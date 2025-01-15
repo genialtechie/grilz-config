@@ -25,6 +25,8 @@ export const useGrillzCustomization = () => {
   const updateSelectedTeethCustomization = (
     customization: Partial<ToothCustomization>
   ) => {
+    console.log('Updating customization:', customization);
+    console.log('For teeth:', selectedTeeth);
     setCustomizations((prev) =>
       prev.map((tooth, index) =>
         selectedTeeth.includes(index) ? { ...tooth, ...customization } : tooth

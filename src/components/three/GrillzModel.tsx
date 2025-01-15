@@ -41,38 +41,59 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
 
       const index = parseInt(mesh.name.replace('tooth_', ''), 10) - 1;
       if (index >= 0 && index < customizations.length) {
-        const material = new THREE.MeshStandardMaterial({
-          // In selection mode:
-          // - All unselected teeth match bottom mould material exactly
-          // - Selected teeth are red and transparent
-          // In customization mode:
-          // - Selected teeth show customization
-          // - Unselected teeth remain like the mould
-          color: isSelectionMode
-            ? selectedTeeth.includes(index)
-              ? '#ff0000'
-              : '#ffffff'
-            : selectedTeeth.includes(index)
-            ? customizations[index].color
-            : '#ffffff',
-          metalness: isSelectionMode
-            ? 0.5 // Match mould metalness
-            : selectedTeeth.includes(index)
-            ? customizations[index].material === 'diamond'
-              ? 0.5
-              : 1.0
-            : 0.5, // Unselected teeth match mould
-          roughness: isSelectionMode
-            ? 0.3 // Match mould roughness
-            : selectedTeeth.includes(index)
-            ? customizations[index].material === 'diamond'
-              ? 0.1
-              : 0.3
-            : 0.3, // Unselected teeth match mould
-          transparent: isSelectionMode && selectedTeeth.includes(index),
-          opacity: isSelectionMode && selectedTeeth.includes(index) ? 0.8 : 1,
-        });
-        mesh.material = material;
+        const isToothSelected = selectedTeeth.includes(index);
+        const customization = customizations[index];
+        const isDiamond = customization.material === 'diamond';
+
+        // Default mould properties
+        const mouldColor = '#ffffff';
+        const mouldMetalness = 0.2;
+        const mouldRoughness = 0.5;
+
+        // Material properties based on mode and selection
+        const materialProps = isSelectionMode
+          ? {
+              // Selection mode: highlight selected teeth in red, others match mould
+              color: isToothSelected ? '#ff0000' : mouldColor,
+              metalness: mouldMetalness,
+              roughness: mouldRoughness,
+              transparent: isToothSelected,
+              opacity: isToothSelected ? 0.8 : 1,
+            }
+          : {
+              // Customization mode: apply custom properties to selected teeth
+              color: isToothSelected ? customization.color : mouldColor,
+              metalness: isToothSelected
+                ? isDiamond
+                  ? 0.5
+                  : 1.0
+                : mouldMetalness,
+              roughness: isToothSelected
+                ? isDiamond
+                  ? 0.1
+                  : 0.3
+                : mouldRoughness,
+              transparent: false,
+              opacity: 1,
+            };
+
+        mesh.material = new THREE.MeshStandardMaterial(materialProps);
+
+        if (customizations[index]?.material === 'diamond') {
+          const material = new THREE.MeshPhysicalMaterial({
+            color: customizations[index].color,
+            metalness: 0.1,
+            roughness: 0.0,
+            transmission: 0.9, // Makes it transparent like real diamond
+            thickness: 0.5, // Depth of transparency
+            envMapIntensity: 1.5,
+            clearcoat: 1.0, // Adds a clear coating
+            clearcoatRoughness: 0.1,
+            emissive: new THREE.Color(0xffffff),
+            emissiveIntensity: 0.2,
+          });
+          mesh.material = material;
+        }
       }
     }
   });
