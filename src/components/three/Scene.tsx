@@ -38,6 +38,8 @@ const Scene: React.FC<SceneProps> = ({
         <OrbitControls
           minDistance={50}
           maxDistance={150}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI - Math.PI / 2}
         />
         <spotLight
           position={[5, 5, 5]}
