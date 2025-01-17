@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { GrillzModelProps } from '../../lib/types';
+import { createDiamondStones } from './DiamondStones';
 
 const GrillzModel: React.FC<GrillzModelProps> = ({
   customizations,
@@ -20,7 +21,6 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
     if (mesh.name === 'bottom_mould') return;
 
     const toothIndex = parseInt(mesh.name.replace('tooth_', ''), 10) - 1;
-    console.log('Selecting tooth:', toothIndex);
     toggleToothSelection(toothIndex);
   };
 
@@ -43,7 +43,6 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
       if (index >= 0 && index < customizations.length) {
         const isToothSelected = selectedTeeth.includes(index);
         const customization = customizations[index];
-        const isDiamond = customization.material === 'diamond';
 
         // Default mould properties
         const mouldColor = '#ffffff';
@@ -63,36 +62,27 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
           : {
               // Customization mode: apply custom properties to selected teeth
               color: isToothSelected ? customization.color : mouldColor,
-              metalness: isToothSelected
-                ? isDiamond
-                  ? 0.5
-                  : 1.0
-                : mouldMetalness,
-              roughness: isToothSelected
-                ? isDiamond
-                  ? 0.1
-                  : 0.3
-                : mouldRoughness,
+              metalness: isToothSelected ? 1.0 : mouldMetalness,
+              roughness: isToothSelected ? 0.3 : mouldRoughness,
               transparent: false,
               opacity: 1,
             };
 
         mesh.material = new THREE.MeshStandardMaterial(materialProps);
 
-        if (customizations[index]?.material === 'diamond') {
-          const material = new THREE.MeshPhysicalMaterial({
-            color: customizations[index].color,
-            metalness: 0.1,
-            roughness: 0.0,
-            transmission: 0.9, // Makes it transparent like real diamond
-            thickness: 0.5, // Depth of transparency
-            envMapIntensity: 1.5,
-            clearcoat: 1.0, // Adds a clear coating
-            clearcoatRoughness: 0.1,
-            emissive: new THREE.Color(0xffffff),
-            emissiveIntensity: 0.2,
-          });
-          mesh.material = material;
+        // Remove existing diamond stones if hasDiamonds is false or in selection mode
+        const existingStones = mesh.children.find(
+          (child) => child.name === 'diamond_stones'
+        );
+        if (existingStones) {
+          mesh.remove(existingStones);
+        }
+
+        // Only add diamond stones if hasDiamonds is true and not in selection mode
+        if (customization.hasDiamonds && isToothSelected && !isSelectionMode) {
+          const diamondStones = createDiamondStones(mesh, '#FFFFFF');
+          diamondStones.name = 'diamond_stones';
+          mesh.add(diamondStones);
         }
       }
     }

@@ -6,7 +6,7 @@ const ColorStep: React.FC<ColorStepProps> = ({
   selectedMaterial,
   selectedColor,
   onChange,
-  goToStep, //eslint-disable-line @typescript-eslint/no-unused-vars
+  goToStep,
 }) => {
   const variants = materialConfigs[selectedMaterial].variants;
 
@@ -19,13 +19,18 @@ const ColorStep: React.FC<ColorStepProps> = ({
         {variants.map(({ name, color }) => (
           <button
             key={name}
-            className={`flex flex-col items-center space-y-2 p-4 rounded ${
-              selectedColor === color ? 'ring-2 ring-blue-500' : ''
+            className={`px-6 py-4 rounded-lg flex flex-col items-center ${
+              selectedColor === color
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 hover:bg-gray-200'
             }`}
-            onClick={() => onChange(color)}
+            onClick={() => {
+              onChange(color);
+              goToStep(4);
+            }}
           >
             <div
-              className="w-12 h-12 rounded-full"
+              className="w-12 h-12 rounded-full mb-2"
               style={{ backgroundColor: color }}
             />
             <span>{name}</span>

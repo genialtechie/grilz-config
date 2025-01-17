@@ -15,21 +15,27 @@ function App() {
   } = useGrillzCustomization();
 
   return (
-    <div className="App bg-gray-100 min-h-screen flex flex-col items-center justify-center space-y-4">
-      <Scene
-        customizations={customizations}
-        selectedTeeth={selectedTeeth}
-        isSelectionMode={isSelectionMode}
-        toggleToothSelection={toggleToothSelection}
-      />
+    <div className="h-screen bg-gray-100 px-4 py-4 md:py-8 md:px-6 lg:px-8 flex items-center">
+      <div className="max-w-7xl w-full mx-auto flex flex-col items-center gap-2 md:gap-6">
+        <div className="w-full max-w-xl h-[50vh] md:h-[60vh]">
+          <Scene
+            customizations={customizations}
+            selectedTeeth={selectedTeeth}
+            isSelectionMode={isSelectionMode}
+            toggleToothSelection={toggleToothSelection}
+          />
+        </div>
 
-      <CustomizationStepper
-        selectedTeeth={selectedTeeth}
-        selectAllTeeth={selectAllTeeth}
-        setIsSelectionMode={setIsSelectionMode}
-        customizations={customizations}
-        updateSelectedTeethCustomization={updateSelectedTeethCustomization}
-      />
+        <div className="w-full max-w-xl h-[40vh] md:h-[30vh] flex flex-col">
+          <CustomizationStepper
+            selectedTeeth={selectedTeeth}
+            selectAllTeeth={selectAllTeeth}
+            setIsSelectionMode={setIsSelectionMode}
+            customizations={customizations}
+            updateSelectedTeethCustomization={updateSelectedTeethCustomization}
+          />
+        </div>
+      </div>
     </div>
   );
 }

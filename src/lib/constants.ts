@@ -14,11 +14,4 @@ export const materialConfigs = {
       { name: 'Platinum', color: '#E5E4E2' },
     ],
   },
-  diamond: {
-    defaultColor: '#FFFFFF',
-    variants: [
-      { name: 'Clear Diamond', color: '#FFFFFF' },
-      { name: 'Black Diamond', color: '#333333' },
-    ],
-  },
 };

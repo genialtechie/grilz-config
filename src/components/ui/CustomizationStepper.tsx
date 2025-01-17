@@ -8,6 +8,7 @@ import {
 import SelectionStep from './SelectionStep';
 import MaterialStep from './MaterialStep';
 import ColorStep from './ColorStep';
+import DiamondStep from './DiamondStep';
 import StepperNav from './StepperNav';
 import { materialConfigs } from '../../lib/constants';
 
@@ -29,6 +30,11 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
       ? customizations[selectedTeeth[0]].color
       : materialConfigs[currentMaterial].defaultColor;
 
+  const hasDiamonds =
+    selectedTeeth.length > 0
+      ? customizations[selectedTeeth[0]].hasDiamonds || false
+      : false;
+
   const safeGoToStep = (step: number) => {
     if (instance?.goToStep) {
       instance.goToStep(step);
@@ -39,14 +45,20 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="w-full h-full flex flex-col">
       <StepWizard
+        className="flex flex-col h-full"
         onStepChange={(stats) => {
           console.log('Step changed:', stats);
           setIsSelectionMode(stats.activeStep === 1);
         }}
         instance={setInstance}
-        nav={<StepperNav instance={instance} />}
+        nav={
+          <StepperNav
+            instance={instance}
+            selectedTeeth={selectedTeeth}
+          />
+        }
       >
         <SelectionStep
           selectedTeeth={selectedTeeth}
@@ -64,6 +76,13 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
           selectedColor={currentColor}
           onChange={(color) => {
             updateSelectedTeethCustomization({ color });
+          }}
+          goToStep={safeGoToStep}
+        />
+        <DiamondStep
+          hasDiamonds={hasDiamonds}
+          onChange={(hasDiamonds) => {
+            updateSelectedTeethCustomization({ hasDiamonds });
           }}
           goToStep={safeGoToStep}
         />

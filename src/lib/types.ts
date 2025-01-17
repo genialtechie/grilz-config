@@ -1,8 +1,9 @@
-export type Material = 'gold' | 'silver' | 'diamond';
+export type Material = 'gold' | 'silver';
 export type ToothCustomization = {
   material: Material;
   color: string;
-  variant?: string; // For different gold/silver variants
+  variant?: string;
+  hasDiamonds?: boolean;
 };
 
 export interface MaterialSelectorProps {
@@ -65,6 +66,7 @@ export interface StepWizardInstance {
 
 export interface StepperNavProps {
   instance: StepWizardInstance | null;
+  selectedTeeth: number[];
 }
 
 export interface CustomizationStepperProps {
@@ -75,4 +77,10 @@ export interface CustomizationStepperProps {
   updateSelectedTeethCustomization: (
     customization: Partial<ToothCustomization>
   ) => void;
+}
+
+export interface DiamondStepProps {
+  hasDiamonds: boolean;
+  onChange: (hasDiamonds: boolean) => void;
+  goToStep: (step: number) => void;
 }
