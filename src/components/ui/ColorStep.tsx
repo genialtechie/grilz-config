@@ -11,30 +11,25 @@ const ColorStep: React.FC<ColorStepProps> = ({
   const variants = materialConfigs[selectedMaterial].variants;
 
   return (
-    <div className="space-y-4 flex flex-col items-center">
-      <h3 className="text-lg font-semibold text-center">
-        Select {selectedMaterial} variant
-      </h3>
-      <div className="flex justify-center space-x-4">
+    <div className="flex flex-col items-center justify-center gap-8 w-full">
+
+      <div className="flex gap-6 w-full justify-center">
         {variants.map(({ name, color }) => (
           <button
             key={name}
-            className={`px-6 py-4 rounded-lg flex flex-col items-center ${
+            className={`w-16 h-16 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 ${
               selectedColor === color
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
+                ? 'ring-2 ring-blue-500 scale-105'
+                : 'hover:ring-2 hover:ring-blue-300'
             }`}
+            style={{
+              background: color,
+            }}
             onClick={() => {
               onChange(color);
               goToStep(4);
             }}
-          >
-            <div
-              className="w-12 h-12 rounded-full mb-2"
-              style={{ backgroundColor: color }}
-            />
-            <span>{name}</span>
-          </button>
+          />
         ))}
       </div>
     </div>

@@ -1,5 +1,4 @@
 import React from 'react';
-import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light.css';
 import { StepperNavProps } from '../../lib/types';
@@ -16,46 +15,43 @@ const StepperNav: React.FC<StepperNavProps> = ({ instance, selectedTeeth }) => {
 
   const stepTitles = [
     'Select Teeth',
-    'Choose Material',
-    'Select Variant',
+    'Material & Color',
     'Add Diamonds',
   ];
 
-  return (
-    <div className="flex justify-center gap-1 md:gap-2 mb-2 md:mb-4">
-      {stepTitles.map((title, index) => {
-        const isDisabled = index > 0 && !hasTeethSelected;
-        const isActive = currentStepIndex === index;
+  const totalSteps = stepTitles.length;
+  const currentStep = Math.max(0, Math.min(currentStepIndex, totalSteps - 1));
+  const canGoBack = currentStep > 0;
+  const canGoForward = currentStep < totalSteps - 1 && (currentStep !== 0 || hasTeethSelected);
 
-        return (
-          <Tippy
-            key={index}
-            content="Please select teeth first"
-            disabled={!isDisabled}
-            placement="top"
-            theme="light"
-            arrow={true}
-            animation="scale"
-            duration={200}
-            className="shadow-lg"
-          >
-            <button
-              onClick={() => !isDisabled && goToStep(index + 1)}
-              disabled={isDisabled}
-              className={`px-2 py-1 md:px-4 md:py-2 text-xs md:text-base rounded transition-all duration-200
-                ${
-                  isActive
-                    ? 'bg-blue-500 text-white'
-                    : isDisabled
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                    : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-            >
-              {title}
-            </button>
-          </Tippy>
-        );
-      })}
+  return (
+    <div className="flex items-center justify-center gap-4 mb-2 w-full">
+      <button
+        onClick={() => canGoBack && goToStep(currentStep)}
+        disabled={!canGoBack}
+        className={`text-3xl px-4 py-2 rounded-full transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400
+          ${canGoBack ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'}`}
+        aria-label="Previous step"
+      >
+        &#8592;
+      </button>
+      <div className="flex flex-col items-center">
+        <span className="text-base md:text-lg font-semibold text-gray-900 whitespace-nowrap">
+          {stepTitles[currentStep]}
+        </span>
+        <span className="text-gray-400 text-sm mt-1">
+          {currentStep + 1} / {totalSteps}
+        </span>
+      </div>
+      <button
+        onClick={() => canGoForward && goToStep(currentStep + 1)}
+        disabled={!canGoForward}
+        className={`text-3xl px-4 py-2 rounded-full transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400
+          ${canGoForward ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'}`}
+        aria-label="Next step"
+      >
+        &#8594;
+      </button>
     </div>
   );
 };

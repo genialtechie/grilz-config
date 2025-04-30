@@ -10,24 +10,17 @@ const MaterialStep: React.FC<MaterialStepProps> = ({
 }) => {
   const materials = ['gold', 'silver'];
 
-  const materialEmojis = {
-    gold: '🌟',
-    silver: '✨',
-  };
-
   return (
-    <div className="space-y-2 md:space-y-4 flex flex-col items-center p-2 md:p-4">
-      <h3 className="text-base sm:text-lg font-semibold text-center">
-        Choose your material
-      </h3>
-      <div className="flex justify-center gap-2 md:gap-4">
+    <div className="flex flex-col items-center justify-center gap-8 w-full">
+
+      <div className="flex gap-6 w-full justify-center">
         {materials.map((material) => (
           <button
             key={material}
-            className={`px-3 py-2 md:px-6 md:py-4 rounded-lg flex flex-col items-center ${
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-base font-semibold shadow transition-all duration-150 border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
               selectedMaterial === material
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
+                ? 'bg-blue-500 text-white border-blue-500 scale-105'
+                : 'bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100'
             }`}
             onClick={() => {
               const materialType = material as Material;
@@ -39,10 +32,16 @@ const MaterialStep: React.FC<MaterialStepProps> = ({
               goToStep(3);
             }}
           >
-            <span className="text-base md:text-xl mb-1">
-              {materialEmojis[material as keyof typeof materialEmojis]}
-            </span>
-            <span className="text-sm md:text-base capitalize">{material}</span>
+            <div
+              className="w-16 h-16 rounded-full border border-gray-300 shadow-inner"
+              style={{
+                background: material.toLowerCase().includes('gold')
+                  ? 'linear-gradient(135deg, #FFD700 0%, #FFFACD 100%)'
+                  : material.toLowerCase().includes('silver')
+                  ? 'linear-gradient(135deg, #C0C0C0 0%, #F8F8FF 100%)'
+                  : materialConfigs[material as keyof typeof materialConfigs]?.variants?.[0]?.color || '#eee',
+              }}
+            />
           </button>
         ))}
       </div>

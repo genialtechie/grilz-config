@@ -6,8 +6,7 @@ import {
   CustomizationStepperProps,
 } from '../../lib/types';
 import SelectionStep from './SelectionStep';
-import MaterialStep from './MaterialStep';
-import ColorStep from './ColorStep';
+import MaterialColorStep from './MaterialColorStep';
 import DiamondStep from './DiamondStep';
 import StepperNav from './StepperNav';
 import { materialConfigs } from '../../lib/constants';
@@ -19,16 +18,13 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   updateSelectedTeethCustomization,
   setIsSelectionMode,
 }) => {
-  const [currentMaterial, setCurrentMaterial] =
-    React.useState<Material>('gold');
+  const [currentMaterial, setCurrentMaterial] = React.useState<Material>('gold');
   const [instance, setInstance] = React.useState<StepWizardInstance | null>(
     null
   );
-
-  const currentColor =
-    selectedTeeth.length > 0
-      ? customizations[selectedTeeth[0]].color
-      : materialConfigs[currentMaterial].defaultColor;
+  const [currentColor, setCurrentColor] = React.useState<string>(
+    materialConfigs[currentMaterial].defaultColor
+  );
 
   const hasDiamonds =
     selectedTeeth.length > 0
@@ -45,14 +41,14 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="bg-white rounded-t-2xl shadow-2xl p-6 max-w-md w-full flex flex-col gap-4 border border-gray-100">
       <StepWizard
-        className="flex flex-col h-full"
+        className="flex flex-col h-full gap-4"
         onStepChange={(stats) => {
           console.log('Step changed:', stats);
           setIsSelectionMode(stats.activeStep === 1);
         }}
-        instance={setInstance}
+        instance={(wizard) => setInstance(wizard as StepWizardInstance | null)}
         nav={
           <StepperNav
             instance={instance}
@@ -65,18 +61,12 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
           selectAllTeeth={selectAllTeeth}
           goToStep={safeGoToStep}
         />
-        <MaterialStep
-          selectedMaterial={currentMaterial}
-          onChange={setCurrentMaterial}
-          updateSelectedTeethCustomization={updateSelectedTeethCustomization}
-          goToStep={safeGoToStep}
-        />
-        <ColorStep
+        <MaterialColorStep
           selectedMaterial={currentMaterial}
           selectedColor={currentColor}
-          onChange={(color) => {
-            updateSelectedTeethCustomization({ color });
-          }}
+          onMaterialChange={setCurrentMaterial}
+          onColorChange={setCurrentColor}
+          updateSelectedTeethCustomization={updateSelectedTeethCustomization}
           goToStep={safeGoToStep}
         />
         <DiamondStep

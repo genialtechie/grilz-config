@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ToothCustomization } from '../types';
 
-const defaultCustomization: ToothCustomization[] = Array(14).fill({
+const defaultCustomization: ToothCustomization[] = Array(32).fill({
   material: 'gold',
   color: '#FFD700',
 });
@@ -19,7 +19,7 @@ export const useGrillzCustomization = () => {
   };
 
   const selectAllTeeth = () => {
-    setSelectedTeeth([...Array(14)].map((_, i) => i));
+    setSelectedTeeth([...Array(32)].map((_, i) => i));
   };
 
   const updateSelectedTeethCustomization = (

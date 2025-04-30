@@ -22,10 +22,20 @@ const Scene: React.FC<SceneProps> = ({
           position={[0, 0, 10]}
           fov={50}
         />
+        <OrbitControls
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={1}
+          maxDistance={2}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={(3 * Math.PI) / 4}
+          target={[0, 0, 0]}
+        />
         <ambientLight intensity={0.8} />
         <directionalLight
           position={[10, 10, 5]}
-          intensity={1.5}
+          intensity={1}
         />
         <directionalLight
           position={[-10, -10, -5]}
@@ -34,12 +44,6 @@ const Scene: React.FC<SceneProps> = ({
         <directionalLight
           position={[0, 0, 10]}
           intensity={1}
-        />
-        <OrbitControls
-          minDistance={50}
-          maxDistance={150}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI - Math.PI / 2}
         />
         <spotLight
           position={[5, 5, 5]}
@@ -58,12 +62,14 @@ const Scene: React.FC<SceneProps> = ({
           groundColor="#000000"
         />
         <Environment preset="studio" />
-        <GrillzModel
-          customizations={customizations}
-          selectedTeeth={selectedTeeth}
-          isSelectionMode={isSelectionMode}
-          toggleToothSelection={toggleToothSelection}
-        />
+        <React.Suspense fallback={null}>
+          <GrillzModel
+            customizations={customizations}
+            selectedTeeth={selectedTeeth}
+            isSelectionMode={isSelectionMode}
+            toggleToothSelection={toggleToothSelection}
+          />
+        </React.Suspense>
       </Canvas>
     </div>
   );

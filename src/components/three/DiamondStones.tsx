@@ -1,28 +1,28 @@
 import * as THREE from 'three';
 
 export const createDiamondStones = (parentMesh: THREE.Mesh, color: string) => {
-  const COUNT = 1500;
-  const geometry = new THREE.OctahedronGeometry(1.5);
+  const COUNT = 2500;
+  const geometry = new THREE.OctahedronGeometry(0.00375); // Halved size again
   const material = new THREE.MeshPhysicalMaterial({
     color: color,
-    metalness: 1,
+    metalness: 0,             // Diamonds are not metallic
     roughness: 0.0,
     transmission: 0.8,
     thickness: 2.0,
     envMapIntensity: 5.0,
-    clearcoat: 1.0,
+    clearcoat: 0.0,           // Removed clearcoat
     clearcoatRoughness: 0.0,
     ior: 2.42,
     reflectivity: 1.0,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.9,             // Increased opacity
     attenuationColor: new THREE.Color(color),
     attenuationDistance: 0.5,
     emissive: new THREE.Color(color),
-    emissiveIntensity: 0.2,
+    emissiveIntensity: 0.0,   // Removed emissive glow
     sheen: 0.0,
     specularIntensity: 1.0,
-    specularColor: new THREE.Color(color),
+    specularColor: new THREE.Color(0xffffff), // White specular highlights
   });
 
   const instancedMesh = new THREE.InstancedMesh(geometry, material, COUNT);
