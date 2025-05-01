@@ -13,10 +13,10 @@ const DiamondStep: React.FC<DiamondStepProps> = ({
     <div className="flex flex-col items-center justify-center gap-6 w-full">
       {/* Add/Remove Diamonds Button - Styled like SelectionStep */}
       <button
-        className={`w-36 h-16 rounded-lg flex items-center justify-center text-base font-semibold shadow-md transition-all duration-150 border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-          hasDiamonds // Remove Diamonds -> Secondary Active (White BG, Black Text)
-            ? 'bg-white text-black border-gray-400 hover:bg-gray-100 focus:ring-gray-500'
-            : 'bg-black text-white border-black hover:bg-gray-800 focus:ring-gray-500' // Add Diamonds -> Primary Active (Black BG, White Text)
+        className={`flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all duration-150 border-2 shadow focus:outline-none focus:ring-2 focus:ring-black ${
+          hasDiamonds
+            ? 'bg-white text-black border-black hover:bg-gray-100'
+            : 'bg-black text-white border-black hover:bg-gray-800'
         }`}
         onClick={toggleDiamonds}
       >

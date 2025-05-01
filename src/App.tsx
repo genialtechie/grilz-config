@@ -2,7 +2,8 @@ import './index.css';
 import Scene from './components/three/Scene';
 import { useGrillzCustomization } from './lib/hooks/useGrillzCustomization';
 import CustomizationStepper from './components/ui/CustomizationStepper';
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { pricingConfig } from './lib/pricingConfig';
 
 function App() {
   const [panelOpen, setPanelOpen] = useState(true);
@@ -17,6 +18,20 @@ function App() {
     resetCustomizationForSelection,
     clearAllTeeth,
   } = useGrillzCustomization();
+
+  // Calculate total price based on customizations
+  const totalCost = useMemo(() => {
+    let cost = pricingConfig.baseCost;
+    customizations.forEach(({ material, hasDiamonds }) => {
+      if (material !== 'default') {
+        cost += pricingConfig.materials[material].costPerTooth;
+      }
+      if (hasDiamonds) {
+        cost += pricingConfig.diamonds.costPerTooth;
+      }
+    });
+    return cost;
+  }, [customizations]);
 
   return (
     <div className="relative h-screen overflow-hidden bg-gray-100">
@@ -48,10 +63,12 @@ function App() {
           </div>
           {/* Toggle Handle Bar */}
           <button
-            className={`w-full py-2 text-center cursor-pointer bg-white transition-all duration-300 ease-in-out ${panelOpen ? 'border-t border-gray-200 rounded-b-2xl' : 'rounded-lg shadow-lg'}`}
+            className={`relative w-full py-2 text-center cursor-pointer bg-white transition-all duration-300 ease-in-out ${panelOpen ? 'border-t border-gray-200 rounded-b-2xl' : 'rounded-lg shadow-lg'}`}
             onClick={() => setPanelOpen(!panelOpen)}
             aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
           >
+            {/* Display total price */}
+            <span className="absolute left-4 bottom-1 text-sm font-semibold">${totalCost}</span>
             <span className="inline-block w-8 h-1 bg-gray-400 rounded-full"></span>
           </button>
         </div>
