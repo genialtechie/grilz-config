@@ -5,39 +5,26 @@ const DiamondStep: React.FC<DiamondStepProps> = ({
   hasDiamonds,
   onChange,
 }) => {
-  return (
-    <div className="flex flex-col items-center justify-center gap-8 w-full">
+  const toggleDiamonds = () => {
+    onChange(!hasDiamonds);
+  };
 
-      <div className="flex gap-6 w-full justify-center">
-        <button
-          className={`w-32 h-20 rounded-xl flex flex-col items-center justify-center text-base font-semibold shadow transition-all duration-150 border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            !hasDiamonds
-              ? 'bg-blue-500 text-white border-blue-500 scale-105'
-              : 'bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100'
-          }`}
-          onClick={() => {
-            onChange(false);
-            // goToStep(1); // Removed to stay on this step
-          }}
-        >
-          <span className="text-2xl mb-1">❌</span>
-          <span className="text-base">No Diamonds</span>
-        </button>
-        <button
-          className={`w-32 h-20 rounded-xl flex flex-col items-center justify-center text-base font-semibold shadow transition-all duration-150 border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            hasDiamonds
-              ? 'bg-blue-500 text-white border-blue-500 scale-105'
-              : 'bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100'
-          }`}
-          onClick={() => {
-            onChange(true);
-            // goToStep(1); // Removed to stay on this step
-          }}
-        >
-          <span className="text-2xl mb-1">💎</span>
-          <span className="text-base">Add Diamonds</span>
-        </button>
-      </div>
+  return (
+    <div className="flex flex-col items-center justify-center gap-6 w-full">
+      {/* Add/Remove Diamonds Button - Styled like SelectionStep */}
+      <button
+        className={`w-36 h-16 rounded-lg flex items-center justify-center text-base font-semibold shadow-md transition-all duration-150 border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+          hasDiamonds // Remove Diamonds -> Secondary Active (White BG, Black Text)
+            ? 'bg-white text-black border-gray-400 hover:bg-gray-100 focus:ring-gray-500'
+            : 'bg-black text-white border-black hover:bg-gray-800 focus:ring-gray-500' // Add Diamonds -> Primary Active (Black BG, White Text)
+        }`}
+        onClick={toggleDiamonds}
+      >
+        <span className="text-center leading-tight">
+          {hasDiamonds ? 'Remove Diamonds' : 'Add Diamonds'}
+        </span>
+      </button>
+      {/* Removed Back button and its container div */}
     </div>
   );
 };

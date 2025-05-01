@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
@@ -34,16 +34,52 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
   toggleToothSelection,
 }) => {
   const { scene } = useGLTF('/assets/teeth_final.glb');
+  const originalMaterialsRef = useRef<Map<number, THREE.Material>>(new Map()); // Ref for original materials
 
-  // Log all mesh names once on component mount
-  React.useEffect(() => {
-    console.log("--- Traversing scene for mesh names ---");
+  // Clone the scene to avoid modifying the original asset
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone();
+    console.log('Scene cloned.');
+    return clone;
+  }, [scene]);
+
+  // Store original materials on mount
+  useEffect(() => {
+    const materialsMap = new Map<number, THREE.Material>();
+    let storedCount = 0;
+    scene.traverse((child) => {
+      // Use original scene here to capture initial state before any modifications
+      if (child instanceof THREE.Mesh && !(child.material instanceof THREE.Material)) {
+        console.warn(`Mesh '${child.name}' has non-standard material type:`, child.material);
+      }
+
+      if (child instanceof THREE.Mesh && child.material instanceof THREE.Material) {
+        const index = getToothIndexFromName(child.name);
+        if (index !== null && index >= 0 && !materialsMap.has(index)) {
+          // Store a clone of the material
+          materialsMap.set(index, child.material.clone());
+          storedCount++;
+        }
+      }
+    });
+    originalMaterialsRef.current = materialsMap;
+    if (storedCount > 0) {
+      console.log(`Stored original materials for ${storedCount} teeth.`);
+    } else {
+        console.warn('No original tooth materials were stored. Check mesh names and getToothIndexFromName logic.');
+    }
+    // Intentionally depend only on the original scene load
+  }, [scene]);
+
+  // Log mesh names (keep for debugging, use original scene)
+  useEffect(() => {
+    console.log("--- Traversing original scene for mesh names ---");
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         console.log(`Found Mesh: Name='${child.name}'`);
       }
     });
-    console.log("--- Finished traversing scene ---");
+    console.log("--- Finished traversing original scene ---");
   }, [scene]);
 
   const handleToothClick = (e: ThreeEvent<MouseEvent>) => {
@@ -67,65 +103,122 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
     console.log('--- End Click Event ---');
   };
 
-  scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const mesh = child as THREE.Mesh;
+  // --- Pre-create reusable materials for performance ---
+  const materials = useMemo(() => ({
+    gold: new THREE.MeshStandardMaterial({ color: '#FFD700', metalness: 0.8, roughness: 0.3 }),
+    silver: new THREE.MeshStandardMaterial({ color: '#C0C0C0', metalness: 0.9, roughness: 0.2 }),
+    selectionHighlight: new THREE.MeshStandardMaterial({ color: '#ff0000', transparent: true, opacity: 0.7, roughness: 0.5 }),
+    mould: new THREE.MeshStandardMaterial({ color: '#F5F5F5', metalness: 0.1, roughness: 0.8 }), // Default/fallback mould
+  }), []);
 
-      if (mesh.name === 'bottom_mould' || mesh.name === 'top_mould') {
-        const material = new THREE.MeshStandardMaterial({
-          color: '#ffffff',
-          metalness: 0.2,
-          roughness: 0.5,
-        });
-        mesh.material = material;
-        return;
+  // --- Apply customizations and selection highlights to the CLONED scene --- 
+  clonedScene.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return; // Skip non-meshes
+
+    const mesh = child as THREE.Mesh;
+    const index = getToothIndexFromName(mesh.name);
+
+    // --- Handle Moulds (Apply mould material) ---
+    if (mesh.name === 'bottom_mould' || mesh.name === 'top_mould') {
+      mesh.material = materials.mould;
+      return;
+    }
+
+    // --- Handle Teeth ---
+    if (index !== null && index >= 0 && index < customizations.length) {
+      const isToothSelectedForHighlight = selectedTeeth.includes(index);
+      const customization = customizations[index];
+      const originalMaterial = originalMaterialsRef.current.get(index);
+
+      // Remove existing diamonds first
+      const existingStones = mesh.getObjectByName('diamond_stones');
+      if (existingStones) {
+        mesh.remove(existingStones);
       }
 
-      const index = getToothIndexFromName(mesh.name);
-
-      if (index !== null && index >= 0 && index < customizations.length) {
-        const isToothSelected = selectedTeeth.includes(index);
-        const customization = customizations[index];
-
-        const mouldColor = '#ffffff';
-        const mouldMetalness = 0.2;
-        const mouldRoughness = 0.5;
-
-        const materialProps = isSelectionMode
-          ? {
-              color: isToothSelected ? '#ff0000' : mouldColor,
-              metalness: mouldMetalness,
-              roughness: mouldRoughness,
-              transparent: isToothSelected,
-              opacity: isToothSelected ? 0.8 : 1,
+      if (isSelectionMode) {
+        // --- Selection Mode: Apply highlight ONLY to selected, others keep their material ---
+        if (isToothSelectedForHighlight) {
+          mesh.material = materials.selectionHighlight;
+        } else {
+          // Apply the actual current material (customized or original)
+          if (customization && customization.material !== 'default') {
+            // Apply Customization (same logic as below)
+            let targetMaterial: THREE.MeshStandardMaterial | undefined;
+            if (customization.material === 'gold') {
+              targetMaterial = materials.gold.clone();
+            } else if (customization.material === 'silver') {
+              targetMaterial = materials.silver.clone();
+            } else {
+              targetMaterial = materials.mould.clone();
             }
-          : {
-              color: isToothSelected ? customization.color : mouldColor,
-              metalness: isToothSelected ? 1.0 : mouldMetalness,
-              roughness: isToothSelected ? 0.3 : mouldRoughness,
-              transparent: false,
-              opacity: 1,
-            };
-
-        mesh.material = new THREE.MeshStandardMaterial(materialProps);
-
-        const existingStones = mesh.getObjectByName('diamond_stones');
-        if (existingStones) {
-          mesh.remove(existingStones);
+            targetMaterial.color.set(customization.color);
+            mesh.material = targetMaterial;
+            // Ensure diamonds are shown if customized, even in selection mode
+            if (customization.hasDiamonds) {
+              const diamondStones = createDiamondStones(mesh, '#FFFFFF'); 
+              diamondStones.name = 'diamond_stones';
+              mesh.add(diamondStones);
+            }
+          } else {
+            // Apply Original/Default Material (same logic as below)
+            if (originalMaterial) {
+              mesh.material = originalMaterial;
+            } else {
+              mesh.material = materials.mould;
+              console.warn(`Original material for tooth index ${index} not found. Applying fallback.`);
+            }
+             // Diamonds are already removed or weren't there
+          }
         }
 
-        if (customization.hasDiamonds && isToothSelected && !isSelectionMode) {
-          const diamondStones = createDiamondStones(mesh, '#FFFFFF');
-          diamondStones.name = 'diamond_stones';
-          mesh.add(diamondStones);
+      } else {
+        // --- Customization Mode: Apply custom or original materials ---
+        if (customization && customization.material !== 'default') {
+          // Apply Customization
+          let targetMaterial: THREE.MeshStandardMaterial | undefined;
+          
+          if (customization.material === 'gold') {
+            targetMaterial = materials.gold.clone(); // Clone to modify color safely
+          } else if (customization.material === 'silver') {
+            targetMaterial = materials.silver.clone(); // Clone to modify color safely
+          } else {
+            // Fallback or handle other material types if added later
+            targetMaterial = materials.mould.clone(); 
+          }
+          
+          targetMaterial.color.set(customization.color); // Set the specific color
+          mesh.material = targetMaterial;
+
+          // Add diamonds if specified
+          if (customization.hasDiamonds) {
+            const diamondStones = createDiamondStones(mesh, '#FFFFFF'); // Use white stones for now
+            diamondStones.name = 'diamond_stones';
+            mesh.add(diamondStones);
+          }
+        } else {
+          // Apply Original/Default Material (Reset state)
+          if (originalMaterial) {
+            mesh.material = originalMaterial; // Use the stored original material
+          } else {
+            // Fallback if original material wasn't found
+            mesh.material = materials.mould;
+            console.warn(`Original material for tooth index ${index} not found. Applying fallback.`);
+          }
+          // Diamonds are already removed
         }
       }
+    } else if(mesh.name !== 'bottom_mould' && mesh.name !== 'top_mould') {
+      // Optional: Handle meshes that are not moulds and don't match tooth naming
+      // Could be gums, etc. Apply a default material if needed.
+      // mesh.material = materials.mould; 
+      // console.log(`Applying default material to unrecognized mesh: ${mesh.name}`);
     }
   });
 
   return (
     <primitive
-      object={scene}
+      object={clonedScene} // Use the cloned scene
       scale={10} // Scale the model up
       onClick={handleToothClick}
     />

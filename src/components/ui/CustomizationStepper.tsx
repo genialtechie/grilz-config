@@ -17,13 +17,13 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   customizations,
   updateSelectedTeethCustomization,
   setIsSelectionMode,
+  resetCustomizationForSelection,
+  clearAllTeeth,
 }) => {
-  const [currentMaterial, setCurrentMaterial] = React.useState<Material>('gold');
+  const [currentMaterial, setCurrentMaterial] = React.useState<Material | null>(null);
+  const [currentColor, setCurrentColor] = React.useState<string | null>(null);
   const [instance, setInstance] = React.useState<StepWizardInstance | null>(
     null
-  );
-  const [currentColor, setCurrentColor] = React.useState<string>(
-    materialConfigs[currentMaterial].defaultColor
   );
 
   const hasDiamonds =
@@ -59,7 +59,9 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
         <SelectionStep
           selectedTeeth={selectedTeeth}
           selectAllTeeth={selectAllTeeth}
+          clearAllTeeth={clearAllTeeth}
           goToStep={safeGoToStep}
+          resetCustomizationForSelection={resetCustomizationForSelection}
         />
         <MaterialColorStep
           selectedMaterial={currentMaterial}

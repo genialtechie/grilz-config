@@ -1,37 +1,58 @@
 import React from 'react';
 import { SelectionStepProps } from '../../lib/types';
 
+const TOTAL_TEETH = 32; // Define total teeth constant
+
 const SelectionStep: React.FC<SelectionStepProps> = ({
   selectedTeeth,
   selectAllTeeth,
+  clearAllTeeth, // Receive clear function
   goToStep,
+  resetCustomizationForSelection,
 }) => {
-  return (
-    <div className="flex flex-col items-center justify-center gap-8 w-full">
+  const allSelected = selectedTeeth.length === TOTAL_TEETH;
+  const noneSelected = selectedTeeth.length === 0;
 
-      <div className="flex gap-6 w-full justify-center">
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 w-full">
+
+      <div className="flex gap-6 w-full justify-center"> 
+        {/* All Teeth / Clear Selection Button */}
         <button
-          className={`w-32 h-20 rounded-xl flex flex-col items-center justify-center text-base font-semibold shadow transition-all duration-150 border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            selectedTeeth.length === 14
-              ? 'bg-blue-500 text-white border-blue-500'
-              : 'bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100'
+          className={`w-36 h-16 rounded-lg flex items-center justify-center text-base font-semibold shadow-md transition-all duration-150 border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            allSelected // Clear Selection -> Secondary Active (White BG, Black Text)
+              ? 'bg-white text-black border-gray-400 hover:bg-gray-100 focus:ring-gray-500'
+              : 'bg-black text-white border-black hover:bg-gray-800 focus:ring-gray-500' // Select All -> Primary Active (Black BG, White Text)
           }`}
-          onClick={selectAllTeeth}
+          onClick={allSelected ? clearAllTeeth : selectAllTeeth}
         >
-          <span className="text-2xl mb-1">👄</span>
-          <span className="text-base">All Teeth</span>
+          <span className="text-center leading-tight">{allSelected ? 'Clear Selection' : 'Select All'}</span> 
         </button>
+
+        {/* Clear Style Button */}
         <button
-          className={`w-32 h-20 rounded-xl flex flex-col items-center justify-center text-base font-semibold shadow transition-all duration-150 border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            selectedTeeth.length > 0 && selectedTeeth.length < 14
-              ? 'bg-blue-500 text-white border-blue-500'
-              : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+          className={`w-36 h-16 rounded-lg flex items-center justify-center text-base font-semibold shadow-md transition-all duration-150 border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            !noneSelected // Secondary Active (White BG, Black Text)
+              ? 'bg-white text-black border-gray-400 hover:bg-gray-100 focus:ring-gray-500'
+              : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed opacity-70' // Disabled
           }`}
-          onClick={() => selectedTeeth.length > 0 && goToStep(2)}
-          disabled={selectedTeeth.length === 0}
+          onClick={resetCustomizationForSelection}
+          disabled={noneSelected}
         >
-          <span className="text-2xl mb-1">🦷</span>
-          <span className="text-base">Selected ({selectedTeeth.length})</span>
+          <span className="text-center leading-tight">Clear Style</span> 
+        </button>
+
+        {/* Continue Button */}
+        <button
+          className={`w-36 h-16 rounded-lg flex items-center justify-center text-base font-semibold shadow-md transition-all duration-150 border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            !noneSelected // Primary Active (Black BG, White Text)
+              ? 'bg-black text-white border-black hover:bg-gray-800 focus:ring-gray-500'
+              : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed opacity-70' // Disabled
+          }`}
+          onClick={() => !noneSelected && goToStep(2)}
+          disabled={noneSelected}
+        >
+          <span className="text-center leading-tight">Continue ({selectedTeeth.length})</span> 
         </button>
       </div>
     </div>

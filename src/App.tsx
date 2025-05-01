@@ -14,6 +14,8 @@ function App() {
     selectAllTeeth,
     updateSelectedTeethCustomization,
     setIsSelectionMode,
+    resetCustomizationForSelection,
+    clearAllTeeth,
   } = useGrillzCustomization();
 
   return (
@@ -40,6 +42,8 @@ function App() {
               setIsSelectionMode={setIsSelectionMode}
               customizations={customizations}
               updateSelectedTeethCustomization={updateSelectedTeethCustomization}
+              resetCustomizationForSelection={resetCustomizationForSelection}
+              clearAllTeeth={clearAllTeeth}
             />
           </div>
           {/* Toggle Handle Bar */}

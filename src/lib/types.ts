@@ -1,4 +1,4 @@
-export type Material = 'gold' | 'silver';
+export type Material = 'gold' | 'silver' | 'default';
 export type ToothCustomization = {
   material: Material;
   color: string;
@@ -34,7 +34,9 @@ export interface GrillzModelProps {
 export interface SelectionStepProps {
   selectedTeeth: number[];
   selectAllTeeth: () => void;
+  clearAllTeeth: () => void;
   goToStep: (step: number) => void;
+  resetCustomizationForSelection: () => void;
 }
 
 export interface MaterialStepProps {
@@ -72,11 +74,13 @@ export interface StepperNavProps {
 export interface CustomizationStepperProps {
   selectedTeeth: number[];
   selectAllTeeth: () => void;
+  clearAllTeeth: () => void;
   setIsSelectionMode: (mode: boolean) => void;
   customizations: ToothCustomization[];
   updateSelectedTeethCustomization: (
     customization: Partial<ToothCustomization>
   ) => void;
+  resetCustomizationForSelection: () => void;
 }
 
 export interface DiamondStepProps {
