@@ -2,11 +2,15 @@ import './index.css';
 import Scene from './components/three/Scene';
 import { useGrillzCustomization } from './lib/hooks/useGrillzCustomization';
 import CustomizationStepper from './components/ui/CustomizationStepper';
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { pricingConfig } from './lib/pricingConfig';
+import SummaryPage from './components/ui/SummaryPage';
+import ARView from './components/ui/ARView';
 
 function App() {
   const [panelOpen, setPanelOpen] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showAR, setShowAR] = useState(false);
   const {
     customizations,
     selectedTeeth,
@@ -32,6 +36,30 @@ function App() {
     });
     return cost;
   }, [customizations]);
+
+  // Show AR view
+  if (showAR) {
+    return <ARView onBack={() => { setShowAR(false); setShowSummary(true); }} />;
+  }
+
+  // Show summary page when done
+  if (showSummary) {
+    return (
+      <SummaryPage
+        totalCost={totalCost}
+        customizations={customizations}
+        onBack={() => {
+          setShowSummary(false);
+          setIsSelectionMode(true);
+          setPanelOpen(true);
+        }}
+        onAR={() => {
+          setShowSummary(false);
+          setShowAR(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="relative h-screen overflow-hidden bg-gray-100">
@@ -62,15 +90,22 @@ function App() {
             />
           </div>
           {/* Toggle Handle Bar */}
-          <button
-            className={`relative w-full py-2 text-center cursor-pointer bg-white transition-all duration-300 ease-in-out ${panelOpen ? 'border-t border-gray-200 rounded-b-2xl' : 'rounded-lg shadow-lg'}`}
-            onClick={() => setPanelOpen(!panelOpen)}
-            aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
-          >
-            {/* Display total price */}
-            <span className="absolute left-4 bottom-1 text-sm font-semibold">${totalCost}</span>
-            <span className="inline-block w-8 h-1 bg-gray-400 rounded-full"></span>
-          </button>
+          <div className="relative w-full">
+            <button
+              className={`w-full py-2 text-center cursor-pointer bg-white transition-all duration-300 ease-in-out ${panelOpen ? 'border-t border-gray-200 rounded-b-2xl' : 'rounded-lg shadow-lg'}`}
+              onClick={() => setPanelOpen(!panelOpen)}
+              aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
+            >
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold">${totalCost}</span>
+              <span className="inline-block w-8 h-1 bg-gray-400 rounded-full"></span>
+            </button>
+            <button
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold"
+              onClick={() => setShowSummary(true)}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>
