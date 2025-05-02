@@ -8,7 +8,9 @@ interface MaterialColorStepProps {
   selectedColor: string | null;
   onMaterialChange: (material: Material) => void;
   onColorChange: (color: string) => void;
-  updateSelectedTeethCustomization: (update: Partial<ToothCustomization>) => void;
+  updateSelectedTeethCustomization: (
+    update: Partial<ToothCustomization>
+  ) => void;
   goToStep: (step: number) => void;
 }
 
@@ -21,7 +23,9 @@ const MaterialColorStep: React.FC<MaterialColorStepProps> = ({
   goToStep,
 }) => {
   const materials: Material[] = ['gold', 'silver'];
-  const variants = selectedMaterial ? materialConfigs[selectedMaterial].variants : [];
+  const variants = selectedMaterial
+    ? materialConfigs[selectedMaterial].variants
+    : [];
 
   const handleMaterialSelect = (material: Material) => {
     const defaultColor = materialConfigs[material].defaultColor;
@@ -44,7 +48,9 @@ const MaterialColorStep: React.FC<MaterialColorStepProps> = ({
     <div className="flex flex-col items-center gap-2 w-full">
       {/* Material Selection */}
       <div className="flex flex-col items-center gap-2 w-full">
-        <span className="text-sm font-medium text-gray-600">Select Material</span>
+        <span className="text-sm font-medium text-gray-600">
+          Select Material
+        </span>
         <div className="flex gap-4">
           {materials.map((material) => (
             <button
@@ -60,9 +66,10 @@ const MaterialColorStep: React.FC<MaterialColorStepProps> = ({
               <div
                 className="w-full h-full rounded-full border border-gray-300 shadow-inner"
                 style={{
-                  background: material.toLowerCase() === 'gold'
-                    ? 'linear-gradient(135deg, #FFD700 0%, #FFFACD 100%)'
-                    : 'linear-gradient(135deg, #C0C0C0 0%, #F8F8FF 100%)',
+                  background:
+                    material.toLowerCase() === 'gold'
+                      ? 'linear-gradient(135deg, #FFD700 0%, #FFFACD 100%)'
+                      : 'linear-gradient(135deg, #C0C0C0 0%, #F8F8FF 100%)',
                 }}
               />
             </button>
@@ -73,22 +80,26 @@ const MaterialColorStep: React.FC<MaterialColorStepProps> = ({
       {/* Color Variant Selection */}
       {selectedMaterial && (
         <div className="flex flex-col items-center gap-2 w-full">
-          <span className="text-sm font-medium text-gray-600">Select Color / Finish</span>
+          <span className="text-sm font-medium text-gray-600">
+            Select Color / Finish
+          </span>
           <div className="flex gap-4 w-full justify-center flex-wrap">
-            {variants.map(({ name, color }) => (
-              <button
-                key={name}
-                title={name} // Tooltip for color name
-                className={`w-10 h-10 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-150 border border-gray-300 ${
-                  selectedColor === color
-                    ? 'border-blue-500 scale-110 ring-2 ring-black ring-offset-1'
-                    : 'border-gray-300 hover:scale-105 focus:ring-gray-400'
-                }`}
-                style={{ background: color }}
-                onClick={() => handleColorSelect(color)}
-                aria-label={`Select color ${name}`}
-              />
-            ))}
+            {variants.map(
+              ({ name, color }: { name: string; color: string }) => (
+                <button
+                  key={name}
+                  title={name} // Tooltip for color name
+                  className={`w-10 h-10 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-150 border border-gray-300 ${
+                    selectedColor === color
+                      ? 'border-blue-500 scale-110 ring-2 ring-black ring-offset-1'
+                      : 'border-gray-300 hover:scale-105 focus:ring-gray-400'
+                  }`}
+                  style={{ background: color }}
+                  onClick={() => handleColorSelect(color)}
+                  aria-label={`Select color ${name}`}
+                />
+              )
+            )}
           </div>
         </div>
       )}

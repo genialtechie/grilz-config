@@ -9,7 +9,6 @@ import SelectionStep from './SelectionStep';
 import MaterialColorStep from './MaterialColorStep';
 import DiamondStep from './DiamondStep';
 import StepperNav from './StepperNav';
-import { materialConfigs } from '../../lib/constants';
 
 const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   selectedTeeth,
@@ -20,7 +19,9 @@ const CustomizationStepper: React.FC<CustomizationStepperProps> = ({
   resetCustomizationForSelection,
   clearAllTeeth,
 }) => {
-  const [currentMaterial, setCurrentMaterial] = React.useState<Material | null>(null);
+  const [currentMaterial, setCurrentMaterial] = React.useState<Material | null>(
+    null
+  );
   const [currentColor, setCurrentColor] = React.useState<string | null>(null);
   const [instance, setInstance] = React.useState<StepWizardInstance | null>(
     null
