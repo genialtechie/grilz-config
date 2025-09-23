@@ -1,114 +1,20 @@
+import { Routes, Route } from 'react-router-dom';
+import LandingPage from './components/landing/LandingPage';
+import Configurator from './components/Configurator';
 import './index.css';
-import Scene from './components/three/Scene';
-import { useGrillzCustomization } from './lib/hooks/useGrillzCustomization';
-import CustomizationStepper from './components/ui/CustomizationStepper';
-import { useState, useMemo } from 'react';
-import { pricingConfig } from './lib/pricingConfig';
-import SummaryPage from './components/ui/SummaryPage';
-import ARView from './components/ui/ARView';
 
 function App() {
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [showSummary, setShowSummary] = useState(false);
-  const [showAR, setShowAR] = useState(false);
-  const {
-    customizations,
-    selectedTeeth,
-    isSelectionMode,
-    toggleToothSelection,
-    selectAllTeeth,
-    updateSelectedTeethCustomization,
-    setIsSelectionMode,
-    resetCustomizationForSelection,
-    clearAllTeeth,
-  } = useGrillzCustomization();
-
-  // Calculate total price based on customizations
-  const totalCost = useMemo(() => {
-    let cost = pricingConfig.baseCost;
-    customizations.forEach(({ material, hasDiamonds }) => {
-      if (material !== 'default') {
-        cost += pricingConfig.materials[material].costPerTooth;
-      }
-      if (hasDiamonds) {
-        cost += pricingConfig.diamonds.costPerTooth;
-      }
-    });
-    return cost;
-  }, [customizations]);
-
-  // Show AR view
-  if (showAR) {
-    return <ARView onBack={() => { setShowAR(false); setShowSummary(true); }} />;
-  }
-
-  // Show summary page when done
-  if (showSummary) {
-    return (
-      <SummaryPage
-        totalCost={totalCost}
-        customizations={customizations}
-        onBack={() => {
-          setShowSummary(false);
-          setIsSelectionMode(true);
-          setPanelOpen(true);
-        }}
-        onAR={() => {
-          setShowSummary(false);
-          setShowAR(true);
-        }}
-      />
-    );
-  }
-
   return (
-    <div className="relative h-screen overflow-hidden bg-gray-100">
-      {/* 3D Canvas Area */}
-      <div className={`w-full flex items-center justify-center p-4 box-border transition-all duration-300 ease-in-out ${panelOpen ? 'h-[calc(100vh_-_50vh_-_1.5rem)]' : 'h-full'}`}>
-        <Scene
-          customizations={customizations}
-          selectedTeeth={selectedTeeth}
-          isSelectionMode={isSelectionMode}
-          toggleToothSelection={toggleToothSelection}
-        />
-      </div>
-      {/* Panel Container (fixed bottom-center) */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full z-40 flex justify-center">
-        <div className="w-full max-w-[380px]">
-          {/* Panel Content (collapses) */}
-          <div
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${panelOpen ? 'max-h-[50vh]' : 'max-h-0'}`}
-          >
-            <CustomizationStepper
-              selectedTeeth={selectedTeeth}
-              selectAllTeeth={selectAllTeeth}
-              setIsSelectionMode={setIsSelectionMode}
-              customizations={customizations}
-              updateSelectedTeethCustomization={updateSelectedTeethCustomization}
-              resetCustomizationForSelection={resetCustomizationForSelection}
-              clearAllTeeth={clearAllTeeth}
-            />
-          </div>
-          {/* Toggle Handle Bar */}
-          <div className="relative w-full">
-            <button
-              className={`w-full py-2 text-center cursor-pointer bg-white transition-all duration-300 ease-in-out ${panelOpen ? 'border-t border-gray-200 rounded-b-2xl' : 'rounded-lg shadow-lg'}`}
-              onClick={() => setPanelOpen(!panelOpen)}
-              aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
-            >
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold">${totalCost}</span>
-              <span className="inline-block w-8 h-1 bg-gray-400 rounded-full"></span>
-            </button>
-            <button
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold"
-              onClick={() => setShowSummary(true)}
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Routes>
+      <Route
+        path="/"
+        element={<LandingPage />}
+      />
+      <Route
+        path="/configurator"
+        element={<Configurator />}
+      />
+    </Routes>
   );
 }
 

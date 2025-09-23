@@ -17,6 +17,7 @@
     "@tippyjs/react": "^4.2.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.9.1",
     "react-step-wizard": "^5.3.11",
     "three": "^0.172.0",
     "tippy.js": "^6.3.7"
@@ -25,6 +26,7 @@
     "@eslint/js": "^9.17.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
