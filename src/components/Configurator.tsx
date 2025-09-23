@@ -47,9 +47,6 @@ function Configurator() {
           setShowSummary(true);
         }}
         customizations={customizations}
-        selectedTeeth={selectedTeeth}
-        isSelectionMode={isSelectionMode}
-        toggleToothSelection={toggleToothSelection}
       />
     );
   }

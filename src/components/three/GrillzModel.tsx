@@ -15,7 +15,7 @@ const getToothIndexFromName = (name: string): number | null => {
     return null;
   }
 
-  const [_, prefix, numberStr] = match;
+  const [, prefix, numberStr] = match;
   const number = parseInt(numberStr, 10);
 
   if (prefix === 'top') {
@@ -177,7 +177,6 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
         if (customization && customization.material !== 'default') {
           // Apply Customization
           let targetMaterial: THREE.MeshStandardMaterial | undefined;
-          
           if (customization.material === 'gold') {
             targetMaterial = materials.gold.clone(); // Clone to modify color safely
           } else if (customization.material === 'silver') {
@@ -186,7 +185,6 @@ const GrillzModel: React.FC<GrillzModelProps> = ({
             // Fallback or handle other material types if added later
             targetMaterial = materials.mould.clone(); 
           }
-          
           targetMaterial.color.set(customization.color); // Set the specific color
           mesh.material = targetMaterial;
 

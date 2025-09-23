@@ -23,11 +23,12 @@ const MaterialColorStep: React.FC<MaterialColorStepProps> = ({
   goToStep,
 }) => {
   const materials: Material[] = ['gold', 'silver'];
-  const variants = selectedMaterial
+  const variants = selectedMaterial && selectedMaterial !== 'default'
     ? materialConfigs[selectedMaterial].variants
     : [];
 
   const handleMaterialSelect = (material: Material) => {
+    if (material === 'default') return;
     const defaultColor = materialConfigs[material].defaultColor;
     onMaterialChange(material);
     onColorChange(defaultColor);
