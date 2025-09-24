@@ -138,13 +138,13 @@ function Configurator() {
               onClick={() => setPanelOpen(!panelOpen)}
               aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
             >
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold">
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-gray-800">
                 ${totalCost}
               </span>
               <span className="inline-block w-8 h-1 bg-gray-400 rounded-full"></span>
             </button>
             <button
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-gray-800"
               onClick={() => setShowSummary(true)}
             >
               Done
