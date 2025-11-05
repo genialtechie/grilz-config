@@ -5,13 +5,11 @@ import CustomizationStepper from './ui/CustomizationStepper';
 import { useState, useMemo } from 'react';
 import { pricingConfig } from '../lib/pricingConfig';
 import SummaryPage from './ui/SummaryPage';
-import ARView from './ui/ARView';
 import { Link } from 'react-router-dom';
 
 function Configurator() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
-  const [showAR, setShowAR] = useState(false);
   const {
     customizations,
     selectedTeeth,
@@ -38,19 +36,6 @@ function Configurator() {
     return cost;
   }, [customizations]);
 
-  // Show AR view
-  if (showAR) {
-    return (
-      <ARView
-        onBack={() => {
-          setShowAR(false);
-          setShowSummary(true);
-        }}
-        customizations={customizations}
-      />
-    );
-  }
-
   // Show summary page when done
   if (showSummary) {
     return (
@@ -61,10 +46,6 @@ function Configurator() {
           setShowSummary(false);
           setIsSelectionMode(true);
           setPanelOpen(true);
-        }}
-        onAR={() => {
-          setShowSummary(false);
-          setShowAR(true);
         }}
       />
     );
