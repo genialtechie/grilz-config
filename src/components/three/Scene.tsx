@@ -1,78 +1,68 @@
-import React from 'react';
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import {
+  Environment,
+  Html,
   OrbitControls,
   PerspectiveCamera,
-  Environment,
 } from '@react-three/drei';
 import GrillzModel from './GrillzModel';
-import { SceneProps } from '../../lib/types';
+import type { SceneProps } from '../../lib/types';
 
-const Scene: React.FC<SceneProps> = ({
+function ModelLoader() {
+  return (
+    <Html center>
+      <div className="canvas-loader">
+        <span />
+        Loading 3D preview
+      </div>
+    </Html>
+  );
+}
+
+function Scene({
   customizations,
   selectedTeeth,
   isSelectionMode,
   toggleToothSelection,
-}) => {
+}: SceneProps) {
   return (
-    <div className="w-full h-full">
-      <Canvas className="w-full h-full">
-        <PerspectiveCamera
-          makeDefault
-          position={[0, 0, 10]}
-          fov={50}
-        />
+    <div className="viewer-canvas">
+      <Canvas
+        dpr={[1, 1.75]}
+        gl={{ antialias: true, alpha: true }}
+        shadows
+        aria-label="Interactive grillz model"
+      >
+        <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={44} />
         <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={1}
-          maxDistance={2}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={(3 * Math.PI) / 4}
+          enableDamping
+          dampingFactor={0.08}
+          enablePan={false}
+          enableZoom
+          enableRotate
+          minDistance={7.5}
+          maxDistance={12.5}
+          minPolarAngle={Math.PI / 3.4}
+          maxPolarAngle={(Math.PI * 2.4) / 3.4}
           target={[0, 0, 0]}
         />
-        <ambientLight intensity={0.8} />
-        <directionalLight
-          position={[10, 10, 5]}
-          intensity={1}
-        />
-        <directionalLight
-          position={[-10, -10, -5]}
-          intensity={1}
-        />
-        <directionalLight
-          position={[0, 0, 10]}
-          intensity={1}
-        />
-        <spotLight
-          position={[5, 5, 5]}
-          intensity={1.5}
-          angle={0.4}
-          penumbra={1}
-        />
-        <pointLight
-          position={[-5, -5, -5]}
-          intensity={1}
-          distance={50}
-        />
-        <hemisphereLight
-          intensity={0.5}
-          color="#ffffff"
-          groundColor="#000000"
-        />
+        <ambientLight intensity={1.1} />
+        <directionalLight position={[6, 7, 8]} intensity={2.1} castShadow />
+        <directionalLight position={[-7, 2, 5]} intensity={1.2} />
+        <pointLight position={[0, -5, 5]} intensity={0.8} />
         <Environment preset="studio" />
-        <React.Suspense fallback={null}>
+        <Suspense fallback={<ModelLoader />}>
           <GrillzModel
             customizations={customizations}
             selectedTeeth={selectedTeeth}
             isSelectionMode={isSelectionMode}
             toggleToothSelection={toggleToothSelection}
           />
-        </React.Suspense>
+        </Suspense>
       </Canvas>
     </div>
   );
-};
+}
 
 export default Scene;

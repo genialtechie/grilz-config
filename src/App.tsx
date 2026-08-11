@@ -1,18 +1,30 @@
-import { Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Route, Routes } from 'react-router-dom';
 import LandingPage from './components/landing/LandingPage';
-import Configurator from './components/Configurator';
-import './index.css';
+import './App.css';
+
+const Configurator = lazy(() => import('./components/Configurator'));
+
+function ConfiguratorLoader() {
+  return (
+    <div className="route-loader" role="status">
+      <span />
+      Loading demo store
+    </div>
+  );
+}
 
 function App() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<LandingPage />}
-      />
+      <Route path="/" element={<LandingPage />} />
       <Route
         path="/configurator"
-        element={<Configurator />}
+        element={
+          <Suspense fallback={<ConfiguratorLoader />}>
+            <Configurator />
+          </Suspense>
+        }
       />
     </Routes>
   );

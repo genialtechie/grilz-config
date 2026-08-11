@@ -1,70 +1,88 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ToothCustomization } from '../types';
 
-// Default state for a single tooth when reset
 export const baseToothState: ToothCustomization = {
-  material: 'default', // Use 'default' as the base material state
-  color: '#FFFFFF', // Default color (won't be used if material is 'default')
+  material: 'default',
+  color: '#f5f5f2',
   hasDiamonds: false,
 };
 
-// Initialize default customization state for all 32 teeth
-const defaultCustomization: ToothCustomization[] = Array(32).fill(null).map(() => ({ ...baseToothState }));
+const makeDefaultCustomizations = () =>
+  Array.from({ length: 32 }, () => ({ ...baseToothState }));
+
+const centeredSet = (teethPerRow: number) => {
+  const start = Math.floor((16 - teethPerRow) / 2);
+  const top = Array.from({ length: teethPerRow }, (_, index) => start + index);
+  const bottom = Array.from(
+    { length: teethPerRow },
+    (_, index) => 16 + start + index,
+  );
+  return [...top, ...bottom];
+};
 
 export const useGrillzCustomization = () => {
-  const [customizations, setCustomizations] =
-    useState<ToothCustomization[]>(defaultCustomization);
-  const [selectedTeeth, setSelectedTeeth] = useState<number[]>([]);
+  const [customizations, setCustomizations] = useState<ToothCustomization[]>(
+    makeDefaultCustomizations,
+  );
+  const [selectedTeeth, setSelectedTeeth] = useState<number[]>(() => centeredSet(6));
   const [isSelectionMode, setIsSelectionMode] = useState(true);
 
-  const toggleToothSelection = (index: number) => {
-    setSelectedTeeth((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+  const toggleToothSelection = useCallback((index: number) => {
+    setSelectedTeeth((previous) =>
+      previous.includes(index)
+        ? previous.filter((toothIndex) => toothIndex !== index)
+        : [...previous, index].sort((a, b) => a - b),
     );
-  };
+  }, []);
 
-  const selectAllTeeth = () => {
-    setSelectedTeeth([...Array(32)].map((_, i) => i));
-  };
+  const selectPreset = useCallback((teethPerRow: number) => {
+    setSelectedTeeth(centeredSet(teethPerRow));
+  }, []);
 
-  // Function to clear the tooth selection
-  const clearAllTeeth = () => {
-    setSelectedTeeth([]);
-  };
+  const selectAllTeeth = useCallback(() => {
+    setSelectedTeeth(Array.from({ length: 32 }, (_, index) => index));
+  }, []);
 
-  const updateSelectedTeethCustomization = (
-    customization: Partial<ToothCustomization>
-  ) => {
-    console.log('Updating customization:', customization);
-    console.log('For teeth:', selectedTeeth);
-    setCustomizations((prev) =>
-      prev.map((tooth, index) =>
-        selectedTeeth.includes(index) ? { ...tooth, ...customization } : tooth
-      )
+  const clearAllTeeth = useCallback(() => setSelectedTeeth([]), []);
+
+  const updateSelectedTeethCustomization = useCallback(
+    (customization: Partial<ToothCustomization>) => {
+      const selectedToothSet = new Set(selectedTeeth);
+      setCustomizations((previous) =>
+        previous.map((tooth, index) =>
+          selectedToothSet.has(index) ? { ...tooth, ...customization } : tooth,
+        ),
+      );
+    },
+    [selectedTeeth],
+  );
+
+  const resetCustomizationForSelection = useCallback(() => {
+    const selectedToothSet = new Set(selectedTeeth);
+    setCustomizations((previous) =>
+      previous.map((tooth, index) =>
+        selectedToothSet.has(index) ? { ...baseToothState } : tooth,
+      ),
     );
-  };
+  }, [selectedTeeth]);
 
-  // Function to reset the customization for selected teeth
-  const resetCustomizationForSelection = () => {
-    // Use Partial<ToothCustomization> to allow setting just the needed fields for reset
-    const resetState: Partial<ToothCustomization> = { 
-      material: 'default',
-      color: baseToothState.color, // Include color for consistency, though it might not be used
-      hasDiamonds: false 
-    };
-    updateSelectedTeethCustomization(resetState);
-    console.log('Resetting customization for teeth:', selectedTeeth);
-  };
+  const resetAll = useCallback(() => {
+    setCustomizations(makeDefaultCustomizations());
+    setSelectedTeeth(centeredSet(6));
+    setIsSelectionMode(true);
+  }, []);
 
   return {
     customizations,
     selectedTeeth,
     isSelectionMode,
     toggleToothSelection,
+    selectPreset,
     selectAllTeeth,
     clearAllTeeth,
     updateSelectedTeethCustomization,
     setIsSelectionMode,
     resetCustomizationForSelection,
+    resetAll,
   };
 };

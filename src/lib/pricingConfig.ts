@@ -1,11 +1,15 @@
 export const pricingConfig = {
-  baseCost: 200, // Base service cost
+  baseCost: 200,
   materials: {
     gold: { costPerTooth: 150 },
-    silver: { costPerTooth: 100 },
-    // Add more materials if needed
+    silver: { costPerTooth: 115 },
   },
   diamonds: {
-    costPerTooth: 75, // Cost for adding diamonds per tooth
+    moissanite: { costPerTooth: 75 },
+    lab: { costPerTooth: 160 },
   },
-};
+  cuts: {
+    deep: 0,
+    permanent: 100,
+  },
+} as const;
