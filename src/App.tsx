@@ -9,7 +9,7 @@ function ConfiguratorLoader() {
   return (
     <div className="route-loader" role="status">
       <span />
-      Loading demo store
+      Loading custom commerce experience
     </div>
   );
 }

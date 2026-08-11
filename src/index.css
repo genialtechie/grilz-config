@@ -42,6 +42,6 @@ button {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #1b62f4;
+  outline: 2px solid #ce4257;
   outline-offset: 2px;
 }

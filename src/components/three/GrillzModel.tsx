@@ -65,14 +65,14 @@ function GrillzModel({
 
   const materials = useMemo(() => {
     const selected = new THREE.MeshStandardMaterial({
-      color: '#2868ef',
-      emissive: '#123d9c',
+      color: '#ce4257',
+      emissive: '#712432',
       emissiveIntensity: 0.22,
       metalness: 0.25,
       roughness: 0.34,
     });
     const mould = new THREE.MeshStandardMaterial({
-      color: '#f1f0ed',
+      color: '#e8e1d7',
       metalness: 0.05,
       roughness: 0.72,
     });

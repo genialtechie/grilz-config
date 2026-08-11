@@ -135,12 +135,9 @@ function Configurator() {
   return (
     <main className="configurator-shell">
       <header className="builder-header">
-        <Link className="brand-lockup" to="/" aria-label="Back to MagPollo demo store">
-          <span className="brand-mark">M</span>
-          <span className="brand-copy">
-            <strong>MAGPOLLO</strong>
-            <small>Demo store</small>
-          </span>
+        <Link className="brand-lockup" to="/" aria-label="Back to MagPollo custom commerce">
+          <img className="brand-logo" src="/assets/magpollo-logo.svg" alt="MagPollo" />
+          <small>Custom commerce</small>
         </Link>
         <div className="header-actions">
           <button className="icon-button" type="button" onClick={handleReset} aria-label="Start over" title="Start over">
@@ -199,7 +196,6 @@ function Configurator() {
             {step === 'select' && (
               <div className="panel-view">
                 <div className="panel-heading">
-                  <span className="eyebrow">Step 1 of 3</span>
                   <h1>Choose your set</h1>
                   <p>Start with a popular layout, then click individual teeth in the 3D model to refine it.</p>
                 </div>
@@ -251,7 +247,6 @@ function Configurator() {
                   Change teeth
                 </button>
                 <div className="panel-heading panel-heading--compact">
-                  <span className="eyebrow">Step 2 of 3</span>
                   <h1>Design your set</h1>
                   <p>Changes apply to all {selectedTeeth.length} selected teeth.</p>
                 </div>
@@ -349,7 +344,6 @@ function Configurator() {
                   Edit design
                 </button>
                 <div className="panel-heading panel-heading--compact">
-                  <span className="eyebrow">Step 3 of 3</span>
                   <h1>Review your set</h1>
                   <p>Everything below updates from your selections.</p>
                 </div>
@@ -368,7 +362,7 @@ function Configurator() {
                 </dl>
 
                 <div className="total-row"><span>Estimated total</span><strong>{formatPrice(totalCost)}</strong></div>
-                <p className="fine-print">Mock pricing for demonstration. A production build can connect live inventory, pricing, checkout, and order management.</p>
+                <p className="fine-print">Sample pricing shown. A production implementation can connect live inventory, pricing, checkout, and order management.</p>
 
                 <button className="primary-button primary-button--cart" type="button" onClick={() => setStep('added')}>
                   <ShoppingBag size={17} />
@@ -381,7 +375,6 @@ function Configurator() {
             {step === 'added' && (
               <div className="panel-view success-view">
                 <div className="success-mark"><Check size={30} /></div>
-                <span className="eyebrow">Added to mock cart</span>
                 <h1>Your custom set is ready.</h1>
                 <p>The complete configuration, product preview, and price would now travel with the order.</p>
                 <div className="order-reference">
