@@ -1,12 +1,9 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/watch",
-      "destination": "https://share.descript.com/view/fN9LMDfJ41k?utm_source=linkedin&utm_medium=featured",
-      "permanent": false
-    }
-  ],
-  "rewrites": [
+      "destination": "/watch.html"
+    },
     {
       "source": "/configurator",
       "destination": "/index.html"
