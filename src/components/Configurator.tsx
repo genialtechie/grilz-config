@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePostHog } from '@posthog/react';
 import { Link } from 'react-router-dom';
 import {
   Check,
@@ -45,6 +46,8 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 const formatPrice = (value: number) => currencyFormatter.format(value);
 
 function Configurator() {
+  const posthog = usePostHog();
+  const hasCapturedOpen = useRef(false);
   const [step, setStep] = useState<BuilderStep>('select');
   const [panelOpen, setPanelOpen] = useState(true);
   const [cutStyle, setCutStyle] = useState<CutStyle>('deep');
@@ -89,6 +92,12 @@ function Configurator() {
     return pricingConfig.baseCost + customizationCost + pricingConfig.cuts[cutStyle];
   }, [customizations, cutStyle]);
 
+  useEffect(() => {
+    if (hasCapturedOpen.current) return;
+    hasCapturedOpen.current = true;
+    posthog.capture('sample_configurator_opened');
+  }, [posthog]);
+
   const goToSelection = () => {
     setStep('select');
     setIsSelectionMode(true);
@@ -97,6 +106,9 @@ function Configurator() {
 
   const goToDesign = () => {
     if (selectedTeeth.length === 0) return;
+    posthog.capture('sample_design_started', {
+      selected_teeth: selectedTeeth.length,
+    });
     setStep('design');
     setIsSelectionMode(false);
     setPanelOpen(true);
@@ -130,6 +142,32 @@ function Configurator() {
     setPanelOpen(true);
   };
 
+  const goToReview = (placement: 'header' | 'design_panel') => {
+    if (!isComplete) return;
+    posthog.capture('sample_design_reviewed', {
+      placement,
+      selected_teeth: selectedTeeth.length,
+      finish: selectedFinish?.id ?? 'custom_mix',
+      surface: currentCustomization?.hasDiamonds ? 'iced_out' : 'plain',
+      stone: currentCustomization?.diamondType ?? 'none',
+      cut: cutStyle,
+      estimated_total: totalCost,
+    });
+    setStep('review');
+  };
+
+  const completeSample = () => {
+    posthog.capture('sample_configuration_completed', {
+      selected_teeth: selectedTeeth.length,
+      finish: selectedFinish?.id ?? 'custom_mix',
+      surface: currentCustomization?.hasDiamonds ? 'iced_out' : 'plain',
+      stone: currentCustomization?.diamondType ?? 'none',
+      cut: cutStyle,
+      estimated_total: totalCost,
+    });
+    setStep('added');
+  };
+
   const stepNumber = step === 'select' ? 1 : step === 'design' ? 2 : 3;
 
   return (
@@ -147,7 +185,7 @@ function Configurator() {
             <small>Estimated total</small>
             <strong>{formatPrice(totalCost)}</strong>
           </div>
-          <button className="cart-button" type="button" onClick={() => isComplete && setStep('review')} disabled={!isComplete}>
+          <button className="cart-button" type="button" onClick={() => goToReview('header')} disabled={!isComplete}>
             <ShoppingBag size={17} />
             <span>Review</span>
           </button>
@@ -329,7 +367,7 @@ function Configurator() {
 
                 <div className="panel-actions">
                   <button className="secondary-button" type="button" onClick={resetCustomizationForSelection}>Clear design</button>
-                  <button className="primary-button" type="button" onClick={() => setStep('review')} disabled={!isComplete}>
+                  <button className="primary-button" type="button" onClick={() => goToReview('design_panel')} disabled={!isComplete}>
                     Review design
                     <span>{formatPrice(totalCost)}</span>
                   </button>
@@ -364,7 +402,7 @@ function Configurator() {
                 <div className="total-row"><span>Estimated total</span><strong>{formatPrice(totalCost)}</strong></div>
                 <p className="fine-print">Sample pricing shown. A production implementation can connect live inventory, pricing, checkout, and order management.</p>
 
-                <button className="primary-button primary-button--cart" type="button" onClick={() => setStep('added')}>
+                <button className="primary-button primary-button--cart" type="button" onClick={completeSample}>
                   <ShoppingBag size={17} />
                   Add custom set
                   <span>{formatPrice(totalCost)}</span>

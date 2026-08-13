@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePostHog } from '@posthog/react';
 import {
   ArrowRight,
   Box,
@@ -84,6 +85,19 @@ const OPERATIONS = [
 ];
 
 export default function LandingPage() {
+  const posthog = usePostHog();
+
+  const captureSampleClick = (placement: 'header' | 'hero' | 'final') => {
+    posthog.capture('sample_configurator_cta_clicked', { placement });
+  };
+
+  const captureContactClick = (placement: 'final' | 'footer') => {
+    posthog.capture('contact_clicked', {
+      placement,
+      channel: 'email',
+    });
+  };
+
   return (
     <div className="demo-store-page">
       <header className="demo-header">
@@ -93,7 +107,11 @@ export default function LandingPage() {
         </Link>
         <nav className="demo-nav" aria-label="Custom commerce navigation">
           <a href="#how-it-works">How it works</a>
-          <Link className="demo-nav-cta" to="/configurator">
+          <Link
+            className="demo-nav-cta"
+            to="/configurator"
+            onClick={() => captureSampleClick('header')}
+          >
             Configure a sample <ArrowRight size={15} />
           </Link>
         </nav>
@@ -108,7 +126,11 @@ export default function LandingPage() {
               order complex products online.
             </p>
             <div className="demo-hero-actions">
-              <Link className="demo-primary-cta" to="/configurator">
+              <Link
+                className="demo-primary-cta"
+                to="/configurator"
+                onClick={() => captureSampleClick('hero')}
+              >
                 Configure a sample product <ArrowRight size={17} />
               </Link>
               <a className="demo-secondary-cta" href="#how-it-works">See how it works</a>
@@ -219,10 +241,18 @@ export default function LandingPage() {
             customer choices to an order your team can fulfill.
           </p>
           <div className="demo-final-actions">
-            <a className="demo-primary-cta" href="mailto:salesteam@magpollo.com">
+            <a
+              className="demo-primary-cta"
+              href="mailto:salesteam@magpollo.com"
+              onClick={() => captureContactClick('final')}
+            >
               Talk to MagPollo <ArrowRight size={17} />
             </a>
-            <Link className="demo-secondary-cta" to="/configurator">
+            <Link
+              className="demo-secondary-cta"
+              to="/configurator"
+              onClick={() => captureSampleClick('final')}
+            >
               Configure a sample
             </Link>
           </div>
@@ -234,7 +264,12 @@ export default function LandingPage() {
           <img src="/assets/magpollo-logo.svg" alt="MagPollo" />
           <span>Custom commerce systems for products that are difficult to sell online.</span>
         </div>
-        <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>
+        <a
+          href="mailto:salesteam@magpollo.com"
+          onClick={() => captureContactClick('footer')}
+        >
+          salesteam@magpollo.com
+        </a>
       </footer>
     </div>
   );
