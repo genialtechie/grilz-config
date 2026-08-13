@@ -2,7 +2,10 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   Box,
+  CheckCircle2,
   CircleDollarSign,
+  FileText,
+  Repeat2,
   Settings2,
   ShoppingBag,
 } from 'lucide-react';
@@ -31,6 +34,55 @@ const COMMERCE_STEPS = [
   },
 ];
 
+const PRODUCT_EXPERIENCES = [
+  {
+    title: 'Let buyers see the room before they order.',
+    copy: 'Turn fabrics, colors, dimensions, and finishes into a visual buying flow that makes considered purchases easier to understand.',
+    neutral: '/assets/options/sofa-neutral.avif',
+    selected: '/assets/options/sofa-rose.avif',
+    alt: 'A configurable sofa shown in a neutral finish',
+  },
+  {
+    title: 'Make every material choice feel tangible.',
+    copy: 'Customers can compare metals, stones, settings, and price changes without waiting for another mockup or quote.',
+    neutral: '/assets/options/ring-neutral.avif',
+    selected: '/assets/options/ring-rose.avif',
+    alt: 'A configurable ring shown in silver',
+  },
+  {
+    title: 'Help customers choose with confidence.',
+    copy: 'Bring frames, lenses, colors, and fit options into one guided experience instead of a wall of disconnected variants.',
+    neutral: '/assets/options/eyewear-neutral.avif',
+    selected: '/assets/options/eyewear-rose.avif',
+    alt: 'Configurable eyewear shown in a neutral finish',
+  },
+  {
+    title: 'Sell detail without another photoshoot.',
+    copy: 'Show combinations of cases, bands, faces, and finishes while preserving the rules behind what can actually be made.',
+    neutral: '/assets/options/watch-neutral.avif',
+    selected: '/assets/options/watch-rose.avif',
+    alt: 'A configurable watch shown in silver',
+  },
+];
+
+const OPERATIONS = [
+  {
+    icon: FileText,
+    title: 'Accurate order details',
+    copy: 'Every approved choice becomes a clean specification your team can use.',
+  },
+  {
+    icon: CircleDollarSign,
+    title: 'Pricing that keeps up',
+    copy: 'Rules update the price as customers change materials, sizes, and add-ons.',
+  },
+  {
+    icon: Repeat2,
+    title: 'Connected handoff',
+    copy: 'Send the final order into checkout, production, or the tools you already use.',
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className="demo-store-page">
@@ -49,18 +101,6 @@ export default function LandingPage() {
 
       <main>
         <section className="demo-hero">
-          <video
-            className="demo-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            poster="/assets/og-image.png"
-            aria-hidden="true"
-          >
-            <source src="/assets/grillz-video.mp4" type="video/mp4" />
-          </video>
-          <div className="demo-hero-veil" />
           <div className="demo-hero-content">
             <h1>Sell custom products without the back-and-forth.</h1>
             <p>
@@ -73,6 +113,60 @@ export default function LandingPage() {
               </Link>
               <a className="demo-secondary-cta" href="#how-it-works">See how it works</a>
             </div>
+          </div>
+          <div className="demo-hero-media" aria-hidden="true">
+            <video
+              className="demo-hero-product-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="/assets/mobile-hero.webp"
+            >
+              <source src="/assets/hero-video.mp4" type="video/mp4" />
+            </video>
+            <img
+              className="demo-hero-product-image"
+              src="/assets/mobile-hero.webp"
+              alt=""
+            />
+          </div>
+        </section>
+
+        <section className="demo-use-cases" aria-labelledby="product-range-title">
+          <div className="demo-use-case-intro">
+            <h2 id="product-range-title">Custom products should still be easy to buy.</h2>
+            <p>
+              We shape the experience around the decisions your customers need
+              to make and the rules your team needs to preserve.
+            </p>
+          </div>
+          <div className="demo-use-case-list">
+            {PRODUCT_EXPERIENCES.map(({ title, copy, neutral, selected, alt }, index) => (
+              <article className="demo-use-case" key={title}>
+                <div className="demo-use-case-copy">
+                  <span aria-hidden="true">0{index + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                </div>
+                <div className="demo-use-case-visual">
+                  <img
+                    className="demo-use-case-neutral"
+                    src={neutral}
+                    alt={alt}
+                    width="909"
+                    height="822"
+                  />
+                  <img
+                    className="demo-use-case-selected"
+                    src={selected}
+                    alt=""
+                    width="909"
+                    height="822"
+                  />
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -98,22 +192,39 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="demo-product-band">
-          <div className="demo-product-copy">
-            <h2>See custom commerce in action.</h2>
+        <section className="demo-operations" aria-labelledby="operations-title">
+          <div className="demo-operations-heading">
+            <h2 id="operations-title">The experience does not stop at the product page.</h2>
             <p>
-              Select the teeth, compare finishes, add stones, and watch the model
-              and estimated price respond to every decision.
+              The same system that helps a customer decide can give your team a
+              complete, order-ready handoff.
             </p>
-            <Link className="demo-text-link" to="/configurator">
-              Configure the sample product <ArrowRight size={16} />
-            </Link>
           </div>
-          <div className="demo-product-visual">
-            <img
-              src="/assets/Customize-your-grillz.png"
-              alt="MagPollo 3D custom product configurator shown on a phone"
-            />
+          <div className="demo-operation-list">
+            {OPERATIONS.map(({ icon: Icon, title, copy }) => (
+              <article className="demo-operation" key={title}>
+                <Icon size={21} strokeWidth={1.7} />
+                <h3>{title}</h3>
+                <p>{copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="demo-final-cta">
+          <CheckCircle2 size={28} strokeWidth={1.5} aria-hidden="true" />
+          <h2>Make your hardest product easier to buy.</h2>
+          <p>
+            Show us how you sell it today. We will find the clearest path from
+            customer choices to an order your team can fulfill.
+          </p>
+          <div className="demo-final-actions">
+            <a className="demo-primary-cta" href="mailto:salesteam@magpollo.com">
+              Talk to MagPollo <ArrowRight size={17} />
+            </a>
+            <Link className="demo-secondary-cta" to="/configurator">
+              Configure a sample
+            </Link>
           </div>
         </section>
       </main>
