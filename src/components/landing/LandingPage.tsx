@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
 import {
@@ -86,6 +87,15 @@ const OPERATIONS = [
 
 export default function LandingPage() {
   const posthog = usePostHog();
+  const hasCapturedView = useRef(false);
+
+  useEffect(() => {
+    if (hasCapturedView.current) return;
+    hasCapturedView.current = true;
+    posthog.capture('commerce_landing_viewed', {
+      page_path: window.location.pathname,
+    });
+  }, [posthog]);
 
   const captureSampleClick = (placement: 'header' | 'hero' | 'final') => {
     posthog.capture('sample_configurator_cta_clicked', { placement });
