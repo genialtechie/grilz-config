@@ -89,7 +89,7 @@ export function capturePreview(state: RootState, grillzTeeth: number[]): string 
  * A black-and-white PNG mask (white = the given teeth, stones included) in the
  * same crop as capturePreview, slightly dilated. Used for per-tooth AI edits.
  */
-export function captureToothMask(state: RootState, teeth: number[]): string {
+export function captureToothMask(state: RootState, teeth: number[], extendDown = 0): string {
   const wanted = new Set(teeth);
   const white = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
   const black = new THREE.MeshBasicMaterial({ color: '#000000', toneMapped: false });
@@ -145,5 +145,13 @@ export function captureToothMask(state: RootState, teeth: number[]): string {
     }
   }
   context.drawImage(canvas, 0, 0);
+  // Fangs reach below the 3D tooth, so stretch the mask downward to give the AI room.
+  if (extendDown > 0) {
+    const snapshot = document.createElement('canvas');
+    snapshot.width = OUTPUT_SIZE;
+    snapshot.height = OUTPUT_SIZE;
+    snapshot.getContext('2d')!.drawImage(dilated, 0, 0);
+    for (let offset = 3; offset <= extendDown; offset += 3) context.drawImage(snapshot, 0, offset);
+  }
   return dilated.toDataURL('image/png');
 }

@@ -1674,3 +1674,67 @@
 .builder-panel .panel-scroll {
   overflow-y: auto;
 }
+
+/* Inscription (Make it yours step) */
+.inscription-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.inscription-row svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.inscription-row small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.inscription-input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.inscription-styles {
+  margin-top: 10px;
+}
+
+.tooth-pick-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 12px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tooth-pick-button--active {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}

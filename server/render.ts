@@ -1,4 +1,4 @@
-import { MAX_MASKED_GROUPS, buildFillPrompt, buildRenderPrompt, parseRenderSpec, type RenderSpec } from '../src/lib/renderSpec.js';
+import { buildFillPrompt, buildRenderPrompt, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
 
 // Turns a 3D configurator screenshot into a studio product photo with FLUX.2 pro.
 // Shared by the Vercel function (api/render.ts) and the Vite dev server.
@@ -124,20 +124,24 @@ async function runJob(endpoint: string, body: Record<string, unknown>, apiKey: s
   throw new JobError(504, 'The render took too long. Please try again.');
 }
 
-type MaskJob = { indices: number[]; mask: string; prompt: string };
+type MaskJob = { kind: string; indices: number[]; mask: string; prompt: string };
 
+// The client must send exactly the edits the server would plan for this design,
+// in the same order; prompts are always built here.
 const parseMasks = (value: unknown, spec: RenderSpec): MaskJob[] | null => {
+  const plan = planMasks(spec);
   if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > MAX_MASKED_GROUPS) return null;
+  if (!Array.isArray(value) || value.length !== plan.length) return null;
   const jobs: MaskJob[] = [];
-  for (const item of value) {
+  for (const [position, item] of value.entries()) {
+    const expected = plan[position];
     if (!item || typeof item !== 'object') return null;
-    const { indices, mask } = item as { indices?: unknown; mask?: unknown };
-    if (!Array.isArray(indices) || !indices.length || !indices.every((index) => Number.isInteger(index))) return null;
+    const { kind, indices, mask } = item as { kind?: unknown; indices?: unknown; mask?: unknown };
+    if (kind !== expected.kind || !Array.isArray(indices) || indices.join(',') !== expected.indices.join(',')) return null;
     const maskBase64 = typeof mask === 'string' && mask.startsWith('data:image/png;') ? readImage(mask) : null;
-    const prompt = buildFillPrompt(spec, indices as number[]);
+    const prompt = buildFillPrompt(spec, expected);
     if (!maskBase64 || !prompt) return null;
-    jobs.push({ indices: indices as number[], mask: maskBase64, prompt });
+    jobs.push({ kind: expected.kind, indices: expected.indices, mask: maskBase64, prompt });
   }
   return jobs;
 };
@@ -207,7 +211,7 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
       result = await runJob('flux-pro-1.0-fill', { image: result, mask: job.mask, prompt: job.prompt }, apiKey, deadline);
       edits += 1;
     } catch (error) {
-      console.error('masked edit skipped', job.indices, error instanceof Error ? error.message : error);
+      console.error('masked edit skipped', job.kind, job.indices, error instanceof Error ? error.message : error);
     }
   }
 

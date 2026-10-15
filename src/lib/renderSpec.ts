@@ -83,10 +83,22 @@ export type ToothDesign = {
 };
 
 /** Options that apply to the whole set. */
+export const INSCRIPTION_STYLES = [
+  { id: 'cut', label: 'Diamond-cut', detail: 'Bold faceted letters', price: 75, render: 'bold raised diamond-cut metal letters with sharp faceted edges that catch the light' },
+  { id: 'iced', label: 'Iced letters', detail: 'Letters set with stones', price: 150, render: 'raised letters paved with small sparkling stones' },
+  { id: 'engraved', label: 'Engraved', detail: 'Cut into the metal', price: 50, render: 'crisp letters engraved into the metal surface' },
+] as const;
+export type InscriptionStyleId = Id<typeof INSCRIPTION_STYLES>;
+export const INSCRIPTION_MAX = 6;
+const INSCRIPTION_PATTERN = /^[A-Za-z0-9&$#!.' -]{1,6}$/;
+
+export type Inscription = { text: string; tooth: number; style: InscriptionStyleId };
+
 export type SetOptions = {
   fangs: boolean;
   cut: CutId;
   vision: string;
+  inscription: Inscription | null;
 };
 
 export type RenderTooth = ToothDesign & { index: number };
@@ -103,7 +115,7 @@ export const DEFAULT_TOOTH: ToothDesign = {
   stone: 'moissanite',
 };
 
-export const DEFAULT_SET: SetOptions = { fangs: false, cut: 'deep', vision: '' };
+export const DEFAULT_SET: SetOptions = { fangs: false, cut: 'deep', vision: '', inscription: null };
 
 export const isGold = (metal: MetalId) => metal === 'yellow' || metal === 'white' || metal === 'rose';
 
@@ -130,6 +142,7 @@ export const priceBreakdown = (teeth: ToothDesign[], set: SetOptions) => {
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', PRICES.photo);
   if (set.fangs) add('Fangs', PRICES.fangs);
   if (set.cut === 'permanent') add('Permanent look', PRICES.permanent);
+  if (set.inscription) add(`Inscription "${set.inscription.text}"`, INSCRIPTION_STYLES.find((item) => item.id === set.inscription!.style)!.price);
   return { lines, total: lines.reduce((total, line) => total + line.amount, 0) };
 };
 
@@ -172,6 +185,7 @@ export const summarizeDesign = (spec: RenderSpec): string[] => {
   const groups = groupTeeth(spec.teeth);
   groups.forEach((group) => lines.push(groups.length > 1 ? `${group.length}× ${describeTooth(group[0])}` : describeTooth(group[0])));
   if (spec.fangs) lines.push('Fangs');
+  if (spec.inscription) lines.push(`"${spec.inscription.text}" on ${wearerToothName(spec.inscription.tooth)}`);
   lines.push(label(CUTS, spec.cut));
   return lines;
 };
@@ -198,10 +212,19 @@ export const parseRenderSpec = (value: unknown): RenderSpec | null => {
   if (new Set(teeth.map((tooth) => tooth!.index)).size !== teeth.length) return null;
   if (!oneOf(CUTS, spec.cut) || typeof spec.fangs !== 'boolean') return null;
   if (typeof spec.vision !== 'string' || spec.vision.length > VISION_MAX) return null;
+  let inscription: Inscription | null = null;
+  if (spec.inscription !== undefined && spec.inscription !== null) {
+    const raw = spec.inscription as Record<string, unknown>;
+    if (typeof raw.text !== 'string' || !INSCRIPTION_PATTERN.test(raw.text.trim())) return null;
+    if (!oneOf(INSCRIPTION_STYLES, raw.style)) return null;
+    if (!(teeth as RenderTooth[]).some((tooth) => tooth.index === raw.tooth)) return null;
+    inscription = { text: raw.text.trim(), tooth: raw.tooth as number, style: raw.style };
+  }
   return {
     teeth: (teeth as RenderTooth[]).sort((a, b) => a.index - b.index),
     fangs: spec.fangs,
     cut: spec.cut,
+    inscription,
     // Keep the customer's note to plain printable text.
     vision: spec.vision.replace(/[^\p{L}\p{N}\p{P}\p{Zs}$+=<>^`|~]/gu, ' ').trim(),
   };
@@ -303,33 +326,80 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
     .filter(Boolean)
     .join(' ');
 
-// ---- Per-tooth masked edits ----
-// After the main render, every tooth group that differs from the majority is
-// repainted inside a mask taken from the 3D model, so mixed designs come out
-// exactly where the customer put them.
+// ---- Masked edits ----
+// After the main render, targeted edits repaint just part of the photo inside a
+// mask taken from the 3D model:
+// - "group": tooth groups that differ from the majority (mixed designs)
+// - "fangs": the two upper canines, mask stretched down so a point fits
+// - "inscription": the customer's letters on the tooth they picked
 
-export const MAX_MASKED_GROUPS = 3;
+export const MAX_MASKED_EDITS = 3;
+export const FANG_TEETH = [5, 10];
 
-/** Tooth groups that get a masked edit: every group except the largest. */
-export const maskedGroups = (spec: Pick<RenderSpec, 'teeth'>): number[][] =>
+export type MaskKind = 'group' | 'fangs' | 'inscription';
+export type MaskPlan = { kind: MaskKind; indices: number[] };
+
+/**
+ * The edits to run, in execution order. Explicit paid extras (inscription,
+ * fangs) win the slots first when the cap is hit; they still run last so a
+ * group repaint never covers them.
+ */
+export const planMasks = (spec: Pick<RenderSpec, 'teeth' | 'fangs' | 'inscription'>): MaskPlan[] => {
+  const priority: MaskPlan[] = [];
+  if (spec.inscription) priority.push({ kind: 'inscription', indices: [spec.inscription.tooth] });
+  if (spec.fangs) priority.push({ kind: 'fangs', indices: FANG_TEETH });
   groupTeeth(spec.teeth)
-    .slice(1, 1 + MAX_MASKED_GROUPS)
-    .map((group) => group.map((tooth) => tooth.index));
+    .slice(1)
+    .forEach((group) => priority.push({ kind: 'group', indices: group.map((tooth) => tooth.index) }));
+  const order: Record<MaskKind, number> = { group: 0, fangs: 1, inscription: 2 };
+  return priority.slice(0, MAX_MASKED_EDITS).sort((a, b) => order[a.kind] - order[b.kind]);
+};
 
-/** The prompt for repainting one masked group. Built on the server only. */
-export const buildFillPrompt = (spec: RenderSpec, indices: number[]): string | null => {
-  const wanted = new Set(indices);
+const SEAMLESS =
+  'Match the surrounding metal colour, lighting, reflections and photo style exactly so the edit is seamless, and leave the gums and mold untouched.';
+
+/** The prompt for one masked edit. Built on the server only. */
+export const buildFillPrompt = (spec: RenderSpec, plan: MaskPlan): string | null => {
+  const designOf = (index: number): ToothDesign => spec.teeth.find((tooth) => tooth.index === index) ?? groupTeeth(spec.teeth)[0][0];
+  if (plan.kind === 'fangs') {
+    const design = designOf(FANG_TEETH[0]);
+    return [
+      `Turn the two masked upper canine teeth into long, sharp, pointed fang caps made of ${shortDesign(design)}: ${describeDesign(design)}.`,
+      'Each fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like vampire fangs.',
+      SEAMLESS,
+      'Do not add any text, lettering or marks. Photorealistic high-end jewelry product photograph.',
+    ].join(' ');
+  }
+  if (plan.kind === 'inscription') {
+    if (!spec.inscription) return null;
+    const design = designOf(spec.inscription.tooth);
+    const style = INSCRIPTION_STYLES.find((item) => item.id === spec.inscription!.style)!;
+    const text = spec.inscription.text;
+    return [
+      `On the masked grillz tooth (${shortDesign(design)}), add the characters "${text}" across its front face as ${style.render}.`,
+      `Spell it exactly "${text}": ${text.length} character${text.length === 1 ? '' : 's'}, in this order, centred, upright and clearly legible. Nothing else is written anywhere.`,
+      'Keep the tooth shape, size, metal and position the same.',
+      SEAMLESS,
+      'Photorealistic high-end jewelry product photograph.',
+    ].join(' ');
+  }
+  const wanted = new Set(plan.indices);
   const teeth = spec.teeth.filter((tooth) => wanted.has(tooth.index));
-  if (!teeth.length || teeth.length !== indices.length) return null;
+  if (!teeth.length || teeth.length !== plan.indices.length) return null;
   const design = teeth[0];
-  const hasFang = spec.fangs && teeth.some((tooth) => tooth.index < 16 && toothName(tooth.index).endsWith('canine'));
   return [
     `Repaint only the masked grillz ${teeth.length === 1 ? 'tooth' : 'teeth'} as ${shortDesign(design)}: ${describeDesign(design)}.`,
-    hasFang ? 'This tooth is a long, sharp, pointed fang cap.' : '',
-    'Keep the same tooth shape, size and position. Match the surrounding metal colour, lighting, reflections and photo style exactly so the edit is seamless.',
-    'Do not add any text, lettering, numbers, labels or marks anywhere, and leave the gums and mold untouched.',
-    'Photorealistic high-end jewelry product photograph. No watermark.',
-  ]
-    .filter(Boolean)
-    .join(' ');
+    'Keep the same tooth shape, size and position.',
+    SEAMLESS,
+    'Do not add any text, lettering, numbers, labels or marks anywhere. Photorealistic high-end jewelry product photograph. No watermark.',
+  ].join(' ');
+};
+
+/** "your upper left canine": side as the wearer sees it (index 0 is the wearer's left). */
+export const wearerToothName = (index: number) => {
+  const row = index < 16 ? 'upper' : 'lower';
+  const position = index % 16;
+  const fromCentre = position < 8 ? 7 - position : position - 8;
+  const side = position < 8 ? 'left' : 'right';
+  return `${row} ${side} ${TOOTH_NAMES.at(Math.min(fromCentre, 5))}`;
 };

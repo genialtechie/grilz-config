@@ -19,6 +19,7 @@ import {
   ScanLine,
   ShoppingBag,
   Store,
+  Type,
   X,
 } from 'lucide-react';
 import Scene from './three/Scene';
@@ -40,12 +41,16 @@ import {
   SETTINGS,
   STONES,
   STYLES,
+  INSCRIPTION_MAX,
+  INSCRIPTION_STYLES,
   VISION_MAX,
   isGold,
-  maskedGroups,
+  planMasks,
   priceBreakdown,
   priceHint,
   summarizeDesign,
+  wearerToothName,
+  type InscriptionStyleId,
   type MoldId,
   type RenderSpec,
   type SetOptions,
@@ -108,6 +113,10 @@ function Configurator() {
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
   const [setOptions, setSetOptions] = useState<SetOptions>(DEFAULT_SET);
+  const [inscriptionText, setInscriptionText] = useState('');
+  const [inscriptionStyle, setInscriptionStyle] = useState<InscriptionStyleId>('cut');
+  const [inscriptionTooth, setInscriptionTooth] = useState<number | null>(null);
+  const [inscriptionPicking, setInscriptionPicking] = useState(false);
   const [inspiration, setInspiration] = useState<string | null>(null);
   const [inspirationError, setInspirationError] = useState<string | null>(null);
   const [mold, setMold] = useState<MoldId>('kit');
@@ -147,13 +156,24 @@ function Configurator() {
   const nextStep = steps.at(stepIndex + 1);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
 
-  const pricing = priceBreakdown(teethDesigns, setOptions);
+  // The inscription only counts once it has text and sits on a tooth in the set.
+  const inscription =
+    inscriptionText.trim() && inscriptionTooth !== null && selectedSet.has(inscriptionTooth)
+      ? { text: inscriptionText.trim(), tooth: inscriptionTooth, style: inscriptionStyle }
+      : null;
+  const effectiveSet: SetOptions = { ...setOptions, inscription };
+  const pricing = priceBreakdown(teethDesigns, effectiveSet);
   const totalCost = pricing.total;
 
   // What the 3D model shows: the selection while choosing teeth or picking,
   // otherwise each tooth's own metal and stones.
-  const isSelectionMode = step === 'teeth' || pickMode;
-  const highlighted = step === 'teeth' ? selectedTeeth : activePicked;
+  const pickingInscription = step === 'vision' && inscriptionPicking;
+  const isSelectionMode = step === 'teeth' || pickMode || pickingInscription;
+  const highlighted = step === 'teeth'
+    ? selectedTeeth
+    : pickingInscription
+      ? (inscriptionTooth !== null ? [inscriptionTooth] : [])
+      : activePicked;
   const customizations = useMemo<ToothCustomization[]>(
     () =>
       Array.from({ length: 32 }, (_, index) => {
@@ -173,6 +193,12 @@ function Configurator() {
   const handleToothClick = (index: number) => {
     if (step === 'teeth') {
       toggleToothSelection(index);
+      return;
+    }
+    if (pickingInscription) {
+      if (!selectedSet.has(index)) return;
+      setInscriptionTooth(index);
+      setInscriptionPicking(false);
       return;
     }
     if (!pickMode || !selectedSet.has(index)) return;
@@ -203,8 +229,9 @@ function Configurator() {
   const updateSet = (patch: Partial<SetOptions>) => setSetOptions((previous) => ({ ...previous, ...patch }));
 
   const renderSpec = useMemo<RenderSpec | null>(
-    () => (teethDesigns.length ? { ...setOptions, teeth: teethDesigns } : null),
-    [setOptions, teethDesigns],
+    () => (teethDesigns.length ? { ...setOptions, inscription, teeth: teethDesigns } : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setOptions, teethDesigns, inscription?.text, inscription?.tooth, inscription?.style],
   );
   const designLines = renderSpec ? summarizeDesign(renderSpec) : [];
 
@@ -221,6 +248,7 @@ function Configurator() {
     fangs: setOptions.fangs,
     cut: setOptions.cut,
     has_vision: setOptions.vision.trim().length > 0,
+    inscription_style: inscription?.style ?? 'none',
     has_inspiration: Boolean(inspiration),
     estimated_total: totalCost,
   });
@@ -233,11 +261,15 @@ function Configurator() {
     // Let the focus/keyboard paint first; the high-res capture takes a frame.
     window.requestAnimationFrame(() => {
       let preview: string;
-      let masks: { indices: number[]; mask: string }[] = [];
+      let masks: { kind: string; indices: number[]; mask: string }[] = [];
       try {
         preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index));
         // Mixed designs: one mask per tooth group that differs from the majority.
-        masks = maskedGroups(spec).map((indices) => ({ indices, mask: captureToothMask(state, indices) }));
+        masks = planMasks(spec).map((plan) => ({
+          kind: plan.kind,
+          indices: plan.indices,
+          mask: captureToothMask(state, plan.indices, plan.kind === 'fangs' ? 90 : 0),
+        }));
       } catch {
         return;
       }
@@ -299,6 +331,7 @@ function Configurator() {
     posthog.capture('sample_step_viewed', { step: target });
     setPickMode(false);
     setPickedTeeth([]);
+    setInscriptionPicking(false);
     setStep(target);
     setPanelOpen(true);
     panelScroll.current?.scrollTo({ top: 0 });
@@ -316,6 +349,10 @@ function Configurator() {
     setPickedTeeth([]);
     setSetOptions(DEFAULT_SET);
     setInspiration(null);
+    setInscriptionText('');
+    setInscriptionStyle('cut');
+    setInscriptionTooth(null);
+    setInscriptionPicking(false);
     setMold('kit');
     setStep('teeth');
     setPanelOpen(true);
@@ -412,7 +449,7 @@ function Configurator() {
               image={render.image}
               error={render.error}
               startedAt={render.startedAt}
-              expectedSeconds={16 + 18 * maskedGroups({ teeth: teethDesigns }).length}
+              expectedSeconds={16 + 18 * (renderSpec ? planMasks(renderSpec).length : 0)}
               canRetry={render.rendersLeft > 0}
               onRetry={startRender}
               onClose={() => setShowPhoto(false)}
@@ -673,6 +710,53 @@ function Configurator() {
               )}
 
               {step === 'vision' && (
+                <>
+                <fieldset className="control-group">
+                  <legend>Initials or text <em className="legend-optional">Optional</em></legend>
+                  <div className="inscription-row">
+                    <Type size={16} />
+                    <input
+                      className="inscription-input"
+                      value={inscriptionText}
+                      onChange={(event) => setInscriptionText(event.target.value.replace(/[^A-Za-z0-9&$#!.' -]/g, '').slice(0, INSCRIPTION_MAX))}
+                      placeholder="e.g. HB"
+                      maxLength={INSCRIPTION_MAX}
+                      aria-label="Initials or text"
+                    />
+                    <small>{inscriptionText.length}/{INSCRIPTION_MAX}</small>
+                  </div>
+                  {inscriptionText.trim() && (
+                    <>
+                      <div className="segmented-control segmented-control--three inscription-styles">
+                        {INSCRIPTION_STYLES.map((style) => (
+                          <button
+                            key={style.id}
+                            className={inscriptionStyle === style.id ? 'segment segment--selected' : 'segment'}
+                            type="button"
+                            onClick={() => setInscriptionStyle(style.id)}
+                            title={style.detail}
+                          >
+                            {style.label}
+                            <small>+{formatPrice(style.price)}</small>
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className={`tooth-pick-button${inscriptionPicking ? ' tooth-pick-button--active' : ''}`}
+                        type="button"
+                        onClick={() => setInscriptionPicking((picking) => !picking)}
+                      >
+                        <MousePointer2 size={15} />
+                        {inscriptionPicking
+                          ? 'Tap the tooth on the model…'
+                          : inscription
+                            ? `On your ${wearerToothName(inscription.tooth)} · Change`
+                            : 'Choose the tooth on the model'}
+                      </button>
+                      {!inscription && !inscriptionPicking && <small className="field-hint">Pick a tooth to add this to your design.</small>}
+                    </>
+                  )}
+                </fieldset>
                 <fieldset className="control-group">
                   <legend>Your idea <em className="legend-optional">Optional</em></legend>
                   <textarea
@@ -681,7 +765,7 @@ function Configurator() {
                     onChange={(event) => updateSet({ vision: event.target.value.slice(0, VISION_MAX) })}
                     placeholder={teethDesigns.some((tooth) => tooth.type === 'photo')
                       ? "Describe the photo placement, e.g. my daughter's portrait across the front two"
-                      : 'Initials, a skyline, a pattern, a vibe…'}
+                      : 'A skyline, a pattern, a vibe…'}
                     rows={4}
                     maxLength={VISION_MAX}
                   />
@@ -701,6 +785,7 @@ function Configurator() {
                   )}
                   {inspirationError && <div className="inline-note" role="alert">{inspirationError}</div>}
                 </fieldset>
+                </>
               )}
 
               {step === 'photo' && (

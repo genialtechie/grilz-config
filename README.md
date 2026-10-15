@@ -41,6 +41,14 @@ group with `flux-pro-1.0-fill` after the main render. Uniform designs skip
 this. Each extra group adds about $0.05 and 15–20s; at most 3 groups, and
 `api/render.ts` has `maxDuration: 120`.
 
+Fangs and inscriptions also use masked edits, so they land on the right
+teeth: fangs repaint the two upper canines with the mask stretched downward
+(room for the point), and an inscription ("Initials or text" in Make it
+yours, up to 6 characters, tooth picked on the model) writes the text on that
+one tooth. Explicit extras win the 3 edit slots first; execution order is
+mixed groups, then fangs, then the inscription. The server only accepts masks
+that match the plan it computes itself (`planMasks` in renderSpec.ts).
+
 Lead events: `sample_lead_submitted` (contact + full design),
 `sample_render_started|completed|failed`, `sample_step_viewed`,
 `sample_deposit_clicked`.
