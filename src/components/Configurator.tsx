@@ -30,25 +30,12 @@ import { downscaleImage } from '../lib/downscaleImage';
 import { useAiRender } from '../lib/hooks/useAiRender';
 import { baseToothState, useGrillzCustomization } from '../lib/hooks/useGrillzCustomization';
 import {
-  CUTS,
-  DEFAULT_SET,
-  DEFAULT_TOOTH,
-  FANG_OPTIONS,
-  GRILLZ_TYPES,
-  KARATS,
-  METALS,
-  MOLDS,
-  SETTINGS,
-  STONES,
-  STYLES,
   INSCRIPTION_MAX,
-  INSCRIPTION_STYLES,
+  METALS,
   VISION_MAX,
   isGold,
   planMasks,
   groupTeeth,
-  priceBreakdown,
-  priceHint,
   summarizeDesign,
   wearerToothName,
   type InscriptionStyleId,
@@ -57,6 +44,9 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
+import { FANG_OPTIONS } from '../lib/renderSpec';
+import { depositFor, priceBreakdown } from '../lib/pricing';
+import { useTenant } from '../lib/tenant/useTenant';
 import type { ToothCustomization } from '../lib/types';
 
 type StepId = 'teeth' | 'metal' | 'style' | 'stones' | 'extras' | 'vision' | 'photo';
@@ -102,18 +92,18 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 
 const formatPrice = (value: number) => currencyFormatter.format(value);
 
-const depositFor = (total: number) => Math.max(100, Math.round((total * 0.25) / 10) * 10);
-
 function Configurator() {
   const posthog = usePostHog();
+  const tenant = useTenant();
+  const { catalog, hints } = tenant;
   const hasCapturedOpen = useRef(false);
   const [step, setStep] = useState<StepId>('teeth');
   const [panelOpen, setPanelOpen] = useState(true);
-  const [base, setBase] = useState<ToothDesign>(DEFAULT_TOOTH);
+  const [base, setBase] = useState<ToothDesign>(tenant.defaultTooth);
   const [overrides, setOverrides] = useState<Record<number, ToothDesign>>({});
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
-  const [setOptions, setSetOptions] = useState<SetOptions>(DEFAULT_SET);
+  const [setOptions, setSetOptions] = useState<SetOptions>(tenant.defaultSet);
   const [inscriptionText, setInscriptionText] = useState('');
   const [inscriptionStyle, setInscriptionStyle] = useState<InscriptionStyleId>('cut');
   const [inscriptionTooth, setInscriptionTooth] = useState<number | null>(null);
@@ -152,7 +142,8 @@ function Configurator() {
   const shown: ToothDesign = pickMode && activePicked.length ? designFor(activePicked[0]) : base;
   const pickingNothing = pickMode && activePicked.length === 0;
 
-  const steps: StepId[] = ['teeth', 'metal', 'style', ...(anyIced ? (['stones'] as const) : []), 'extras', 'vision', 'photo'];
+  const hasVisionStep = catalog.vision || catalog.inscriptionStyles.length > 0;
+  const steps: StepId[] = ['teeth', 'metal', 'style', ...(anyIced ? (['stones'] as const) : []), 'extras', ...(hasVisionStep ? (['vision'] as const) : []), 'photo'];
   const stepIndex = Math.max(0, steps.indexOf(step));
   const nextStep = steps.at(stepIndex + 1);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
@@ -163,7 +154,8 @@ function Configurator() {
       ? { text: inscriptionText.trim(), tooth: inscriptionTooth, style: inscriptionStyle }
       : null;
   const effectiveSet: SetOptions = { ...setOptions, inscription };
-  const pricing = priceBreakdown(teethDesigns, effectiveSet);
+  const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet);
+  const deposit = depositFor(tenant.config.deposit, pricing.total);
   const totalCost = pricing.total;
 
   // What the 3D model shows: the selection while choosing teeth or picking,
@@ -342,11 +334,11 @@ function Configurator() {
     setShowPhoto(false);
     setDepositReached(false);
     resetAll();
-    setBase(DEFAULT_TOOTH);
+    setBase(tenant.defaultTooth);
     setOverrides({});
     setPickMode(false);
     setPickedTeeth([]);
-    setSetOptions(DEFAULT_SET);
+    setSetOptions(tenant.defaultSet);
     setInspiration(null);
     setInscriptionText('');
     setInscriptionStyle('cut');
@@ -358,7 +350,7 @@ function Configurator() {
   };
 
   const reserveDeposit = () => {
-    posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit: depositFor(totalCost), mold });
+    posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit, mold });
     setDepositReached(true);
   };
 
@@ -555,11 +547,11 @@ function Configurator() {
                 <>
                   {scopeBar}
                   <div className="option-grid">
-                    {METALS.map((metal) => (
+                    {catalog.metals.map((metal) => (
                       <OptionCard
                         key={metal.id}
                         label={metal.label}
-                        hint={priceHint.metal(metal.id, shown.karat)}
+                        hint={hints.metal(metal.id, shown.karat)}
                         image={metal.image}
                         swatch={metal.swatch}
                         selected={shown.metal === metal.id}
@@ -572,7 +564,7 @@ function Configurator() {
                     <fieldset className="control-group control-group--revealed">
                       <legend>Karat</legend>
                       <div className="segmented-control segmented-control--three">
-                        {KARATS.map((karat) => (
+                        {catalog.karats.map((karat) => (
                           <button
                             key={karat.id}
                             className={shown.karat === karat.id ? 'segment segment--selected' : 'segment'}
@@ -581,7 +573,7 @@ function Configurator() {
                             onClick={() => applyDesign({ karat: karat.id })}
                           >
                             {karat.label}
-                            <small>{priceHint.metal(shown.metal, karat.id)}</small>
+                            <small>{hints.metal(shown.metal, karat.id)}</small>
                           </button>
                         ))}
                       </div>
@@ -596,11 +588,11 @@ function Configurator() {
                   <fieldset className="control-group">
                     <legend>Type</legend>
                     <div className="option-grid option-grid--three">
-                      {GRILLZ_TYPES.map((type) => (
+                      {catalog.types.map((type) => (
                         <OptionCard
                           key={type.id}
                           label={type.label}
-                          hint={priceHint.type(type.id)}
+                          hint={hints.type(type.id)}
                           image={type.image}
                           selected={shown.type === type.id}
                           disabled={pickingNothing}
@@ -612,12 +604,12 @@ function Configurator() {
                   <fieldset className="control-group">
                     <legend>Finish</legend>
                     <div className="option-grid option-grid--three">
-                      {STYLES.map((style) => (
+                      {catalog.styles.map((style) => (
                         <OptionCard
                           key={style.id}
                           label={style.label}
                           detail={style.detail}
-                          hint={priceHint.style(style.id)}
+                          hint={hints.style(style.id)}
                           image={style.image}
                           selected={shown.style === style.id}
                           disabled={pickingNothing}
@@ -640,12 +632,12 @@ function Configurator() {
                   <fieldset className="control-group">
                     <legend>Setting</legend>
                     <div className="option-grid option-grid--three">
-                      {SETTINGS.map((setting) => (
+                      {catalog.settings.map((setting) => (
                         <OptionCard
                           key={setting.id}
                           label={setting.label}
                           detail={setting.detail}
-                          hint={priceHint.setting(setting.id)}
+                          hint={hints.setting(setting.id)}
                           image={setting.image}
                           selected={shown.setting === setting.id}
                           disabled={pickingNothing}
@@ -657,12 +649,12 @@ function Configurator() {
                   <fieldset className="control-group">
                     <legend>Stones</legend>
                     <div className="option-grid option-grid--three">
-                      {STONES.map((stone) => (
+                      {catalog.stones.map((stone) => (
                         <OptionCard
                           key={stone.id}
                           label={stone.label}
                           detail={stone.detail}
-                          hint={priceHint.stone(stone.id)}
+                          hint={hints.stone(stone.id)}
                           image={stone.image}
                           selected={shown.stone === stone.id}
                           disabled={pickingNothing}
@@ -679,6 +671,7 @@ function Configurator() {
 
               {step === 'extras' && (
                 <>
+                  {catalog.fangs && (
                   <fieldset className="control-group">
                     <legend>Fangs</legend>
                     <div className="option-grid option-grid--two">
@@ -695,10 +688,11 @@ function Configurator() {
                       ))}
                     </div>
                   </fieldset>
+                  )}
                   <fieldset className="control-group">
                     <legend>Fit</legend>
                     <div className="option-grid option-grid--two">
-                      {CUTS.map((cut) => (
+                      {catalog.cuts.map((cut) => (
                         <OptionCard
                           key={cut.id}
                           label={cut.label}
@@ -716,6 +710,7 @@ function Configurator() {
 
               {step === 'vision' && (
                 <>
+                {catalog.inscriptionStyles.length > 0 && (
                 <fieldset className="control-group">
                   <legend>Initials or text <em className="legend-optional">Optional</em></legend>
                   <div className="inscription-row">
@@ -733,7 +728,7 @@ function Configurator() {
                   {inscriptionText.trim() && (
                     <>
                       <div className="segmented-control segmented-control--three inscription-styles">
-                        {INSCRIPTION_STYLES.map((style) => (
+                        {catalog.inscriptionStyles.map((style) => (
                           <button
                             key={style.id}
                             className={inscriptionStyle === style.id ? 'segment segment--selected' : 'segment'}
@@ -742,7 +737,7 @@ function Configurator() {
                             title={style.detail}
                           >
                             {style.label}
-                            <small>+{formatPrice(style.price)}</small>
+                            {hints.inscription(style.id) && <small>{hints.inscription(style.id)}</small>}
                           </button>
                         ))}
                       </div>
@@ -762,6 +757,8 @@ function Configurator() {
                     </>
                   )}
                 </fieldset>
+                )}
+                {catalog.vision && (
                 <fieldset className="control-group">
                   <legend>Your idea <em className="legend-optional">Optional</em></legend>
                   <textarea
@@ -790,6 +787,7 @@ function Configurator() {
                   )}
                   {inspirationError && <div className="inline-note" role="alert">{inspirationError}</div>}
                 </fieldset>
+                )}
                 </>
               )}
 
@@ -831,7 +829,7 @@ function Configurator() {
                       <fieldset className="control-group">
                         <legend>How we get your fit</legend>
                         <div className="choice-list">
-                          {MOLDS.map((option) => {
+                          {catalog.molds.map((option) => {
                             const Icon = MOLD_ICONS[option.id];
                             return (
                             <button
@@ -851,7 +849,7 @@ function Configurator() {
                       <button className="primary-button" type="button" onClick={reserveDeposit}>
                         <CreditCard size={17} />
                         Reserve with deposit
-                        <span>{formatPrice(depositFor(totalCost))}</span>
+                        <span>{formatPrice(deposit ?? 0)}</span>
                       </button>
                     </>
                   )}
@@ -861,7 +859,7 @@ function Configurator() {
                       <Check size={18} />
                       <p>
                         Demo: on a live store this opens the jeweler&apos;s own checkout (Stripe or Shopify) for the{' '}
-                        {formatPrice(depositFor(totalCost))} deposit, with the design, photo and fit choice attached to the order.
+                        {formatPrice(deposit ?? 0)} deposit, with the design, photo and fit choice attached to the order.
                       </p>
                     </div>
                   )}

@@ -113,3 +113,20 @@ To restore normal tracking in a browser:
 ```text
 https://commerce.magpollo.com/?mp_internal=0
 ```
+
+## Tenants (multi-shop)
+
+Every shop is a **tenant config** (`src/lib/tenant/schema.ts`, validated with zod):
+brand, which options it sells, its prices, its deposit rule, lead routes and AI
+allowance. The option catalog itself (ids, labels, images, AI prompt text) stays
+platform-owned in `src/lib/renderSpec.ts`; a shop only chooses and prices options.
+
+- `src/lib/pricing.ts` is the price engine: pure functions of a design and a
+  tenant's pricing, shared by the builder and the server.
+- `src/lib/tenant/vvslab.ts` is tenant zero, the public demo. Its prices are the
+  site's sample prices.
+- The builder reads the tenant through `useTenant()`; `parseRenderSpec(spec, catalog)`
+  rejects options a shop does not sell.
+- `npm test` runs the golden tests: tenant zero must price, summarize and prompt
+  20 sample designs exactly as before (`src/lib/__tests__/fixtures/golden.json`).
+  Regenerate that file only when a price or prompt change is intended.

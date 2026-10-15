@@ -1,0 +1,1273 @@
+{
+  "plain6x6": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 12 teeth",
+          "amount": 1800
+        }
+      ],
+      "total": 2000
+    },
+    "deposit": 500,
+    "summary": [
+      "6 top + 6 bottom",
+      "Yellow gold 10K · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": []
+  },
+  "top6White14k": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 1260
+        }
+      ],
+      "total": 1460
+    },
+    "deposit": 370,
+    "summary": [
+      "6 top + 0 bottom",
+      "White gold 14K · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "single": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 1 teeth",
+          "amount": 150
+        }
+      ],
+      "total": 350
+    },
+    "deposit": 100,
+    "summary": [
+      "1 top + 0 bottom",
+      "Yellow gold 10K · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 1 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 1 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "twoPieceRose": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 2 teeth",
+          "amount": 556
+        }
+      ],
+      "total": 756
+    },
+    "deposit": 190,
+    "summary": [
+      "2 top + 0 bottom",
+      "Rose gold 18K · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 2 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 18K rose gold, soft pinkish copper-gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 2 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 18K rose gold, soft pinkish copper-gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "fullSetSilver": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 32 teeth",
+          "amount": 2720
+        }
+      ],
+      "total": 2920
+    },
+    "deposit": 730,
+    "summary": [
+      "16 top + 16 bottom",
+      "Sterling silver · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering every upper tooth and every lower tooth; all of the grillz teeth: sterling silver, bright cool silver with a smooth mirror-polished solid finish. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering every upper tooth and every lower tooth; all of the grillz teeth: sterling silver, bright cool silver with a smooth mirror-polished solid finish. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": []
+  },
+  "iced8x8": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 16 teeth",
+          "amount": 2400
+        },
+        {
+          "label": "Stones",
+          "amount": 1200
+        }
+      ],
+      "total": 3800
+    },
+    "deposit": 950,
+    "summary": [
+      "8 top + 8 bottom",
+      "Yellow gold 10K · Iced · Honeycomb · Moissanite",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and 8 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and 8 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": []
+  },
+  "icedMosaicNatural": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 1260
+        },
+        {
+          "label": "Stones",
+          "amount": 1920
+        },
+        {
+          "label": "Mosaic setting",
+          "amount": 150
+        }
+      ],
+      "total": 3530
+    },
+    "deposit": 880,
+    "summary": [
+      "6 top + 0 bottom",
+      "Yellow gold 14K · Iced · Mosaic · Natural diamond",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling natural diamonds set in a mosaic setting of mixed stone sizes, larger stones surrounded by smaller ones; solid, no openings or cut-outs; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling natural diamonds set in a mosaic setting of mixed stone sizes, larger stones surrounded by smaller ones; solid, no openings or cut-outs; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "icedProngLabPlatinum": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 1920
+        },
+        {
+          "label": "Stones",
+          "amount": 960
+        }
+      ],
+      "total": 3080
+    },
+    "deposit": 770,
+    "summary": [
+      "6 top + 0 bottom",
+      "Platinum · Iced · Prong · Lab diamond",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: platinum, cool bright silver-white metal, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: platinum, cool bright silver-white metal, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "openFaceFangs": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Style & finish",
+          "amount": 240
+        },
+        {
+          "label": "Fangs",
+          "amount": 150
+        }
+      ],
+      "total": 1490
+    },
+    "deposit": 370,
+    "summary": [
+      "6 top + 0 bottom",
+      "Rose gold 10K · Open-face",
+      "Fangs",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K rose gold, soft pinkish copper-gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K rose gold, soft pinkish copper-gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            5
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 10K rose gold, soft pinkish copper-gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            10
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 10K rose gold, soft pinkish copper-gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      }
+    ]
+  },
+  "diamondCut10x10": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 20 teeth",
+          "amount": 3000
+        },
+        {
+          "label": "Style & finish",
+          "amount": 700
+        }
+      ],
+      "total": 3900
+    },
+    "deposit": 980,
+    "summary": [
+      "10 top + 10 bottom",
+      "Yellow gold 10K · Diamond-cut",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 10 upper teeth and 10 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 10 upper teeth and 10 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": []
+  },
+  "diamondDustPermanent": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Style & finish",
+          "amount": 180
+        },
+        {
+          "label": "Permanent look",
+          "amount": 100
+        }
+      ],
+      "total": 1380
+    },
+    "deposit": 350,
+    "summary": [
+      "6 top + 0 bottom",
+      "Yellow gold 10K · Diamond-dust",
+      "Permanent look"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a diamond-dust finish: a fine sparkling glitter texture across the metal surface; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums; the grillz look seamless and permanent, like custom fitted caps. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a diamond-dust finish: a fine sparkling glitter texture across the metal surface; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums; the grillz look seamless and permanent, like custom fitted caps. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "engravingVision": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Style & finish",
+          "amount": 270
+        }
+      ],
+      "total": 1370
+    },
+    "deposit": 340,
+    "summary": [
+      "6 top + 0 bottom",
+      "Yellow gold 10K · Engraving",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Customer notes (apply only if they describe the jewelry): \"Add a small star on my left front tooth\". Apply each note to ONLY the tooth it names, never to the matching tooth on the other side; \"left\" and \"right\" in the notes mean the wearer's own left and right, which appear on the viewer's right and left in this front view. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Customer notes (apply only if they describe the jewelry): \"Add a small star on my left front tooth\". Apply each note to ONLY the tooth it names, never to the matching tooth on the other side; \"left\" and \"right\" in the notes mean the wearer's own left and right, which appear on the viewer's right and left in this front view. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "opalsWhite": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 4 teeth",
+          "amount": 840
+        },
+        {
+          "label": "Style & finish",
+          "amount": 360
+        }
+      ],
+      "total": 1400
+    },
+    "deposit": 350,
+    "summary": [
+      "4 top + 0 bottom",
+      "White gold 14K · Opals",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 4 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with inlaid iridescent white fire opal panels set into the front of each tooth; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 4 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with inlaid iridescent white fire opal panels set into the front of each tooth; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "photoGrillz": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 2 teeth",
+          "amount": 300
+        },
+        {
+          "label": "Photo artwork",
+          "amount": 250
+        }
+      ],
+      "total": 750
+    },
+    "deposit": 190,
+    "summary": [
+      "2 top + 0 bottom",
+      "Yellow gold 10K · Photo",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 2 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 2 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "mixedFour": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 8 teeth",
+          "amount": 1680
+        },
+        {
+          "label": "Style & finish",
+          "amount": 240
+        },
+        {
+          "label": "Stones",
+          "amount": 150
+        },
+        {
+          "label": "Fangs",
+          "amount": 150
+        }
+      ],
+      "total": 2420
+    },
+    "deposit": 610,
+    "summary": [
+      "8 top + 0 bottom",
+      "2× Yellow gold 14K · Engraving",
+      "2× Yellow gold 14K · Open-face",
+      "2× Yellow gold 14K · Diamond-cut",
+      "2× Yellow gold 14K · Iced · Honeycomb · Moissanite",
+      "Fangs",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and no grillz on the lower teeth; the 2 upper first premolars: 14K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface; the 2 upper canines: 14K yellow gold, warm rich gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle; the 2 upper lateral incisors: 14K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light; the 2 upper central incisors: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) first premolar: ENGRAVING 14K yellow gold, no stones; (2) canine: OPEN-FACE 14K yellow gold, no stones; (3) lateral incisor: DIAMOND-CUT 14K yellow gold, no stones; (4) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings; (5) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings; (6) lateral incisor: DIAMOND-CUT 14K yellow gold, no stones; (7) canine: OPEN-FACE 14K yellow gold, no stones; (8) first premolar: ENGRAVING 14K yellow gold, no stones. In total exactly 2 teeth are ENGRAVING 14K yellow gold, no stones; exactly 2 teeth are OPEN-FACE 14K yellow gold, no stones; exactly 2 teeth are DIAMOND-CUT 14K yellow gold, no stones; exactly 2 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal); the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and no grillz on the lower teeth; the 2 upper first premolars: 14K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface; the 2 upper canines: 14K yellow gold, warm rich gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle; the 2 upper lateral incisors: 14K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light; the 2 upper central incisors: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) first premolar: ENGRAVING 14K yellow gold, no stones; (2) canine: OPEN-FACE 14K yellow gold, no stones; (3) lateral incisor: DIAMOND-CUT 14K yellow gold, no stones; (4) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings; (5) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings; (6) lateral incisor: DIAMOND-CUT 14K yellow gold, no stones; (7) canine: OPEN-FACE 14K yellow gold, no stones; (8) first premolar: ENGRAVING 14K yellow gold, no stones. In total exactly 2 teeth are ENGRAVING 14K yellow gold, no stones; exactly 2 teeth are OPEN-FACE 14K yellow gold, no stones; exactly 2 teeth are DIAMOND-CUT 14K yellow gold, no stones; exactly 2 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal); the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            4
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ENGRAVING 14K yellow gold, no stones: 14K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            11
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ENGRAVING 14K yellow gold, no stones: 14K yellow gold, warm rich gold colour with ornate hand-engraved scroll patterns across the metal surface. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            6
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up DIAMOND-CUT 14K yellow gold, no stones: 14K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            9
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up DIAMOND-CUT 14K yellow gold, no stones: 14K yellow gold, warm rich gold colour with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            7
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            8
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 14K yellow gold, no openings: 14K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            5
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 14K yellow gold, warm rich gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            10
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 14K yellow gold, warm rich gold colour with open-face windows: each of these teeth is a thin metal outline frame with the natural white tooth visible in the middle. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      }
+    ]
+  },
+  "twoTone": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 12 teeth",
+          "amount": 2520
+        },
+        {
+          "label": "Style & finish",
+          "amount": 210
+        },
+        {
+          "label": "Stones",
+          "amount": 960
+        },
+        {
+          "label": "Inscription \"VVS\"",
+          "amount": 150
+        }
+      ],
+      "total": 4040
+    },
+    "deposit": 1010,
+    "summary": [
+      "6 top + 6 bottom",
+      "6× Rose gold 14K · Iced · Prong · Lab diamond",
+      "6× White gold 14K · Diamond-cut",
+      "\"VVS\" on lower left central incisor",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; the 2 upper canines, the 2 upper lateral incisors, the 2 upper central incisors: 14K rose gold, soft pinkish copper-gold colour, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs; the 2 lower canines, the 2 lower lateral incisors, the 2 lower central incisors: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (2) lateral incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (3) central incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (4) central incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (5) lateral incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (6) canine: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings. Lower row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: DIAMOND-CUT 14K white gold, no stones; (2) lateral incisor: DIAMOND-CUT 14K white gold, no stones; (3) central incisor: DIAMOND-CUT 14K white gold, no stones; (4) central incisor: DIAMOND-CUT 14K white gold, no stones; (5) lateral incisor: DIAMOND-CUT 14K white gold, no stones; (6) canine: DIAMOND-CUT 14K white gold, no stones. In total exactly 6 teeth are ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; exactly 6 teeth are DIAMOND-CUT 14K white gold, no stones. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal). Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; the 2 upper canines, the 2 upper lateral incisors, the 2 upper central incisors: 14K rose gold, soft pinkish copper-gold colour, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs; the 2 lower canines, the 2 lower lateral incisors, the 2 lower central incisors: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (2) lateral incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (3) central incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (4) central incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (5) lateral incisor: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; (6) canine: ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings. Lower row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: DIAMOND-CUT 14K white gold, no stones; (2) lateral incisor: DIAMOND-CUT 14K white gold, no stones; (3) central incisor: DIAMOND-CUT 14K white gold, no stones; (4) central incisor: DIAMOND-CUT 14K white gold, no stones; (5) lateral incisor: DIAMOND-CUT 14K white gold, no stones; (6) canine: DIAMOND-CUT 14K white gold, no stones. In total exactly 6 teeth are ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings; exactly 6 teeth are DIAMOND-CUT 14K white gold, no stones. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal). The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            5,
+            6
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings: 14K rose gold, soft pinkish copper-gold colour, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            7,
+            8
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings: 14K rose gold, soft pinkish copper-gold colour, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            9,
+            10
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up ICED OUT, the whole face covered in sparkling lab-grown diamonds (prong setting) in 14K rose gold, no openings: 14K rose gold, soft pinkish copper-gold colour, fully iced out: the entire front face is covered edge to edge in sparkling lab-grown diamonds set in a uniform prong setting in neat rows of equal round stones; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            21,
+            22
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up DIAMOND-CUT 14K white gold, no stones: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            24,
+            25
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up DIAMOND-CUT 14K white gold, no stones: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            26
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up DIAMOND-CUT 14K white gold, no stones: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "inscription",
+          "indices": [
+            23
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a diamond-cut finish: sharp geometric facets cut into the metal that throw bright light, and add the characters \"VVS\" across its front face as raised letters paved with small sparkling stones. Spell it exactly \"VVS\": 3 characters (V, V, S), in this order, centred, upright and clearly legible, in the same metal as the tooth. Nothing else is written anywhere. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph."
+      }
+    ]
+  },
+  "alternating": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 8 teeth",
+          "amount": 1200
+        },
+        {
+          "label": "Stones",
+          "amount": 300
+        }
+      ],
+      "total": 1700
+    },
+    "deposit": 430,
+    "summary": [
+      "8 top + 0 bottom",
+      "4× Yellow gold 10K · Iced · Honeycomb · Moissanite",
+      "4× Yellow gold 10K · Solid",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and no grillz on the lower teeth; one upper first premolar, one upper lateral incisor, one upper central incisor, one upper canine: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; one upper canine, one upper central incisor, one upper lateral incisor, one upper first premolar: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) first premolar: SOLID 10K yellow gold, no stones; (2) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (3) lateral incisor: SOLID 10K yellow gold, no stones; (4) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (5) central incisor: SOLID 10K yellow gold, no stones; (6) lateral incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (7) canine: SOLID 10K yellow gold, no stones; (8) first premolar: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. In total exactly 4 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; exactly 4 teeth are SOLID 10K yellow gold, no stones. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal); the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 8 upper teeth and no grillz on the lower teeth; one upper first premolar, one upper lateral incisor, one upper central incisor, one upper canine: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; one upper canine, one upper central incisor, one upper lateral incisor, one upper first premolar: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) first premolar: SOLID 10K yellow gold, no stones; (2) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (3) lateral incisor: SOLID 10K yellow gold, no stones; (4) central incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (5) central incisor: SOLID 10K yellow gold, no stones; (6) lateral incisor: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (7) canine: SOLID 10K yellow gold, no stones; (8) first premolar: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. In total exactly 4 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; exactly 4 teeth are SOLID 10K yellow gold, no stones. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal); the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            4
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            6
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            8
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            10
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            5
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up SOLID 10K yellow gold, no stones: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            7
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up SOLID 10K yellow gold, no stones: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            9
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up SOLID 10K yellow gold, no stones: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            11
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up SOLID 10K yellow gold, no stones: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      }
+    ]
+  },
+  "inscriptionCut": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Inscription \"HB\"",
+          "amount": 75
+        }
+      ],
+      "total": 1175
+    },
+    "deposit": 290,
+    "summary": [
+      "6 top + 0 bottom",
+      "Yellow gold 10K · Solid",
+      "\"HB\" on upper left lateral incisor",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      },
+      {
+        "plan": {
+          "kind": "inscription",
+          "indices": [
+            6
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up 10K yellow gold, warm rich gold colour with a smooth mirror-polished solid finish, and add the characters \"HB\" across its front face as bold raised diamond-cut metal letters with sharp faceted edges that catch the light. Spell it exactly \"HB\": 2 characters (H, B), in this order, centred, upright and clearly legible, in the same metal as the tooth. Nothing else is written anywhere. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph."
+      }
+    ]
+  },
+  "inscriptionEngravedFangs": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Fangs",
+          "amount": 150
+        },
+        {
+          "label": "Inscription \"MAG$\"",
+          "amount": 50
+        }
+      ],
+      "total": 1300
+    },
+    "deposit": 330,
+    "summary": [
+      "6 top + 0 bottom",
+      "White gold 10K · Solid",
+      "Fangs",
+      "\"MAG$\" on upper right central incisor",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and no grillz on the lower teeth; all of the grillz teeth: 10K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish; the lower row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            5
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 10K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      },
+      {
+        "plan": {
+          "kind": "fangs",
+          "indices": [
+            10
+          ]
+        },
+        "prompt": "Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: 10K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish. The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang. Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text."
+      },
+      {
+        "plan": {
+          "kind": "inscription",
+          "indices": [
+            8
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up 10K white gold, cool bright rhodium-plated white metal (not champagne, not yellow) with a smooth mirror-polished solid finish, and add the characters \"MAG$\" across its front face as crisp letters engraved into the metal surface. Spell it exactly \"MAG$\": 4 characters (M, A, G, $), in this order, centred, upright and clearly legible, in the same metal as the tooth. Nothing else is written anywhere. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph."
+      }
+    ]
+  },
+  "bottomOnly": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 900
+        },
+        {
+          "label": "Stones",
+          "amount": 1920
+        },
+        {
+          "label": "Permanent look",
+          "amount": 100
+        }
+      ],
+      "total": 3120
+    },
+    "deposit": 780,
+    "summary": [
+      "0 top + 6 bottom",
+      "Yellow gold 10K · Iced · Honeycomb · Natural diamond",
+      "Permanent look"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering no grillz on the upper teeth and 6 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling natural diamonds set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; the upper row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums; the grillz look seamless and permanent, like custom fitted caps. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering no grillz on the upper teeth and 6 lower teeth; all of the grillz teeth: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling natural diamonds set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; the upper row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums; the grillz look seamless and permanent, like custom fitted caps. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "__hints": {
+    "metal": [
+      "$150 / tooth",
+      "$210 / tooth",
+      "$278 / tooth",
+      "$150 / tooth",
+      "$210 / tooth",
+      "$278 / tooth",
+      "$150 / tooth",
+      "$210 / tooth",
+      "$278 / tooth",
+      "$85 / tooth",
+      "$85 / tooth",
+      "$85 / tooth",
+      "$320 / tooth",
+      "$320 / tooth",
+      "$320 / tooth"
+    ],
+    "style": [
+      "Included",
+      "+$40 / tooth",
+      "+$35 / tooth",
+      "+$30 / tooth",
+      "+$45 / tooth",
+      "+$90 / tooth"
+    ],
+    "stone": [
+      "+$75 / tooth",
+      "+$160 / tooth",
+      "+$320 / tooth"
+    ],
+    "setting": [
+      "Included",
+      "+$25 / tooth",
+      "Included"
+    ],
+    "type": [
+      "Included",
+      "Stones priced next",
+      "+$250 artwork"
+    ]
+  }
+}

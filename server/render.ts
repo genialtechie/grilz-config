@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { buildFillPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
+import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab.js';
 
 // Turns a 3D configurator screenshot into a studio product photo with FLUX.2:
 // one main render, then zoomed section edits blended back through 3D masks.
@@ -296,7 +297,9 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
     inspiration?: unknown;
     masks?: unknown;
   };
-  const spec = parseRenderSpec(rawSpec);
+  // Stage 1: every render is for tenant zero. Stage 2 resolves the tenant from the request.
+  const tenant = VVSLAB_CONFIG;
+  const spec = parseRenderSpec(rawSpec, tenant.catalog);
   if (!spec) return fail(400, 'Invalid design.');
 
   const base64 = readImage(image);

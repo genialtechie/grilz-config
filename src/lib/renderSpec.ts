@@ -1,5 +1,6 @@
-// The grillz design catalog: every option in the builder, its sample price,
-// validation, and the AI render prompt. Shared by the browser and /api/render.
+// The grillz design catalog: every option in the builder, validation, and the
+// AI render prompt. Shared by the browser and /api/render. Prices and which
+// options a shop sells live in its tenant config (src/lib/tenant).
 // The client sends a structured design; the prompt is always built on the
 // server so the endpoint cannot be used as a general-purpose image generator.
 
@@ -84,9 +85,9 @@ export type ToothDesign = {
 
 /** Options that apply to the whole set. */
 export const INSCRIPTION_STYLES = [
-  { id: 'cut', label: 'Diamond-cut', detail: 'Bold faceted letters', price: 75, render: 'bold raised diamond-cut metal letters with sharp faceted edges that catch the light' },
-  { id: 'iced', label: 'Iced letters', detail: 'Letters set with stones', price: 150, render: 'raised letters paved with small sparkling stones' },
-  { id: 'engraved', label: 'Engraved', detail: 'Cut into the metal', price: 50, render: 'crisp letters engraved into the metal surface' },
+  { id: 'cut', label: 'Diamond-cut', detail: 'Bold faceted letters', render: 'bold raised diamond-cut metal letters with sharp faceted edges that catch the light' },
+  { id: 'iced', label: 'Iced letters', detail: 'Letters set with stones', render: 'raised letters paved with small sparkling stones' },
+  { id: 'engraved', label: 'Engraved', detail: 'Cut into the metal', render: 'crisp letters engraved into the metal surface' },
 ] as const;
 export type InscriptionStyleId = Id<typeof INSCRIPTION_STYLES>;
 export const INSCRIPTION_MAX = 6;
@@ -118,41 +119,6 @@ export const DEFAULT_TOOTH: ToothDesign = {
 export const DEFAULT_SET: SetOptions = { fangs: false, cut: 'deep', vision: '', inscription: null };
 
 export const isGold = (metal: MetalId) => metal === 'yellow' || metal === 'white' || metal === 'rose';
-
-// ---- Sample pricing (a jeweler would configure their own) ----
-const METAL_PER_TOOTH: Record<MetalId, number> = { yellow: 150, white: 150, rose: 150, silver: 85, platinum: 320 };
-const KARAT_MULTIPLIER: Record<KaratId, number> = { '10k': 1, '14k': 1.4, '18k': 1.85 };
-const STYLE_PER_TOOTH: Record<StyleId, number> = { solid: 0, 'open-face': 40, 'diamond-cut': 35, 'diamond-dust': 30, engraving: 45, opals: 90 };
-const STONE_PER_TOOTH: Record<StoneId, number> = { moissanite: 75, lab: 160, natural: 320 };
-const SETTING_PER_TOOTH: Record<SettingId, number> = { honeycomb: 0, mosaic: 25, prong: 0 };
-export const PRICES = { base: 200, fangs: 150, permanent: 100, photo: 250 } as const;
-
-export const metalPerTooth = (metal: MetalId, karat: KaratId) =>
-  Math.round(METAL_PER_TOOTH[metal] * (isGold(metal) ? KARAT_MULTIPLIER[karat] : 1));
-
-export const priceBreakdown = (teeth: ToothDesign[], set: SetOptions) => {
-  const lines: { label: string; amount: number }[] = [{ label: 'Service fee', amount: PRICES.base }];
-  if (teeth.length === 0) return { lines, total: PRICES.base };
-  const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
-  const add = (label: string, amount: number) => amount && lines.push({ label, amount });
-  add(`Metal · ${teeth.length} teeth`, sum((tooth) => metalPerTooth(tooth.metal, tooth.karat)));
-  add('Style & finish', sum((tooth) => (tooth.type === 'iced' ? 0 : STYLE_PER_TOOTH[tooth.style])));
-  add('Stones', sum((tooth) => (tooth.type === 'iced' ? STONE_PER_TOOTH[tooth.stone] : 0)));
-  add('Mosaic setting', sum((tooth) => (tooth.type === 'iced' ? SETTING_PER_TOOTH[tooth.setting] : 0)));
-  if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', PRICES.photo);
-  if (set.fangs) add('Fangs', PRICES.fangs);
-  if (set.cut === 'permanent') add('Permanent look', PRICES.permanent);
-  if (set.inscription) add(`Inscription "${set.inscription.text}"`, INSCRIPTION_STYLES.find((item) => item.id === set.inscription!.style)!.price);
-  return { lines, total: lines.reduce((total, line) => total + line.amount, 0) };
-};
-
-export const priceHint = {
-  metal: (metal: MetalId, karat: KaratId) => `$${metalPerTooth(metal, karat)} / tooth`,
-  style: (style: StyleId) => (STYLE_PER_TOOTH[style] ? `+$${STYLE_PER_TOOTH[style]} / tooth` : 'Included'),
-  stone: (stone: StoneId) => `+$${STONE_PER_TOOTH[stone]} / tooth`,
-  setting: (setting: SettingId) => (SETTING_PER_TOOTH[setting] ? `+$${SETTING_PER_TOOTH[setting]} / tooth` : 'Included'),
-  type: (type: GrillzType) => (type === 'photo' ? `+$${PRICES.photo} artwork` : type === 'iced' ? 'Stones priced next' : 'Included'),
-};
 
 export const label = <T extends readonly { id: string; label: string }[]>(list: T, id: string) =>
   list.find((item) => item.id === id)?.label ?? id;
@@ -194,6 +160,20 @@ export const summarizeDesign = (spec: RenderSpec): string[] => {
 const oneOf = <T extends readonly { id: string }[]>(list: T, value: unknown): value is Id<T> =>
   typeof value === 'string' && list.some((item) => item.id === value);
 
+/** Which options a shop sells; validation rejects anything else. Omit to allow the whole catalog. */
+export type EnabledOptions = {
+  metals: readonly string[];
+  karats: readonly string[];
+  types: readonly string[];
+  styles: readonly string[];
+  settings: readonly string[];
+  stones: readonly string[];
+  cuts: readonly string[];
+  fangs: boolean;
+  inscription: { enabled: boolean; styles: readonly string[] };
+  vision: boolean;
+};
+
 const parseTooth = (value: unknown): RenderTooth | null => {
   if (!value || typeof value !== 'object') return null;
   const tooth = value as Record<string, unknown>;
@@ -203,7 +183,13 @@ const parseTooth = (value: unknown): RenderTooth | null => {
   return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone };
 };
 
-export const parseRenderSpec = (value: unknown): RenderSpec | null => {
+const sells = (tooth: RenderTooth, enabled: EnabledOptions) =>
+  enabled.metals.includes(tooth.metal) &&
+  (!isGold(tooth.metal) || enabled.karats.includes(tooth.karat)) &&
+  enabled.types.includes(tooth.type) &&
+  (tooth.type === 'iced' ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) : enabled.styles.includes(tooth.style));
+
+export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): RenderSpec | null => {
   if (!value || typeof value !== 'object') return null;
   const spec = value as Record<string, unknown>;
   if (!Array.isArray(spec.teeth) || spec.teeth.length === 0 || spec.teeth.length > 32) return null;
@@ -219,6 +205,12 @@ export const parseRenderSpec = (value: unknown): RenderSpec | null => {
     if (!oneOf(INSCRIPTION_STYLES, raw.style)) return null;
     if (!(teeth as RenderTooth[]).some((tooth) => tooth.index === raw.tooth)) return null;
     inscription = { text: raw.text.trim(), tooth: raw.tooth as number, style: raw.style };
+  }
+  if (enabled) {
+    if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
+    if (!enabled.cuts.includes(spec.cut) || (spec.fangs && !enabled.fangs)) return null;
+    if (inscription && !(enabled.inscription.enabled && enabled.inscription.styles.includes(inscription.style))) return null;
+    if (!enabled.vision && spec.vision.trim()) return null;
   }
   return {
     teeth: (teeth as RenderTooth[]).sort((a, b) => a.index - b.index),
