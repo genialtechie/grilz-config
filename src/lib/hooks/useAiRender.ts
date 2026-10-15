@@ -43,7 +43,12 @@ export const useAiRender = () => {
 
   useEffect(() => () => controller.current?.abort(), []);
 
-  const start = useCallback(async (preview: string, spec: RenderSpec, inspiration?: string | null) => {
+  const start = useCallback(async (
+    preview: string,
+    spec: RenderSpec,
+    inspiration?: string | null,
+    masks: { indices: number[]; mask: string }[] = [],
+  ) => {
     const used = readUsage();
     if (used >= MAX_RENDERS_PER_VISITOR) {
       setStatus('error');
@@ -65,7 +70,7 @@ export const useAiRender = () => {
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: preview, spec, inspiration: inspiration ?? undefined }),
+        body: JSON.stringify({ image: preview, spec, inspiration: inspiration ?? undefined, masks }),
         signal: abort.signal,
       });
       const body = (await response.json().catch(() => ({}))) as {

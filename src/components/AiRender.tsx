@@ -129,6 +129,7 @@ type RenderOverlayProps = {
   image: string | null;
   error: string | null;
   startedAt: number | null;
+  expectedSeconds: number;
   canRetry: boolean;
   onRetry: () => void;
   onClose: () => void;
@@ -158,7 +159,7 @@ async function savePhoto(image: string) {
 }
 
 // Covers the 3D viewer with the AI photo (or its progress).
-export function RenderOverlay({ status, image, error, startedAt, canRetry, onRetry, onClose }: RenderOverlayProps) {
+export function RenderOverlay({ status, image, error, startedAt, expectedSeconds, canRetry, onRetry, onClose }: RenderOverlayProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -168,7 +169,7 @@ export function RenderOverlay({ status, image, error, startedAt, canRetry, onRet
   }, [status]);
 
   const elapsed = startedAt ? Math.max(0, (now - startedAt) / 1000) : 0;
-  const progress = Math.min(95, (elapsed / 16) * 100);
+  const progress = Math.min(95, (elapsed / expectedSeconds) * 100);
 
   return (
     <div className="render-overlay">
@@ -179,9 +180,9 @@ export function RenderOverlay({ status, image, error, startedAt, canRetry, onRet
       {status === 'rendering' && (
         <div className="render-overlay__status" role="status">
           <Loader2 className="spin" size={22} />
-          <strong>Finishing your photo…</strong>
+          <strong>{expectedSeconds > 20 && elapsed > 17 ? 'Placing each tooth exactly…' : 'Finishing your photo…'}</strong>
           <span className="render-progress"><span style={{ width: `${progress}%` }} /></span>
-          <small>{elapsed.toFixed(0)}s · usually about 15s</small>
+          <small>{elapsed.toFixed(0)}s · usually about {expectedSeconds}s{expectedSeconds > 20 ? ' for a mixed design' : ''}</small>
         </div>
       )}
 

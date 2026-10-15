@@ -34,6 +34,13 @@ form, so the photo is usually ready when they submit.
 - Option photo cards live in `public/assets/options/grillz/` (generated once
   with FLUX; regenerate with the same seed and framing to keep the set matched).
 
+Mixed designs (e.g. 1 iced tooth in a plain set) get masked edits: the client
+captures a black-and-white mask of each tooth group that differs from the
+majority (same camera and crop as the preview), and the server repaints each
+group with `flux-pro-1.0-fill` after the main render. Uniform designs skip
+this. Each extra group adds about $0.05 and 15–20s; at most 3 groups, and
+`api/render.ts` has `maxDuration: 120`.
+
 Lead events: `sample_lead_submitted` (contact + full design),
 `sample_render_started|completed|failed`, `sample_step_viewed`,
 `sample_deposit_clicked`.

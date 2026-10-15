@@ -24,7 +24,7 @@ import {
 import Scene from './three/Scene';
 import { LeadCapture, RenderOverlay, type Lead } from './AiRender';
 import { OptionCard } from './builder/OptionCard';
-import { capturePreview } from '../lib/capturePreview';
+import { capturePreview, captureToothMask } from '../lib/capturePreview';
 import { downscaleImage } from '../lib/downscaleImage';
 import { useAiRender } from '../lib/hooks/useAiRender';
 import { baseToothState, useGrillzCustomization } from '../lib/hooks/useGrillzCustomization';
@@ -42,6 +42,7 @@ import {
   STYLES,
   VISION_MAX,
   isGold,
+  maskedGroups,
   priceBreakdown,
   priceHint,
   summarizeDesign,
@@ -232,13 +233,16 @@ function Configurator() {
     // Let the focus/keyboard paint first; the high-res capture takes a frame.
     window.requestAnimationFrame(() => {
       let preview: string;
+      let masks: { indices: number[]; mask: string }[] = [];
       try {
-        preview = capturePreview(state);
+        preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index));
+        // Mixed designs: one mask per tooth group that differs from the majority.
+        masks = maskedGroups(spec).map((indices) => ({ indices, mask: captureToothMask(state, indices) }));
       } catch {
         return;
       }
-      posthog.capture('sample_render_started', designProperties());
-      void render.start(preview, spec, reference).then((result) => {
+      posthog.capture('sample_render_started', { ...designProperties(), masked_groups: masks.length });
+      void render.start(preview, spec, reference, masks).then((result) => {
         if (result.ok) {
           posthog.capture('sample_render_completed', { ...designProperties(), render_seconds: result.seconds });
         } else if (result.reason !== 'aborted') {
@@ -408,6 +412,7 @@ function Configurator() {
               image={render.image}
               error={render.error}
               startedAt={render.startedAt}
+              expectedSeconds={16 + 18 * maskedGroups({ teeth: teethDesigns }).length}
               canRetry={render.rendersLeft > 0}
               onRetry={startRender}
               onClose={() => setShowPhoto(false)}
@@ -578,7 +583,11 @@ function Configurator() {
                         />
                       ))}
                     </div>
-                    {shown.style !== 'solid' && <small className="field-hint">Finish details show in your AI photo.</small>}
+                    {shown.type === 'iced' ? (
+                      <small className="field-hint">Iced teeth are covered in stones, so the finish applies to any plain teeth in your set.</small>
+                    ) : (
+                      shown.style !== 'solid' && <small className="field-hint">Finish details show in your AI photo.</small>
+                    )}
                   </fieldset>
                 </>
               )}

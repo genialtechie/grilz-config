@@ -35,7 +35,7 @@ export const STYLES = [
 ] as const;
 
 export const SETTINGS = [
-  { id: 'honeycomb', label: 'Honeycomb', detail: 'Tight hexagon pavé', image: card('setting-honeycomb'), render: 'a tight honeycomb pave setting with thin metal walls between the stones' },
+  { id: 'honeycomb', label: 'Honeycomb', detail: 'Tight hexagon pavé', image: card('setting-honeycomb'), render: 'tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings' },
   { id: 'mosaic', label: 'Mosaic', detail: 'Mixed stone sizes', image: card('setting-mosaic'), render: 'a mosaic setting of mixed stone sizes, larger stones surrounded by smaller ones' },
   { id: 'prong', label: 'Prong', detail: 'Uniform rows', image: card('setting-prong'), render: 'a uniform prong setting in neat rows of equal round stones' },
 ] as const;
@@ -124,7 +124,7 @@ export const priceBreakdown = (teeth: ToothDesign[], set: SetOptions) => {
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
   const add = (label: string, amount: number) => amount && lines.push({ label, amount });
   add(`Metal · ${teeth.length} teeth`, sum((tooth) => metalPerTooth(tooth.metal, tooth.karat)));
-  add('Style & finish', sum((tooth) => STYLE_PER_TOOTH[tooth.style]));
+  add('Style & finish', sum((tooth) => (tooth.type === 'iced' ? 0 : STYLE_PER_TOOTH[tooth.style])));
   add('Stones', sum((tooth) => (tooth.type === 'iced' ? STONE_PER_TOOTH[tooth.stone] : 0)));
   add('Mosaic setting', sum((tooth) => (tooth.type === 'iced' ? SETTING_PER_TOOTH[tooth.setting] : 0)));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', PRICES.photo);
@@ -162,7 +162,7 @@ export const describeTooth = (tooth: ToothDesign) => {
       : tooth.type === 'photo'
         ? 'Photo'
         : label(STYLES, tooth.style);
-  const extraStyle = tooth.type !== 'plain' && tooth.style !== 'solid' ? ` + ${label(STYLES, tooth.style)}` : '';
+  const extraStyle = tooth.type === 'photo' && tooth.style !== 'solid' ? ` + ${label(STYLES, tooth.style)}` : '';
   return `${metal} · ${surface}${extraStyle}`;
 };
 
@@ -229,8 +229,8 @@ const pick = <T extends readonly { id: string }[]>(list: T, id: string): T[numbe
 const describeDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${pick(METALS, tooth.metal).render}`;
   if (tooth.type === 'iced') {
-    const style = tooth.style !== 'solid' ? `, combined with ${pick(STYLES, tooth.style).render} where metal shows` : '';
-    return `${metal}, fully iced out edge to edge with small ${pick(STONES, tooth.stone).render} in ${pick(SETTINGS, tooth.setting).render}${style}`;
+    // Stones cover the whole face of an iced tooth, so the finish (open-face, engraving…) does not apply.
+    return `${metal}, fully iced out: the entire front face is covered edge to edge in sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}; solid, no openings or cut-outs`;
   }
   if (tooth.type === 'photo') {
     return `${metal} with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided`;
@@ -241,6 +241,24 @@ const describeDesign = (tooth: ToothDesign) => {
 const rowText = (count: number, row: 'upper' | 'lower') =>
   count === 0 ? `no grillz on the ${row} teeth` : count === 16 ? `every ${row} tooth` : `${count} ${row} teeth`;
 
+const shortDesign = (tooth: ToothDesign) => {
+  const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${label(METALS, tooth.metal).toLowerCase()}`;
+  if (tooth.type === 'iced') {
+    return `ICED OUT, the whole face covered in sparkling ${pick(STONES, tooth.stone).render} (${label(SETTINGS, tooth.setting).toLowerCase()} setting) in ${metal}, no openings`;
+  }
+  if (tooth.type === 'photo') return `PHOTO ENGRAVED, ${metal}`;
+  return `${label(STYLES, tooth.style).toUpperCase()} ${metal}, no stones`;
+};
+
+// The model numbers each row from the viewer's right (index 0) to the viewer's left (index 15),
+// so higher indices sit further to the viewer's left in a front view.
+const rowLayout = (teeth: RenderTooth[], row: 'upper' | 'lower') => {
+  const inRow = teeth.filter((tooth) => (row === 'upper' ? tooth.index < 16 : tooth.index >= 16)).sort((a, b) => b.index - a.index);
+  if (!inRow.length) return '';
+  const items = inRow.map((tooth, position) => `(${position + 1}) ${toothName(tooth.index).replace(`${row} `, '')}: ${shortDesign(tooth)}`);
+  return `${row === 'upper' ? 'Upper' : 'Lower'} row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: ${items.join('; ')}.`;
+};
+
 export const describeSpec = (spec: RenderSpec): string => {
   const upper = spec.teeth.filter((tooth) => tooth.index < 16).length;
   const groups = groupTeeth(spec.teeth);
@@ -249,9 +267,19 @@ export const describeSpec = (spec: RenderSpec): string => {
     parts.push(`${describeLocation(group.map((tooth) => tooth.index), spec.teeth.length)}: ${describeDesign(group[0])}`);
   });
   if (groups.length > 1) {
-    parts.push('the teeth do NOT all match: follow the per-tooth designs above exactly, as the different metal finishes in the 3D preview show');
+    const layout = [rowLayout(spec.teeth, 'upper'), rowLayout(spec.teeth, 'lower')].filter(Boolean).join(' ');
+    const counts = groups
+      .map((group) => `exactly ${group.length} ${group.length === 1 ? 'tooth is' : 'teeth are'} ${shortDesign(group[0])}`)
+      .join('; ');
+    parts.push(
+      `IMPORTANT, the teeth do NOT all match. ${layout} In total ${counts}. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal)`,
+    );
   }
-  if (spec.fangs) parts.push('the two upper canines are extended into sharp pointed fang caps');
+  (['upper', 'lower'] as const).forEach((row) => {
+    const count = spec.teeth.filter((tooth) => (row === 'upper' ? tooth.index < 16 : tooth.index >= 16)).length;
+    if (count === 0) parts.push(`the ${row} row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums`);
+  });
+  if (spec.fangs) parts.push('the two upper canines are extended into long, sharp, clearly pointed fang caps');
   if (spec.cut === 'permanent') parts.push('the grillz look seamless and permanent, like custom fitted caps');
   return `${parts.join('; ')}.`;
 };
@@ -260,7 +288,9 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
   [
     'Turn this rough 3D preview into a professional high-end jewelry product photograph.',
     `The product is ${describeSpec(spec)}`,
-    spec.vision ? `Customer notes (apply only if they describe the jewelry): "${spec.vision}".` : '',
+    spec.vision
+      ? `Customer notes (apply only if they describe the jewelry): "${spec.vision}". Apply each note to ONLY the tooth it names, never to the matching tooth on the other side; "left" and "right" in the notes mean the wearer's own left and right, which appear on the viewer's right and left in this front view.`
+      : '',
     hasInspiration
       ? "The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image."
       : '',
@@ -272,3 +302,34 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
   ]
     .filter(Boolean)
     .join(' ');
+
+// ---- Per-tooth masked edits ----
+// After the main render, every tooth group that differs from the majority is
+// repainted inside a mask taken from the 3D model, so mixed designs come out
+// exactly where the customer put them.
+
+export const MAX_MASKED_GROUPS = 3;
+
+/** Tooth groups that get a masked edit: every group except the largest. */
+export const maskedGroups = (spec: Pick<RenderSpec, 'teeth'>): number[][] =>
+  groupTeeth(spec.teeth)
+    .slice(1, 1 + MAX_MASKED_GROUPS)
+    .map((group) => group.map((tooth) => tooth.index));
+
+/** The prompt for repainting one masked group. Built on the server only. */
+export const buildFillPrompt = (spec: RenderSpec, indices: number[]): string | null => {
+  const wanted = new Set(indices);
+  const teeth = spec.teeth.filter((tooth) => wanted.has(tooth.index));
+  if (!teeth.length || teeth.length !== indices.length) return null;
+  const design = teeth[0];
+  const hasFang = spec.fangs && teeth.some((tooth) => tooth.index < 16 && toothName(tooth.index).endsWith('canine'));
+  return [
+    `Repaint only the masked grillz ${teeth.length === 1 ? 'tooth' : 'teeth'} as ${shortDesign(design)}: ${describeDesign(design)}.`,
+    hasFang ? 'This tooth is a long, sharp, pointed fang cap.' : '',
+    'Keep the same tooth shape, size and position. Match the surrounding metal colour, lighting, reflections and photo style exactly so the edit is seamless.',
+    'Do not add any text, lettering, numbers, labels or marks anywhere, and leave the gums and mold untouched.',
+    'Photorealistic high-end jewelry product photograph. No watermark.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+};

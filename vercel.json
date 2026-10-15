@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/render.ts": { "maxDuration": 60 }
+    "api/render.ts": { "maxDuration": 120 }
   },
   "rewrites": [
     {
