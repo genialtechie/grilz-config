@@ -1,0 +1,138 @@
+import { z } from 'zod';
+import {
+  CUTS,
+  GRILLZ_TYPES,
+  INSCRIPTION_STYLES,
+  KARATS,
+  METALS,
+  MOLDS,
+  SETTINGS,
+  STONES,
+  STYLES,
+} from '../renderSpec.js';
+
+// A tenant (jeweler) config: everything that differs between shops. The option
+// catalog itself (ids, labels, images, AI prompt text) belongs to the platform in
+// renderSpec.ts; a shop chooses which options it sells and what it charges.
+// The same schema validates configs in the browser, the API and the dashboard.
+
+const ids = <T extends readonly { id: string }[]>(list: T) => list.map((item) => item.id) as [T[number]['id'], ...T[number]['id'][]];
+
+export const MetalIdSchema = z.enum(ids(METALS));
+export const KaratIdSchema = z.enum(ids(KARATS));
+export const GrillzTypeSchema = z.enum(ids(GRILLZ_TYPES));
+export const StyleIdSchema = z.enum(ids(STYLES));
+export const SettingIdSchema = z.enum(ids(SETTINGS));
+export const StoneIdSchema = z.enum(ids(STONES));
+export const CutIdSchema = z.enum(ids(CUTS));
+export const MoldIdSchema = z.enum(ids(MOLDS));
+export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
+
+const money = z.number().min(0).max(100_000);
+const multiplier = z.number().min(0.1).max(10);
+const nonEmptyUnique = <T extends z.ZodTypeAny>(item: T) =>
+  z.array(item).min(1).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.');
+const priceMap = <K extends z.ZodEnum<[string, ...string[]]>>(key: K) => z.record(key, money);
+
+export const FONT_PAIRS = ['serif-classic', 'modern-sans', 'editorial'] as const;
+export const PRICE_DISPLAYS = ['exact', 'from', 'hidden'] as const;
+
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a 6-digit hex colour like #C9A45C.');
+
+export const BrandSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  /** Public URL or storage path of the logo; absent = a wordmark of `name`. */
+  logo: z.string().trim().max(500).optional(),
+  accent: hex,
+  fontPair: z.enum(FONT_PAIRS),
+  instagram: z.string().trim().regex(/^[A-Za-z0-9._]{1,30}$/, 'Instagram handle without the @.').optional(),
+  phone: z.string().trim().max(30).optional(),
+  /** "Powered by VVS Lab" in the footer. */
+  poweredBy: z.boolean(),
+});
+
+export const CatalogSchema = z.object({
+  metals: nonEmptyUnique(MetalIdSchema),
+  karats: nonEmptyUnique(KaratIdSchema),
+  types: nonEmptyUnique(GrillzTypeSchema),
+  styles: nonEmptyUnique(StyleIdSchema),
+  settings: nonEmptyUnique(SettingIdSchema),
+  stones: nonEmptyUnique(StoneIdSchema),
+  cuts: nonEmptyUnique(CutIdSchema),
+  molds: nonEmptyUnique(MoldIdSchema),
+  fangs: z.boolean(),
+  inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
+  /** The "Make it yours" step: free-text idea and inspiration upload. */
+  vision: z.boolean(),
+});
+
+export const PricingSchema = z.object({
+  currency: z.literal('USD'),
+  display: z.enum(PRICE_DISPLAYS),
+  base: money,
+  metalPerTooth: priceMap(MetalIdSchema),
+  /** Applies to gold only (yellow, white, rose). */
+  karatMultiplier: z.record(KaratIdSchema, multiplier),
+  stylePerTooth: priceMap(StyleIdSchema),
+  stonePerTooth: priceMap(StoneIdSchema),
+  settingPerTooth: priceMap(SettingIdSchema),
+  extras: z.object({ fangs: money, permanent: money, photo: money }),
+  inscription: priceMap(InscriptionStyleIdSchema),
+  /** Totals below this are raised to it; 0 = no minimum. */
+  minimumOrder: money,
+});
+
+export const DepositSchema = z.object({
+  /** stripe = checkout into the shop's Stripe account; link = the shop's own payment link; none = no deposit step. */
+  mode: z.enum(['stripe', 'link', 'none']),
+  rule: z.discriminatedUnion('type', [
+    z.object({ type: z.literal('percent'), value: z.number().min(1).max(100), min: money, roundTo: z.number().int().min(1).max(100) }),
+    z.object({ type: z.literal('fixed'), amount: money }),
+  ]),
+  link: z.string().url().optional(),
+});
+
+export const TenantConfigSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    brand: BrandSchema,
+    catalog: CatalogSchema,
+    pricing: PricingSchema,
+    deposit: DepositSchema,
+    leads: z.object({ email: z.array(z.string().email()).max(5), sms: z.array(z.string().max(30)).max(3) }),
+    ai: z.object({ monthlyGenerations: z.number().int().min(0).max(100_000) }),
+  })
+  .superRefine((config, ctx) => {
+    const { catalog, pricing, deposit } = config;
+    const need = (list: readonly string[], prices: Record<string, number>, path: string) => {
+      list.forEach((id) => {
+        if (prices[id] === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pricing', path, id], message: `Add a price for ${id}.` });
+      });
+    };
+    need(catalog.metals, pricing.metalPerTooth, 'metalPerTooth');
+    need(catalog.karats, pricing.karatMultiplier, 'karatMultiplier');
+    need(catalog.styles, pricing.stylePerTooth, 'stylePerTooth');
+    need(catalog.stones, pricing.stonePerTooth, 'stonePerTooth');
+    need(catalog.settings, pricing.settingPerTooth, 'settingPerTooth');
+    if (catalog.inscription.enabled) need(catalog.inscription.styles, pricing.inscription, 'inscription');
+    if (deposit.mode === 'link' && !deposit.link) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['deposit', 'link'], message: 'Add the payment link.' });
+    if (pricing.display === 'hidden' && deposit.mode !== 'none' && deposit.rule.type !== 'fixed') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['deposit', 'rule'], message: 'With hidden prices the deposit must be a fixed amount.' });
+    }
+    if (catalog.types.includes('iced') && (!catalog.settings.length || !catalog.stones.length)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['catalog', 'types'], message: 'Iced out needs at least one setting and stone.' });
+    }
+  });
+
+export type TenantConfig = z.infer<typeof TenantConfigSchema>;
+export type TenantCatalog = TenantConfig['catalog'];
+export type TenantPricing = TenantConfig['pricing'];
+export type TenantDeposit = TenantConfig['deposit'];
+
+export type ParseResult = { ok: true; config: TenantConfig } | { ok: false; issues: { path: string; message: string }[] };
+
+export const parseTenantConfig = (value: unknown): ParseResult => {
+  const result = TenantConfigSchema.safeParse(value);
+  if (result.success) return { ok: true, config: result.data };
+  return { ok: false, issues: result.error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) };
+};
