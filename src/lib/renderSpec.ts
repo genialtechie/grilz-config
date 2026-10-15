@@ -302,7 +302,8 @@ export const describeSpec = (spec: RenderSpec): string => {
     const count = spec.teeth.filter((tooth) => (row === 'upper' ? tooth.index < 16 : tooth.index >= 16)).length;
     if (count === 0) parts.push(`the ${row} row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums`);
   });
-  if (spec.fangs) parts.push('the two upper canines are extended into long, sharp, clearly pointed fang caps');
+  // Fangs are added by their own section edits; asking for them here makes the
+  // model reshape the neighbouring teeth, which then no longer line up with the 3D masks.
   if (spec.cut === 'permanent') parts.push('the grillz look seamless and permanent, like custom fitted caps');
   return `${parts.join('; ')}.`;
 };
@@ -318,7 +319,7 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
       ? "The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image."
       : '',
     'Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal.',
-    'Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input.',
+    'Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel.',
     'Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth.',
     'Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour.',
     'Photorealistic. No text, no watermark, no logos, no people in the scene.',
@@ -326,72 +327,118 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
     .filter(Boolean)
     .join(' ');
 
-// ---- Masked edits ----
-// After the main render, targeted edits repaint just part of the photo inside a
-// mask taken from the 3D model:
-// - "group": tooth groups that differ from the majority (mixed designs)
-// - "fangs": the two upper canines, mask stretched down so a point fits
+// ---- Section edits ----
+// After the main render, each section of the set is repainted on its own: the
+// server crops the photo around that section's mask (taken from the 3D model),
+// edits the zoomed crop with a focused prompt, and blends the result back
+// through the mask. Zoomed, single-purpose edits follow the design far more
+// reliably than one prompt describing every tooth. Kinds:
+// - "tooth": a run of adjacent teeth that share a design (mixed designs only)
+// - "fangs": one upper canine, mask stretched down so a point fits
 // - "inscription": the customer's letters on the tooth they picked
+// - "bare": a row with no grillz, kept as plain white teeth
 
-export const MAX_MASKED_EDITS = 3;
+export const MAX_SECTION_EDITS = 10;
 export const FANG_TEETH = [5, 10];
 
-export type MaskKind = 'group' | 'fangs' | 'inscription';
+export type MaskKind = 'bare' | 'tooth' | 'fangs' | 'inscription';
 export type MaskPlan = { kind: MaskKind; indices: number[] };
 
-/**
- * The edits to run, in execution order. Explicit paid extras (inscription,
- * fangs) win the slots first when the cap is hit; they still run last so a
- * group repaint never covers them.
- */
-export const planMasks = (spec: Pick<RenderSpec, 'teeth' | 'fangs' | 'inscription'>): MaskPlan[] => {
-  const priority: MaskPlan[] = [];
-  if (spec.inscription) priority.push({ kind: 'inscription', indices: [spec.inscription.tooth] });
-  if (spec.fangs) priority.push({ kind: 'fangs', indices: FANG_TEETH });
-  groupTeeth(spec.teeth)
-    .slice(1)
-    .forEach((group) => priority.push({ kind: 'group', indices: group.map((tooth) => tooth.index) }));
-  const order: Record<MaskKind, number> = { group: 0, fangs: 1, inscription: 2 };
-  return priority.slice(0, MAX_MASKED_EDITS).sort((a, b) => order[a.kind] - order[b.kind]);
+const KIND_ORDER: Record<MaskKind, number> = { bare: 0, tooth: 1, fangs: 2, inscription: 3 };
+
+/** Splits teeth into runs of neighbours in the same row, at most `size` teeth per run. */
+const runsOf = (indices: number[], size: number): number[][] => {
+  const sorted = [...indices].sort((a, b) => a - b);
+  const runs: number[][] = [];
+  sorted.forEach((index) => {
+    const last = runs.at(-1);
+    const sameRow = last && Math.floor(last[0] / 16) === Math.floor(index / 16);
+    if (last && sameRow && index === last.at(-1)! + 1 && last.length < size) last.push(index);
+    else runs.push([index]);
+  });
+  return runs;
 };
 
-const SEAMLESS =
-  'Match the surrounding metal colour, lighting, reflections and photo style exactly so the edit is seamless, and leave the gums and mold untouched.';
+/**
+ * The section edits to run, composited in this order (later ones win where they
+ * overlap). Fangs and the inscription tooth get their own edits that include
+ * the tooth's design, so they are left out of the "tooth" runs.
+ */
+export const planMasks = (spec: Pick<RenderSpec, 'teeth' | 'fangs' | 'inscription'>): MaskPlan[] => {
+  const selected = new Set(spec.teeth.map((tooth) => tooth.index));
+  const plans: MaskPlan[] = [];
+  const special = new Set<number>();
+  if (spec.inscription) {
+    plans.push({ kind: 'inscription', indices: [spec.inscription.tooth] });
+    special.add(spec.inscription.tooth);
+  }
+  if (spec.fangs) {
+    FANG_TEETH.filter((index) => !special.has(index)).forEach((index) => {
+      plans.push({ kind: 'fangs', indices: [index] });
+      special.add(index);
+    });
+  }
+  ([0, 16] as const).forEach((rowStart) => {
+    const row = Array.from({ length: 16 }, (_, offset) => rowStart + offset);
+    if (spec.teeth.length && !row.some((index) => selected.has(index))) plans.push({ kind: 'bare', indices: row });
+  });
+  const groups = groupTeeth(spec.teeth);
+  if (groups.length > 1) {
+    const budget = MAX_SECTION_EDITS - plans.length;
+    // Smallest runs that fit the budget: single teeth zoom in best.
+    for (const size of [1, 2, 3, 4, 16]) {
+      const runs = groups.flatMap((group) => runsOf(group.map((tooth) => tooth.index).filter((index) => !special.has(index)), size));
+      if (runs.length <= budget || size === 16) {
+        runs.slice(0, Math.max(0, budget)).forEach((indices) => plans.push({ kind: 'tooth', indices }));
+        break;
+      }
+    }
+  }
+  return plans.sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+};
 
-/** The prompt for one masked edit. Built on the server only. */
+const EDIT_STYLE =
+  'Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph.';
+
+/** Edit model per section: FLUX.2 [flex] is stronger at lettering. */
+export const editModel = (plan: MaskPlan) => (plan.kind === 'inscription' ? 'flux-2-flex' : 'flux-2-pro');
+
+/** The prompt for one section edit (on a zoomed crop). Built on the server only. */
 export const buildFillPrompt = (spec: RenderSpec, plan: MaskPlan): string | null => {
-  const designOf = (index: number): ToothDesign => spec.teeth.find((tooth) => tooth.index === index) ?? groupTeeth(spec.teeth)[0][0];
-  if (plan.kind === 'fangs') {
-    const design = designOf(FANG_TEETH[0]);
+  const designOf = (index: number): ToothDesign | undefined => spec.teeth.find((tooth) => tooth.index === index);
+  if (plan.kind === 'bare') {
     return [
-      `Turn the two masked upper canine teeth into long, sharp, pointed fang caps made of ${shortDesign(design)}: ${describeDesign(design)}.`,
-      'Each fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like vampire fangs.',
-      SEAMLESS,
-      'Do not add any text, lettering or marks. Photorealistic high-end jewelry product photograph.',
+      'Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint.',
+      'Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text.',
+    ].join(' ');
+  }
+  if (plan.kind === 'fangs') {
+    const design = designOf(plan.indices[0]) ?? groupTeeth(spec.teeth)[0][0];
+    return [
+      `Make the canine tooth in the centre of this close-up a long, sharp, pointed FANG grill cap: ${describeDesign(design)}.`,
+      'The fang tapers to a clear point that reaches noticeably lower than the neighbouring teeth, like a vampire fang.',
+      'Match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text.',
     ].join(' ');
   }
   if (plan.kind === 'inscription') {
     if (!spec.inscription) return null;
-    const design = designOf(spec.inscription.tooth);
+    const design = designOf(spec.inscription.tooth) ?? groupTeeth(spec.teeth)[0][0];
     const style = INSCRIPTION_STYLES.find((item) => item.id === spec.inscription!.style)!;
     const text = spec.inscription.text;
     return [
-      `On the masked grillz tooth (${shortDesign(design)}), add the characters "${text}" across its front face as ${style.render}.`,
-      `Spell it exactly "${text}": ${text.length} character${text.length === 1 ? '' : 's'}, in this order, centred, upright and clearly legible. Nothing else is written anywhere.`,
-      'Keep the tooth shape, size, metal and position the same.',
-      SEAMLESS,
-      'Photorealistic high-end jewelry product photograph.',
+      `Make the grillz tooth in the centre of this close-up ${describeDesign(design)}, and add the characters "${text}" across its front face as ${style.render}.`,
+      `Spell it exactly "${text}": ${text.length} character${text.length === 1 ? '' : 's'} (${text.split('').join(', ')}), in this order, centred, upright and clearly legible, in the same metal as the tooth. Nothing else is written anywhere.`,
+      EDIT_STYLE,
     ].join(' ');
   }
-  const wanted = new Set(plan.indices);
-  const teeth = spec.teeth.filter((tooth) => wanted.has(tooth.index));
-  if (!teeth.length || teeth.length !== plan.indices.length) return null;
-  const design = teeth[0];
+  const teeth = plan.indices.map(designOf);
+  if (!teeth.length || teeth.some((tooth) => !tooth)) return null;
+  const design = teeth[0]!;
+  const what = teeth.length === 1 ? 'the grillz tooth in the centre of this close-up' : `the ${teeth.length} neighbouring grillz teeth in the centre of this close-up`;
   return [
-    `Repaint only the masked grillz ${teeth.length === 1 ? 'tooth' : 'teeth'} as ${shortDesign(design)}: ${describeDesign(design)}.`,
-    'Keep the same tooth shape, size and position.',
-    SEAMLESS,
-    'Do not add any text, lettering, numbers, labels or marks anywhere. Photorealistic high-end jewelry product photograph. No watermark.',
+    `Make ${what} ${shortDesign(design)}: ${describeDesign(design)}.`,
+    EDIT_STYLE,
+    'No text, lettering, numbers or marks.',
   ].join(' ');
 };
 

@@ -1,6 +1,8 @@
-import { buildFillPrompt, buildRenderPrompt, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
+import sharp from 'sharp';
+import { buildFillPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
 
-// Turns a 3D configurator screenshot into a studio product photo with FLUX.2 pro.
+// Turns a 3D configurator screenshot into a studio product photo with FLUX.2:
+// one main render, then zoomed section edits blended back through 3D masks.
 // Shared by the Vercel function (api/render.ts) and the Vite dev server.
 
 const BFL = 'https://api.bfl.ai/v1';
@@ -10,6 +12,9 @@ const POLL_INTERVAL_MS = 1500;
 // function's maxDuration in vercel.json (120s), with room to respond.
 const BUDGET_MS = 105_000;
 const JOB_TIMEOUT_MS = 55_000;
+// BFL rejects bursts of parallel jobs (HTTP 429), so section edits run a few at a time.
+const EDIT_CONCURRENCY = 4;
+const EDIT_SIZE = 1024;
 
 // Best-effort per-IP throttle. Serverless instances do not share memory, so this
 // only slows down abuse; the client also caps renders per visitor.
@@ -33,24 +38,40 @@ export type RenderEnv = {
   FLUX_API_KEY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
-  RENDER_DAILY_CAP?: string;
+  /** Daily budget in FLUX generations (one per main render or section edit). */
+  RENDER_DAILY_GENERATIONS?: string;
 };
 
-// Hard daily budget across all instances, via Upstash Redis REST (free tier).
-// Skipped when Upstash is not configured. Fails open if Redis is unreachable,
-// so an Upstash outage does not take the demo down.
-const overDailyCap = async (env: RenderEnv): Promise<boolean> => {
+// Rough cost of one FLUX.2 generation in BFL credits (1 credit = $0.01), used to
+// stop before starting a render the account cannot pay for.
+const CREDITS_PER_GENERATION = 7;
+const DEFAULT_DAILY_GENERATIONS = 45; // about $3 a day
+const PAUSED = 'Studio photos are paused right now.';
+
+// Daily budget in generations, so a complex design (main render + up to 10
+// section edits) costs more of it than a simple one. Shared across instances via
+// Upstash Redis REST when configured; otherwise counted per instance, which only
+// slows spending down. Fails open if Redis is unreachable.
+const localSpend = new Map<string, number>();
+
+const overDailyBudget = async (env: RenderEnv, generations: number): Promise<boolean> => {
+  const cap = Number(env.RENDER_DAILY_GENERATIONS ?? DEFAULT_DAILY_GENERATIONS) || DEFAULT_DAILY_GENERATIONS;
+  const key = `generations:${new Date().toISOString().slice(0, 10)}`;
   const url = env.UPSTASH_REDIS_REST_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return false;
-  const cap = Number(env.RENDER_DAILY_CAP ?? '100') || 100;
-  const key = `renders:${new Date().toISOString().slice(0, 10)}`;
+  if (!url || !token) {
+    const spent = (localSpend.get(key) ?? 0) + generations;
+    if (spent > cap) return true;
+    localSpend.clear();
+    localSpend.set(key, spent);
+    return false;
+  }
   try {
     const response = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify([
-        ['INCR', key],
+        ['INCRBY', key, String(generations)],
         ['EXPIRE', key, '172800'],
       ]),
     });
@@ -62,9 +83,28 @@ const overDailyCap = async (env: RenderEnv): Promise<boolean> => {
   }
 };
 
+// The BFL balance, cached briefly per instance. Lets us refuse a render up front
+// (a clear "paused" message) instead of failing halfway through.
+let creditCache: { value: number; at: number } | null = null;
+
+const bflCredits = async (apiKey: string): Promise<number | null> => {
+  if (creditCache && Date.now() - creditCache.at < 60_000) return creditCache.value;
+  try {
+    const response = await fetch(`${BFL}/credits`, { headers: { 'x-key': apiKey, accept: 'application/json' } });
+    if (!response.ok) return null;
+    const { credits } = (await response.json()) as { credits?: number };
+    if (typeof credits !== 'number') return null;
+    creditCache = { value: credits, at: Date.now() };
+    return credits;
+  } catch {
+    return null;
+  }
+};
+
 export type RenderResult = { status: number; body: Record<string, unknown> };
 
-const fail = (status: number, error: string): RenderResult => ({ status, body: { error } });
+// `code` lets the client tell a temporary hiccup (retry) from paused renders (no retry).
+const fail = (status: number, error: string, code = 'failed'): RenderResult => ({ status, body: { error, code } });
 
 const readImage = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -79,6 +119,7 @@ class JobError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code = 'failed',
   ) {
     super(message);
   }
@@ -86,11 +127,22 @@ class JobError extends Error {
 
 // Submits one BFL job, polls until it is ready, and returns the result as base64 JPEG.
 async function runJob(endpoint: string, body: Record<string, unknown>, apiKey: string, deadline: number): Promise<string> {
-  const submit = await fetch(`${BFL}/${endpoint}`, {
-    method: 'POST',
-    headers: { 'x-key': apiKey, 'Content-Type': 'application/json', accept: 'application/json' },
-    body: JSON.stringify({ ...body, output_format: 'jpeg', safety_tolerance: 2 }),
-  });
+  let submit: Response | null = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    submit = await fetch(`${BFL}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'x-key': apiKey, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ ...body, output_format: 'jpeg', safety_tolerance: 2 }),
+    });
+    if (submit.status !== 429 || Date.now() > deadline - 20_000) break;
+    await sleep(1500 + attempt * 1500);
+  }
+  if (!submit) throw new JobError(502, 'The renderer is busy. Please try again.');
+  if (submit.status === 402) {
+    creditCache = { value: 0, at: Date.now() };
+    console.error('bfl out of credits', endpoint);
+    throw new JobError(503, PAUSED, 'paused');
+  }
   if (!submit.ok) {
     console.error('bfl submit failed', endpoint, submit.status, (await submit.text()).slice(0, 300));
     throw new JobError(502, 'The renderer is busy. Please try again.');
@@ -102,8 +154,8 @@ async function runJob(endpoint: string, body: Record<string, unknown>, apiKey: s
   const stopAt = Math.min(deadline, Date.now() + JOB_TIMEOUT_MS);
   while (Date.now() < stopAt) {
     await sleep(POLL_INTERVAL_MS);
-    const poll = await fetch(pollUrl, { headers: { 'x-key': apiKey, accept: 'application/json' } });
-    if (!poll.ok) continue;
+    const poll = await fetch(pollUrl, { headers: { 'x-key': apiKey, accept: 'application/json' } }).catch(() => null);
+    if (!poll?.ok) continue;
     const result = (await poll.json()) as { status?: string; result?: { sample?: string } };
     if (result.status === 'Ready' && result.result?.sample) {
       // Signed result URLs expire after ~10 minutes, so fetch the image now.
@@ -124,7 +176,7 @@ async function runJob(endpoint: string, body: Record<string, unknown>, apiKey: s
   throw new JobError(504, 'The render took too long. Please try again.');
 }
 
-type MaskJob = { kind: string; indices: number[]; mask: string; prompt: string };
+type MaskJob = { kind: string; indices: number[]; mask: string; prompt: string; model: string };
 
 // The client must send exactly the edits the server would plan for this design,
 // in the same order; prompts are always built here.
@@ -141,10 +193,87 @@ const parseMasks = (value: unknown, spec: RenderSpec): MaskJob[] | null => {
     const maskBase64 = typeof mask === 'string' && mask.startsWith('data:image/png;') ? readImage(mask) : null;
     const prompt = buildFillPrompt(spec, expected);
     if (!maskBase64 || !prompt) return null;
-    jobs.push({ kind: expected.kind, indices: expected.indices, mask: maskBase64, prompt });
+    jobs.push({ kind: expected.kind, indices: expected.indices, mask: maskBase64, prompt, model: editModel(expected) });
   }
   return jobs;
 };
+
+type Raw = { data: Buffer; width: number; height: number; channels: number };
+
+const toRaw = async (input: Buffer, channels: 1 | 3, size?: { width: number; height: number }): Promise<Raw> => {
+  let image = sharp(input);
+  if (size) image = image.resize(size.width, size.height, { fit: 'fill' });
+  image = channels === 1 ? image.greyscale() : image.removeAlpha();
+  const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height, channels: info.channels };
+};
+
+/** A square crop around the mask with room for context, clamped to the image. */
+const cropBox = (mask: Raw) => {
+  let x0 = mask.width, y0 = mask.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < mask.height; y += 1) {
+    for (let x = 0; x < mask.width; x += 1) {
+      if (mask.data[(y * mask.width + x) * mask.channels] > 127) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return null;
+  const limit = Math.min(mask.width, mask.height);
+  const side = Math.round(Math.min(limit, Math.max(300, Math.max(x1 - x0, y1 - y0) * 1.9)));
+  const clamp = (centre: number, max: number) => Math.round(Math.max(0, Math.min(max - side, centre - side / 2)));
+  return { left: clamp((x0 + x1) / 2, mask.width), top: clamp((y0 + y1) / 2, mask.height), width: side, height: side };
+};
+
+type SectionEdit = { patch: Raw; alpha: Raw; box: { left: number; top: number; width: number; height: number } };
+
+// Crops the photo around one section, edits the zoomed crop, and returns the
+// edited patch with a feathered mask ready to blend back in.
+async function runSectionEdit(photo: Buffer, size: { width: number; height: number }, job: MaskJob, apiKey: string, deadline: number): Promise<SectionEdit | null> {
+  const mask = await toRaw(Buffer.from(job.mask, 'base64'), 1, size);
+  const box = cropBox(mask);
+  if (!box) return null;
+  const crop = await sharp(photo).extract(box).resize(EDIT_SIZE, EDIT_SIZE, { kernel: 'lanczos3' }).jpeg({ quality: 94 }).toBuffer();
+  const edited = await runJob(job.model, { prompt: job.prompt, input_image: crop.toString('base64') }, apiKey, deadline);
+  const patch = await toRaw(Buffer.from(edited, 'base64'), 3, { width: box.width, height: box.height });
+  const alphaPng = await sharp(Buffer.from(job.mask, 'base64')).resize(size.width, size.height, { fit: 'fill' }).greyscale().extract(box).blur(2.5).png().toBuffer();
+  const alpha = await toRaw(alphaPng, 1);
+  return { patch, alpha, box };
+}
+
+const blend = (base: Raw, edit: SectionEdit) => {
+  const { patch, alpha, box } = edit;
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const a = alpha.data[y * alpha.width + x] / 255;
+      if (a <= 0) continue;
+      const target = ((box.top + y) * base.width + box.left + x) * base.channels;
+      const source = (y * patch.width + x) * patch.channels;
+      for (let c = 0; c < 3; c += 1) base.data[target + c] = Math.round(patch.data[source + c] * a + base.data[target + c] * (1 - a));
+    }
+  }
+};
+
+/** Runs `tasks` with at most `limit` in flight; results keep their order. */
+async function pool<T>(tasks: (() => Promise<T>)[], limit: number): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = new Array(tasks.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < tasks.length) {
+      const index = next++;
+      try {
+        results[index] = { status: 'fulfilled', value: await tasks[index]() };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
 
 export async function handleRender(payload: unknown, ip: string, env: RenderEnv): Promise<RenderResult> {
   try {
@@ -180,8 +309,14 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
   const masks = parseMasks(rawMasks, spec);
   if (!masks) return fail(400, 'Invalid tooth masks.');
 
-  if (throttled(ip)) return fail(429, 'Too many renders. Try again in a few minutes.');
-  if (await overDailyCap(env)) return fail(429, 'Demo photo renders are paused for today. Check back tomorrow.');
+  if (throttled(ip)) return fail(429, 'Too many renders. Try again in a few minutes.', 'throttled');
+  const generations = 1 + masks.length;
+  const credits = await bflCredits(apiKey);
+  if (credits !== null && credits < CREDITS_PER_GENERATION * generations) {
+    console.error('render refused: low credits', credits);
+    return fail(503, PAUSED, 'paused');
+  }
+  if (await overDailyBudget(env, generations)) return fail(503, PAUSED, 'paused');
 
   const started = Date.now();
   const deadline = started + BUDGET_MS;
@@ -198,20 +333,30 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
       deadline,
     );
   } catch (error) {
-    if (error instanceof JobError) return fail(error.status, error.message);
+    if (error instanceof JobError) return fail(error.status, error.message, error.code);
     throw error;
   }
 
-  // Repaint each tooth group that differs from the majority inside its own mask.
-  // A failed or late edit keeps the photo we already have rather than failing.
+  // Repaint each section on a zoomed crop, in parallel, then blend the edits
+  // back in plan order. A failed or late edit keeps the main photo there.
   let edits = 0;
-  for (const job of masks) {
-    if (deadline - Date.now() < 25_000) break;
-    try {
-      result = await runJob('flux-pro-1.0-fill', { image: result, mask: job.mask, prompt: job.prompt }, apiKey, deadline);
-      edits += 1;
-    } catch (error) {
-      console.error('masked edit skipped', job.kind, job.indices, error instanceof Error ? error.message : error);
+  if (masks.length && deadline - Date.now() > 25_000) {
+    const photo = Buffer.from(result, 'base64');
+    const meta = await sharp(photo).metadata();
+    const size = { width: meta.width ?? 1024, height: meta.height ?? 1024 };
+    const settled = await pool(masks.map((job) => () => runSectionEdit(photo, size, job, apiKey, deadline)), EDIT_CONCURRENCY);
+    const base = await toRaw(photo, 3);
+    settled.forEach((outcome, index) => {
+      if (outcome.status === 'fulfilled' && outcome.value) {
+        blend(base, outcome.value);
+        edits += 1;
+      } else if (outcome.status === 'rejected') {
+        const reason = outcome.reason instanceof Error ? outcome.reason.message : outcome.reason;
+        console.error('section edit skipped', masks[index].kind, masks[index].indices, reason);
+      }
+    });
+    if (edits) {
+      result = (await sharp(base.data, { raw: { width: base.width, height: base.height, channels: 3 } }).jpeg({ quality: 92 }).toBuffer()).toString('base64');
     }
   }
 

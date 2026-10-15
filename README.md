@@ -26,9 +26,17 @@ form, so the photo is usually ready when they submit.
   (`src/lib/renderSpec.ts`), so the endpoint can't generate arbitrary images.
 - Set `FLUX_API_KEY` in Vercel (Production and Preview) and in `.env.local` for
   local work. Never prefix it with `VITE_`.
-- Cost guards: 3 renders per visitor (browser), a best-effort per-IP throttle,
-  and an optional daily cap via Upstash Redis (`UPSTASH_REDIS_REST_URL`,
-  `UPSTASH_REDIS_REST_TOKEN`, `RENDER_DAILY_CAP`, default 100 renders/day).
+- Pipeline: one FLUX.2 [pro] render, then (for mixed designs, fangs, letters or
+  bare rows) zoomed section edits blended back through 3D masks. A simple design
+  is 1 generation; a complex one up to 11 (roughly $0.07 each).
+- Cost guards: renders start only when the lead form is sent, 3 per visitor
+  (failed ones are refunded), a best-effort per-IP throttle, a BFL balance check
+  before each render, and a daily budget in generations (`RENDER_DAILY_GENERATIONS`,
+  default 45, about $3/day). The budget is shared across instances only when
+  Upstash Redis is set (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`);
+  without it each instance counts on its own.
+- When credits run out or the budget is spent, the API answers `code: "paused"`
+  and the builder shows the 3D preview with a friendly note instead of an error.
   Also add a Vercel Firewall rate-limit rule on `/api/render` (e.g. 5 per 10
   minutes per IP) and keep auto top-up off in the BFL account.
 - Option photo cards live in `public/assets/options/grillz/` (generated once

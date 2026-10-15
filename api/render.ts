@@ -2,7 +2,7 @@ import { handleRender } from '../server/render.js';
 
 // Vercel Node function: POST /api/render  { image: dataURL, spec: RenderSpec }
 // Env: FLUX_API_KEY (required); UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN,
-// RENDER_DAILY_CAP (optional daily budget, default 100 renders).
+// RENDER_DAILY_GENERATIONS (optional daily budget in FLUX generations, default 45).
 
 export async function POST(request: Request): Promise<Response> {
   let payload: unknown;

@@ -60,12 +60,21 @@ function renderCrop(state: RootState, background: string): HTMLCanvasElement {
  * A square JPEG of the current 3D view, ready to send to the AI renderer.
  * Teeth without grillz are painted clean matte white for the capture so the AI
  * never mistakes a dimly lit natural tooth for metal.
+ * With `hideStones` (mixed designs) the stone meshes are left out: they poke
+ * past the tooth outline, the AI then draws those teeth bigger, and the photo
+ * stops lining up with the per-tooth masks. Section edits add the stones back.
  */
-export function capturePreview(state: RootState, grillzTeeth: number[]): string {
+export function capturePreview(state: RootState, grillzTeeth: number[], hideStones = false): string {
   const withGrillz = new Set(grillzTeeth);
   const natural = new THREE.MeshStandardMaterial({ color: '#f6f3ee', roughness: 0.55, metalness: 0 });
   const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+  const hidden: THREE.Object3D[] = [];
   state.scene.traverse((object) => {
+    if (hideStones && object.name === 'diamond_stones' && object.visible) {
+      object.visible = false;
+      hidden.push(object);
+      return;
+    }
     if (!(object instanceof THREE.Mesh) || !toothNameRegex.test(object.name)) return;
     const index = toothIndexOf(object);
     if (index === null || withGrillz.has(index)) return;
@@ -78,6 +87,9 @@ export function capturePreview(state: RootState, grillzTeeth: number[]): string 
   } finally {
     originals.forEach((material, mesh) => {
       mesh.material = material;
+    });
+    hidden.forEach((object) => {
+      object.visible = true;
     });
     natural.dispose();
     state.gl.render(state.scene, state.camera);
