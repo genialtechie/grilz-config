@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, type RootState } from '@react-three/fiber';
 import {
   Environment,
   Html,
@@ -20,18 +20,24 @@ function ModelLoader() {
   );
 }
 
+type Props = SceneProps & {
+  onReady?: (state: RootState) => void;
+};
+
 function Scene({
   customizations,
   selectedTeeth,
   isSelectionMode,
   toggleToothSelection,
-}: SceneProps) {
+  onReady,
+}: Props) {
   return (
     <div className="viewer-canvas">
       <Canvas
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true }}
         shadows
+        onCreated={onReady}
         aria-label="Interactive grillz model"
       >
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={44} />
@@ -51,7 +57,7 @@ function Scene({
         <directionalLight position={[6, 7, 8]} intensity={2.1} castShadow />
         <directionalLight position={[-7, 2, 5]} intensity={1.2} />
         <pointLight position={[0, -5, 5]} intensity={0.8} />
-        <Environment preset="studio" />
+        <Environment files="/assets/env/studio_small_03_1k.hdr" />
         <Suspense fallback={<ModelLoader />}>
           <GrillzModel
             customizations={customizations}

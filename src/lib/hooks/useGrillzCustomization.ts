@@ -10,6 +10,11 @@ export const baseToothState: ToothCustomization = {
 const makeDefaultCustomizations = () =>
   Array.from({ length: 32 }, () => ({ ...baseToothState }));
 
+const centeredTop = (count: number) => {
+  const start = Math.floor((16 - count) / 2);
+  return Array.from({ length: count }, (_, index) => start + index);
+};
+
 const centeredSet = (teethPerRow: number) => {
   const start = Math.floor((16 - teethPerRow) / 2);
   const top = Array.from({ length: teethPerRow }, (_, index) => start + index);
@@ -37,6 +42,19 @@ export const useGrillzCustomization = () => {
 
   const selectPreset = useCallback((teethPerRow: number) => {
     setSelectedTeeth(centeredSet(teethPerRow));
+  }, []);
+
+  const selectTopOnly = useCallback((count: number) => {
+    setSelectedTeeth(centeredTop(count));
+  }, []);
+
+  // Sets how many teeth are covered in one row (centred), keeping the other row.
+  const setRowCount = useCallback((row: 'top' | 'bottom', count: number) => {
+    setSelectedTeeth((previous) => {
+      const keep = previous.filter((index) => (row === 'top' ? index >= 16 : index < 16));
+      const rowTeeth = centeredTop(Math.max(0, Math.min(16, count))).map((index) => (row === 'top' ? index : index + 16));
+      return [...keep, ...rowTeeth].sort((a, b) => a - b);
+    });
   }, []);
 
   const selectAllTeeth = useCallback(() => {
@@ -78,6 +96,8 @@ export const useGrillzCustomization = () => {
     isSelectionMode,
     toggleToothSelection,
     selectPreset,
+    selectTopOnly,
+    setRowCount,
     selectAllTeeth,
     clearAllTeeth,
     updateSelectedTeethCustomization,
