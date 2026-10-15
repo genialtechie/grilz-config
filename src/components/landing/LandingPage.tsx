@@ -1,87 +1,82 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
-import {
-  ArrowRight,
-  Box,
-  CheckCircle2,
-  CircleDollarSign,
-  FileText,
-  Repeat2,
-  Settings2,
-  ShoppingBag,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import './style.css';
 
-const COMMERCE_STEPS = [
+const INSTAGRAM_DM = 'https://ig.me/m/vvslab.ai';
+const INSTAGRAM_PROFILE = 'https://www.instagram.com/vvslab.ai/';
+
+const PROBLEMS = [
+  { title: 'They can’t picture it.', note: 'So they ask for photos of pieces you haven’t made yet.' },
+  { title: 'The quote takes days.', note: 'Metal, karat, stones, teeth. Interest cools while you calculate.' },
+  { title: 'No deposit, no commitment.', note: 'The order never makes it to the bench.' },
+];
+
+const STEPS = [
   {
-    icon: Settings2,
-    title: 'Guided configuration',
-    copy: 'Turn complex product choices into a clear, controlled buying flow.',
+    title: 'They build it in 3D.',
+    copy: 'Tap the teeth, pick the metal, style, setting and stones. Every tooth can be different. The price updates with every choice.',
+    image: '/assets/vvs/phone-metal.webp',
+    alt: 'The builder on a phone, showing metal and karat options',
   },
   {
-    icon: Box,
-    title: 'Real-time visualization',
-    copy: 'Let buyers see materials, finishes, and details before they commit.',
-  },
-  {
-    icon: CircleDollarSign,
-    title: 'Dynamic pricing',
-    copy: 'Update the quote as options change, without manual back-and-forth.',
-  },
-  {
-    icon: ShoppingBag,
-    title: 'Cart-ready orders',
-    copy: 'Carry the final configuration into checkout and production workflows.',
+    title: 'They leave their info.',
+    copy: 'Name and Instagram or phone go in before the studio photo unlocks. Every finished design is a lead with contact details.',
+    image: '/assets/vvs/phone-photo.webp',
+    alt: 'The builder’s last step with a price breakdown and a contact form',
   },
 ];
 
-const PRODUCT_EXPERIENCES = [
-  {
-    title: 'Let buyers see the room before they order.',
-    copy: 'Turn fabrics, colors, dimensions, and finishes into a visual buying flow that makes considered purchases easier to understand.',
-    neutral: '/assets/options/sofa-neutral.avif',
-    selected: '/assets/options/sofa-rose.avif',
-    alt: 'A configurable sofa shown in a neutral finish',
-  },
-  {
-    title: 'Make every material choice feel tangible.',
-    copy: 'Customers can compare metals, stones, settings, and price changes without waiting for another mockup or quote.',
-    neutral: '/assets/options/ring-neutral.avif',
-    selected: '/assets/options/ring-rose.avif',
-    alt: 'A configurable ring shown in silver',
-  },
-  {
-    title: 'Help customers choose with confidence.',
-    copy: 'Bring frames, lenses, colors, and fit options into one guided experience instead of a wall of disconnected variants.',
-    neutral: '/assets/options/eyewear-neutral.avif',
-    selected: '/assets/options/eyewear-rose.avif',
-    alt: 'Configurable eyewear shown in a neutral finish',
-  },
-  {
-    title: 'Sell detail without another photoshoot.',
-    copy: 'Show combinations of cases, bands, faces, and finishes while preserving the rules behind what can actually be made.',
-    neutral: '/assets/options/watch-neutral.avif',
-    selected: '/assets/options/watch-rose.avif',
-    alt: 'A configurable watch shown in silver',
-  },
+const OPTIONS = [
+  { label: 'Iced out', image: '/assets/vvs/options/type-iced.webp' },
+  { label: 'Open face', image: '/assets/vvs/options/style-open-face.webp' },
+  { label: 'Diamond cut', image: '/assets/vvs/options/style-diamond-cut.webp' },
+  { label: 'Fangs', image: '/assets/vvs/options/fangs-yes.webp' },
+  { label: 'Honeycomb', image: '/assets/vvs/options/setting-honeycomb.webp' },
+  { label: 'Moissanite', image: '/assets/vvs/options/stone-moissanite.webp' },
+  { label: 'Rose gold', image: '/assets/vvs/options/metal-rose.webp' },
+  { label: 'Photo grillz', image: '/assets/vvs/options/type-photo.webp' },
 ];
 
-const OPERATIONS = [
+const OPTION_LIST =
+  'Yellow, white and rose gold from 10K to 18K, silver and platinum. Plain, iced out or photo grillz. Solid, open face, diamond cut, diamond dust, engraving or opals. Honeycomb, mosaic or prong settings. Moissanite, lab or natural stones. Fangs, deep cut or permanent look, initials on a tooth, and an inspiration photo upload.';
+
+const DELIVERABLES = [
+  { title: 'The lead', note: 'Name plus Instagram or phone, captured before the photo unlocks.' },
+  { title: 'The exact spec', note: 'Every tooth, metal, stone and setting, with the price they saw.' },
+  { title: 'The studio photo', note: 'The same image your customer fell for.' },
+  { title: 'The mold choice', note: 'In-store fitting, a mailed kit, or their own mold or scan.' },
+  { title: 'The deposit', note: 'Through your own Stripe or Shopify checkout. Your money, direct.' },
+];
+
+const INCLUDED = [
+  'Your own builder link for your site and IG bio',
+  'Your prices and options loaded in',
+  'AI studio photo for every finished design',
+  'Leads, specs and deposits sent to you',
+];
+
+const FAQS = [
   {
-    icon: FileText,
-    title: 'Accurate order details',
-    copy: 'Every approved choice becomes a clean specification your team can use.',
+    q: 'Do I need a website?',
+    a: 'No. The builder is its own link, so it works straight from your Instagram bio, your stories or a DM. If you have a site, it can live there too.',
   },
   {
-    icon: CircleDollarSign,
-    title: 'Pricing that keeps up',
-    copy: 'Rules update the price as customers change materials, sizes, and add-ons.',
+    q: 'Whose prices does it show?',
+    a: 'Yours. We load your metal, stone and per-tooth pricing during setup, so the live total matches what you’d quote.',
   },
   {
-    icon: Repeat2,
-    title: 'Connected handoff',
-    copy: 'Send the final order into checkout, production, or the tools you already use.',
+    q: 'Where does the deposit go?',
+    a: 'Through your own Stripe or Shopify checkout, straight to you.',
+  },
+  {
+    q: 'Is the studio photo the final piece?',
+    a: 'It’s a photo-real render of the design they built, so they can see it before they pay. The 3D build and the spec you receive are the source of truth for the bench.',
+  },
+  {
+    q: 'Is there a contract?',
+    a: 'No. $199 a month, no setup fee, cancel any month.',
   },
 ];
 
@@ -94,192 +89,216 @@ export default function LandingPage() {
     hasCapturedView.current = true;
     posthog.capture('commerce_landing_viewed', {
       page_path: window.location.pathname,
+      landing_version: 'vvs_lab_v1',
     });
   }, [posthog]);
 
-  const captureSampleClick = (placement: 'header' | 'hero' | 'final') => {
+  const captureBuilderClick = (placement: string) => {
     posthog.capture('sample_configurator_cta_clicked', { placement });
   };
 
-  const captureContactClick = (placement: 'final' | 'footer') => {
-    posthog.capture('contact_clicked', {
-      placement,
-      channel: 'email',
-    });
+  const captureDmClick = (placement: string) => {
+    posthog.capture('contact_clicked', { placement, channel: 'instagram_dm' });
   };
 
+  const BuilderButton = ({ placement, label = 'Try the builder' }: { placement: string; label?: string }) => (
+    <Link className="vvs-btn vvs-btn-gold" to="/configurator" onClick={() => captureBuilderClick(placement)}>
+      {label} <ArrowRight size={18} strokeWidth={1.8} />
+    </Link>
+  );
+
+  const DmButton = ({ placement }: { placement: string }) => (
+    <a
+      className="vvs-btn vvs-btn-line"
+      href={INSTAGRAM_DM}
+      target="_blank"
+      rel="noreferrer"
+      onClick={() => captureDmClick(placement)}
+    >
+      DM “BUILD” for a demo
+    </a>
+  );
+
   return (
-    <div className="demo-store-page">
-      <header className="demo-header">
-        <Link className="demo-brand" to="/" aria-label="MagPollo custom commerce home">
-          <img src="/assets/magpollo-logo.svg" alt="MagPollo" />
-          <small>Custom commerce</small>
+    <div className="vvs-page">
+      <header className="vvs-header">
+        <Link className="vvs-wordmark" to="/" aria-label="VVS Lab home">
+          <b>VVS</b> LAB
         </Link>
-        <nav className="demo-nav" aria-label="Custom commerce navigation">
-          <a href="#how-it-works">How it works</a>
-          <Link
-            className="demo-nav-cta"
-            to="/configurator"
-            onClick={() => captureSampleClick('header')}
-          >
-            Configure a sample <ArrowRight size={15} />
+        <nav className="vvs-nav" aria-label="Page navigation">
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <Link className="vvs-nav-cta" to="/configurator" onClick={() => captureBuilderClick('header')}>
+            Try the builder
           </Link>
         </nav>
       </header>
 
       <main>
-        <section className="demo-hero">
-          <div className="demo-hero-content">
-            <h1>Sell custom products without the back-and-forth.</h1>
-            <p>
-              Give customers a guided way to configure, visualize, price, and
-              order complex products online.
+        <section className="vvs-hero">
+          <div className="vvs-hero-photo" role="img" aria-label="Studio photo of gold grillz with fangs, designed in the builder" />
+          <div className="vvs-hero-copy">
+            <h1 className="vvs-serif">
+              Your DMs are losing <em>custom</em> orders.
+            </h1>
+            <p className="vvs-lede">
+              A live 3D grillz builder for your site and IG link. Customers design the piece, see the price,
+              and get a studio photo of it. You get the lead, the spec and the deposit.
             </p>
-            <div className="demo-hero-actions">
-              <Link
-                className="demo-primary-cta"
-                to="/configurator"
-                onClick={() => captureSampleClick('hero')}
-              >
-                Configure a sample product <ArrowRight size={17} />
-              </Link>
-              <a className="demo-secondary-cta" href="#how-it-works">See how it works</a>
+            <div className="vvs-actions">
+              <BuilderButton placement="hero" />
+              <DmButton placement="hero" />
+            </div>
+            <p className="vvs-price-line">$199/mo · No setup fee · Month to month</p>
+          </div>
+        </section>
+
+        <section className="vvs-problem" aria-labelledby="problem-title">
+          <div className="vvs-quote">
+            <span className="vvs-mark" aria-hidden="true">“</span>
+            <h2 id="problem-title" className="vvs-serif">How much for 6 bottom?</h2>
+            <p>The most expensive message in your inbox. Then the photos, the back-and-forth, the ghosting.</p>
+          </div>
+          <ol className="vvs-rows">
+            {PROBLEMS.map(({ title, note }, index) => (
+              <li key={title}>
+                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <p>{title}</p>
+                  <small>{note}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="vvs-how" id="how" aria-labelledby="how-title">
+          <h2 id="how-title" className="vvs-serif vvs-section-title">
+            Let them <em>build it</em> themselves.
+          </h2>
+          <div className="vvs-steps">
+            {STEPS.map(({ title, copy, image, alt }, index) => (
+              <article className="vvs-step" key={title}>
+                <div className="vvs-device">
+                  <img src={image} alt={alt} loading="lazy" />
+                </div>
+                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
+                <h3 className="vvs-serif">{title}</h3>
+                <p>{copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="vvs-reveal" aria-labelledby="reveal-title">
+          <h2 id="reveal-title" className="vvs-serif vvs-section-title">
+            Then they see it <em>finished</em>.
+          </h2>
+          <p className="vvs-reveal-copy">
+            <span className="vvs-num">03</span>
+            The 3D design turns into a studio photo of their exact piece. That’s the moment they put money down.
+          </p>
+          <div className="vvs-pair">
+            <figure>
+              <img src="/assets/vvs/preview-mixed.webp" alt="3D preview of a rose gold open-face set with one iced front tooth" loading="lazy" />
+              <figcaption>3D preview</figcaption>
+            </figure>
+            <figure>
+              <img src="/assets/vvs/photo-mixed.webp" alt="Studio photo of the same rose gold set with one iced front tooth" loading="lazy" />
+              <figcaption className="vvs-gold-text">AI studio photo</figcaption>
+            </figure>
+          </div>
+          <p className="vvs-caption">Same design, tooth for tooth. One iced front tooth stays one iced front tooth.</p>
+        </section>
+
+        <section className="vvs-options" aria-labelledby="options-title">
+          <div className="vvs-options-head">
+            <h2 id="options-title" className="vvs-serif vvs-section-title">
+              Every option you <em>actually</em> sell.
+            </h2>
+            <p>{OPTION_LIST}</p>
+          </div>
+          <div className="vvs-option-grid">
+            {OPTIONS.map(({ label, image }) => (
+              <figure key={label}>
+                <img src={image} alt={label} loading="lazy" />
+                <figcaption>{label}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        <section className="vvs-get" aria-labelledby="get-title">
+          <h2 id="get-title" className="vvs-serif vvs-section-title">
+            A lead you can <em>close</em>.
+          </h2>
+          <ol className="vvs-rows">
+            {DELIVERABLES.map(({ title, note }, index) => (
+              <li key={title}>
+                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <p>{title}</p>
+                  <small>{note}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="vvs-pricing" id="pricing" aria-labelledby="pricing-title">
+          <div className="vvs-price-card">
+            <h2 id="pricing-title" className="vvs-serif">
+              $199<span>/mo</span>
+            </h2>
+            <p className="vvs-price-sub">No setup fee. Month to month.</p>
+            <ul>
+              {INCLUDED.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <div className="vvs-actions vvs-actions-center">
+              <DmButton placement="pricing" />
             </div>
           </div>
-          <div className="demo-hero-media" aria-hidden="true">
-            <video
-              className="demo-hero-product-video"
-              autoPlay
-              muted
-              loop
-              playsInline
-              poster="/assets/mobile-hero.webp"
-            >
-              <source src="/assets/hero-video.mp4" type="video/mp4" />
-            </video>
-            <img
-              className="demo-hero-product-image"
-              src="/assets/mobile-hero.webp"
-              alt=""
-            />
-          </div>
         </section>
 
-        <section className="demo-use-cases" aria-labelledby="product-range-title">
-          <div className="demo-use-case-intro">
-            <h2 id="product-range-title">Custom products should still be easy to buy.</h2>
-            <p>
-              We shape the experience around the decisions your customers need
-              to make and the rules your team needs to preserve.
-            </p>
-          </div>
-          <div className="demo-use-case-list">
-            {PRODUCT_EXPERIENCES.map(({ title, copy, neutral, selected, alt }, index) => (
-              <article className="demo-use-case" key={title}>
-                <div className="demo-use-case-copy">
-                  <span aria-hidden="true">0{index + 1}</span>
-                  <h3>{title}</h3>
-                  <p>{copy}</p>
-                </div>
-                <div className="demo-use-case-visual">
-                  <img
-                    className="demo-use-case-neutral"
-                    src={neutral}
-                    alt={alt}
-                    width="909"
-                    height="822"
-                  />
-                  <img
-                    className="demo-use-case-selected"
-                    src={selected}
-                    alt=""
-                    width="909"
-                    height="822"
-                  />
-                </div>
-              </article>
+        <section className="vvs-faq" aria-labelledby="faq-title">
+          <h2 id="faq-title" className="vvs-serif vvs-section-title">Questions.</h2>
+          <div className="vvs-faq-list">
+            {FAQS.map(({ q, a }) => (
+              <details key={q}>
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
             ))}
           </div>
         </section>
 
-        <section className="demo-flow" id="how-it-works">
-          <div className="demo-section-heading">
-            <h2>Turn every choice into an order your team can fulfill.</h2>
-            <p>
-              Replace scattered messages, manual quotes, and unclear build notes
-              with one connected buying and fulfillment flow.
-            </p>
-          </div>
-          <div className="demo-step-grid">
-            {COMMERCE_STEPS.map(({ icon: Icon, title, copy }, index) => (
-              <article className="demo-step" key={title}>
-                <div className="demo-step-topline">
-                  <Icon size={19} strokeWidth={1.7} />
-                  <span>0{index + 1}</span>
-                </div>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="demo-operations" aria-labelledby="operations-title">
-          <div className="demo-operations-heading">
-            <h2 id="operations-title">The experience does not stop at the product page.</h2>
-            <p>
-              The same system that helps a customer decide can give your team a
-              complete, order-ready handoff.
-            </p>
-          </div>
-          <div className="demo-operation-list">
-            {OPERATIONS.map(({ icon: Icon, title, copy }) => (
-              <article className="demo-operation" key={title}>
-                <Icon size={21} strokeWidth={1.7} />
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="demo-final-cta">
-          <CheckCircle2 size={28} strokeWidth={1.5} aria-hidden="true" />
-          <h2>Make your hardest product easier to buy.</h2>
-          <p>
-            Show us how you sell it today. We will find the clearest path from
-            customer choices to an order your team can fulfill.
-          </p>
-          <div className="demo-final-actions">
-            <a
-              className="demo-primary-cta"
-              href="mailto:salesteam@magpollo.com"
-              onClick={() => captureContactClick('final')}
-            >
-              Talk to MagPollo <ArrowRight size={17} />
-            </a>
-            <Link
-              className="demo-secondary-cta"
-              to="/configurator"
-              onClick={() => captureSampleClick('final')}
-            >
-              Configure a sample
-            </Link>
+        <section className="vvs-final">
+          <img className="vvs-logo" src="/assets/vvs/logo.webp" alt="" width="128" height="128" />
+          <h2 className="vvs-serif">
+            DM “<em>BUILD</em>” for a demo.
+          </h2>
+          <p>Or try the builder your customers would use, right now.</p>
+          <div className="vvs-actions vvs-actions-center">
+            <BuilderButton placement="final" />
+            <DmButton placement="final" />
           </div>
         </section>
       </main>
 
-      <footer className="demo-footer">
-        <div>
-          <img src="/assets/magpollo-logo.svg" alt="MagPollo" />
-          <span>Custom commerce systems for products that are difficult to sell online.</span>
-        </div>
-        <a
-          href="mailto:salesteam@magpollo.com"
-          onClick={() => captureContactClick('footer')}
-        >
-          salesteam@magpollo.com
-        </a>
+      <footer className="vvs-footer">
+        <span>
+          <b>VVS</b> LAB · by Magpollo
+        </span>
+        <span className="vvs-footer-links">
+          <a href={INSTAGRAM_PROFILE} target="_blank" rel="noreferrer" onClick={() => captureDmClick('footer_profile')}>
+            @vvslab.ai
+          </a>
+          <a href="mailto:salesteam@magpollo.com" onClick={() => posthog.capture('contact_clicked', { placement: 'footer', channel: 'email' })}>
+            salesteam@magpollo.com
+          </a>
+        </span>
       </footer>
     </div>
   );
