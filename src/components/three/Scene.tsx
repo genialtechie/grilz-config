@@ -57,7 +57,7 @@ function Scene({
         <directionalLight position={[6, 7, 8]} intensity={2.1} castShadow />
         <directionalLight position={[-7, 2, 5]} intensity={1.2} />
         <pointLight position={[0, -5, 5]} intensity={0.8} />
-        <Environment preset="studio" />
+        <Environment files="/assets/env/studio_small_03_1k.hdr" />
         <Suspense fallback={<ModelLoader />}>
           <GrillzModel
             customizations={customizations}
