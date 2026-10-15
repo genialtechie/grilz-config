@@ -45,7 +45,8 @@ import {
   type ToothDesign,
 } from '../lib/renderSpec';
 import { FANG_OPTIONS } from '../lib/renderSpec';
-import { depositFor, priceBreakdown } from '../lib/pricing';
+import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
+import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { useTenant } from '../lib/tenant/useTenant';
 import type { ToothCustomization } from '../lib/types';
 
@@ -92,6 +93,23 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 
 const formatPrice = (value: number) => currencyFormatter.format(value);
 
+function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['brand'] }) {
+  return (
+    <div className="brand-lockup shop-brand">
+      {brand.logo ? (
+        <img className="shop-brand__logo" src={brand.logo} alt={brand.name} fetchPriority="high" decoding="async" />
+      ) : (
+        <span className="shop-brand__wordmark">{brand.name}</span>
+      )}
+      {brand.instagram && (
+        <a className="shop-brand__ig" href={`https://instagram.com/${brand.instagram}`} target="_blank" rel="noreferrer">
+          @{brand.instagram}
+        </a>
+      )}
+    </div>
+  );
+}
+
 function Configurator() {
   const posthog = usePostHog();
   const tenant = useTenant();
@@ -114,7 +132,7 @@ function Configurator() {
   const [depositReached, setDepositReached] = useState(false);
   const threeState = useRef<RootState | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
-  const render = useAiRender();
+  const render = useAiRender(tenant.slug);
   const [lead, setLead] = useState<Lead | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
   const {
@@ -156,6 +174,9 @@ function Configurator() {
   const effectiveSet: SetOptions = { ...setOptions, inscription };
   const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
+  const brand = tenant.config.brand;
+  const priceHidden = tenant.config.pricing.display === 'hidden';
+  const totalText = (value: number) => displayTotal(tenant.config.pricing, value, formatPrice).text;
   const totalCost = pricing.total;
 
   // What the 3D model shows: the selection while choosing teeth or picking,
@@ -351,6 +372,8 @@ function Configurator() {
 
   const reserveDeposit = () => {
     posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit, mold });
+    const { mode, link } = tenant.config.deposit;
+    if (!tenant.demo && mode === 'link' && link) window.open(link, '_blank', 'noopener');
     setDepositReached(true);
   };
 
@@ -401,26 +424,33 @@ function Configurator() {
   const intro = STEP_INTROS[step];
 
   return (
-    <main className="configurator-shell">
+    <main
+      className={tenant.demo ? 'configurator-shell' : `configurator-shell shop-shell ${fontPairClass(brand)}`}
+      style={tenant.demo ? undefined : themeStyle(brand)}
+    >
       <header className="builder-header">
-        <Link className="brand-lockup" to="/" aria-label="VVS Lab by Magpollo, back to home">
-          <span className="brand-primary">
-            <img className="brand-mark" src="/assets/vvs/logo-mark.png" alt="VVS" width="640" height="281" />
-            <span className="brand-lab">LAB</span>
-          </span>
-          <span className="brand-by">
-            by <img src="/assets/magpollo-logo.svg" alt="Magpollo" />
-          </span>
-        </Link>
+        {tenant.demo ? (
+          <Link className="brand-lockup" to="/" aria-label="VVS Lab by Magpollo, back to home">
+            <span className="brand-primary">
+              <img className="brand-mark" src="/assets/vvs/logo-mark.png" alt="VVS" width="640" height="281" />
+              <span className="brand-lab">LAB</span>
+            </span>
+            <span className="brand-by">
+              by <img src="/assets/magpollo-logo.svg" alt="Magpollo" />
+            </span>
+          </Link>
+        ) : (
+          <ShopBrand brand={brand} />
+        )}
         <div className="header-actions">
           <button className="icon-button" type="button" onClick={handleReset} aria-label="Start over" title="Start over">
             <RotateCcw size={18} strokeWidth={1.8} />
           </button>
           <div className="header-total">
             <small>Estimated total</small>
-            <strong>{formatPrice(totalCost)}</strong>
+            <strong>{totalText(totalCost)}</strong>
           </div>
-          <button className="cart-button" type="button" onClick={() => goTo('photo')} disabled={!selectedTeeth.length}>
+          <button className="cart-button" type="button" onClick={() => goTo('photo')} disabled={!selectedTeeth.length} aria-label="Review your design">
             <ShoppingBag size={17} />
             <span>Review</span>
           </button>
@@ -800,12 +830,17 @@ function Configurator() {
                     </div>
                   </div>
 
-                  <dl className="review-list">
-                    {pricing.lines.map((line) => (
-                      <div key={line.label}><dt>{line.label}</dt><dd>{formatPrice(line.amount)}</dd></div>
-                    ))}
-                  </dl>
-                  <div className="total-row"><span>Estimated total</span><strong>{formatPrice(totalCost)}</strong></div>
+                  {!priceHidden && (
+                    <dl className="review-list">
+                      {pricing.lines.map((line) => (
+                        <div key={line.label}><dt>{line.label}</dt><dd>{formatPrice(line.amount)}</dd></div>
+                      ))}
+                    </dl>
+                  )}
+                  <div className="total-row">
+                    <span>{priceHidden ? 'Price' : 'Estimated total'}</span>
+                    <strong>{priceHidden ? `Confirmed by ${brand.name}` : totalText(totalCost)}</strong>
+                  </div>
 
                   <LeadCapture
                     renderStatus={render.status}
@@ -813,7 +848,7 @@ function Configurator() {
                     renderPreview={render.preview}
                     lead={lead}
                     designLines={designLines}
-                    total={formatPrice(totalCost)}
+                    total={priceHidden ? 'Price on request' : totalText(totalCost)}
                     onSubmit={handleLeadSubmit}
                     onShowPhoto={() => setShowPhoto(true)}
                   />
@@ -846,15 +881,20 @@ function Configurator() {
                           })}
                         </div>
                       </fieldset>
-                      <button className="primary-button" type="button" onClick={reserveDeposit}>
-                        <CreditCard size={17} />
-                        Reserve with deposit
-                        <span>{formatPrice(deposit ?? 0)}</span>
-                      </button>
+                      {deposit !== null && (tenant.demo || tenant.config.deposit.mode === 'link') && (
+                        <button className="primary-button" type="button" onClick={reserveDeposit}>
+                          <CreditCard size={17} />
+                          {priceHidden ? 'Hold your spot' : 'Reserve with deposit'}
+                          <span>{formatPrice(deposit)}</span>
+                        </button>
+                      )}
+                      {!tenant.demo && (deposit === null || tenant.config.deposit.mode === 'stripe') && (
+                        <p className="fine-print">{brand.name} will reach out on {lead.contact} to confirm your design and next steps.</p>
+                      )}
                     </>
                   )}
 
-                  {depositReached && (
+                  {depositReached && tenant.demo && (
                     <div className="deposit-note" role="status">
                       <Check size={18} />
                       <p>
@@ -864,7 +904,12 @@ function Configurator() {
                     </div>
                   )}
 
-                  <p className="fine-print">Sample pricing shown. A jeweler sets their own prices, options and deposit.</p>
+                  {tenant.demo && <p className="fine-print">Sample pricing shown. A jeweler sets their own prices, options and deposit.</p>}
+                  {!tenant.demo && brand.poweredBy && (
+                    <p className="powered-by">
+                      Powered by <a href="https://vvslab.magpollo.com/?utm_source=shop&utm_medium=powered_by" target="_blank" rel="noreferrer">VVS Lab</a>
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -872,8 +917,8 @@ function Configurator() {
 
           <footer className="panel-footer">
             <div className="panel-footer__total">
-              <small>Total</small>
-              <strong>{formatPrice(totalCost)}</strong>
+              <small>{priceHidden ? 'Price' : 'Total'}</small>
+              <strong>{priceHidden ? 'On request' : totalText(totalCost)}</strong>
             </div>
             {prevStep && (
               <button className="icon-button" type="button" onClick={() => goTo(prevStep)} aria-label={`Back to ${STEP_LABELS[prevStep]}`}>

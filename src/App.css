@@ -1807,3 +1807,129 @@
   border-color: var(--accent);
   background: var(--accent);
 }
+
+/* ---------- Shop pages (/b/<slug>) ---------- */
+.shop-brand {
+  min-width: 0;
+  gap: 12px;
+}
+
+.shop-brand__logo {
+  display: block;
+  max-width: 160px;
+  max-height: 36px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.shop-brand__wordmark {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.shop-brand__ig {
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shop-brand__ig:hover {
+  color: var(--ink);
+}
+
+.font-pair--serif-classic .panel-heading h1,
+.font-pair--serif-classic .shop-brand__wordmark {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.font-pair--serif-classic .panel-heading h1 {
+  font-size: 30px;
+}
+
+.font-pair--serif-classic .shop-brand__wordmark {
+  font-size: 22px;
+}
+
+.font-pair--editorial .panel-heading h1,
+.font-pair--editorial .shop-brand__wordmark {
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.font-pair--editorial .shop-brand__wordmark {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 14px;
+}
+
+.powered-by {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.powered-by a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.shop-state {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--canvas);
+}
+
+.shop-state__card {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  width: min(420px, 100%);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.shop-state__card h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.shop-state__card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.shop-state__card .primary-button {
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+@media (max-width: 860px) {
+  .shop-brand__logo {
+    max-width: 120px;
+    max-height: 30px;
+  }
+
+  .shop-brand__ig {
+    display: none;
+  }
+}

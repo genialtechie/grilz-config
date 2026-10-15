@@ -3,7 +3,8 @@ import type { TenantConfig } from './schema.js';
 /** Tenant zero: the public VVS Lab demo. Its prices are the sample prices shown on the site. */
 export const VVSLAB_CONFIG: TenantConfig = {
   schemaVersion: 1,
-  brand: { name: 'VVS Lab', logo: '/assets/vvs/logo-mark.png', accent: '#C9A45C', fontPair: 'serif-classic', instagram: 'vvslab.ai', poweredBy: false },
+  // Keeps the builder's existing look: Magpollo red accent, Inter throughout.
+  brand: { name: 'VVS Lab', logo: '/assets/vvs/logo-mark.png', accent: '#CE4257', fontPair: 'modern-sans', instagram: 'vvslab.ai', poweredBy: false },
   catalog: {
     metals: ['yellow', 'white', 'rose', 'silver', 'platinum'],
     karats: ['10k', '14k', '18k'],

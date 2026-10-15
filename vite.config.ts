@@ -1,11 +1,20 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Serves /api/render during `npm run dev` with the same handler Vercel uses,
+// Serves /api/render and /api/tenant during `npm run dev` with the same handlers Vercel uses,
 // so the AI render works locally when FLUX_API_KEY is set in .env.local.
 const devRenderApi = (env: Record<string, string>): Plugin => ({
   name: 'dev-render-api',
   configureServer(server) {
+    server.middlewares.use('/api/tenant/', async (req, res) => {
+      const slug = decodeURIComponent((req.url ?? '').replace(/^\//, '').split('?')[0])
+      const { handleTenant } = await server.ssrLoadModule('/server/tenantApi.ts')
+      const { status, body, headers } = await handleTenant(slug, env)
+      res.statusCode = status
+      Object.entries(headers as Record<string, string>).forEach(([key, value]) => res.setHeader(key, value))
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(body))
+    })
     server.middlewares.use('/api/render', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405

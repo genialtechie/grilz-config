@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { buildFillPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
-import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab.js';
+import { getPublishedTenant, type TenantEnv } from './tenants.js';
 
 // Turns a 3D configurator screenshot into a studio product photo with FLUX.2:
 // one main render, then zoomed section edits blended back through 3D masks.
@@ -35,7 +35,7 @@ const throttled = (ip: string) => {
   return false;
 };
 
-export type RenderEnv = {
+export type RenderEnv = TenantEnv & {
   FLUX_API_KEY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
@@ -291,15 +291,18 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
   if (!apiKey) return fail(503, 'Rendering is not configured.');
   if (!payload || typeof payload !== 'object') return fail(400, 'Invalid request.');
 
-  const { image, spec: rawSpec, inspiration, masks: rawMasks } = payload as {
+  const { tenant: rawTenant, image, spec: rawSpec, inspiration, masks: rawMasks } = payload as {
+    tenant?: unknown;
     image?: unknown;
     spec?: unknown;
     inspiration?: unknown;
     masks?: unknown;
   };
-  // Stage 1: every render is for tenant zero. Stage 2 resolves the tenant from the request.
-  const tenant = VVSLAB_CONFIG;
-  const spec = parseRenderSpec(rawSpec, tenant.catalog);
+  // Every render belongs to a shop; designs are validated against what that shop sells.
+  const lookup = await getPublishedTenant(typeof rawTenant === 'string' ? rawTenant : 'vvslab', env);
+  if (!lookup.ok) return fail(lookup.reason === 'unavailable' ? 503 : 404, lookup.reason === 'unavailable' ? 'The renderer is unavailable. Please try again.' : 'Shop not found.');
+  if (lookup.tenant.status !== 'live') return fail(503, PAUSED, 'paused');
+  const spec = parseRenderSpec(rawSpec, lookup.tenant.config.catalog);
   if (!spec) return fail(400, 'Invalid design.');
 
   const base64 = readImage(image);

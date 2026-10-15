@@ -4,6 +4,7 @@ import LandingPage from './components/landing/LandingPage';
 import './App.css';
 
 const Configurator = lazy(() => import('./components/Configurator'));
+const ShopPage = lazy(() => import('./components/ShopPage'));
 
 function ConfiguratorLoader() {
   return (
@@ -23,6 +24,14 @@ function App() {
         element={
           <Suspense fallback={<ConfiguratorLoader />}>
             <Configurator />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/b/:slug/*"
+        element={
+          <Suspense fallback={<ConfiguratorLoader />}>
+            <ShopPage />
           </Suspense>
         }
       />
