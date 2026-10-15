@@ -63,8 +63,9 @@
   justify-content: space-between;
   padding: 28px var(--gutter);
 }
-.vvs-wordmark { font-size: 15px; letter-spacing: 0.32em; font-weight: 600; }
-.vvs-wordmark b, .vvs-footer b { color: var(--gold); font-weight: 700; }
+.vvs-wordmark { display: flex; align-items: center; gap: 10px; font-size: 15px; letter-spacing: 0.32em; font-weight: 600; }
+.vvs-wordmark img { height: 34px; width: auto; }
+.vvs-footer b { color: var(--gold); font-weight: 700; }
 .vvs-nav { display: flex; align-items: center; gap: 32px; font-size: 15px; color: var(--body); }
 .vvs-nav a:hover { color: var(--ink); }
 .vvs-nav-cta {
@@ -240,6 +241,8 @@
   .vvs-header { padding: 20px 16px; }
   .vvs-nav a:not(.vvs-nav-cta) { display: none; }
   .vvs-nav-cta { padding: 9px 14px; font-size: 14px; }
+  .vvs-wordmark img { height: 28px; }
+  .vvs-wordmark { gap: 8px; font-size: 13px; }
   .vvs-page { --gutter: 16px; }
   .vvs-hero { grid-template-columns: 1fr; padding-top: 84px; gap: 32px; min-height: 0; }
   .vvs-hero-photo { grid-column: 1; grid-row: 1; max-width: none; }

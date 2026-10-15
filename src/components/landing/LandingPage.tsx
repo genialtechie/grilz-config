@@ -123,7 +123,8 @@ export default function LandingPage() {
     <div className="vvs-page">
       <header className="vvs-header">
         <Link className="vvs-wordmark" to="/" aria-label="VVS Lab home">
-          <b>VVS</b> LAB
+          <img src="/assets/vvs/logo-mark.png" alt="VVS" width="640" height="281" />
+          <span>LAB</span>
         </Link>
         <nav className="vvs-nav" aria-label="Page navigation">
           <a href="#how">How it works</a>

@@ -412,9 +412,14 @@ function Configurator() {
   return (
     <main className="configurator-shell">
       <header className="builder-header">
-        <Link className="brand-lockup" to="/" aria-label="Back to MagPollo custom commerce">
-          <img className="brand-logo" src="/assets/magpollo-logo.svg" alt="MagPollo" />
-          <small>Custom commerce</small>
+        <Link className="brand-lockup" to="/" aria-label="VVS Lab by Magpollo, back to home">
+          <span className="brand-primary">
+            <img className="brand-mark" src="/assets/vvs/logo-mark.png" alt="VVS" width="640" height="281" />
+            <span className="brand-lab">LAB</span>
+          </span>
+          <span className="brand-by">
+            by <img src="/assets/magpollo-logo.svg" alt="Magpollo" />
+          </span>
         </Link>
         <div className="header-actions">
           <button className="icon-button" type="button" onClick={handleReset} aria-label="Start over" title="Start over">

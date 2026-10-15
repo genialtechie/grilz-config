@@ -87,6 +87,8 @@ const applyInternalTrafficControl = (): boolean => {
   }
 
   if (import.meta.env.DEV) return true;
+  // Automated browsers (Playwright, agents, uptime checks) never count as real visitors.
+  if (navigator.webdriver) return true;
 
   try {
     return window.localStorage.getItem(INTERNAL_TRAFFIC_KEY) === '1';
@@ -110,6 +112,8 @@ export const filterAndEnrichAnalyticsEvent = (
       ...campaignAttribution,
       analytics_version: ANALYTICS_VERSION,
       traffic_type: 'external',
+      // Separates this offer's events from other Magpollo projects in PostHog.
+      offer: 'jeweler_builder',
     },
   };
 };
