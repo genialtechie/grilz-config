@@ -72,6 +72,9 @@ All new external events include `analytics_version=commerce_v2`,
 path. Use those two fixed properties to keep new reports separate from the old
 mixed traffic.
 
+All events also carry `offer=jeweler_builder`. The PostHog project and the
+"Jeweler sprint" dashboard can be (re)created with `scripts/setup_posthog.py`.
+
 Use standard UTM parameters on outbound links. Keep values descriptive but do
 not include a person's name, email address, or other personal information.
 

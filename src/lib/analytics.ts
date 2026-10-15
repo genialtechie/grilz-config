@@ -112,6 +112,8 @@ export const filterAndEnrichAnalyticsEvent = (
       ...campaignAttribution,
       analytics_version: ANALYTICS_VERSION,
       traffic_type: 'external',
+      // Separates this offer's events from other Magpollo projects in PostHog.
+      offer: 'jeweler_builder',
     },
   };
 };
