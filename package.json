@@ -20,6 +20,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.9.1",
     "react-step-wizard": "^5.3.11",
+    "sharp": "^0.34.5",
     "three": "^0.172.0",
     "tippy.js": "^6.3.7"
   },

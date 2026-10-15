@@ -46,6 +46,7 @@ import {
   VISION_MAX,
   isGold,
   planMasks,
+  groupTeeth,
   priceBreakdown,
   priceHint,
   summarizeDesign,
@@ -263,7 +264,7 @@ function Configurator() {
       let preview: string;
       let masks: { kind: string; indices: number[]; mask: string }[] = [];
       try {
-        preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index));
+        preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index), groupTeeth(spec.teeth).length > 1);
         // Mixed designs: one mask per tooth group that differs from the majority.
         masks = planMasks(spec).map((plan) => ({
           kind: plan.kind,
@@ -284,10 +285,6 @@ function Configurator() {
     });
   };
 
-  const handleRenderIntent = () => {
-    if (render.status === 'idle' && render.rendersLeft > 0) startRender();
-  };
-
   const handleLeadSubmit = (submitted: Lead) => {
     setLead(submitted);
     setShowPhoto(true);
@@ -300,6 +297,8 @@ function Configurator() {
       $set: { name: submitted.name, contact: submitted.contact },
     });
     posthog.capture('sample_configuration_completed', designProperties());
+    // Renders start here rather than on form focus: each one costs money, and
+    // visitors who abandon the form would never see it.
     if (render.status === 'idle') startRender();
   };
 
@@ -452,9 +451,10 @@ function Configurator() {
             <RenderOverlay
               status={render.status}
               image={render.image}
+              preview={render.preview}
               error={render.error}
               startedAt={render.startedAt}
-              expectedSeconds={16 + 18 * (renderSpec ? planMasks(renderSpec).length : 0)}
+              expectedSeconds={16 + 16 * Math.ceil((renderSpec ? planMasks(renderSpec).length : 0) / 4)}
               canRetry={render.rendersLeft > 0}
               onRetry={startRender}
               onClose={() => setShowPhoto(false)}
@@ -810,13 +810,12 @@ function Configurator() {
                   <div className="total-row"><span>Estimated total</span><strong>{formatPrice(totalCost)}</strong></div>
 
                   <LeadCapture
-                    rendersLeft={render.rendersLeft}
                     renderStatus={render.status}
                     renderImage={render.image}
+                    renderPreview={render.preview}
                     lead={lead}
                     designLines={designLines}
                     total={formatPrice(totalCost)}
-                    onIntent={handleRenderIntent}
                     onSubmit={handleLeadSubmit}
                     onShowPhoto={() => setShowPhoto(true)}
                   />

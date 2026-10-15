@@ -9,13 +9,12 @@ export type Lead = {
 };
 
 type LeadCaptureProps = {
-  rendersLeft: number;
   renderStatus: RenderStatus;
   renderImage: string | null;
+  renderPreview: string | null;
   lead: Lead | null;
   designLines: string[];
   total: string;
-  onIntent: () => void;
   onSubmit: (lead: Lead) => void;
   onShowPhoto: () => void;
 };
@@ -24,13 +23,12 @@ type LeadCaptureProps = {
 // started in the background on first interaction so the photo is usually
 // ready by the time they press submit.
 export function LeadCapture({
-  rendersLeft,
   renderStatus,
   renderImage,
+  renderPreview,
   lead,
   designLines,
   total,
-  onIntent,
   onSubmit,
   onShowPhoto,
 }: LeadCaptureProps) {
@@ -51,13 +49,13 @@ export function LeadCapture({
           <span className="demo-badge">Demo</span>
         </header>
         <div className="lead-card__body">
-          {renderImage ? (
+          {renderImage || (renderStatus === 'paused' && renderPreview) ? (
             <button className="lead-card__thumb" type="button" onClick={onShowPhoto} aria-label="View photo">
-              <img src={renderImage} alt="AI render of the requested set" />
+              <img src={renderImage ?? renderPreview!} alt={renderImage ? 'AI render of the requested set' : '3D preview of the requested set'} />
             </button>
           ) : (
             <div className="lead-card__thumb lead-card__thumb--loading">
-              {renderStatus === 'error' ? <Camera size={18} /> : <Loader2 className="spin" size={18} />}
+              {renderStatus === 'error' || renderStatus === 'paused' ? <Camera size={18} /> : <Loader2 className="spin" size={18} />}
             </div>
           )}
           <dl>
@@ -84,15 +82,14 @@ export function LeadCapture({
     onSubmit({ name: name.trim(), contact: contact.trim(), note: note.trim() });
   };
 
-  const outOfRenders = rendersLeft === 0 && renderStatus === 'idle';
 
   return (
-    <form className="lead-form" onSubmit={submit} onFocusCapture={onIntent} noValidate>
+    <form className="lead-form" onSubmit={submit} noValidate>
       <div className="lead-form__heading">
         <Camera size={17} />
         <div>
           <strong>Get a real photo of this set</strong>
-          <small>Leave your details and we&apos;ll turn your design into a studio photo in seconds.</small>
+          <small>Leave your details and we&apos;ll turn your design into a studio photo in about a minute.</small>
         </div>
       </div>
       <label>
@@ -113,7 +110,7 @@ export function LeadCapture({
         <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Timeline, budget, engraving ideas" maxLength={200} />
       </label>
       {formError && <div className="inline-note" role="alert">{formError}</div>}
-      <button className="primary-button" type="submit" disabled={outOfRenders}>
+      <button className="primary-button" type="submit">
         <Send size={16} />
         Send design &amp; get photo
       </button>
@@ -127,6 +124,7 @@ export function LeadCapture({
 type RenderOverlayProps = {
   status: RenderStatus;
   image: string | null;
+  preview: string | null;
   error: string | null;
   startedAt: number | null;
   expectedSeconds: number;
@@ -159,7 +157,7 @@ async function savePhoto(image: string) {
 }
 
 // Covers the 3D viewer with the AI photo (or its progress).
-export function RenderOverlay({ status, image, error, startedAt, expectedSeconds, canRetry, onRetry, onClose }: RenderOverlayProps) {
+export function RenderOverlay({ status, image, preview, error, startedAt, expectedSeconds, canRetry, onRetry, onClose }: RenderOverlayProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -184,6 +182,17 @@ export function RenderOverlay({ status, image, error, startedAt, expectedSeconds
           <span className="render-progress"><span style={{ width: `${progress}%` }} /></span>
           <small>{elapsed.toFixed(0)}s · usually about {expectedSeconds}s{expectedSeconds > 20 ? ' for a mixed design' : ''}</small>
         </div>
+      )}
+
+      {status === 'paused' && (
+        <>
+          {preview && <img className="render-overlay__image" src={preview} alt="3D preview of your custom grillz" />}
+          <div className="render-overlay__status render-overlay__status--note" role="status">
+            <Camera size={20} />
+            <strong>Studio photos are taking a short break.</strong>
+            <small>Your design and details went through. Here&apos;s your 3D design for now.</small>
+          </div>
+        </>
       )}
 
       {status === 'error' && (
