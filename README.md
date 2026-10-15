@@ -13,6 +13,31 @@ npm run dev
 Copy `.env.example` to `.env.local` and provide the PostHog project token and
 host. Local development traffic is excluded from PostHog automatically.
 
+## AI photo render
+
+The review step ("Your photo") turns the 3D preview into a studio photo with
+FLUX.2 pro (Black Forest Labs). The customer leaves their name and Instagram or
+phone first; the render starts in the background as soon as they click into the
+form, so the photo is usually ready when they submit.
+
+- `api/render.ts` is the Vercel function; `server/render.ts` holds the logic and
+  also serves `/api/render` during `npm run dev`.
+- The browser sends a structured design only. The prompt is built on the server
+  (`src/lib/renderSpec.ts`), so the endpoint can't generate arbitrary images.
+- Set `FLUX_API_KEY` in Vercel (Production and Preview) and in `.env.local` for
+  local work. Never prefix it with `VITE_`.
+- Cost guards: 3 renders per visitor (browser), a best-effort per-IP throttle,
+  and an optional daily cap via Upstash Redis (`UPSTASH_REDIS_REST_URL`,
+  `UPSTASH_REDIS_REST_TOKEN`, `RENDER_DAILY_CAP`, default 100 renders/day).
+  Also add a Vercel Firewall rate-limit rule on `/api/render` (e.g. 5 per 10
+  minutes per IP) and keep auto top-up off in the BFL account.
+- Option photo cards live in `public/assets/options/grillz/` (generated once
+  with FLUX; regenerate with the same seed and framing to keep the set matched).
+
+Lead events: `sample_lead_submitted` (contact + full design),
+`sample_render_started|completed|failed`, `sample_step_viewed`,
+`sample_deposit_clicked`.
+
 ## Campaign analytics
 
 The application records this conversion path:

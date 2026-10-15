@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/render.ts": { "maxDuration": 60 }
+  },
   "rewrites": [
     {
       "source": "/watch",
