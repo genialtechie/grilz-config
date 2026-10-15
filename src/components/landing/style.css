@@ -215,7 +215,7 @@
 
 /* final */
 .vvs-final { text-align: center; }
-.vvs-logo { width: 128px; height: 128px; border-radius: 50%; margin: 0 auto 32px; }
+.vvs-logo { width: 200px; height: auto; margin: 0 auto 36px; }
 .vvs-final h2 { font-size: clamp(52px, 7vw, 104px); line-height: 1; }
 .vvs-final p { margin-top: 20px; font-size: 19px; color: var(--body); }
 

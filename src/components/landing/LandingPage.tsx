@@ -275,7 +275,7 @@ export default function LandingPage() {
         </section>
 
         <section className="vvs-final">
-          <img className="vvs-logo" src="/assets/vvs/logo.webp" alt="" width="128" height="128" />
+          <img className="vvs-logo" src="/assets/vvs/logo-mark.png" alt="" width="640" height="281" />
           <h2 className="vvs-serif">
             DM “<em>BUILD</em>” for a demo.
           </h2>
