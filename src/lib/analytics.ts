@@ -87,6 +87,8 @@ const applyInternalTrafficControl = (): boolean => {
   }
 
   if (import.meta.env.DEV) return true;
+  // Automated browsers (Playwright, agents, uptime checks) never count as real visitors.
+  if (navigator.webdriver) return true;
 
   try {
     return window.localStorage.getItem(INTERNAL_TRAFFIC_KEY) === '1';

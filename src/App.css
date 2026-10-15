@@ -68,21 +68,46 @@
   text-decoration: none;
 }
 
-.brand-logo {
-  display: block;
-  width: 114px;
-  height: auto;
+.brand-primary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
-.brand-lockup small,
+.brand-mark {
+  display: block;
+  height: 26px;
+  width: auto;
+  filter: drop-shadow(0 1px 1px rgba(40, 30, 10, 0.18));
+}
+
+.brand-lab {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: var(--ink);
+}
+
+.brand-by {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.brand-by img {
+  display: block;
+  height: 13px;
+  width: auto;
+  opacity: 0.75;
+}
+
 .header-total small {
   color: var(--muted);
   font-size: 10px;
-}
-
-.brand-lockup small {
-  padding-left: 10px;
-  border-left: 1px solid var(--line);
 }
 
 .header-actions {
@@ -770,14 +795,26 @@
     padding: 0 12px;
   }
 
-  .brand-lockup small,
   .header-total,
   .cart-button span {
     display: none;
   }
 
-  .brand-logo {
-    width: 104px;
+  .brand-mark {
+    height: 22px;
+  }
+
+  .brand-lab {
+    font-size: 12px;
+  }
+
+  .brand-by {
+    padding-left: 9px;
+    font-size: 10px;
+  }
+
+  .brand-by img {
+    height: 11px;
   }
 
   .cart-button {
@@ -1666,9 +1703,16 @@
 }
 
 .builder-panel {
-  height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Full height only in the side-by-side layout. On phones the panel is a
+   bottom sheet (44%) under the 3D view; 100% there covers the model. */
+@media (min-width: 861px) {
+  .builder-panel {
+    height: 100%;
+  }
 }
 
 .builder-panel .panel-scroll {
