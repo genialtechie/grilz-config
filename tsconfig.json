@@ -3,5 +3,8 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  // Vercel type-checks api/*.ts with this root file. Without strict, zod types
+  // lose their required fields and every Result union fails to narrow.
+  "compilerOptions": { "strict": true, "skipLibCheck": true }
 }

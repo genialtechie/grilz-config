@@ -4,6 +4,8 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
+import { useTenant } from '../../lib/tenant/useTenant';
+import { mix, usableAccent } from '../../lib/tenant/theme';
 
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
 
@@ -63,10 +65,15 @@ function GrillzModel({
     return { clonedScene: clone, originalMaterials: originals };
   }, [scene]);
 
+  // Selected teeth glow in the shop's accent (the demo keeps its original red).
+  const tenant = useTenant();
+  const selectColor = tenant.demo ? '#ce4257' : usableAccent(tenant.config.brand.accent);
+  const selectGlow = tenant.demo ? '#712432' : mix(selectColor, '#000000', 0.45);
+
   const materials = useMemo(() => {
     const selected = new THREE.MeshStandardMaterial({
-      color: '#ce4257',
-      emissive: '#712432',
+      color: selectColor,
+      emissive: selectGlow,
       emissiveIntensity: 0.22,
       metalness: 0.25,
       roughness: 0.34,
@@ -79,7 +86,7 @@ function GrillzModel({
     const finishCache = new Map<string, THREE.MeshStandardMaterial>();
 
     return { selected, mould, finishCache };
-  }, []);
+  }, [selectColor, selectGlow]);
 
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
 

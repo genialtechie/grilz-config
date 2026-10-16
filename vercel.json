@@ -1,8 +1,22 @@
 {
   "functions": {
-    "api/render.ts": { "maxDuration": 120 }
+    "api/render.ts": {
+      "maxDuration": 120
+    }
   },
   "rewrites": [
+    {
+      "source": "/api/tenant/:slug",
+      "destination": "/api/tenant?slug=:slug"
+    },
+    {
+      "source": "/b/:slug",
+      "destination": "/api/shop-page?slug=:slug"
+    },
+    {
+      "source": "/b/:slug/:path*",
+      "destination": "/api/shop-page?slug=:slug"
+    },
     {
       "source": "/watch",
       "destination": "/watch.html"

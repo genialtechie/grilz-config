@@ -17,3 +17,16 @@ jobs:
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: npm test
       - run: npx vite build
+  database:
+    # Applies every migration to a fresh local Supabase and proves tenants can't
+    # see each other's data. Fails the PR if a policy leaks.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - run: supabase start -x studio,realtime,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,postgres-meta
+      - run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/isolation.sql
+      - if: always()
+        run: supabase stop --no-backup

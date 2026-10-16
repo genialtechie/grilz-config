@@ -22,7 +22,7 @@ const writeUsage = (value: number) => {
   }
 };
 
-export const useAiRender = () => {
+export const useAiRender = (tenant = 'vvslab') => {
   const [status, setStatus] = useState<RenderStatus>('idle');
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export const useAiRender = () => {
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: preview, spec, inspiration: inspiration ?? undefined, masks }),
+        body: JSON.stringify({ tenant, image: preview, spec, inspiration: inspiration ?? undefined, masks }),
         signal: abort.signal,
       });
       const body = (await response.json().catch(() => ({}))) as {
@@ -111,7 +111,7 @@ export const useAiRender = () => {
       setError('Could not reach the renderer. Check your connection and try again.');
       return { ok: false as const, reason: 'network' };
     }
-  }, []);
+  }, [tenant]);
 
   return {
     status,

@@ -38,7 +38,8 @@ function Scene({
         gl={{ antialias: true, alpha: true }}
         shadows
         onCreated={onReady}
-        aria-label="Interactive grillz model"
+        role="img"
+        aria-label="Interactive 3D model of your grillz. Drag to rotate, tap a tooth to select it."
       >
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={44} />
         <OrbitControls
