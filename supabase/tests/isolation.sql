@@ -15,22 +15,11 @@ begin
   insert into public.leads (tenant_id, name, contact, spec, price, total, config_version) values (tb, 'B lead', '@b', '{}', '{}', 100, 1) returning id into lb;
   insert into public.tenant_configs (tenant_id, version, config) values (ta, 1, '{}') returning id into ca;
 
-  -- an invited email becomes a platform admin only once confirmed, and only for a
-  -- password-less (magic link) account; others never do
-  insert into public.platform_admin_invites (email) values ('iso-admin@test.local'), ('iso-squat@test.local');
-  insert into auth.users (id, instance_id, aud, role, email) values
-    (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'ISO-Admin@test.local');
-  select count(*) into n from public.platform_admins pa join auth.users u on u.id = pa.user_id where u.email = 'ISO-Admin@test.local';
-  if n <> 0 then raise exception 'unconfirmed invite became admin'; end if;
-  update auth.users set email_confirmed_at = now() where email = 'ISO-Admin@test.local';
-  select count(*) into n from public.platform_admins pa join auth.users u on u.id = pa.user_id where u.email = 'ISO-Admin@test.local';
-  if n <> 1 then raise exception 'confirmed invite was not granted'; end if;
-  -- someone pre-registers an invited address with a password; confirming it must not grant admin
-  insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
-    (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'iso-squat@test.local', crypt('attacker', gen_salt('bf')));
-  update auth.users set email_confirmed_at = now() where email = 'iso-squat@test.local';
-  select count(*) into n from public.platform_admins pa join auth.users u on u.id = pa.user_id where u.email = 'iso-squat@test.local';
-  if n <> 0 then raise exception 'password account with an invited email became admin'; end if;
+  -- nothing grants platform admin automatically: a confirmed new account is not an admin
+  insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at) values
+    (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'iso-new@test.local', now());
+  select count(*) into n from public.platform_admins pa join auth.users u on u.id = pa.user_id where u.email = 'iso-new@test.local';
+  if n <> 0 then raise exception 'a new account became admin'; end if;
   select count(*) into n from public.platform_admins where user_id in (ua, ub);
   if n <> 0 then raise exception 'uninvited user became admin'; end if;
 
@@ -78,10 +67,8 @@ begin
   if not ok then raise exception 'A changed tenant status'; end if;
 
   ok := false;
-  begin select count(*) into n from public.platform_admin_invites; exception when others then ok := true; end;
-  if not ok and n > 0 then raise exception 'A can read admin invites'; end if;
-
-  if public.claim_admin_invite() then raise exception 'A claimed an admin invite'; end if;
+  begin insert into public.platform_admins (user_id) values (ua); exception when others then ok := true; end;
+  if not ok then raise exception 'A made itself a platform admin'; end if;
 
   -- act as anon
   reset role;
