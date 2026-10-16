@@ -115,3 +115,4 @@
   .admin-lead img, .admin-lead__noimg { width: 64px; height: 64px; }
   .admin-lead select { grid-column: 1 / -1; width: 100%; }
 }
+.admin-notice a { color: inherit; font-weight: 700; margin-left: 6px; }

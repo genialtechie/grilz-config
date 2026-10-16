@@ -72,7 +72,7 @@ export function ShopEditor() {
   const [config, setConfig] = useState<TenantConfig | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string; link?: { href: string; label: string } } | null>(null);
   const [tab, setTab] = useState<'setup' | 'leads'>('setup');
   const [emailsText, setEmailsText] = useState('');
 
@@ -139,12 +139,12 @@ export function ShopEditor() {
       }
     });
 
-  const run = async (label: string, work: () => Promise<string>) => {
+  const run = async (label: string, work: () => Promise<string | null>) => {
     setBusy(label);
     setNotice(null);
     try {
       const text = await work();
-      setNotice({ kind: 'ok', text });
+      if (text) setNotice({ kind: 'ok', text });
     } catch (reason) {
       setNotice({ kind: 'error', text: reason instanceof Error ? reason.message : String(reason) });
     } finally {
@@ -159,15 +159,16 @@ export function ShopEditor() {
   };
 
   const onSave = () => run('save', async () => `Draft v${(await save()).version} saved.`);
-  const onPreview = () => {
-    // Opened synchronously so the browser doesn't block the tab as a popup.
-    const tabRef = window.open('about:blank', '_blank');
+  // Preview is a plain link to the saved draft: scripted tabs are blocked or
+  // detached by some browsers (including in-app ones), links never are.
+  const previewHref = (version: number) => `${window.location.origin}/b/${tenant.slug}?preview=${version}`;
+  const onSaveAndPreview = () =>
     void run('preview', async () => {
-      const row = dirty || !draft ? await save() : draft;
-      if (tabRef) tabRef.location.href = `/b/${tenant.slug}?preview=${row.version}`;
-      return `Previewing draft v${row.version} in a new tab.`;
+      const row = await save();
+      setNotice({ kind: 'ok', text: `Draft v${row.version} saved.`, link: { href: previewHref(row.version), label: 'Open preview' } });
+      return null;
     });
-  };
+
   const onPublish = () =>
     run('publish', async () => {
       const row = dirty || !draft ? await save() : draft;
@@ -213,7 +214,11 @@ export function ShopEditor() {
         </div>
         <div className="admin-actions">
           <button className="admin-button" type="button" onClick={onSave} disabled={!!busy || !parsed?.ok}><Save size={15} /> Save draft</button>
-          <button className="admin-button" type="button" onClick={onPreview} disabled={!!busy || !parsed?.ok}><Eye size={15} /> Preview</button>
+          {draft && !dirty ? (
+            <a className="admin-button" href={previewHref(draft.version)} target="_blank" rel="noopener"><Eye size={15} /> Preview</a>
+          ) : (
+            <button className="admin-button" type="button" onClick={onSaveAndPreview} disabled={!!busy || !parsed?.ok}><Eye size={15} /> Save &amp; preview</button>
+          )}
           <button className="admin-button admin-button--primary" type="button" onClick={onPublish} disabled={!!busy || !parsed?.ok || (!dirty && !draft)}><Rocket size={15} /> Publish</button>
           {tenant.status === 'live' ? (
             <button className="admin-button" type="button" onClick={() => onStatus('paused')} disabled={!!busy}><Pause size={15} /> Pause</button>
@@ -222,7 +227,12 @@ export function ShopEditor() {
           )}
         </div>
       </div>
-      {notice && <p className={notice.kind === 'ok' ? 'admin-notice' : 'admin-error admin-notice'} role="status">{notice.text}</p>}
+      {notice && (
+        <p className={notice.kind === 'ok' ? 'admin-notice' : 'admin-error admin-notice'} role="status">
+          {notice.text}
+          {notice.link && <> <a href={notice.link.href} target="_blank" rel="noopener">{notice.link.label} ↗</a></>}
+        </p>
+      )}
       {parsed && !parsed.ok && (
         <div className="admin-card admin-issues" role="alert">
           <strong>Fix before saving</strong>

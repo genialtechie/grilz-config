@@ -50,11 +50,9 @@ export async function isAdmin(): Promise<boolean> {
   const db = supabase();
   const { data: user } = await db.auth.getUser();
   if (!user.user) return false;
+  // Admins are granted by hand in the database (see supabase/README.md).
   const rows = must(await db.from('platform_admins').select('user_id').eq('user_id', user.user.id));
-  if (rows.length) return true;
-  // An invited email that signed up before the invite existed.
-  const { data } = await db.rpc('claim_admin_invite');
-  return data === true;
+  return rows.length > 0;
 }
 
 export async function listTenants() {

@@ -41,7 +41,13 @@ It prints `isolation ok`, or fails naming the leak.
 | `TURNSTILE_SECRET_KEY`, `VITE_TURNSTILE_SITE_KEY` | prod only | Turnstile can't cover `*.vercel.app` previews |
 | `PUBLIC_ORIGIN` | prod, preview | Logo links in emails |
 
-**Admin.** `/admin`, magic-link sign-in. An address in `platform_admin_invites` becomes a platform admin once it is confirmed, and only for a password-less account. Create a shop → set brand, catalog, prices, deposit, lead emails → **Preview** (`/b/<slug>?preview=<version>`, visible only to admins and the shop's members) → **Publish** → **Go live**.
+**Admin.** `/admin`, magic-link sign-in. Platform admins are granted by hand after the person has signed in once (Supabase gives magic-link accounts a random password hash, so an automatic invite can't tell the owner from someone who pre-registered the address):
+
+```sql
+insert into public.platform_admins (user_id)
+select id from auth.users where email = 'name@magpollo.com' and email_confirmed_at is not null;
+```
+ Create a shop → set brand, catalog, prices, deposit, lead emails → **Preview** (`/b/<slug>?preview=<version>`, visible only to admins and the shop's members) → **Publish** → **Go live**.
 
 **Integration tests.** `server/__tests__/pipeline.int.test.ts` runs the whole pipeline against a local Supabase with FLUX and Resend mocked. CI runs it in the `database` job; locally:
 
