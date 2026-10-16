@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { TenantConfig } from './schema';
+import type { TenantConfig } from './schema.js';
 
 // Brand tokens for a shop page. Shops pick an accent and a font pair; the rest
 // of the design is fixed so every shop still looks premium.

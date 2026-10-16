@@ -116,3 +116,60 @@ export const publicTenant = (tenant: PublishedTenant) => ({
   version: tenant.version,
   config: { ...tenant.config, leads: { email: [], sms: [] } },
 });
+
+const idCache = new Map<string, string>();
+
+/** The database id for a tenant. Tenant zero is bundled without one, so it is looked up by slug. */
+export async function tenantIdFor(tenant: PublishedTenant, env: TenantEnv): Promise<string | null> {
+  if (tenant.id) return tenant.id;
+  const cached = idCache.get(tenant.slug);
+  if (cached) return cached;
+  const url = env.SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const response = await fetch(`${url.replace(/\/$/, '')}/rest/v1/tenants?${new URLSearchParams({ slug: `eq.${tenant.slug}`, select: 'id' })}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!response.ok) return null;
+    const [row] = (await response.json()) as { id: string }[];
+    if (row) idCache.set(tenant.slug, row.id);
+    return row?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** How long the previous price list stays valid for sessions that started before a change. */
+const GRACE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * The config a customer's session was priced with. A customer who started before
+ * a new price list went live keeps the previous one for a few hours; any other
+ * version (older lists, drafts) prices with the current config.
+ */
+export async function configForSession(tenant: PublishedTenant, version: unknown, env: TenantEnv): Promise<{ version: number; config: TenantConfig }> {
+  const current = { version: tenant.version, config: tenant.config };
+  if (typeof version !== 'number' || !Number.isInteger(version) || version === tenant.version || !tenant.id) return current;
+  const url = env.SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return current;
+  try {
+    const query = new URLSearchParams({
+      tenant_id: `eq.${tenant.id}`,
+      status: 'in.(published,archived)',
+      published_at: 'not.is.null',
+      select: 'version,config,published_at',
+      order: 'published_at.desc',
+      limit: '2',
+    });
+    const response = await fetch(`${url.replace(/\/$/, '')}/rest/v1/tenant_configs?${query}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!response.ok) return current;
+    const [latest, previous] = (await response.json()) as { version: number; config: unknown; published_at: string }[];
+    if (!latest || !previous || previous.version !== version || Date.now() - Date.parse(latest.published_at) > GRACE_MS) return current;
+    const parsed = parseTenantConfig(previous.config);
+    return parsed.ok ? { version: previous.version, config: parsed.config } : current;
+  } catch {
+    return current;
+  }
+}

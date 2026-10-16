@@ -7,6 +7,10 @@ export type Tenant = {
   slug: string;
   /** The public demo: deposits and leads are simulated. */
   demo: boolean;
+  /** The published config version this session is priced with. */
+  version: number;
+  /** An admin previewing an unpublished draft: leads and renders are disabled. */
+  preview: boolean;
   config: TenantConfig;
   catalog: ReturnType<typeof shopCatalog>;
   hints: ReturnType<typeof priceHints>;
@@ -14,9 +18,11 @@ export type Tenant = {
   defaultSet: ReturnType<typeof defaultSet>;
 };
 
-export const buildTenant = (slug: string, config: TenantConfig, demo = false): Tenant => ({
+export const buildTenant = (slug: string, config: TenantConfig, demo = false, version = 0, preview = false): Tenant => ({
   slug,
   demo,
+  version,
+  preview,
   config,
   catalog: shopCatalog(config.catalog),
   hints: priceHints(config.pricing),

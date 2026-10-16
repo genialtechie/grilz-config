@@ -2,6 +2,9 @@
   "functions": {
     "api/render.ts": {
       "maxDuration": 120
+    },
+    "api/leads.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -23,6 +26,14 @@
     },
     {
       "source": "/configurator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/:path*",
       "destination": "/index.html"
     }
   ]

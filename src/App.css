@@ -1020,6 +1020,24 @@
   margin: 0;
 }
 
+/* Honeypot: off-screen rather than display:none, which some bots skip. */
+.lead-form__trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.turnstile:empty {
+  display: none;
+}
+
+.lead-form .primary-button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
 .lead-card__icon {
   display: grid;
   width: 32px;
@@ -1932,4 +1950,22 @@
   .shop-brand__ig {
     display: none;
   }
+}
+
+/* Draft preview for admins and shop members. */
+.preview-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  z-index: 60;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #1f1b16;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
 }

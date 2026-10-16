@@ -1,12 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Box, Camera, Download, Inbox, Loader2, RefreshCw, Send } from 'lucide-react';
+import { Box, Camera, Check, Download, Inbox, Loader2, RefreshCw, Send } from 'lucide-react';
+import { displayContact, isEmail, normaliseContact } from '../lib/contact';
+import { TURNSTILE_SITE_KEY } from '../lib/turnstile';
+import { Turnstile } from './Turnstile';
 import type { RenderStatus } from '../lib/hooks/useAiRender';
 
 export type Lead = {
   name: string;
   contact: string;
+  email: string;
   note: string;
 };
+
+/** Sent alongside the lead: the Turnstile token and the honeypot field. */
+export type LeadExtras = { turnstile: string | null; website: string };
 
 type LeadCaptureProps = {
   renderStatus: RenderStatus;
@@ -15,13 +22,16 @@ type LeadCaptureProps = {
   lead: Lead | null;
   designLines: string[];
   total: string;
-  onSubmit: (lead: Lead) => void;
+  /** The public demo shows what a jeweler would receive; a shop shows the customer a receipt. */
+  demo: boolean;
+  shopName: string;
+  /** Resolves to an error message, or null once the lead is stored. */
+  onSubmit: (lead: Lead, extras: LeadExtras) => Promise<string | null>;
   onShowPhoto: () => void;
 };
 
-// Review-step card. The customer leaves their details first; the render is
-// started in the background on first interaction so the photo is usually
-// ready by the time they press submit.
+// Review-step card. The customer leaves their details, the design goes to the
+// shop, and the studio photo is rendered for them right after.
 export function LeadCapture({
   renderStatus,
   renderImage,
@@ -29,15 +39,52 @@ export function LeadCapture({
   lead,
   designLines,
   total,
+  demo,
+  shopName,
   onSubmit,
   onShowPhoto,
 }: LeadCaptureProps) {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
+  const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
+  const [website, setWebsite] = useState('');
+  const [turnstile, setTurnstile] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   if (lead) {
+    const thumb = renderImage || (renderStatus === 'paused' && renderPreview) ? (
+      <button className="lead-card__thumb" type="button" onClick={onShowPhoto} aria-label="View photo">
+        <img src={renderImage ?? renderPreview!} alt={renderImage ? 'AI render of the requested set' : '3D preview of the requested set'} />
+      </button>
+    ) : (
+      <div className="lead-card__thumb lead-card__thumb--loading">
+        {renderStatus === 'error' || renderStatus === 'paused' || renderStatus === 'idle' ? <Camera size={18} /> : <Loader2 className="spin" size={18} />}
+      </div>
+    );
+    if (!demo) {
+      return (
+        <section className="lead-card lead-card--sent" aria-label="Design sent" role="status">
+          <header className="lead-card__header">
+            <span className="lead-card__icon lead-card__icon--ok"><Check size={16} /></span>
+            <div>
+              <strong>Sent to {shopName}</strong>
+              <small>They&apos;ll reach out on {displayContact(normaliseContact(lead.contact)?.value ?? lead.contact)}</small>
+            </div>
+          </header>
+          <div className="lead-card__body">
+            {thumb}
+            <dl>
+              <div><dt>Design</dt><dd>{designLines.join(' · ')}</dd></div>
+              <div><dt>Estimate</dt><dd>{total}</dd></div>
+              {lead.email && <div><dt>Confirmation</dt><dd>{lead.email}</dd></div>}
+            </dl>
+          </div>
+          <p className="fine-print">{shopName} confirms the final price and details with you before anything is made.</p>
+        </section>
+      );
+    }
     return (
       <section className="lead-card" aria-label="Lead preview">
         <header className="lead-card__header">
@@ -49,15 +96,7 @@ export function LeadCapture({
           <span className="demo-badge">Demo</span>
         </header>
         <div className="lead-card__body">
-          {renderImage || (renderStatus === 'paused' && renderPreview) ? (
-            <button className="lead-card__thumb" type="button" onClick={onShowPhoto} aria-label="View photo">
-              <img src={renderImage ?? renderPreview!} alt={renderImage ? 'AI render of the requested set' : '3D preview of the requested set'} />
-            </button>
-          ) : (
-            <div className="lead-card__thumb lead-card__thumb--loading">
-              {renderStatus === 'error' || renderStatus === 'paused' ? <Camera size={18} /> : <Loader2 className="spin" size={18} />}
-            </div>
-          )}
+          {thumb}
           <dl>
             <div><dt>Customer</dt><dd>{lead.name}</dd></div>
             <div><dt>Contact</dt><dd>{lead.contact}</dd></div>
@@ -74,22 +113,31 @@ export function LeadCapture({
     );
   }
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (sending) return;
     if (name.trim().length < 2) return setFormError('Add your name.');
-    if (contact.trim().length < 3) return setFormError('Add your Instagram handle or phone number.');
+    if (!normaliseContact(contact)) return setFormError('Add your Instagram handle (like @yourname) or a US phone number.');
+    if (email.trim() && !isEmail(email.trim())) return setFormError('Check your email address, or leave it blank.');
+    if (TURNSTILE_SITE_KEY && !turnstile) return setFormError('One moment, checking you are human…');
     setFormError(null);
-    onSubmit({ name: name.trim(), contact: contact.trim(), note: note.trim() });
+    setSending(true);
+    const error = await onSubmit({ name: name.trim(), contact: contact.trim(), email: email.trim(), note: note.trim() }, { turnstile, website });
+    setSending(false);
+    if (error) setFormError(error);
   };
-
 
   return (
     <form className="lead-form" onSubmit={submit} noValidate>
       <div className="lead-form__heading">
         <Camera size={17} />
         <div>
-          <strong>Get a real photo of this set</strong>
-          <small>Leave your details and we&apos;ll turn your design into a studio photo in about a minute.</small>
+          <strong>{demo ? 'Get a real photo of this set' : `Send your design to ${shopName}`}</strong>
+          <small>
+            {demo
+              ? 'Leave your details and we\'ll turn your design into a studio photo in about a minute.'
+              : `${shopName} gets your design and price, and you get a studio photo of your set in about a minute.`}
+          </small>
         </div>
       </div>
       <label>
@@ -102,20 +150,35 @@ export function LeadCapture({
           value={contact}
           onChange={(event) => setContact(event.target.value)}
           placeholder="@yourhandle or (555) 555-0100"
+          autoComplete="tel"
           maxLength={80}
         />
       </label>
       <label>
-        <span>Anything we should know? <em>Optional</em></span>
+        <span>Email <em>Optional, for your confirmation</em></span>
+        <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" inputMode="email" maxLength={120} />
+      </label>
+      <label>
+        <span>Anything {demo ? 'we' : 'they'} should know? <em>Optional</em></span>
         <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Timeline, budget, engraving ideas" maxLength={200} />
       </label>
+      {/* Honeypot: hidden from people and screen readers, tempting to bots. */}
+      <div className="lead-form__trap" aria-hidden="true">
+        <label>
+          Website
+          <input tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+        </label>
+      </div>
+      <Turnstile onToken={setTurnstile} />
       {formError && <div className="inline-note" role="alert">{formError}</div>}
-      <button className="primary-button" type="submit">
-        <Send size={16} />
-        Send design &amp; get photo
+      <button className="primary-button" type="submit" disabled={sending}>
+        {sending ? <Loader2 className="spin" size={16} /> : <Send size={16} />}
+        {sending ? 'Sending…' : demo ? 'Send design & get photo' : `Send to ${shopName}`}
       </button>
       <p className="fine-print">
-        Demo: your details go to MagPollo (not a jeweler) so we can follow up about setting this up for your store.
+        {demo
+          ? 'Demo: your details go to MagPollo (not a jeweler) so we can follow up about setting this up for your store.'
+          : `Your design and contact go only to ${shopName}. Studio photos are AI-generated from your design.`}
       </p>
     </form>
   );
@@ -217,7 +280,7 @@ export function RenderOverlay({ status, image, preview, error, startedAt, expect
           </button>
         )}
       </div>
-      {status === 'ready' && <span className="render-overlay__label">AI photo from your design</span>}
+      {status === 'ready' && <span className="render-overlay__label">AI studio photo of your design · the finished piece is handmade and may vary</span>}
     </div>
   );
 }

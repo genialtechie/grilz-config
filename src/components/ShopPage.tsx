@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
 import { TenantProvider } from '../lib/tenant/context';
 import { loadTenant, type LoadedTenant } from '../lib/tenant/loadTenant';
@@ -36,6 +36,9 @@ function Loading() {
 
 export default function ShopPage() {
   const { slug = '' } = useParams();
+  const [search] = useSearchParams();
+  // ?preview=<version>: a signed-in admin or shop member checking an unpublished draft.
+  const previewVersion = Number(search.get('preview')) || null;
   const posthog = usePostHog();
   const [loaded, setLoaded] = useState<LoadedTenant | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -43,15 +46,24 @@ export default function ShopPage() {
   useEffect(() => {
     const abort = new AbortController();
     setLoaded(null);
-    void loadTenant(slug.toLowerCase(), abort.signal).then((result) => {
+    const load = async () => {
+      let preview: { version: number; token: string | null } | undefined;
+      if (previewVersion) {
+        // The Supabase client only loads for previews, never for customers.
+        const { accessToken } = await import('../admin/supabase');
+        preview = { version: previewVersion, token: await accessToken().catch(() => null) };
+      }
+      const result = await loadTenant(slug.toLowerCase(), abort.signal, preview);
       if (!abort.signal.aborted) setLoaded(result);
-    });
+    };
+    void load();
     return () => abort.abort();
-  }, [slug, attempt]);
+  }, [slug, attempt, previewVersion]);
 
   useEffect(() => {
     if (loaded?.state !== 'ok') return;
     // Every event from this page is attributed to the shop.
+    if (loaded.preview) return;
     posthog.register({ tenant: loaded.slug });
     posthog.group('tenant', loaded.slug);
     document.title = `Design your custom grillz · ${loaded.config.brand.name}`;
@@ -61,6 +73,9 @@ export default function ShopPage() {
   if (!loaded) return <Loading />;
   if (loaded.state === 'not_found') {
     return <StatePage title="This builder doesn't exist" text="Check the link with the shop that sent it, or ask them for a new one." />;
+  }
+  if (loaded.state === 'sign_in') {
+    return <StatePage title="Sign in to preview" text="Drafts are only visible to the shop's team and VVS Lab." action={{ label: 'Sign in', href: '/admin' }} />;
   }
   if (loaded.state === 'unavailable') {
     return (
@@ -86,7 +101,12 @@ export default function ShopPage() {
     );
   }
   return (
-    <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo}>
+    <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo} version={loaded.version} preview={loaded.preview}>
+      {loaded.preview && (
+        <div className="preview-banner" role="status">
+          Draft preview · v{loaded.version} · customers can&apos;t see this yet
+        </div>
+      )}
       <Suspense fallback={<Loading />}>
         <Configurator />
       </Suspense>
