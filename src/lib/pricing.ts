@@ -1,5 +1,5 @@
-import { isGold, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec';
-import type { TenantDeposit, TenantPricing } from './tenant/schema';
+import { isGold, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 // The price engine: pure functions of a design and a tenant's pricing. The same
 // code runs in the builder and on the server, which recomputes every total.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { LeadReceipt } from '../leads';
 import type { RenderSpec } from '../renderSpec';
 
 export type RenderStatus = 'idle' | 'rendering' | 'ready' | 'error' | 'paused';
@@ -51,6 +52,7 @@ export const useAiRender = (tenant = 'vvslab') => {
     spec: RenderSpec,
     inspiration?: string | null,
     masks: { indices: number[]; mask: string }[] = [],
+    lead: LeadReceipt | null = null,
   ) => {
     const used = readUsage();
     if (used >= MAX_RENDERS_PER_VISITOR) {
@@ -79,7 +81,7 @@ export const useAiRender = (tenant = 'vvslab') => {
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant, image: preview, spec, inspiration: inspiration ?? undefined, masks }),
+        body: JSON.stringify({ tenant, image: preview, spec, inspiration: inspiration ?? undefined, masks, leadId: lead?.leadId, leadToken: lead?.token }),
         signal: abort.signal,
       });
       const body = (await response.json().catch(() => ({}))) as {

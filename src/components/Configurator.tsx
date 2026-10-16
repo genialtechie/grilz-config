@@ -23,7 +23,8 @@ import {
   X,
 } from 'lucide-react';
 import Scene from './three/Scene';
-import { LeadCapture, RenderOverlay, type Lead } from './AiRender';
+import { LeadCapture, RenderOverlay, type Lead, type LeadExtras } from './AiRender';
+import { submitLead, type LeadReceipt } from '../lib/leads';
 import { OptionCard } from './builder/OptionCard';
 import { capturePreview, captureToothMask } from '../lib/capturePreview';
 import { downscaleImage } from '../lib/downscaleImage';
@@ -115,6 +116,7 @@ function Configurator() {
   const tenant = useTenant();
   const { catalog, hints } = tenant;
   const hasCapturedOpen = useRef(false);
+  const openedAt = useRef(Date.now());
   const [step, setStep] = useState<StepId>('teeth');
   const [panelOpen, setPanelOpen] = useState(true);
   const [base, setBase] = useState<ToothDesign>(tenant.defaultTooth);
@@ -267,57 +269,95 @@ function Configurator() {
     estimated_total: totalCost,
   });
 
-  const startRender = () => {
-    if (!threeState.current || !renderSpec) return;
-    const state = threeState.current;
-    const spec = renderSpec;
-    const reference = inspiration;
-    // Let the focus/keyboard paint first; the high-res capture takes a frame.
-    window.requestAnimationFrame(() => {
-      let preview: string;
-      let masks: { kind: string; indices: number[]; mask: string }[] = [];
-      try {
-        preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index), groupTeeth(spec.teeth).length > 1);
-        // Mixed designs: one mask per tooth group that differs from the majority.
-        masks = planMasks(spec).map((plan) => ({
-          kind: plan.kind,
-          indices: plan.indices,
-          mask: captureToothMask(state, plan.indices, plan.kind === 'fangs' ? 90 : 0),
-        }));
-      } catch {
-        return;
-      }
-      posthog.capture('sample_render_started', { ...designProperties(), masked_groups: masks.length });
-      void render.start(preview, spec, reference, masks).then((result) => {
-        if (result.ok) {
-          posthog.capture('sample_render_completed', { ...designProperties(), render_seconds: result.seconds });
-        } else if (result.reason !== 'aborted') {
-          posthog.capture('sample_render_failed', { ...designProperties(), reason: result.reason });
+  type Capture = { spec: RenderSpec; preview: string; masks: { kind: string; indices: number[]; mask: string }[] };
+
+  /** The 3D capture (and tooth masks for mixed designs), taken after the next paint. */
+  const captureDesign = () =>
+    new Promise<Capture | null>((resolve) => {
+      if (!threeState.current || !renderSpec) return resolve(null);
+      const state = threeState.current;
+      const spec = renderSpec;
+      // Let the focus/keyboard paint first; the high-res capture takes a frame.
+      window.requestAnimationFrame(() => {
+        try {
+          const preview = capturePreview(state, spec.teeth.map((tooth) => tooth.index), groupTeeth(spec.teeth).length > 1);
+          // Mixed designs: one mask per tooth group that differs from the majority.
+          const masks = planMasks(spec).map((plan) => ({
+            kind: plan.kind,
+            indices: plan.indices,
+            mask: captureToothMask(state, plan.indices, plan.kind === 'fangs' ? 90 : 0),
+          }));
+          resolve({ spec, preview, masks });
+        } catch {
+          resolve(null);
         }
       });
     });
+
+  const renderCapture = (capture: Capture, receipt: LeadReceipt | null) => {
+    posthog.capture('sample_render_started', { ...designProperties(), masked_groups: capture.masks.length });
+    void render.start(capture.preview, capture.spec, inspiration, capture.masks, receipt).then((result) => {
+      if (result.ok) {
+        posthog.capture('sample_render_completed', { ...designProperties(), render_seconds: result.seconds });
+      } else if (result.reason !== 'aborted') {
+        posthog.capture('sample_render_failed', { ...designProperties(), reason: result.reason });
+      }
+    });
   };
 
-  const handleLeadSubmit = (submitted: Lead) => {
+  const startRender = async () => {
+    const capture = await captureDesign();
+    if (capture) renderCapture(capture, null);
+  };
+
+  const handleLeadSubmit = async (submitted: Lead, extras: LeadExtras): Promise<string | null> => {
+    if (tenant.preview) return 'This is a preview. Publish the shop to take designs.';
+    const capture = await captureDesign();
+    if (!capture) return 'Something went wrong with the 3D view. Refresh and try again.';
+    // Renders start only once the lead is stored: each one costs money, and
+    // visitors who abandon the form never see it.
+    const photo = render.rendersLeft > 0 && tenant.config.ai.monthlyGenerations > 0;
+    const outcome = await submitLead({
+      tenant: tenant.slug,
+      configVersion: tenant.version,
+      name: submitted.name,
+      contact: submitted.contact,
+      email: submitted.email || undefined,
+      note: submitted.note || undefined,
+      spec: capture.spec,
+      preview: capture.preview,
+      photo,
+      turnstile: extras.turnstile ?? undefined,
+      website: extras.website,
+      elapsedMs: Date.now() - openedAt.current,
+    });
+    if (!outcome.ok) {
+      posthog.capture('sample_lead_failed', { ...designProperties(), reason: outcome.code });
+      return outcome.error;
+    }
     setLead(submitted);
     setShowPhoto(true);
+    // The demo's leads are Magpollo's own prospects; a shop's customers stay out of our analytics.
     posthog.capture('sample_lead_submitted', {
       ...designProperties(),
-      lead_name: submitted.name,
-      lead_contact: submitted.contact,
-      lead_note: submitted.note || undefined,
+      ...(tenant.demo
+        ? {
+            lead_name: submitted.name,
+            lead_contact: submitted.contact,
+            lead_note: submitted.note || undefined,
+            $set: { name: submitted.name, contact: submitted.contact },
+          }
+        : { has_email: Boolean(submitted.email) }),
       render_status_at_submit: render.status,
-      $set: { name: submitted.name, contact: submitted.contact },
     });
     posthog.capture('sample_configuration_completed', designProperties());
-    // Renders start here rather than on form focus: each one costs money, and
-    // visitors who abandon the form would never see it.
-    if (render.status === 'idle') startRender();
+    if (photo && render.status === 'idle') renderCapture(capture, outcome.receipt);
+    return null;
   };
 
   const regenerate = () => {
     setShowPhoto(true);
-    startRender();
+    void startRender();
   };
 
   useEffect(() => {
@@ -849,6 +889,8 @@ function Configurator() {
                     lead={lead}
                     designLines={designLines}
                     total={priceHidden ? 'Price on request' : totalText(totalCost)}
+                    demo={tenant.demo}
+                    shopName={brand.name}
                     onSubmit={handleLeadSubmit}
                     onShowPhoto={() => setShowPhoto(true)}
                   />

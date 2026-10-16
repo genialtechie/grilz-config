@@ -5,6 +5,7 @@ import './App.css';
 
 const Configurator = lazy(() => import('./components/Configurator'));
 const ShopPage = lazy(() => import('./components/ShopPage'));
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 function ConfiguratorLoader() {
   return (
@@ -32,6 +33,14 @@ function App() {
         element={
           <Suspense fallback={<ConfiguratorLoader />}>
             <ShopPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin/*"
+        element={
+          <Suspense fallback={<ConfiguratorLoader />}>
+            <AdminApp />
           </Suspense>
         }
       />

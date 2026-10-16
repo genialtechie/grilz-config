@@ -1,6 +1,10 @@
 import sharp from 'sharp';
 import { buildFillPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
-import { getPublishedTenant, type TenantEnv } from './tenants.js';
+import { createDb, hasDb, type Db } from './db.js';
+import { verifyLeadToken, type Defer, type LeadEnv } from './leads.js';
+import { notifyLead } from './notify.js';
+import { getPublishedTenant, tenantIdFor, type TenantEnv } from './tenants.js';
+import { crossedWarning, dayGenerations, recordUsage, reserveGenerations, settleReservation, warnAllowance, type UsageOutcome } from './usage.js';
 
 // Turns a 3D configurator screenshot into a studio product photo with FLUX.2:
 // one main render, then zoomed section edits blended back through 3D masks.
@@ -35,7 +39,7 @@ const throttled = (ip: string) => {
   return false;
 };
 
-export type RenderEnv = TenantEnv & {
+export type RenderEnv = TenantEnv & LeadEnv & {
   FLUX_API_KEY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
@@ -55,8 +59,19 @@ const PAUSED = 'Studio photos are paused right now.';
 // slows spending down. Fails open if Redis is unreachable.
 const localSpend = new Map<string, number>();
 
-const overDailyBudget = async (env: RenderEnv, generations: number): Promise<boolean> => {
-  const cap = Number(env.RENDER_DAILY_GENERATIONS ?? DEFAULT_DAILY_GENERATIONS) || DEFAULT_DAILY_GENERATIONS;
+const dailyCap = (env: RenderEnv) => Number(env.RENDER_DAILY_GENERATIONS ?? DEFAULT_DAILY_GENERATIONS) || DEFAULT_DAILY_GENERATIONS;
+
+// Without the database (local dev), the daily budget falls back to Upstash or per-instance memory.
+const overDailyBudget = async (env: RenderEnv, generations: number, db: Db | null): Promise<boolean> => {
+  const cap = dailyCap(env);
+  // render_usage is shared by every instance, so it is the exact count when the database is reachable.
+  if (db) {
+    try {
+      return (await dayGenerations(db)) + generations > cap;
+    } catch (error) {
+      console.error('daily budget check failed', error instanceof Error ? error.message : error);
+    }
+  }
   const key = `generations:${new Date().toISOString().slice(0, 10)}`;
   const url = env.UPSTASH_REDIS_REST_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN;
@@ -276,9 +291,11 @@ async function pool<T>(tasks: (() => Promise<T>)[], limit: number): Promise<Prom
   return results;
 }
 
-export async function handleRender(payload: unknown, ip: string, env: RenderEnv): Promise<RenderResult> {
+const noDefer: Defer = (work) => void work;
+
+export async function handleRender(payload: unknown, ip: string, env: RenderEnv, defer: Defer = noDefer): Promise<RenderResult> {
   try {
-    return await render(payload, ip, env);
+    return await render(payload, ip, env, defer);
   } catch (error) {
     // Network failures to the renderer must never crash the function.
     console.error('render failed', error instanceof Error ? error.message : error);
@@ -286,13 +303,15 @@ export async function handleRender(payload: unknown, ip: string, env: RenderEnv)
   }
 }
 
-async function render(payload: unknown, ip: string, env: RenderEnv): Promise<RenderResult> {
+async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer): Promise<RenderResult> {
   const apiKey = env.FLUX_API_KEY;
   if (!apiKey) return fail(503, 'Rendering is not configured.');
   if (!payload || typeof payload !== 'object') return fail(400, 'Invalid request.');
 
-  const { tenant: rawTenant, image, spec: rawSpec, inspiration, masks: rawMasks } = payload as {
+  const { tenant: rawTenant, image, spec: rawSpec, inspiration, masks: rawMasks, leadId: rawLeadId, leadToken } = payload as {
     tenant?: unknown;
+    leadId?: unknown;
+    leadToken?: unknown;
     image?: unknown;
     spec?: unknown;
     inspiration?: unknown;
@@ -301,8 +320,9 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
   // Every render belongs to a shop; designs are validated against what that shop sells.
   const lookup = await getPublishedTenant(typeof rawTenant === 'string' ? rawTenant : 'vvslab', env);
   if (!lookup.ok) return fail(lookup.reason === 'unavailable' ? 503 : 404, lookup.reason === 'unavailable' ? 'The renderer is unavailable. Please try again.' : 'Shop not found.');
-  if (lookup.tenant.status !== 'live') return fail(503, PAUSED, 'paused');
-  const spec = parseRenderSpec(rawSpec, lookup.tenant.config.catalog);
+  const tenant = lookup.tenant;
+  if (tenant.status !== 'live') return fail(503, PAUSED, 'paused');
+  const spec = parseRenderSpec(rawSpec, tenant.config.catalog);
   if (!spec) return fail(400, 'Invalid design.');
 
   const base64 = readImage(image);
@@ -317,12 +337,67 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
 
   if (throttled(ip)) return fail(429, 'Too many renders. Try again in a few minutes.', 'throttled');
   const generations = 1 + masks.length;
-  const credits = await bflCredits(apiKey);
-  if (credits !== null && credits < CREDITS_PER_GENERATION * generations) {
-    console.error('render refused: low credits', credits);
-    return fail(503, PAUSED, 'paused');
+  const db = hasDb(env) ? createDb(env) : null;
+  const tenantId = db ? await tenantIdFor(tenant, env) : null;
+
+  // A render for a lead attaches its photo to that lead and its email. The token is
+  // bound to this shop and expires; the lead must still be waiting for its photo.
+  let leadId: string | null = null;
+  if (rawLeadId !== undefined && rawLeadId !== null) {
+    if (!db || !verifyLeadToken(rawLeadId, tenantId, leadToken, env)) return fail(403, 'Invalid request.');
+    const waiting = await db.count('leads', { id: `eq.${rawLeadId}`, tenant_id: `eq.${tenantId}`, render_status: 'eq.rendering' }).catch(() => 0);
+    if (!waiting) return fail(409, 'This design already has its photo.', 'done');
+    leadId = rawLeadId;
   }
-  if (await overDailyBudget(env, generations)) return fail(503, PAUSED, 'paused');
+  let reservation: number | null = null;
+
+  // Every outcome is recorded against the shop, and a lead learns whether its photo is coming.
+  const settle = async (outcome: UsageOutcome, used: number, seconds?: number, photo?: string) => {
+    if (!db || !tenantId) return;
+    if (reservation !== null) await settleReservation(db, reservation, { generations: used, outcome, seconds });
+    else await recordUsage(db, { tenantId, generations: used, outcome, seconds, leadId });
+    if (!leadId) return;
+    let status: 'ready' | 'paused' | 'failed' = outcome === 'ok' ? 'ready' : outcome;
+    const patch: Record<string, unknown> = {};
+    if (photo) {
+      const path = `${tenantId}/${leadId}/photo.jpg`;
+      try {
+        await db.upload('lead-media', path, Buffer.from(photo, 'base64'), 'image/jpeg');
+        patch.photo_path = path;
+      } catch (error) {
+        console.error('photo upload failed', leadId, error instanceof Error ? error.message : error);
+        status = 'failed';
+      }
+    }
+    await db.update('leads', { id: `eq.${leadId}`, tenant_id: `eq.${tenantId}`, render_status: 'eq.rendering' }, { ...patch, render_status: status }).catch(() => {});
+    await notifyLead(leadId, status === 'ready' ? 'photo' : 'final', env);
+  };
+  const pause = (reason: string) => {
+    console.error('render paused:', reason, tenant.slug);
+    defer(settle('paused', 0).catch((error) => console.error('settle failed', error instanceof Error ? error.message : error)));
+    return fail(503, PAUSED, 'paused');
+  };
+
+  const credits = await bflCredits(apiKey);
+  if (credits !== null && credits < CREDITS_PER_GENERATION * generations) return pause(`low credits (${credits})`);
+  if (db && tenantId) {
+    // Reserve this render's generations against the shop's month and the global day, atomically.
+    try {
+      const limit = tenant.config.ai.monthlyGenerations;
+      const result = await reserveGenerations(db, { tenantId, generations, monthLimit: limit, dayLimit: dailyCap(env), leadId });
+      if (result.refused) return pause(result.refused === 'allowance' ? `monthly allowance used (${result.usedBefore}/${limit})` : 'daily budget reached');
+      reservation = result.reservation;
+      if (crossedWarning(result.usedBefore, result.usedBefore + generations, limit)) {
+        defer(warnAllowance(tenant, { used: result.usedBefore + generations, limit }, env).catch(() => {}));
+      }
+    } catch (error) {
+      // Fail closed: without the ledger there is no spend control.
+      console.error('reservation failed', error instanceof Error ? error.message : error);
+      return pause('usage ledger unavailable');
+    }
+  } else if (await overDailyBudget(env, generations, null)) {
+    return pause('daily budget reached');
+  }
 
   const started = Date.now();
   const deadline = started + BUDGET_MS;
@@ -339,6 +414,8 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
       deadline,
     );
   } catch (error) {
+    const outcome: UsageOutcome = error instanceof JobError && error.code === 'paused' ? 'paused' : 'failed';
+    defer(settle(outcome, outcome === 'paused' ? 0 : 1).catch(() => {}));
     if (error instanceof JobError) return fail(error.status, error.message, error.code);
     throw error;
   }
@@ -346,7 +423,9 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
   // Repaint each section on a zoomed crop, in parallel, then blend the edits
   // back in plan order. A failed or late edit keeps the main photo there.
   let edits = 0;
+  let attempted = 0;
   if (masks.length && deadline - Date.now() > 25_000) {
+    attempted = masks.length;
     const photo = Buffer.from(result, 'base64');
     const meta = await sharp(photo).metadata();
     const size = { width: meta.width ?? 1024, height: meta.height ?? 1024 };
@@ -366,11 +445,13 @@ async function render(payload: unknown, ip: string, env: RenderEnv): Promise<Ren
     }
   }
 
+  const seconds = Math.round((Date.now() - started) / 100) / 10;
+  defer(settle('ok', 1 + attempted, seconds, result).catch((error) => console.error('settle failed', error instanceof Error ? error.message : error)));
   return {
     status: 200,
     body: {
       image: `data:image/jpeg;base64,${result}`,
-      seconds: Math.round((Date.now() - started) / 100) / 10,
+      seconds,
       edits,
     },
   };

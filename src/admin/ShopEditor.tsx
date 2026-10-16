@@ -1,0 +1,440 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Eye, Pause, Play, Rocket, Save, Trash2, Upload } from 'lucide-react';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
+import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
+import { contrast, usableAccent } from '../lib/tenant/theme';
+import { getTenant, publish, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
+import { LeadsPanel } from './LeadsPanel';
+import { SAMPLE_PRICING } from './templates';
+
+// One page per shop: edit the config as a draft, preview it, publish it, and
+// switch the shop live or paused. Validation is the same zod schema the API
+// uses, so a config that saves here is one the builder can load.
+
+type Option = { id: string; label: string };
+type Loaded = { tenant: TenantRow; configs: ConfigRow[] };
+
+const FONT_LABEL: Record<(typeof FONT_PAIRS)[number], string> = { 'modern-sans': 'Modern sans', 'serif-classic': 'Classic serif', editorial: 'Editorial' };
+const DISPLAY_LABEL: Record<(typeof PRICE_DISPLAYS)[number], string> = { exact: 'Exact price', from: '"From" price', hidden: 'Price on request' };
+
+const startingConfig = (configs: ConfigRow[]): TenantConfig | null => {
+  const row = configs.find((item) => item.status === 'draft') ?? configs.find((item) => item.status === 'published') ?? configs[0];
+  if (!row) return null;
+  const parsed = parseTenantConfig(row.config);
+  return parsed.ok ? parsed.config : (row.config as TenantConfig);
+};
+
+function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="admin-card admin-section">
+      <h2>{title}</h2>
+      {hint && <p className="admin-muted admin-section__hint">{hint}</p>}
+      {children}
+    </section>
+  );
+}
+
+function Issue({ issues, path }: { issues: Map<string, string>; path: string }) {
+  const hit = [...issues.entries()].find(([key]) => key === path || key.startsWith(`${path}.`));
+  return hit ? <small className="admin-error">{hit[1]}</small> : null;
+}
+
+function Money({ label, value, onChange, step = 5, suffix = '' }: { label: string; value: number | undefined; onChange: (value: number) => void; step?: number; suffix?: string }) {
+  return (
+    <label className="admin-field admin-field--money">
+      <span>{label}</span>
+      <div className="admin-prefix">
+        {!suffix && <em>$</em>}
+        <input type="number" inputMode="decimal" min={0} step={step} value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))} />
+        {suffix && <em>{suffix}</em>}
+      </div>
+    </label>
+  );
+}
+
+function Checks({ options, selected, onToggle }: { options: readonly Option[]; selected: readonly string[]; onToggle: (id: string, on: boolean) => void }) {
+  return (
+    <div className="admin-checks">
+      {options.map((option) => (
+        <label key={option.id} className="admin-check">
+          <input type="checkbox" checked={selected.includes(option.id)} onChange={(event) => onToggle(option.id, event.target.checked)} />
+          {option.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+export function ShopEditor() {
+  const { slug = '' } = useParams();
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [config, setConfig] = useState<TenantConfig | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [tab, setTab] = useState<'setup' | 'leads'>('setup');
+  const [emailsText, setEmailsText] = useState('');
+
+  const reload = useCallback(async () => {
+    const result = await getTenant(slug);
+    setLoaded(result);
+    const start = result ? startingConfig(result.configs) : null;
+    setConfig(start);
+    setEmailsText(start?.leads.email.join(', ') ?? '');
+    setDirty(false);
+  }, [slug]);
+
+  useEffect(() => {
+    reload().catch((reason: Error) => setNotice({ kind: 'error', text: reason.message }));
+  }, [reload]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  const parsed = useMemo(() => (config ? parseTenantConfig(config) : null), [config]);
+  const issues = useMemo(() => new Map(parsed && !parsed.ok ? parsed.issues.map((issue) => [issue.path, issue.message]) : []), [parsed]);
+
+  if (!loaded && !notice) return <main className="admin-main"><p className="admin-muted">Loading…</p></main>;
+  if (!loaded || !config) {
+    return (
+      <main className="admin-main">
+        <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>
+        <p className="admin-error">{notice?.text ?? 'Shop not found.'}</p>
+      </main>
+    );
+  }
+
+  const { tenant, configs } = loaded;
+  const draft = configs.find((row) => row.status === 'draft');
+  const published = configs.find((row) => row.status === 'published');
+
+  const update = (change: (next: TenantConfig) => void) => {
+    setConfig((current) => {
+      if (!current) return current;
+      const next = structuredClone(current);
+      change(next);
+      return next;
+    });
+    setDirty(true);
+    setNotice(null);
+  };
+
+  /** Turning an option on gives it a sample price so the config stays valid. */
+  const toggle = (list: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds'>, id: string, on: boolean) =>
+    update((next) => {
+      const current = next.catalog[list] as string[];
+      next.catalog[list] = (on ? [...current, id] : current.filter((item) => item !== id)) as never;
+      const order = { metals: METALS, karats: KARATS, types: GRILLZ_TYPES, styles: STYLES, settings: SETTINGS, stones: STONES, cuts: CUTS, molds: MOLDS }[list] as readonly Option[];
+      (next.catalog[list] as string[]).sort((a, b) => order.findIndex((item) => item.id === a) - order.findIndex((item) => item.id === b));
+      const prices = { metals: 'metalPerTooth', karats: 'karatMultiplier', styles: 'stylePerTooth', settings: 'settingPerTooth', stones: 'stonePerTooth' } as const;
+      const key = prices[list as keyof typeof prices];
+      if (on && key) {
+        const map = next.pricing[key] as Record<string, number>;
+        if (map[id] === undefined) map[id] = (SAMPLE_PRICING[key] as Record<string, number>)[id] ?? 0;
+      }
+    });
+
+  const run = async (label: string, work: () => Promise<string>) => {
+    setBusy(label);
+    setNotice(null);
+    try {
+      const text = await work();
+      setNotice({ kind: 'ok', text });
+    } catch (reason) {
+      setNotice({ kind: 'error', text: reason instanceof Error ? reason.message : String(reason) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const save = async () => {
+    const row = await saveDraft(tenant, configs, config);
+    await reload();
+    return row;
+  };
+
+  const onSave = () => run('save', async () => `Draft v${(await save()).version} saved.`);
+  const onPreview = () => {
+    // Opened synchronously so the browser doesn't block the tab as a popup.
+    const tabRef = window.open('about:blank', '_blank');
+    void run('preview', async () => {
+      const row = dirty || !draft ? await save() : draft;
+      if (tabRef) tabRef.location.href = `/b/${tenant.slug}?preview=${row.version}`;
+      return `Previewing draft v${row.version} in a new tab.`;
+    });
+  };
+  const onPublish = () =>
+    run('publish', async () => {
+      const row = dirty || !draft ? await save() : draft;
+      const version = await publish(row.id);
+      await reload();
+      return tenant.status === 'live' ? `v${version} is live. Customers see it within a minute.` : `v${version} published. Switch the shop live when it's ready.`;
+    });
+  const onStatus = (next: TenantRow['status']) =>
+    run('status', async () => {
+      await setStatus(tenant.id, next);
+      await reload();
+      return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
+    });
+
+  const onLogo = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return setNotice({ kind: 'error', text: 'Logos must be under 2 MB.' });
+    await run('logo', async () => {
+      const url = await uploadLogo(tenant.id, file);
+      update((next) => {
+        next.brand.logo = url;
+      });
+      return 'Logo uploaded. Save the draft to keep it.';
+    });
+  };
+
+  const accentShown = usableAccent(config.brand.accent || '#000000');
+  const accentAdjusted = /^#[0-9a-f]{6}$/i.test(config.brand.accent) && accentShown.toLowerCase() !== config.brand.accent.toLowerCase();
+  const { catalog, pricing, deposit } = config;
+  const pick = <T extends Option>(list: readonly T[], ids: readonly string[]) => list.filter((item) => ids.includes(item.id));
+
+  return (
+    <main className="admin-main">
+      <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>
+      <div className="admin-title-row">
+        <div>
+          <h1>{config.brand.name}</h1>
+          <p className="admin-muted">
+            <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
+            /b/{tenant.slug} · live config {published ? `v${published.version}` : 'none yet'}
+            {draft ? ` · draft v${draft.version}` : ''}{dirty ? ' · unsaved changes' : ''}
+          </p>
+        </div>
+        <div className="admin-actions">
+          <button className="admin-button" type="button" onClick={onSave} disabled={!!busy || !parsed?.ok}><Save size={15} /> Save draft</button>
+          <button className="admin-button" type="button" onClick={onPreview} disabled={!!busy || !parsed?.ok}><Eye size={15} /> Preview</button>
+          <button className="admin-button admin-button--primary" type="button" onClick={onPublish} disabled={!!busy || !parsed?.ok || (!dirty && !draft)}><Rocket size={15} /> Publish</button>
+          {tenant.status === 'live' ? (
+            <button className="admin-button" type="button" onClick={() => onStatus('paused')} disabled={!!busy}><Pause size={15} /> Pause</button>
+          ) : (
+            <button className="admin-button" type="button" onClick={() => onStatus('live')} disabled={!!busy || !published}><Play size={15} /> Go live</button>
+          )}
+        </div>
+      </div>
+      {notice && <p className={notice.kind === 'ok' ? 'admin-notice' : 'admin-error admin-notice'} role="status">{notice.text}</p>}
+      {parsed && !parsed.ok && (
+        <div className="admin-card admin-issues" role="alert">
+          <strong>Fix before saving</strong>
+          <ul>{parsed.issues.slice(0, 6).map((issue) => <li key={issue.path}>{issue.path}: {issue.message}</li>)}</ul>
+        </div>
+      )}
+
+      <div className="admin-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'setup'} className={tab === 'setup' ? 'is-active' : ''} type="button" onClick={() => setTab('setup')}>Setup</button>
+        <button role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'is-active' : ''} type="button" onClick={() => setTab('leads')}>Leads</button>
+      </div>
+
+      {tab === 'leads' ? (
+        <LeadsPanel tenantId={tenant.id} />
+      ) : (
+        <div className="admin-sections">
+          <Section title="Brand">
+            <div className="admin-grid">
+              <label className="admin-field">
+                <span>Shop name</span>
+                <input value={config.brand.name} maxLength={60} onChange={(event) => update((next) => { next.brand.name = event.target.value; })} />
+                <Issue issues={issues} path="brand.name" />
+              </label>
+              <label className="admin-field">
+                <span>Instagram</span>
+                <div className="admin-prefix"><em>@</em>
+                  <input value={config.brand.instagram ?? ''} onChange={(event) => update((next) => { next.brand.instagram = event.target.value.replace(/^@/, '').trim() || undefined; })} />
+                </div>
+                <Issue issues={issues} path="brand.instagram" />
+              </label>
+              <label className="admin-field">
+                <span>Phone</span>
+                <input value={config.brand.phone ?? ''} placeholder="(404) 555-0100" onChange={(event) => update((next) => { next.brand.phone = event.target.value.trim() || undefined; })} />
+              </label>
+              <label className="admin-field">
+                <span>Fonts</span>
+                <select value={config.brand.fontPair} onChange={(event) => update((next) => { next.brand.fontPair = event.target.value as TenantConfig['brand']['fontPair']; })}>
+                  {FONT_PAIRS.map((pair) => <option key={pair} value={pair}>{FONT_LABEL[pair]}</option>)}
+                </select>
+              </label>
+              <label className="admin-field">
+                <span>Accent colour</span>
+                <div className="admin-color">
+                  <input type="color" value={/^#[0-9a-f]{6}$/i.test(config.brand.accent) ? config.brand.accent : '#000000'} onChange={(event) => update((next) => { next.brand.accent = event.target.value.toUpperCase(); })} aria-label="Pick accent colour" />
+                  <input value={config.brand.accent} maxLength={7} onChange={(event) => update((next) => { next.brand.accent = event.target.value; })} />
+                </div>
+                {accentAdjusted ? (
+                  <small className="admin-muted">Too light to read on the page, so text uses <span className="admin-swatch" style={{ background: accentShown }} /> {accentShown} (contrast {contrast(accentShown, '#faf8f5').toFixed(1)}).</small>
+                ) : null}
+                <Issue issues={issues} path="brand.accent" />
+              </label>
+              <div className="admin-field">
+                <span>Logo</span>
+                <div className="admin-logo">
+                  {config.brand.logo ? <img src={config.brand.logo} alt="" /> : <span className="admin-muted">No logo: the shop name is shown as a wordmark.</span>}
+                  <label className="admin-button admin-button--small"><Upload size={14} /> Upload
+                    <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void onLogo(event.target.files?.[0])} />
+                  </label>
+                  {config.brand.logo && <button className="admin-icon-button" type="button" aria-label="Remove logo" onClick={() => update((next) => { delete next.brand.logo; })}><Trash2 size={14} /></button>}
+                </div>
+              </div>
+            </div>
+            <label className="admin-check">
+              <input type="checkbox" checked={config.brand.poweredBy} onChange={(event) => update((next) => { next.brand.poweredBy = event.target.checked; })} />
+              Show &quot;Powered by VVS Lab&quot; in the footer
+            </label>
+          </Section>
+
+          <Section title="What they sell" hint="Anything switched off disappears from every step of the builder.">
+            <h3>Metals</h3><Checks options={METALS} selected={catalog.metals} onToggle={(id, on) => toggle('metals', id, on)} />
+            <h3>Gold karats</h3><Checks options={KARATS} selected={catalog.karats} onToggle={(id, on) => toggle('karats', id, on)} />
+            <h3>Types</h3><Checks options={GRILLZ_TYPES} selected={catalog.types} onToggle={(id, on) => toggle('types', id, on)} />
+            <h3>Finishes</h3><Checks options={STYLES} selected={catalog.styles} onToggle={(id, on) => toggle('styles', id, on)} />
+            {catalog.types.includes('iced') && (
+              <>
+                <h3>Stone settings</h3><Checks options={SETTINGS} selected={catalog.settings} onToggle={(id, on) => toggle('settings', id, on)} />
+                <h3>Stones</h3><Checks options={STONES} selected={catalog.stones} onToggle={(id, on) => toggle('stones', id, on)} />
+              </>
+            )}
+            <h3>Fit</h3><Checks options={CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
+            <h3>Molds</h3><Checks options={MOLDS} selected={catalog.molds} onToggle={(id, on) => toggle('molds', id, on)} />
+            <h3>Extras</h3>
+            <div className="admin-checks">
+              <label className="admin-check"><input type="checkbox" checked={catalog.fangs} onChange={(event) => update((next) => { next.catalog.fangs = event.target.checked; })} /> Fangs</label>
+              <label className="admin-check"><input type="checkbox" checked={catalog.vision} onChange={(event) => update((next) => { next.catalog.vision = event.target.checked; })} /> Ideas &amp; inspiration upload</label>
+              <label className="admin-check"><input type="checkbox" checked={catalog.inscription.enabled} onChange={(event) => update((next) => {
+                next.catalog.inscription.enabled = event.target.checked;
+                if (event.target.checked) next.catalog.inscription.styles.forEach((style) => { next.pricing.inscription[style] ??= SAMPLE_PRICING.inscription[style] ?? 0; });
+              })} /> Inscriptions</label>
+            </div>
+            {catalog.inscription.enabled && (
+              <Checks options={INSCRIPTION_STYLES} selected={catalog.inscription.styles} onToggle={(id, on) => update((next) => {
+                const styles = next.catalog.inscription.styles;
+                next.catalog.inscription.styles = (on ? [...styles, id] : styles.filter((item) => item !== id)) as typeof styles;
+                if (on) next.pricing.inscription[id as keyof typeof next.pricing.inscription] ??= SAMPLE_PRICING.inscription[id as keyof typeof SAMPLE_PRICING.inscription] ?? 0;
+              })} />
+            )}
+            <Issue issues={issues} path="catalog" />
+          </Section>
+
+          <Section title="Prices" hint="Per tooth unless noted. The builder and every lead use exactly these numbers.">
+            <div className="admin-radios">
+              {PRICE_DISPLAYS.map((mode) => (
+                <label key={mode} className="admin-check"><input type="radio" name="display" checked={pricing.display === mode} onChange={() => update((next) => { next.pricing.display = mode; })} /> {DISPLAY_LABEL[mode]}</label>
+              ))}
+            </div>
+            <div className="admin-grid admin-grid--prices">
+              <Money label="Service fee (per order)" value={pricing.base} onChange={(value) => update((next) => { next.pricing.base = value; })} />
+              <Money label="Minimum order" value={pricing.minimumOrder} onChange={(value) => update((next) => { next.pricing.minimumOrder = value; })} />
+            </div>
+            <h3>Metal</h3>
+            <div className="admin-grid admin-grid--prices">
+              {pick(METALS, catalog.metals).map((metal) => (
+                <Money key={metal.id} label={metal.label} value={pricing.metalPerTooth[metal.id]} onChange={(value) => update((next) => { next.pricing.metalPerTooth[metal.id] = value; })} />
+              ))}
+            </div>
+            {catalog.metals.some((metal) => ['yellow', 'white', 'rose'].includes(metal)) && (
+              <>
+                <h3>Karat multiplier (gold)</h3>
+                <div className="admin-grid admin-grid--prices">
+                  {pick(KARATS, catalog.karats).map((karat) => (
+                    <Money key={karat.id} label={karat.label} step={0.05} suffix="×" value={pricing.karatMultiplier[karat.id]} onChange={(value) => update((next) => { next.pricing.karatMultiplier[karat.id] = value; })} />
+                  ))}
+                </div>
+              </>
+            )}
+            <h3>Finish</h3>
+            <div className="admin-grid admin-grid--prices">
+              {pick(STYLES, catalog.styles).map((style) => (
+                <Money key={style.id} label={style.label} value={pricing.stylePerTooth[style.id]} onChange={(value) => update((next) => { next.pricing.stylePerTooth[style.id] = value; })} />
+              ))}
+            </div>
+            {catalog.types.includes('iced') && (
+              <>
+                <h3>Stones and settings</h3>
+                <div className="admin-grid admin-grid--prices">
+                  {pick(STONES, catalog.stones).map((stone) => (
+                    <Money key={stone.id} label={stone.label} value={pricing.stonePerTooth[stone.id]} onChange={(value) => update((next) => { next.pricing.stonePerTooth[stone.id] = value; })} />
+                  ))}
+                  {pick(SETTINGS, catalog.settings).map((setting) => (
+                    <Money key={setting.id} label={`${setting.label} setting`} value={pricing.settingPerTooth[setting.id]} onChange={(value) => update((next) => { next.pricing.settingPerTooth[setting.id] = value; })} />
+                  ))}
+                </div>
+              </>
+            )}
+            <h3>Extras (per order)</h3>
+            <div className="admin-grid admin-grid--prices">
+              {catalog.fangs && <Money label="Fangs" value={pricing.extras.fangs} onChange={(value) => update((next) => { next.pricing.extras.fangs = value; })} />}
+              {catalog.cuts.includes('permanent') && <Money label="Permanent look" value={pricing.extras.permanent} onChange={(value) => update((next) => { next.pricing.extras.permanent = value; })} />}
+              {catalog.types.includes('photo') && <Money label="Photo artwork" value={pricing.extras.photo} onChange={(value) => update((next) => { next.pricing.extras.photo = value; })} />}
+              {catalog.inscription.enabled && pick(INSCRIPTION_STYLES, catalog.inscription.styles).map((style) => (
+                <Money key={style.id} label={`Inscription · ${style.label}`} value={pricing.inscription[style.id]} onChange={(value) => update((next) => { next.pricing.inscription[style.id] = value; })} />
+              ))}
+            </div>
+            <Issue issues={issues} path="pricing" />
+          </Section>
+
+          <Section title="Deposit" hint="Stripe deposits arrive in Stage 5. Until then, use the shop's own payment link or no deposit.">
+            <div className="admin-radios">
+              <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'none'} onChange={() => update((next) => { next.deposit.mode = 'none'; })} /> No deposit</label>
+              <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'link'} onChange={() => update((next) => { next.deposit.mode = 'link'; })} /> Shop&apos;s payment link</label>
+              <label className="admin-check admin-check--disabled"><input type="radio" name="deposit" disabled checked={deposit.mode === 'stripe'} readOnly /> Stripe checkout (soon)</label>
+            </div>
+            {deposit.mode !== 'none' && (
+              <>
+                {deposit.mode === 'link' && (
+                  <label className="admin-field">
+                    <span>Payment link</span>
+                    <input type="url" placeholder="https://cash.app/$shop or a Square/Stripe link" value={deposit.link ?? ''} onChange={(event) => update((next) => { next.deposit.link = event.target.value.trim() || undefined; })} />
+                    <Issue issues={issues} path="deposit.link" />
+                  </label>
+                )}
+                <div className="admin-radios">
+                  <label className="admin-check"><input type="radio" name="rule" checked={deposit.rule.type === 'fixed'} onChange={() => update((next) => { next.deposit.rule = { type: 'fixed', amount: 100 }; })} /> Fixed amount</label>
+                  <label className="admin-check"><input type="radio" name="rule" checked={deposit.rule.type === 'percent'} onChange={() => update((next) => { next.deposit.rule = { type: 'percent', value: 25, min: 100, roundTo: 10 }; })} /> % of the estimate</label>
+                </div>
+                <div className="admin-grid admin-grid--prices">
+                  {deposit.rule.type === 'fixed' ? (
+                    <Money label="Deposit" value={deposit.rule.amount} onChange={(value) => update((next) => { if (next.deposit.rule.type === 'fixed') next.deposit.rule.amount = value; })} />
+                  ) : (
+                    <>
+                      <Money label="Percent" step={1} suffix="%" value={deposit.rule.value} onChange={(value) => update((next) => { if (next.deposit.rule.type === 'percent') next.deposit.rule.value = value; })} />
+                      <Money label="At least" value={deposit.rule.min} onChange={(value) => update((next) => { if (next.deposit.rule.type === 'percent') next.deposit.rule.min = value; })} />
+                    </>
+                  )}
+                </div>
+                <Issue issues={issues} path="deposit.rule" />
+              </>
+            )}
+          </Section>
+
+          <Section title="Leads and AI photos">
+            <label className="admin-field">
+              <span>Send leads to (up to 5 emails, comma separated)</span>
+              <input
+                value={emailsText}
+                placeholder="orders@theirshop.com"
+                onChange={(event) => {
+                  setEmailsText(event.target.value);
+                  update((next) => { next.leads.email = event.target.value.split(/[\s,;]+/).map((item) => item.trim().toLowerCase()).filter(Boolean); });
+                }}
+              />
+              {tenant.kind !== 'shop' && <small className="admin-muted">Test shop: leads go to Magpollo whatever is set here.</small>}
+              <Issue issues={issues} path="leads" />
+            </label>
+            <div className="admin-grid admin-grid--prices">
+              <Money label="AI photos per month" step={10} suffix="photos" value={config.ai.monthlyGenerations} onChange={(value) => update((next) => { next.ai.monthlyGenerations = Math.round(value); })} />
+            </div>
+            <small className="admin-muted">Mixed designs use more than one generation each. At the limit, customers still send their design and see the 3D view instead of a photo.</small>
+          </Section>
+        </div>
+      )}
+    </main>
+  );
+}

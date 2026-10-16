@@ -22,3 +22,30 @@ npx supabase@2 stop --no-backup
 ```
 
 It prints `isolation ok`, or fails naming the leak.
+
+## Leads, emails and the admin (Stage 3)
+
+**Flow.** `POST /api/leads` validates the design against the shop's catalog, recomputes the price from the shop's config, stores the lead (limits checked and insert done under one lock in `create_lead`), and stores a re-encoded 3D capture. The browser then calls `/api/render` with the lead's token (bound to the shop, valid 30 minutes). The shop's email goes once (`leads.notified_at` is claimed atomically): with the studio photo when it lands, or after 40 s without it, in which case the photo follows as a reply in the same thread. Each render reserves its generations first (`reserve_generations`), against the shop's monthly allowance and the global daily budget.
+
+**Routing.** Paying shops email `config.leads.email`. Demo and test shops (`kind` = `demo` / `fixture`), and shops with no lead email yet, go to `PLATFORM_LEADS_EMAIL`. Test-shop subjects start with `[Test shop]`.
+
+**Env (Vercel).**
+
+| Name | Where | Purpose |
+| --- | --- | --- |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | prod, preview | Server database access |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | all | Admin sign-in (RLS applies) |
+| `RESEND_API_KEY` | prod, preview | Lead emails from `leads@vvslab.magpollo.com` |
+| `PLATFORM_LEADS_EMAIL` | prod, preview | Demo/test leads and allowance warnings |
+| `LEAD_TOKEN_SECRET` | prod, preview | Signs render tokens |
+| `TURNSTILE_SECRET_KEY`, `VITE_TURNSTILE_SITE_KEY` | prod only | Turnstile can't cover `*.vercel.app` previews |
+| `PUBLIC_ORIGIN` | prod, preview | Logo links in emails |
+
+**Admin.** `/admin`, magic-link sign-in. An address in `platform_admin_invites` becomes a platform admin once it is confirmed, and only for a password-less account. Create a shop → set brand, catalog, prices, deposit, lead emails → **Preview** (`/b/<slug>?preview=<version>`, visible only to admins and the shop's members) → **Publish** → **Go live**.
+
+**Integration tests.** `server/__tests__/pipeline.int.test.ts` runs the whole pipeline against a local Supabase with FLUX and Resend mocked. CI runs it in the `database` job; locally:
+
+```sh
+npx -y tsx@4.19.2 scripts/tenant-seed-sql.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -q
+INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321 INTEGRATION_SERVICE_KEY=<local service key> npx vitest run server/__tests__/pipeline.int.test.ts
+```
