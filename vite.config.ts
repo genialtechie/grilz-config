@@ -19,6 +19,29 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(body))
     })
+    server.middlewares.use('/api/dashboard/', async (req, res) => {
+      if (req.method !== 'POST') {
+        res.statusCode = 405
+        res.end()
+        return
+      }
+      const action = (req.url ?? '').replace(/^\//, '').split('?')[0]
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(chunk as Buffer)
+      let payload: unknown = null
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+      } catch {
+        // handled by handleDashboard as an invalid request
+      }
+      const token = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? null
+      const { handleDashboard } = await server.ssrLoadModule('/server/dashboard.ts')
+      const { status, body, headers } = await handleDashboard(action, payload, token, env)
+      res.statusCode = status
+      Object.entries(headers as Record<string, string>).forEach(([key, value]) => res.setHeader(key, value))
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(body))
+    })
     server.middlewares.use('/api/leads', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405

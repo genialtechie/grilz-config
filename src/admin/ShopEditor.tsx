@@ -1,22 +1,40 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Pause, Play, Rocket, Save, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
+import { describeChanges } from '../lib/tenant/diff';
 import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
 import { contrast, usableAccent } from '../lib/tenant/theme';
-import { getTenant, publish, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
+import { getTenant, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
+import { TeamPanel } from '../dashboard/TeamPanel';
 import { SAMPLE_PRICING } from './templates';
 
 // One page per shop: edit the config as a draft, preview it, publish it, and
 // switch the shop live or paused. Validation is the same zod schema the API
 // uses, so a config that saves here is one the builder can load.
+//
+// mode="shop" is the jeweler's own dashboard: drafts save as they type, the
+// preview sits beside the form, publishing shows what changes first and goes
+// through the server (which keeps plan-controlled fields), and admin-only
+// controls (status, AI allowance, footer, test-shop notes) are hidden.
+
+type Mode = 'admin' | 'shop';
+type EditorProps = { mode?: Mode; slug?: string; role?: 'admin' | 'owner' | 'staff' };
 
 type Option = { id: string; label: string };
 type Loaded = { tenant: TenantRow; configs: ConfigRow[] };
 
 const FONT_LABEL: Record<(typeof FONT_PAIRS)[number], string> = { 'modern-sans': 'Modern sans', 'serif-classic': 'Classic serif', editorial: 'Editorial' };
 const DISPLAY_LABEL: Record<(typeof PRICE_DISPLAYS)[number], string> = { exact: 'Exact price', from: '"From" price', hidden: 'Price on request' };
+
+const RESET_LABEL: Record<string, string> = { 'ai.monthlyGenerations': 'AI photo allowance', 'brand.poweredBy': '"Powered by VVS Lab" footer' };
+
+const parseRow = (row: ConfigRow | undefined): TenantConfig | null => {
+  if (!row) return null;
+  const parsed = parseTenantConfig(row.config);
+  return parsed.ok ? parsed.config : null;
+};
 
 const startingConfig = (configs: ConfigRow[]): TenantConfig | null => {
   const row = configs.find((item) => item.status === 'draft') ?? configs.find((item) => item.status === 'published') ?? configs[0];
@@ -66,15 +84,23 @@ function Checks({ options, selected, onToggle }: { options: readonly Option[]; s
   );
 }
 
-export function ShopEditor() {
-  const { slug = '' } = useParams();
+export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: EditorProps = {}) {
+  const params = useParams();
+  const slug = slugProp ?? params.slug ?? '';
+  const shop = mode === 'shop';
+  const canPublish = role !== 'staff';
+  const canUpload = role !== 'staff';
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [config, setConfig] = useState<TenantConfig | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string; link?: { href: string; label: string } } | null>(null);
-  const [tab, setTab] = useState<'setup' | 'leads'>('setup');
+  const [tab, setTab] = useState<'setup' | 'leads' | 'team'>('setup');
   const [emailsText, setEmailsText] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [showPreview, setShowPreview] = useState(() => typeof window === 'undefined' || window.innerWidth > 1080);
+  const [previewKey, setPreviewKey] = useState(0);
+  const saving = useRef<Promise<unknown> | null>(null);
 
   const reload = useCallback(async () => {
     const result = await getTenant(slug);
@@ -99,11 +125,35 @@ export function ShopEditor() {
   const parsed = useMemo(() => (config ? parseTenantConfig(config) : null), [config]);
   const issues = useMemo(() => new Map(parsed && !parsed.ok ? parsed.issues.map((issue) => [issue.path, issue.message]) : []), [parsed]);
 
+  // Shop mode: save the draft a moment after they stop typing, then refresh the
+  // preview. The form keeps what they typed meanwhile.
+  useEffect(() => {
+    if (!shop || !dirty || !loaded || !config || !parsed?.ok) return;
+    const timer = window.setTimeout(() => {
+      const snapshot = JSON.stringify(config);
+      const work = (async () => {
+        await saving.current;
+        const fresh = await getTenant(slug);
+        if (!fresh) return;
+        await saveDraft(fresh.tenant, fresh.configs, config);
+        const after = await getTenant(slug);
+        if (after) setLoaded(after);
+        setConfig((current) => {
+          if (current && JSON.stringify(current) === snapshot) setDirty(false);
+          return current;
+        });
+        setPreviewKey((key) => key + 1);
+      })().catch((reason: Error) => setNotice({ kind: 'error', text: `Couldn't save: ${reason.message}` }));
+      saving.current = work;
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [shop, dirty, loaded, config, parsed, slug]);
+
   if (!loaded && !notice) return <main className="admin-main"><p className="admin-muted">Loading…</p></main>;
   if (!loaded || !config) {
     return (
       <main className="admin-main">
-        <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>
+        {!shop && <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>}
         <p className="admin-error">{notice?.text ?? 'Shop not found.'}</p>
       </main>
     );
@@ -112,6 +162,8 @@ export function ShopEditor() {
   const { tenant, configs } = loaded;
   const draft = configs.find((row) => row.status === 'draft');
   const published = configs.find((row) => row.status === 'published');
+  const liveConfig = parseRow(published);
+  const changes = describeChanges(liveConfig, config);
 
   const update = (change: (next: TenantConfig) => void) => {
     setConfig((current) => {
@@ -153,8 +205,11 @@ export function ShopEditor() {
   };
 
   const save = async () => {
-    const row = await saveDraft(tenant, configs, config);
+    await saving.current;
+    const fresh = shop ? await getTenant(slug) : loaded;
+    const row = await saveDraft(fresh?.tenant ?? tenant, fresh?.configs ?? configs, config);
     await reload();
+    setPreviewKey((key) => key + 1);
     return row;
   };
 
@@ -167,6 +222,17 @@ export function ShopEditor() {
       const row = await save();
       setNotice({ kind: 'ok', text: `Draft v${row.version} saved.`, link: { href: previewHref(row.version), label: 'Open preview' } });
       return null;
+    });
+
+  const onPublishShop = () =>
+    run('publish', async () => {
+      const row = dirty || !draft ? await save() : draft;
+      const result = await publishAsMember(row.id);
+      setConfirming(false);
+      await reload();
+      const kept = result.reset.map((path) => RESET_LABEL[path] ?? path);
+      const base = result.live ? `Published. Customers see v${result.version} within a minute.` : `v${result.version} saved as your live version. VVS Lab switches your page on when it's ready.`;
+      return kept.length ? `${base} ${kept.join(' and ')} stay as your plan sets them.` : base;
     });
 
   const onPublish = () =>
@@ -202,16 +268,37 @@ export function ShopEditor() {
 
   return (
     <main className="admin-main">
-      <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>
+      {!shop && <Link to="/admin" className="admin-back"><ArrowLeft size={15} /> Shops</Link>}
       <div className="admin-title-row">
         <div>
           <h1>{config.brand.name}</h1>
-          <p className="admin-muted">
-            <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
-            /b/{tenant.slug} · live config {published ? `v${published.version}` : 'none yet'}
-            {draft ? ` · draft v${draft.version}` : ''}{dirty ? ' · unsaved changes' : ''}
-          </p>
+          {shop ? (
+            <p className="admin-muted">
+              <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
+              {dirty ? 'Saving…' : draft ? (changes.length ? `${changes.length} unpublished change${changes.length > 1 ? 's' : ''}` : 'Draft matches your live page') : 'Up to date'}
+            </p>
+          ) : (
+            <p className="admin-muted">
+              <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
+              /b/{tenant.slug} · live config {published ? `v${published.version}` : 'none yet'}
+              {draft ? ` · draft v${draft.version}` : ''}{dirty ? ' · unsaved changes' : ''}
+            </p>
+          )}
         </div>
+        {shop ? (
+          <div className="admin-actions">
+            <button className="admin-button dash-preview-toggle" type="button" onClick={() => setShowPreview((value) => !value)}>
+              {showPreview ? <EyeOff size={15} /> : <Eye size={15} />} {showPreview ? 'Hide preview' : 'Preview'}
+            </button>
+            {canPublish ? (
+              <button className="admin-button admin-button--primary" type="button" onClick={() => setConfirming(true)} disabled={!!busy || !parsed?.ok || (!dirty && (!draft || !changes.length))}>
+                <Rocket size={15} /> Publish
+              </button>
+            ) : (
+              <span className="admin-muted">The owner publishes changes.</span>
+            )}
+          </div>
+        ) : (
         <div className="admin-actions">
           <button className="admin-button" type="button" onClick={onSave} disabled={!!busy || !parsed?.ok}><Save size={15} /> Save draft</button>
           {draft && !dirty ? (
@@ -226,6 +313,7 @@ export function ShopEditor() {
             <button className="admin-button" type="button" onClick={() => onStatus('live')} disabled={!!busy || !published}><Play size={15} /> Go live</button>
           )}
         </div>
+        )}
       </div>
       {notice && (
         <p className={notice.kind === 'ok' ? 'admin-notice' : 'admin-error admin-notice'} role="status">
@@ -240,14 +328,35 @@ export function ShopEditor() {
         </div>
       )}
 
+      {confirming && (
+        <div className="admin-card dash-confirm" role="dialog" aria-label="Publish changes">
+          <div className="dash-confirm__head">
+            <strong>Publish {changes.length} change{changes.length === 1 ? '' : 's'}?</strong>
+            <button className="admin-icon-button" type="button" aria-label="Cancel" onClick={() => setConfirming(false)}><X size={15} /></button>
+          </div>
+          <ul>{changes.slice(0, 30).map((change, index) => <li key={index}><span className="admin-muted">{change.area}</span> {change.text}</li>)}</ul>
+          {changes.length > 30 && <p className="admin-muted">…and {changes.length - 30} more.</p>}
+          <div className="admin-actions">
+            <button className="admin-button" type="button" onClick={() => setConfirming(false)}>Keep editing</button>
+            <button className="admin-button admin-button--primary" type="button" disabled={!!busy} onClick={() => void onPublishShop()}><Rocket size={15} /> {busy === 'publish' ? 'Publishing…' : 'Publish now'}</button>
+          </div>
+        </div>
+      )}
+
+      {!shop && (
       <div className="admin-tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'setup'} className={tab === 'setup' ? 'is-active' : ''} type="button" onClick={() => setTab('setup')}>Setup</button>
         <button role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'is-active' : ''} type="button" onClick={() => setTab('leads')}>Leads</button>
+        <button role="tab" aria-selected={tab === 'team'} className={tab === 'team' ? 'is-active' : ''} type="button" onClick={() => setTab('team')}>Team</button>
       </div>
+      )}
 
-      {tab === 'leads' ? (
-        <LeadsPanel tenantId={tenant.id} />
+      {tab === 'team' && !shop ? (
+        <TeamPanel shop={{ ...tenant, role: 'admin' }} embedded />
+      ) : tab === 'leads' && !shop ? (
+        <LeadsPanel tenantId={tenant.id} shopName={config.brand.name} />
       ) : (
+        <div className={shop && showPreview ? 'dash-editor' : ''}>
         <div className="admin-sections">
           <Section title="Brand">
             <div className="admin-grid">
@@ -288,17 +397,21 @@ export function ShopEditor() {
                 <span>Logo</span>
                 <div className="admin-logo">
                   {config.brand.logo ? <img src={config.brand.logo} alt="" /> : <span className="admin-muted">No logo: the shop name is shown as a wordmark.</span>}
+                  {canUpload && (
                   <label className="admin-button admin-button--small"><Upload size={14} /> Upload
                     <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void onLogo(event.target.files?.[0])} />
                   </label>
-                  {config.brand.logo && <button className="admin-icon-button" type="button" aria-label="Remove logo" onClick={() => update((next) => { delete next.brand.logo; })}><Trash2 size={14} /></button>}
+                  )}
+                  {config.brand.logo && canUpload && <button className="admin-icon-button" type="button" aria-label="Remove logo" onClick={() => update((next) => { delete next.brand.logo; })}><Trash2 size={14} /></button>}
                 </div>
               </div>
             </div>
+            {!shop && (
             <label className="admin-check">
               <input type="checkbox" checked={config.brand.poweredBy} onChange={(event) => update((next) => { next.brand.poweredBy = event.target.checked; })} />
               Show &quot;Powered by VVS Lab&quot; in the footer
             </label>
+            )}
           </Section>
 
           <Section title="What they sell" hint="Anything switched off disappears from every step of the builder.">
@@ -390,7 +503,7 @@ export function ShopEditor() {
             <Issue issues={issues} path="pricing" />
           </Section>
 
-          <Section title="Deposit" hint="Stripe deposits arrive in Stage 5. Until then, use the shop's own payment link or no deposit.">
+          <Section title="Deposit" hint={shop ? 'Card checkout through your own Stripe account is coming soon. Until then, use your payment link or no deposit.' : "Stripe deposits arrive in Stage 5. Until then, use the shop's own payment link or no deposit."}>
             <div className="admin-radios">
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'none'} onChange={() => update((next) => { next.deposit.mode = 'none'; })} /> No deposit</label>
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'link'} onChange={() => update((next) => { next.deposit.mode = 'link'; })} /> Shop&apos;s payment link</label>
@@ -435,14 +548,30 @@ export function ShopEditor() {
                   update((next) => { next.leads.email = event.target.value.split(/[\s,;]+/).map((item) => item.trim().toLowerCase()).filter(Boolean); });
                 }}
               />
-              {tenant.kind !== 'shop' && <small className="admin-muted">Test shop: leads go to Magpollo whatever is set here.</small>}
+              {tenant.kind !== 'shop' && !shop && <small className="admin-muted">Test shop: leads go to Magpollo whatever is set here.</small>}
               <Issue issues={issues} path="leads" />
             </label>
+            {shop ? (
+              <p>Your plan includes <strong>{(liveConfig ?? config).ai.monthlyGenerations} AI photos a month</strong>.</p>
+            ) : (
             <div className="admin-grid admin-grid--prices">
               <Money label="AI photos per month" step={10} suffix="photos" value={config.ai.monthlyGenerations} onChange={(value) => update((next) => { next.ai.monthlyGenerations = Math.round(value); })} />
             </div>
+            )}
             <small className="admin-muted">Mixed designs use more than one generation each. At the limit, customers still send their design and see the 3D view instead of a photo.</small>
           </Section>
+        </div>
+        {shop && showPreview && (
+          <aside className="dash-preview" aria-label="Preview of your page">
+            <div className="dash-preview__bar">
+              <span>{draft ? `Preview · draft` : 'Your live page'}</span>
+              <a href={draft ? previewHref(draft.version) : `/b/${tenant.slug}`} target="_blank" rel="noopener">Open ↗</a>
+            </div>
+            <div className="dash-preview__frame">
+              <iframe key={`${previewKey}-${draft?.version ?? 0}`} title="Preview of your page" src={draft ? `/b/${tenant.slug}?preview=${draft.version}` : `/b/${tenant.slug}`} />
+            </div>
+          </aside>
+        )}
         </div>
       )}
     </main>

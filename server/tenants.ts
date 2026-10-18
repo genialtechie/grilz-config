@@ -25,7 +25,7 @@ export type TenantLookup =
   | { ok: false; reason: 'invalid_slug' | 'not_found' | 'unavailable' };
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
-const CACHE_MS = 30_000;
+const CACHE_MS = 20_000;
 const cache = new Map<string, { at: number; value: TenantLookup }>();
 
 export const TENANT_ZERO: PublishedTenant = {

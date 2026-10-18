@@ -22,7 +22,7 @@ function SignIn() {
     setState('sending');
     const { error: authError } = await supabase().auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/admin`, shouldCreateUser: true },
+      options: { emailRedirectTo: `${window.location.origin}/admin`, shouldCreateUser: false },
     });
     if (authError) {
       setError(authError.message);

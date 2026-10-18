@@ -50,9 +50,56 @@ begin
   begin insert into public.leads (tenant_id, name, contact, spec, price, total, config_version) values (ta, 'x', 'x', '{}', '{}', 1, 1); exception when others then ok := true; end;
   if not ok then raise exception 'A inserted a lead directly'; end if;
 
+  -- Stage 4: members publish through the server (validated, plan fields kept), not this RPC
   ok := false;
   begin perform public.publish_config(ca); exception when others then ok := true; end;
-  if ok then raise exception 'owner could not publish own draft'; end if;
+  if not ok then raise exception 'owner published without the server'; end if;
+
+  ok := false;
+  begin perform public.publish_config_service(ca, '{}'::jsonb, ua); exception when others then ok := true; end;
+  if not ok then raise exception 'A can call publish_config_service'; end if;
+
+  -- members are added by the server, never by a browser insert
+  ok := false;
+  begin insert into public.members (tenant_id, user_id, role) values (ta, ub, 'staff'); exception when others then ok := true; end;
+  if not ok then raise exception 'owner inserted a member directly'; end if;
+
+  ok := false;
+  begin insert into public.members (tenant_id, user_id, role) values (tb, ua, 'owner'); exception when others then ok := true; end;
+  if not ok then raise exception 'A added itself to B'; end if;
+
+  -- the last owner can't be removed or demoted
+  ok := false;
+  begin delete from public.members where tenant_id = ta and user_id = ua; exception when others then ok := true; end;
+  if not ok then raise exception 'last owner was removed'; end if;
+  ok := false;
+  begin update public.members set role = 'staff' where tenant_id = ta and user_id = ua; exception when others then ok := true; end;
+  if not ok then raise exception 'last owner was demoted'; end if;
+
+  -- A can't touch B's team
+  delete from public.members where tenant_id = tb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'A removed B members'; end if;
+
+  -- team list is scoped to own shops
+  select count(*) into n from public.shop_team(tb); if n <> 0 then raise exception 'A sees B team'; end if;
+  select count(*) into n from public.shop_team(ta); if n <> 1 then raise exception 'A sees % in own team', n; end if;
+
+  -- stats only count own shop
+  if (public.shop_stats(tb, now() - interval '30 days') ->> 'leads')::int <> 0 then raise exception 'A counted B leads'; end if;
+  if (public.shop_stats(ta, now() - interval '30 days') ->> 'leads')::int <> 1 then raise exception 'A stats wrong'; end if;
+
+  -- the customer's note can't be rewritten; status changes are logged
+  ok := false;
+  begin update public.leads set note = 'edited' where id = la; exception when others then ok := true; end;
+  if not ok then raise exception 'A rewrote the customer note'; end if;
+  select count(*) into n from public.lead_events where lead_id = la and type = 'status' and actor = ua;
+  if n < 1 then raise exception 'status change was not logged'; end if;
+
+  -- notes go in as lead events for own leads only
+  insert into public.lead_events (lead_id, tenant_id, type, actor, data) values (la, ta, 'note', ua, '{"text":"called"}');
+  ok := false;
+  begin insert into public.lead_events (lead_id, tenant_id, type, actor, data) values (lb, tb, 'note', ua, '{"text":"x"}'); exception when others then ok := true; end;
+  if not ok then raise exception 'A wrote a note on a B lead'; end if;
 
   ok := false;
   begin update public.leads set notified_at = now() where id = la; exception when others then ok := true; end;

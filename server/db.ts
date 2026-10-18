@@ -82,6 +82,14 @@ export function createDb(env: TenantEnv) {
       return `${base}/storage/v1${signedURL}`;
     },
 
+    /** POST to the Auth admin API (service role): user creation and sign-in links. */
+    authAdmin: async <T>(path: string, body: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string }> => {
+      const response = await fetch(`${base}/auth/v1/admin/${path}`, { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+      const data = (await response.json().catch(() => ({}))) as T & { msg?: string; message?: string; error_description?: string };
+      if (!response.ok) return { ok: false, status: response.status, message: data.msg ?? data.message ?? data.error_description ?? `auth admin ${response.status}` };
+      return { ok: true, data };
+    },
+
     /** The signed-in user behind a Supabase access token, or null. */
     userFromToken: async (token: string): Promise<{ id: string; email?: string } | null> => {
       const response = await fetch(`${base}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` } });

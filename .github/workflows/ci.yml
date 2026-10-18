@@ -36,11 +36,12 @@ jobs:
           cache: npm
       - run: npm ci
       # Lead pipeline end to end (lead → render → photo → emails) with FLUX and Resend mocked.
-      - name: Lead pipeline integration tests
+      - name: Lead pipeline and dashboard integration tests
         run: |
           npx -y tsx@4.19.2 scripts/tenant-seed-sql.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q
           export INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321
           export INTEGRATION_SERVICE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')
-          npx vitest run server/__tests__/pipeline.int.test.ts
+          export INTEGRATION_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')
+          npx vitest run server/__tests__/pipeline.int.test.ts server/__tests__/dashboard.int.test.ts
       - if: always()
         run: supabase stop --no-backup

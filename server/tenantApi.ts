@@ -1,11 +1,12 @@
 import { getPublishedTenant, publicTenant, type TenantEnv } from './tenants.js';
 
 // GET /api/tenant/<slug> → the published config a shop page needs. Cached at
-// the edge for a minute so a dashboard publish shows up within ~60s.
+// the edge for 30s (plus the function's own 20s cache) so a dashboard publish
+// shows up within a minute.
 
 export type ApiResult = { status: number; body: unknown; headers: Record<string, string> };
 
-const CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+const CACHE = 'public, s-maxage=30, stale-while-revalidate=10';
 
 export async function handleTenant(slug: string, env: TenantEnv): Promise<ApiResult> {
   const lookup = await getPublishedTenant(slug.toLowerCase(), env);

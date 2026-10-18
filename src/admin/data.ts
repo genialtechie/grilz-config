@@ -133,7 +133,7 @@ export async function listLeads(tenantId: string) {
       .select('id,created_at,name,contact,email,note,status,total,deposit,render_status,notified_at,preview_path,photo_path,spec,source')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(200),
   ) as LeadRow[];
   const paths = leads.map((lead) => lead.photo_path ?? lead.preview_path).filter((path): path is string => Boolean(path));
   const signed = paths.length ? ((await db.storage.from('lead-media').createSignedUrls(paths, 3600)).data ?? []) : [];
@@ -150,4 +150,69 @@ export async function listLeads(tenantId: string) {
 
 export async function setLeadStatus(leadId: string, status: string) {
   must(await supabase().from('leads').update({ status }).eq('id', leadId).select('id'));
+}
+
+// ---------- Shop dashboard (/dashboard) ----------
+// The same queries serve shop members: row-level security limits them to their
+// own shops. Publishing and inviting go through /api/dashboard so the server can
+// validate the config and keep plan-controlled fields.
+
+export type MemberRole = 'owner' | 'staff';
+export type MyShop = TenantRow & { role: MemberRole | 'admin' };
+
+export async function myShops(): Promise<MyShop[]> {
+  const db = supabase();
+  const { data: user } = await db.auth.getUser();
+  if (!user.user) return [];
+  const rows = must(await db.from('members').select('role,tenants(id,slug,name,kind,status,published_version,created_at)').eq('user_id', user.user.id)) as unknown as { role: MemberRole; tenants: TenantRow | null }[];
+  return rows.filter((row) => row.tenants).map((row) => ({ ...(row.tenants as TenantRow), role: row.role })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function api<T>(action: string, body: Record<string, unknown>): Promise<T> {
+  const { data } = await supabase().auth.getSession();
+  const response = await fetch(`/api/dashboard/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+    body: JSON.stringify(body),
+  });
+  const json = (await response.json().catch(() => ({}))) as T & { message?: string; error?: string; issues?: { path: string; message: string }[] };
+  if (!response.ok) throw new Error(json.message ?? json.issues?.[0]?.message ?? (response.status === 401 ? 'Your session ended. Sign in again.' : 'Something went wrong. Try again.'));
+  return json;
+}
+
+export const publishAsMember = (configId: string) => api<{ version: number; reset: string[]; live: boolean; slug: string }>('publish', { configId });
+export const inviteMember = (tenantId: string, email: string, role: MemberRole) => api<{ added: boolean; emailed?: boolean; message?: string }>('invite', { tenantId, email, role });
+export const viewStats = (tenantId: string, days: number) => api<{ available: boolean; views?: number; started?: number; depositClicks?: number }>('stats', { tenantId, days });
+
+export type TeamMember = { user_id: string; email: string; role: MemberRole; created_at: string; last_sign_in_at: string | null };
+
+export async function shopTeam(tenantId: string) {
+  return must(await supabase().rpc('shop_team', { target: tenantId })) as TeamMember[];
+}
+
+export async function setMemberRole(tenantId: string, userId: string, role: MemberRole) {
+  must(await supabase().from('members').update({ role }).eq('tenant_id', tenantId).eq('user_id', userId).select('user_id'));
+}
+
+export async function removeMember(tenantId: string, userId: string) {
+  must(await supabase().from('members').delete().eq('tenant_id', tenantId).eq('user_id', userId).select('user_id'));
+}
+
+export type ShopStats = { leads: number; contacted: number; deposits: number; won: number; value: number; wonValue: number; popular: { label: string; count: number }[] };
+
+export async function shopStats(tenantId: string, since: Date) {
+  return must(await supabase().rpc('shop_stats', { target: tenantId, since: since.toISOString() })) as ShopStats;
+}
+
+export type LeadEvent = { lead_id: string; type: string; created_at: string; data: Record<string, unknown> };
+
+export async function leadNotes(leadIds: string[]) {
+  if (!leadIds.length) return [] as LeadEvent[];
+  return must(await supabase().from('lead_events').select('lead_id,type,created_at,data').in('lead_id', leadIds).in('type', ['note', 'status']).order('created_at')) as LeadEvent[];
+}
+
+export async function addLeadNote(lead: { id: string }, tenantId: string, text: string) {
+  const db = supabase();
+  const { data: user } = await db.auth.getUser();
+  must(await db.from('lead_events').insert({ lead_id: lead.id, tenant_id: tenantId, type: 'note', actor: user.user?.id, data: { text: text.slice(0, 1000) } }).select('lead_id'));
 }

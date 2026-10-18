@@ -72,7 +72,7 @@ describe('GET /api/tenant/:slug', () => {
     mockFetch(async () => Response.json([row('api-ok', shopConfig())]));
     const result = await handleTenant('API-OK', env);
     expect(result.status).toBe(200);
-    expect(result.headers['Cache-Control']).toContain('s-maxage=60');
+    expect(result.headers['Cache-Control']).toContain('s-maxage=30');
     const body = JSON.stringify(result.body);
     expect(body).not.toContain('owner@icebox.test');
     expect(body).not.toContain('+15555550100');
