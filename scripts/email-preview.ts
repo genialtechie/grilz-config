@@ -11,7 +11,11 @@ import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab';
 
 const out = process.argv[2] ?? 'email-preview';
 const PORT = 5310;
-const origin = `http://127.0.0.1:${PORT}`;
+const local = `http://127.0.0.1:${PORT}`;
+// Emails are rendered with the real origin (so links read right); only the
+// image assets are pointed at the local server.
+const origin = 'https://vvslab.magpollo.com';
+const localAssets = (html: string) => html.replaceAll(`${origin}/assets/`, `${local}/assets/`);
 
 const lead: LeadForEmail = {
   id: '7f3c2a10-5b1e-4c3a-9d1f-2a6b8e4c1d90',
@@ -30,7 +34,7 @@ const lead: LeadForEmail = {
 const shop = structuredClone(VVSLAB_CONFIG);
 shop.brand = { ...shop.brand, name: 'Gold Mouth Jewelers', instagram: 'goldmouth.atl', logo: '/assets/vvs/logo-mark.png', accent: '#1F5C4A' };
 
-const photo = `${origin}/assets/vvs/photo-mixed.webp`;
+const photo = `${local}/assets/vvs/photo-mixed.webp`;
 const withPhoto = (html: string) => html.replace(/cid:(photo|preview)/g, photo);
 
 const emails: Record<string, string> = {
@@ -52,8 +56,8 @@ async function main() {
         for (const scheme of ['light', 'dark'] as const) {
           const page = await browser.newPage({ viewport: { width, height: 800 }, deviceScaleFactor: 2, colorScheme: scheme, ignoreHTTPSErrors: true });
           // Open from the local origin first: a blank page may not load loopback images.
-          await page.goto(`${origin}/robots.txt`);
-          await page.setContent(html, { waitUntil: 'networkidle' });
+          await page.goto(`${local}/robots.txt`);
+          await page.setContent(localAssets(html), { waitUntil: 'networkidle' });
           await page.screenshot({ path: `${out}/${name}-${label}-${scheme}.png`, fullPage: true });
           await page.close();
         }

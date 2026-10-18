@@ -2,7 +2,7 @@ import { usableAccent } from '../../src/lib/tenant/theme.js';
 import type { TenantConfig } from '../../src/lib/tenant/schema.js';
 
 // Everything brand-specific about an email lives here. The components in
-// components.tsx take a Brand and nothing else, so another product reuses the
+// components.ts take a Brand and nothing else, so another product reuses the
 // whole system by writing one of these.
 
 export type Palette = {

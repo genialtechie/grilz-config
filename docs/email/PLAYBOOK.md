@@ -5,10 +5,16 @@ Stripe, Cash App, Duolingo). Brand-agnostic: it's written to become a reusable
 skill. VVS Lab specifics live in [`vvs-lab.md`](vvs-lab.md).
 
 The kit that implements it is in `server/email/` (React Email):
-`brand.ts` (one object per brand), `components.tsx` (the building blocks), and
-`server/emailTemplates.tsx` (the emails). `scripts/email-preview.ts` renders
+`brand.ts` (one object per brand), `components.ts` (the building blocks), and
+`server/emailTemplates.ts` (the emails). `scripts/email-preview.ts` renders
 everything at phone and desktop width, light and dark. `scripts/email-art.ts`
 draws the illustrations.
+
+The components are written with `createElement` in `.ts` files, not JSX:
+Vercel's Node functions compile and bundle only `.ts`, so a `.tsx` server
+module is silently left out of the function and crashes at runtime. On a host
+that bundles TSX, JSX works the same. Either way, check a production build
+contains the email modules before relying on it.
 
 ---
 

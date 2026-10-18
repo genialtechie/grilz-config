@@ -25,9 +25,4 @@ export default tseslint.config(
       ],
     },
   },
-  {
-    // Server-rendered emails (React Email) don't hot-reload in the browser.
-    files: ['server/**/*.tsx'],
-    rules: { 'react-refresh/only-export-components': 'off' },
-  },
 )
