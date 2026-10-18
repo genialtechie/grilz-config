@@ -6,6 +6,7 @@ import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
 import { friendlyAuthError, supabase } from '../admin/supabase';
+import { takeEmailSignIn } from '../lib/emailSignIn';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
@@ -78,16 +79,13 @@ function Welcome() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    const params = new URLSearchParams(window.location.search);
-    const tokenHash = params.get('token_hash') ?? '';
-    const type = params.get('type');
-    const shop = params.get('shop') ?? '';
-    // The token must not stay in the address bar or the history.
-    window.history.replaceState(window.history.state, '', '/dashboard/welcome');
-    if (!tokenHash || (type !== 'invite' && type !== 'magiclink')) {
+    // main.tsx already took the token out of the URL (before analytics saw it).
+    const link = takeEmailSignIn();
+    if (!link) {
       setFailed(true);
       return;
     }
+    const { tokenHash, type, shop } = link;
     void supabase()
       .auth.verifyOtp({ token_hash: tokenHash, type })
       .then(({ error }) => {
@@ -168,10 +166,15 @@ function ShopPicker({ shops }: { shops: MyShop[] }) {
 
 export default function DashboardApp() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [shops, setShops] = useState<MyShop[] | null>(null);
-  const [error, setError] = useState('');
+  // Shops (or the error loading them) belong to the person they were loaded for:
+  // right after someone else signs in from an emailed link, the previous
+  // person's list counts as still loading, never as the new person's.
+  const [loaded, setLoaded] = useState<{ userId: string; shops: MyShop[] | null; error: string } | null>(null);
   const { pathname } = useLocation();
   const userId = session?.user.id;
+  const current = loaded && loaded.userId === userId ? loaded : null;
+  const shops = current?.shops ?? null;
+  const error = current?.error ?? '';
 
   useEffect(() => {
     const db = supabase();
@@ -182,17 +185,18 @@ export default function DashboardApp() {
   }, []);
 
   useEffect(() => {
-    // Per person, not per session object: token refreshes don't reload the shops,
-    // and signing in as someone else (an emailed link) never shows the last person's.
-    setShops(null);
-    setError('');
+    // Per person, not per session object: token refreshes don't reload the shops.
     if (!userId) return;
+    let cancelled = false;
     // Accept any pending invites for this email first, then list the shops.
     acceptInvites()
       .catch(() => 0)
       .then(() => myShops())
-      .then(setShops)
-      .catch((reason: Error) => setError(reason.message));
+      .then((list) => !cancelled && setLoaded({ userId, shops: list, error: '' }))
+      .catch((reason: Error) => !cancelled && setLoaded({ userId, shops: null, error: reason.message }));
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   if (pathname.replace(/\/$/, '') === '/dashboard/welcome') return <Welcome />;
@@ -214,7 +218,7 @@ export default function DashboardApp() {
   return (
     <Routes>
       <Route index element={<ShopPicker shops={shops} />} />
-      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} reload={() => void myShops().then(setShops)} />} />
+      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} reload={() => void myShops().then((list) => setLoaded({ userId: session.user.id, shops: list, error: '' }))} />} />
     </Routes>
   );
 }

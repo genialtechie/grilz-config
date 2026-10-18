@@ -70,3 +70,22 @@ describe('sign-in form errors', () => {
     expect(friendlyAuthError('Something else')).toBe('Something else');
   });
 });
+
+describe('emailed token never reaches analytics', () => {
+  it('is taken out of the URL at startup and handed to the welcome page once', async () => {
+    const { captureEmailSignIn, takeEmailSignIn } = await import('../../src/lib/emailSignIn');
+    const replaced: string[] = [];
+    const location = { pathname: '/dashboard/welcome', search: `?token_hash=${HASH}&type=magiclink&shop=gold` };
+    const history = { state: null, replaceState: (_s: unknown, _t: string, next: string) => void replaced.push(next) };
+    captureEmailSignIn(location, history);
+    expect(replaced).toEqual(['/dashboard/welcome']);
+    expect(takeEmailSignIn()).toEqual({ tokenHash: HASH, type: 'magiclink', shop: 'gold' });
+    expect(takeEmailSignIn()).toBeNull();
+  });
+
+  it('scrubs a token from URLs in analytics events', async () => {
+    const { scrubToken } = await import('../../src/lib/emailSignIn');
+    expect(scrubToken(`https://vvslab.magpollo.com/dashboard/welcome?token_hash=${HASH}&type=invite`)).toBe('https://vvslab.magpollo.com/dashboard/welcome?token_hash=redacted&type=invite');
+    expect(scrubToken(42)).toBe(42);
+  });
+});

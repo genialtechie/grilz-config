@@ -4,7 +4,7 @@ import { createTenant } from './data';
 import { TEMPLATES } from './templates';
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
-const RESERVED = new Set(['admin', 'api', 'app', 'b', 'www', 'dashboard', 'login', 'signup', 'help', 'support', 'assets', 'static', 'configurator', 'watch']);
+const RESERVED = new Set(['admin', 'api', 'app', 'b', 'www', 'dashboard', 'login', 'signup', 'help', 'support', 'assets', 'static', 'configurator', 'watch', 'welcome']);
 const slugify = (name: string) => name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
 export function NewShop() {

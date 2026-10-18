@@ -42,6 +42,36 @@ async function linkFor(email: string) {
   return { mail, link: href.replace(/&amp;/g, '&') };
 }
 
+/** A shop with an owner who can sign in with a password (for calling the invite API). */
+async function shopWithOwner(slug: string, name: string) {
+  const ownerEmail = `owner-${slug}@e2e.test`;
+  const owner = (await authAdmin('users', { email: ownerEmail, password: 'E2e-test-pass-1!', email_confirm: true })) as { id: string };
+  const [tenant] = await rest('tenants', { method: 'POST', body: JSON.stringify({ slug, name, kind: 'fixture', status: 'live' }) });
+  tenantIds.push(tenant.id);
+  const config = structuredClone(VVSLAB_CONFIG);
+  config.brand = { ...config.brand, name };
+  await rest('tenant_configs', { method: 'POST', body: JSON.stringify({ tenant_id: tenant.id, version: 1, config, status: 'published', published_at: new Date().toISOString() }) });
+  await rest(`tenants?id=eq.${tenant.id}`, { method: 'PATCH', body: JSON.stringify({ published_version: 1 }) });
+  await rest('members', { method: 'POST', body: JSON.stringify({ tenant_id: tenant.id, user_id: owner.id, role: 'owner' }) });
+  const token = await passwordToken(ownerEmail);
+  const invite = (email: string, role = 'staff') =>
+    fetch(`${origin}/api/dashboard/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ tenantId: tenant.id, email, role }),
+    });
+  return { tenantId: tenant.id as string, invite };
+}
+
+async function passwordToken(email: string) {
+  const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: anon!, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: 'E2e-test-pass-1!' }),
+  });
+  return ((await response.json()) as { access_token: string }).access_token;
+}
+
 /** Opens a link in a brand-new browser profile (no session, no storage). */
 async function openFresh(link: string) {
   const context = await browser.newContext();
@@ -168,6 +198,33 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     expect(page.url()).not.toContain('token_hash');
     const members = (await rest(`members?tenant_id=eq.${tenant.id}&select=role`)) as { role: string }[];
     expect(members.map((member) => member.role).sort()).toEqual(['owner', 'staff']);
+    await context.close();
+  }, 180_000);
+
+  it('an existing account, opened where someone else is signed in, lands on the linked shop', async () => {
+    // A browser already signed in as a new teammate of shop A.
+    const shopA = await shopWithOwner(`e2e-a-${stamp}`, 'E2E Shop A');
+    const someone = `someone-${stamp}@e2e.test`;
+    expect((await shopA.invite(someone)).status).toBe(200);
+    const { context, page } = await openFresh((await linkFor(someone)).link);
+    await page.waitForURL(`${origin}/dashboard/e2e-a-${stamp}`, { timeout: 60_000 });
+
+    // An existing, used account that already belongs to another shop (so a stale
+    // list would land on the shop picker) is invited to shop C: a magic link.
+    const existing = `existing-${stamp}@e2e.test`;
+    const user = (await authAdmin('users', { email: existing, password: 'E2e-test-pass-1!', email_confirm: true })) as { id: string };
+    await passwordToken(existing); // has signed in before
+    const shopB = await shopWithOwner(`e2e-b-${stamp}`, 'E2E Shop B');
+    await rest('members', { method: 'POST', body: JSON.stringify({ tenant_id: shopB.tenantId, user_id: user.id, role: 'staff' }) });
+    const shopC = await shopWithOwner(`e2e-c-${stamp}`, 'E2E Shop C');
+    expect((await shopC.invite(existing)).status).toBe(200);
+    const { link } = await linkFor(existing);
+    expect(new URL(link).searchParams.get('type')).toBe('magiclink');
+
+    await page.goto(link);
+    await page.waitForURL(`${origin}/dashboard/e2e-c-${stamp}`, { timeout: 60_000 });
+    await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Shop C');
+    expect(await page.locator('.admin-header__user').textContent()).toContain(existing);
     await context.close();
   }, 180_000);
 });
