@@ -213,6 +213,21 @@ Either one hero feature per email (Wispr) or a strict digest grid (Stripe:
 image, title, two lines, "Learn more"). Credit the users who asked for it
 (Arc). A monthly founder letter works well (Raycast).
 
+**How the kit runs them** (VVS Lab: `server/announcements.ts`): each
+announcement is a code entry reviewed in a PR, sent by the daily run. It
+starts with `audience: 'test'` (only the test inbox gets it); flipping to
+`'all'` in a second PR sends it to everyone, once per address, skipping
+opt-outs, paced under the provider's rate limit and spread over several runs
+for big lists. Two reviews, no "oops, sent to everyone" button.
+
+### Win-back mechanics
+
+Trigger on the state that means "lapsed" (VVS Lab: paused after a trial with
+no plan, or a cancelled plan), never on a billing failure (that's dunning) or
+an account that asked to leave. Key the send to the lapse date, so someone
+who comes back and lapses again gets the sequence again. Keep it to two
+emails: the loss-framed fact with what's saved, then "should we stop?".
+
 ## 9. Rendering realities
 
 | Feature | Apple Mail | Gmail | Outlook (classic Windows) |

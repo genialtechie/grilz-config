@@ -44,8 +44,8 @@ mark and the illustrations (the metal), not to type or buttons.
 | Team invite | transactional | redesigned |
 | Sign-in link (Supabase template) | transactional | to do |
 | Trial sequence (days 1, 3, 7, 12, 14) | marketing | built (`server/trialEmails.ts`, daily cron) |
-| Announcements | marketing | to do |
-| Win-back | marketing | to do |
+| Announcements | marketing | built (`server/announcements.ts`, reviewed in PRs) |
+| Win-back | marketing | built (`server/winback.ts`, daily cron) |
 
 ## Email plans
 
@@ -124,8 +124,33 @@ running free trial only. Replies go to `MARKETING_REPLY_TO` (falls back to
 | Ending | 3 or 2 days left | Keep it on: their requests and estimates, what switches off, what's kept, $199/mo | "3 days left on your trial" | Nudge | Keep my builder on | card added |
 | Last day | under a day left | Plain letter from Haleem: why not, or start the plan | "Last day of your trial" (from "Haleem at VVS Lab") | none | Start my plan (or reply) | card added |
 
-Win-back (after the day-14 gate, or a cancelled plan): +7 days "your builder
-is paused, your designs are saved", +30 days "what's new", then stop.
+## Win-back
+
+`server/winback.ts`, in the daily marketing run, topic `tips`. For shops
+paused because the trial ended without a plan, or the plan was cancelled;
+not for a failed payment (billing) or a shop that left (offboarded). Keyed to
+the pause, so a shop paused again later gets them again.
+
+| When | Subject | Karat | Content | CTA |
+| --- | --- | --- | --- | --- |
+| +7 days (2-day window) | "Your builder is paused" | Tarnished | When and why it switched off; what's saved (designs, prices, N requests); $199/mo | Switch it back on |
+| +30 days | "Should we stop emailing you?" | none (plain) | Last email about it; all still there; reply with why, or do nothing | Switch it back on |
+
+## Announcements
+
+`server/announcements.ts`, in the daily marketing run, topic `news`. One
+hero feature per email. Each announcement is an entry in `ANNOUNCEMENTS`
+(reviewed in a PR):
+1. Add it with `audience: 'test'` and a `sendAt`: only `ANNOUNCE_TEST_TO`
+   gets it on the next 14:07 UTC run.
+2. Check it in a real inbox, then change `audience` to `'all'` in a PR.
+   Each address gets each announcement once; every shop owner who isn't
+   offboarded and hasn't opted out of news. Paced at about 1.6/s, up to 80
+   a run; a bigger list finishes on the next runs, within 7 days of `sendAt`.
+
+First one: "Get the deposit, even after they close the tab" (pay deposit
+from the confirmation email, and the deposit-paid email), queued as a test
+for Oct 19.
 
 ## Marketing setup
 

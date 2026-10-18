@@ -66,6 +66,20 @@ export async function optOuts(db: Db, email: string): Promise<Set<Topic | 'all'>
   return new Set(rows.map((row) => row.topic));
 }
 
+// ---------- Recipients ----------
+
+/** A shop's owner: the address the shop was created for (its first owner invite). */
+export async function ownerEmail(db: Db, tenantId: string): Promise<string | null> {
+  const [invite] = await db.select<{ email: string }>('member_invites', { tenant_id: `eq.${tenantId}`, role: 'eq.owner', select: 'email', order: 'created_at.asc', limit: '1' });
+  return invite?.email ? normalise(invite.email) : null;
+}
+
+/** Replies must reach a real inbox: the marketing domain doesn't receive mail. */
+export const marketingReplyTo = (env: { MARKETING_REPLY_TO?: string; PLATFORM_LEADS_EMAIL?: string }) => {
+  const address = env.MARKETING_REPLY_TO || env.PLATFORM_LEADS_EMAIL;
+  return address ? [address] : undefined;
+};
+
 // ---------- Sending ----------
 
 export type MarketingSend = {

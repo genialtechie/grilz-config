@@ -1,6 +1,6 @@
 import { hasCard, TRIAL_DAYS, trialDaysLeft } from '../src/lib/trial.js';
 import { createDb, hasDb, type Db } from './db.js';
-import { sendMarketingEmail, type MarketingEnv, type MarketingResult } from './marketing.js';
+import { marketingReplyTo, ownerEmail, sendMarketingEmail, type MarketingEnv, type MarketingResult } from './marketing.js';
 import { trialEmail, type TrialShop, type TrialStep } from './trialEmails.js';
 
 // The trial sequence, run once a day by /api/cron/marketing. Each shop on a
@@ -48,9 +48,8 @@ async function loadShop(db: Db, row: ShopRow, now: number): Promise<{ shop: Tria
     select: 'version,logo:config->brand->>logo',
   });
   const leads = await db.select<{ total: number | string }>('leads', { tenant_id: `eq.${row.id}`, select: 'total' });
-  const [invite] = await db.select<{ email: string }>('member_invites', { tenant_id: `eq.${row.id}`, role: 'eq.owner', select: 'email', order: 'created_at.asc', limit: '1' });
   return {
-    owner: invite?.email ?? null,
+    owner: await ownerEmail(db, row.id),
     shop: {
       id: row.id,
       slug: row.slug,
@@ -84,8 +83,7 @@ export async function runTrialSequence(env: MarketingEnv & { MARKETING_REPLY_TO?
   });
   run.shops = rows.length;
   const origin = env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com';
-  // Replies must reach a real inbox: the marketing domain doesn't receive mail.
-  const replyTo = env.MARKETING_REPLY_TO || env.PLATFORM_LEADS_EMAIL;
+  const replyTo = marketingReplyTo(env);
   const count = (key: MarketingResult | 'no_owner') => (run.results[key] = (run.results[key] ?? 0) + 1);
   for (const row of rows) {
     const { shop, owner } = await loadShop(db, row, now);
@@ -105,7 +103,7 @@ export async function runTrialSequence(env: MarketingEnv & { MARKETING_REPLY_TO?
         dedupeKey: `trial-${step}:${row.id}`,
         tenantId: row.id,
         fromName: step === 'day-14' ? 'Haleem at VVS Lab' : 'Karat from VVS Lab',
-        replyTo: replyTo ? [replyTo] : undefined,
+        replyTo,
         render: (unsubscribe) => trialEmail(step, shop, origin, unsubscribe),
       },
       env,

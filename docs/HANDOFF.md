@@ -78,7 +78,7 @@ Routing lives in [`vercel.json`](../vercel.json) (rewrites, headers, cron) and
 | `POST /api/dashboard/<action>` | `api/dashboard.ts` | Signed-in member actions (see below) |
 | `POST /api/stripe/webhook[?connect=1]` | `api/stripe/webhook.ts` | Platform events / connected-account events |
 | `GET /api/cron/retention` | `api/cron/retention.ts` | Daily at 04:17 UTC; requires `Authorization: Bearer $CRON_SECRET` |
-| `GET /api/cron/marketing` | `api/cron/marketing.ts` | Daily at 14:07 UTC: the trial email sequence (`?dry=1` reports without sending); same auth |
+| `GET /api/cron/marketing` | `api/cron/marketing.ts` | Daily at 14:07 UTC: trial sequence, win-back, due announcements (`?dry=1` reports without sending); same auth; `maxDuration` 60 s |
 | `GET /api/health` | `api/health.ts` | Uptime probe, never cached |
 
 ## Repository layout
@@ -384,6 +384,7 @@ ships to the browser.
 | `PUBLIC_ORIGIN` | recommended | Links in emails and Stripe return URLs | Defaults to `https://vvslab.magpollo.com` |
 | `EMAIL_FROM_DOMAIN` | optional | Sender domain (`leads@…`) | Defaults to `vvslab.magpollo.com` |
 | `EMAIL_MARKETING_FROM_DOMAIN` | for marketing | Marketing sender (`hello@news.vvslab.magpollo.com`) | Marketing mail isn't sent (`not_configured`) |
+| `ANNOUNCE_TEST_TO` | for announcements | Comma-separated addresses that get `audience: 'test'` announcements | Test announcements go nowhere |
 | `MARKETING_REPLY_TO` | optional | Reply-to on marketing mail (the trial founder letter invites replies) | Falls back to `PLATFORM_LEADS_EMAIL` |
 | `RESEND_WEBHOOK_SECRET` | for marketing | Verifies `/api/resend-webhook` (Resend → Webhooks → signing secret) | Webhook answers 400: complaints and bounces aren't suppressed |
 | `TURNSTILE_SECRET_KEY` | prod | Bot check on leads and signup | Check is skipped |
