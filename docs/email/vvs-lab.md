@@ -21,6 +21,10 @@ mark and the illustrations (the metal), not to type or buttons.
   iced-out grill and an eyebrow piercing. Cool closes every VVS footer; Wink
   welcomes; Hype celebrates wins (deposit paid); Nudge, Working and Tarnished
   are for reminders, loading and win-back. PNGs in `/assets/mascot/`.
+  In the app and emails alike, Karat marks moments (going live, a deposit, a
+  first request, the trial ending, win-back), never utility screens like
+  sign-in or "check your email": jewelers are buying a business tool, so the
+  mark, the serif and the red carry the brand there.
 - Socials: gold Instagram tile (`instagram-tile.png`); shops get the ink tile.
 - Sign-off: "— The VVS Lab team" (shop mail: "— {shop name}").
 - Type: Instrument Serif headlines (Georgia in Gmail), system sans body.

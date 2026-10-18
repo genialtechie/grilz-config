@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Circle, CreditCard, Download, Lock, Rocket, X } from 'lucide-react';
+import { Check, CheckCircle2, Circle, Copy, CreditCard, Download, ExternalLink, Lock, Rocket, X } from 'lucide-react';
 import { billingPortal, exportShopData, getTenant, goLive, startPlan, type MyShop } from '../admin/data';
 import { parseTenantConfig } from '../lib/tenant/schema';
 import { onFreeTrial, pickPrompt, trialDaysLeft, trialExpired, type Seen } from '../lib/trial';
@@ -79,7 +79,11 @@ const writeSeen = (shopId: string, seen: Seen) => {
 export function CardPrompt({ shop, forced, onClose }: { shop: MyShop; forced?: boolean; onClose?: () => void }) {
   const [kind, setKind] = useState<'welcome' | 'reminder' | null>(null);
   const { busy, error, addCard } = useCheckout(shop);
-  const eligible = shop.role !== 'staff' && onFreeTrial(shop);
+  // Not while the shop is still being set up: the checklist comes first. The ask
+  // waits for the first visit after it's live (status as of this visit, so it
+  // doesn't pop over the "you're live" moment either).
+  const [settingUp] = useState(shop.status === 'draft');
+  const eligible = shop.role !== 'staff' && onFreeTrial(shop) && (!settingUp || Boolean(forced));
   const days = trialDaysLeft(shop);
 
   useEffect(() => {
@@ -183,6 +187,7 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [justLive, setJustLive] = useState(false);
   const owner = shop.role !== 'staff';
   const base = `/dashboard/${shop.slug}`;
 
@@ -203,6 +208,7 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
       .catch((reason: Error) => setError(reason.message));
   }, [shop.slug, base]);
 
+  if (justLive) return <YoureLive shop={shop} onClose={() => setJustLive(false)} />;
   if (shop.status !== 'draft') return null;
 
   const goLiveNow = async () => {
@@ -210,6 +216,7 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
     setError('');
     try {
       await goLive(shop.id);
+      setJustLive(true);
       onLive();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -220,7 +227,7 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
 
   return (
     <section className="admin-card admin-section dash-start">
-      <h2>Get your builder live</h2>
+      <h2 className="dash-serif">Get your builder <em>live</em></h2>
       <p className="admin-muted admin-section__hint">About 10 minutes. You can change anything later.</p>
       <ol className="dash-start__steps">
         {(steps ?? []).map((step) => (
@@ -242,10 +249,41 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
       </ol>
       {error && <p className="admin-error" role="alert">{error}</p>}
       {owner ? (
-        <button className="admin-button admin-button--primary" type="button" disabled={busy} onClick={() => void goLiveNow()}><Rocket size={15} /> {busy ? 'Switching on…' : 'Switch my builder on'}</button>
+        <button className="admin-button admin-button--primary dash-start__go" type="button" disabled={busy} onClick={() => void goLiveNow()}><Rocket size={15} /> {busy ? 'Switching on…' : 'Switch my builder on'}</button>
       ) : (
         <p className="admin-muted">The shop owner switches the builder on.</p>
       )}
+    </section>
+  );
+}
+
+/** Right after switching on: the link, where to put it, and Karat celebrating. */
+function YoureLive({ shop, onClose }: { shop: MyShop; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/b/${shop.slug}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      // No clipboard access (older browser): the link is on screen to copy by hand.
+    }
+  };
+  return (
+    <section className="admin-card admin-section dash-live" aria-live="polite">
+      <button className="admin-icon-button dash-live__x" type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+      <img src="/assets/mascot/karat-hype.png" alt="" width="112" height="112" />
+      <h2 className="dash-serif">You’re <em>live</em></h2>
+      <p>Customers can design their set, see your price and send you the request here:</p>
+      <div className="dash-live__link">
+        <span>{url.replace(/^https?:\/\//, '')}</span>
+        <button type="button" onClick={() => void copy()}>{copied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy</>}</button>
+      </div>
+      <p className="admin-muted">Put it in your Instagram bio (Edit profile → Links) and send it to customers who DM you for prices.</p>
+      <div className="dash-live__actions">
+        <a className="dash-live__primary" href={`/b/${shop.slug}`} target="_blank" rel="noopener"><ExternalLink size={15} /> Open your builder</a>
+        <Link className="admin-button" to={`/dashboard/${shop.slug}/website`}>Add it to your website</Link>
+      </div>
     </section>
   );
 }
