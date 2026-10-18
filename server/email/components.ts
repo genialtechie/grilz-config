@@ -193,3 +193,48 @@ export const Steps = ({ brand, steps }: WithBrand & { steps: ReactNode[] }) =>
       }),
     ),
   );
+
+/** A progress checklist: done items get a filled check in the accent, open ones an empty ring. */
+export const Checklist = ({ brand, items }: WithBrand & { items: { label: ReactNode; done: boolean }[] }) =>
+  h(
+    Section,
+    { style: { margin: '6px 0 0' } },
+    ...items.map((item, index) =>
+      h(Row, {
+        key: index,
+        children: [
+          h(
+            Column,
+            { key: 'mark', style: { width: '36px', verticalAlign: 'top', padding: '3px 0' } },
+            h(
+              Text,
+              {
+                className: item.done ? 'em-btn' : 'em-line',
+                style: {
+                  margin: 0,
+                  width: '22px',
+                  height: '22px',
+                  lineHeight: '22px',
+                  textAlign: 'center',
+                  borderRadius: '50%',
+                  fontFamily: brand.fonts.sans,
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: item.done ? brand.light.buttonText : 'transparent',
+                  background: item.done ? brand.light.button : 'transparent',
+                  border: item.done ? 'none' : `2px solid ${brand.light.line}`,
+                  boxSizing: 'border-box',
+                },
+              },
+              item.done ? '✓' : '',
+            ),
+          ),
+          h(
+            Column,
+            { key: 'label', style: { verticalAlign: 'top', padding: '3px 0' } },
+            h(Text, { className: item.done ? 'em-muted' : 'em-text', style: { margin: '0 0 10px', fontFamily: brand.fonts.sans, fontSize: '17px', lineHeight: '1.4', color: item.done ? brand.light.muted : brand.light.text, textDecoration: item.done ? 'line-through' : 'none' } }, item.label),
+          ),
+        ],
+      }),
+    ),
+  );

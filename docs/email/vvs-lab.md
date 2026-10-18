@@ -43,7 +43,7 @@ mark and the illustrations (the metal), not to type or buttons.
 | Welcome / set up builder | transactional | redesigned + illustration |
 | Team invite | transactional | redesigned |
 | Sign-in link (Supabase template) | transactional | to do |
-| Trial sequence (days 1, 3, 7, 12, 14) | marketing | planned below |
+| Trial sequence (days 1, 3, 7, 12, 14) | marketing | built (`server/trialEmails.ts`, daily cron) |
 | Announcements | marketing | to do |
 | Win-back | marketing | to do |
 
@@ -106,18 +106,23 @@ details → reference.
 - **Job:** show the photo that was still rendering; same action as before.
 - Headline "Marcus's *studio photo*" → photo → Text Marcus. Nothing else.
 
-## Trial sequence plan
+## Trial sequence
 
-Send by behaviour: skip a step the shop has already done (published prices,
-went live, got a design request, added a card).
+Built in `server/trialEmails.ts` (the emails) and `server/trialSequence.ts`
+(which step is due), sent by `/api/cron/marketing` daily at 14:07 UTC (10am
+Eastern) through `sendMarketingEmail` (topic `tips`). One email a day at
+most; a step only goes inside its window (missed → skipped, never stacked);
+each step once per shop (`trial-day-N:<tenant>`). Shops made by signup on a
+running free trial only. Replies go to `MARKETING_REPLY_TO` (falls back to
+`PLATFORM_LEADS_EMAIL`): the marketing domain doesn't receive mail.
 
-| Day | Job | Subject ideas | CTA | Skip if |
-| --- | --- | --- | --- | --- |
-| 1 | Go live: logo, prices, switch it on | "Your builder in 10 minutes" | Finish setting up | already live |
-| 3 | Share it: put the link in the Instagram bio, the embed on the site | "Put your builder where customers already are" | Copy my link | had a design request |
-| 7 | Proof: what another shop's customers designed; deposits by card | "How shops close custom sets faster" | Turn on card deposits | Stripe connected |
-| 12 | Trial ending: recap their designs/requests, what $199/mo keeps | "2 days left on your trial" | Keep my builder on | card added |
-| 14 | Last day, plain letter from Haleem | "Today's the last day" / "One quick question for you" | Start my plan (or reply) | card added |
+| Step | When | Job | Subject | Karat | CTA | Skip if |
+| --- | --- | --- | --- | --- | --- | --- |
+| Day 1 | days 1–2 | Go live: their own checklist (logo, prices, switch on) | "Your builder is 10 minutes from live" | Nudge | Finish setting up | live |
+| Day 3 | days 3–4 | Share: Instagram bio and website; not live → "Your builder is still switched off" with the checklist | "Put your builder where customers already are" | Cool | Get my link and embed code | had a design request |
+| Day 7 | days 7–8 | Card deposits: paid up front, straight to their Stripe | "Take the deposit when they send the design" | Hype | Turn on card deposits | Stripe connected |
+| Ending | 3 or 2 days left | Keep it on: their requests and estimates, what switches off, what's kept, $199/mo | "3 days left on your trial" | Nudge | Keep my builder on | card added |
+| Last day | under a day left | Plain letter from Haleem: why not, or start the plan | "Last day of your trial" (from "Haleem at VVS Lab") | none | Start my plan (or reply) | card added |
 
 Win-back (after the day-14 gate, or a cancelled plan): +7 days "your builder
 is paused, your designs are saved", +30 days "what's new", then stop.
@@ -141,11 +146,9 @@ is paused, your designs are saved", +30 days "what's new", then stop.
 - **Complaints and hard bounces** arrive on `/api/resend-webhook` and opt the
   address out of all marketing. Account and lead mail still go.
 
-Still to do after this merges (needs the deploy):
-1. Apply migration `20261020000001_marketing_email.sql` to production.
-2. In Resend → Webhooks, add `https://vvslab.magpollo.com/api/resend-webhook`
-   for `email.bounced` and `email.complained`; put its signing secret in
-   Vercel as `RESEND_WEBHOOK_SECRET`.
-3. Send a test to Gmail and check "Show original": SPF, DKIM and DMARC pass,
-   and the unsubscribe headers are present.
-4. Warm up: start with small batches (the trial sequence is naturally slow).
+Done (Oct 18 2026): migration applied to production; Resend webhook for
+`email.bounced` and `email.complained` with its secret in Vercel
+(`RESEND_WEBHOOK_SECRET`), checked end to end with Resend's test addresses;
+a test to Gmail landed in the inbox with SPF, DKIM and DMARC pass and the
+one-click unsubscribe headers DKIM-signed. Warm-up: the trial sequence is
+naturally slow (a few sends a day); keep any broadcast small at first.

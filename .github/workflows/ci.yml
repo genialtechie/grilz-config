@@ -44,7 +44,7 @@ jobs:
           export INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321
           export INTEGRATION_SERVICE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')
           export INTEGRATION_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')
-          npx vitest run server/__tests__/pipeline.int.test.ts server/__tests__/dashboard.int.test.ts server/__tests__/signup.int.test.ts server/__tests__/marketing.int.test.ts
+          npx vitest run server/__tests__/pipeline.int.test.ts server/__tests__/dashboard.int.test.ts server/__tests__/signup.int.test.ts server/__tests__/marketing.int.test.ts server/__tests__/trialSequence.int.test.ts
       # Signup and team-invite emails: open the real emailed link in a fresh browser.
       - run: npx playwright install --with-deps chromium
       - name: Email sign-in links (e2e)
