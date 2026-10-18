@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import './auth.css';
 
 // The pages a jeweler sees around the emails (sign up, sign in, check your
-// email) share the emails' look: one cream surface, the VVS mark, one Karat,
-// a serif headline with one italic red word, one red button.
+// email) share the emails' look: one cream surface, the VVS mark, a serif
+// headline with one italic red word, one red button. Karat is for moments
+// (going live, a win), not for these utility screens; `karat` is there for those.
 
 export type KaratMood = 'wink' | 'cool' | 'working' | 'nudge' | 'hype' | 'tarnished';
 

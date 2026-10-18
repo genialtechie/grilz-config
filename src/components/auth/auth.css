@@ -110,3 +110,4 @@
 .auth-note { margin: -4px 0 0; text-align: center; font-size: 13px; color: var(--au-muted); }
 .auth-link { padding: 0; border: 0; background: none; color: var(--au-link); font: inherit; text-decoration: underline; cursor: pointer; }
 .auth .auth-button { color: #fff; }
+.auth__mark + .auth__title { margin-top: 20px; }

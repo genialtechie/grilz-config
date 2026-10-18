@@ -78,7 +78,6 @@ export default function SignupPage() {
   if (state === 'sent') {
     return (
       <AuthPage
-        karat="wink"
         title={<>Check your <em>email</em></>}
         lead={<>We sent a link to <strong>{email}</strong>. Open it on this phone to set up {name || 'your shop'}: add your logo and prices, then switch your builder on.</>}
         foot={<p>Nothing there in a minute? Check spam, or email <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>.</p>}
@@ -88,7 +87,6 @@ export default function SignupPage() {
 
   return (
     <AuthPage
-      karat="wink"
       title={<>Your own 3D grillz <em>builder</em></>}
       lead="Customers design their set, see your price and send you the order with a studio photo. Free for 14 days, then $199 a month."
       foot={<p>Already have a shop? <a href="/dashboard">Sign in</a></p>}

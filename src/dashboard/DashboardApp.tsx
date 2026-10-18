@@ -44,7 +44,6 @@ function SignIn({ expired }: { expired?: boolean }) {
   if (state === 'sent') {
     return (
       <AuthPage
-        karat="working"
         title={<>Check your <em>email</em></>}
         lead={<>If <strong>{email}</strong> has a VVS Lab shop, a sign-in link is on its way. Open it on this device.</>}
         foot={<p>Nothing there in a minute? Check spam, or <button className="auth-link" type="button" onClick={() => setState('idle')}>try another email</button>.</p>}
@@ -54,7 +53,6 @@ function SignIn({ expired }: { expired?: boolean }) {
 
   return (
     <AuthPage
-      karat={expired ? 'nudge' : 'cool'}
       title={expired ? <>That link has <em>expired</em></> : <>Sign in to your <em>shop</em></>}
       lead={expired ? 'Sign-in links work once and expire after an hour. Enter your email and we’ll send a fresh one.' : 'We’ll email you a link. No password to remember.'}
       foot={<>
@@ -106,7 +104,7 @@ function Welcome() {
   }, [navigate]);
 
   if (failed) return <SignIn expired />;
-  return <AuthPage karat="working" title={<>Signing you <em>in</em></>} lead="One moment." />;
+  return <AuthPage title={<>Signing you <em>in</em></>} lead="One moment." />;
 }
 
 function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
@@ -218,7 +216,6 @@ export default function DashboardApp() {
   if (error || !shops?.length) {
     return (
       <AuthPage
-        karat="nudge"
         title={error ? <>Couldn’t load your <em>shop</em></> : <>No shop <em>yet</em></>}
         lead={error || <><strong>{session.user.email}</strong> isn’t on a shop’s team. Start your own, or ask the shop owner to invite this email.</>}
         foot={<p><button className="auth-link" type="button" onClick={() => void supabase().auth.signOut()}>Sign out</button></p>}
