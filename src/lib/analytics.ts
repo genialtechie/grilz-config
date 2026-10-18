@@ -1,4 +1,5 @@
 import type { CaptureResult } from 'posthog-js';
+import { scrubToken } from './emailSignIn';
 
 const INTERNAL_TRAFFIC_KEY = 'magpollo_internal_traffic';
 const CAMPAIGN_ATTRIBUTION_KEY = 'magpollo_campaign_attribution';
@@ -105,10 +106,16 @@ export const filterAndEnrichAnalyticsEvent = (
 ): CaptureResult | null => {
   if (!event || isInternalTraffic) return null;
 
+  // Second guard: a sign-in token must never reach PostHog (main.tsx strips it first).
+  const properties = { ...event.properties };
+  for (const key of ['$current_url', '$initial_current_url', '$referrer', '$initial_referrer', '$pathname']) {
+    if (key in properties) properties[key] = scrubToken(properties[key]);
+  }
+
   return {
     ...event,
     properties: {
-      ...event.properties,
+      ...properties,
       ...campaignAttribution,
       analytics_version: ANALYTICS_VERSION,
       traffic_type: 'external',

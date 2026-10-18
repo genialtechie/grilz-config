@@ -1,6 +1,7 @@
 import { TEMPLATES } from '../src/admin/templates.js';
 import { TRIAL_DAYS } from '../src/lib/trial.js';
-import { createDb, hasDb, type Db } from './db.js';
+import { signInLink } from './authLinks.js';
+import { createDb, hasDb } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
 import { hashIp, looksAutomated, verifyTurnstile, type SpamEnv } from './spam.js';
 import type { ApiResult } from './tenantApi.js';
@@ -24,7 +25,7 @@ export const SIGNUP_LIMITS = { perIpDay: 3, perEmailDay: 2, globalDay: 60 };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const IG = /^[A-Za-z0-9._]{1,30}$/;
 /** Slugs we keep for ourselves or that would confuse customers. */
-const RESERVED = new Set(['admin', 'api', 'app', 'b', 'www', 'dashboard', 'login', 'signup', 'help', 'support', 'assets', 'static', 'configurator', 'watch', 'vvslab', 'vvs', 'magpollo', 'demo', 'test', 'shop', 'shops', 'privacy', 'terms', 'billing', 'embed', 'status', 'official', 'jewelry', 'grillz']);
+const RESERVED = new Set(['admin', 'api', 'app', 'b', 'www', 'dashboard', 'login', 'signup', 'help', 'support', 'assets', 'static', 'configurator', 'watch', 'vvslab', 'vvs', 'magpollo', 'demo', 'test', 'shop', 'shops', 'privacy', 'terms', 'billing', 'embed', 'status', 'official', 'jewelry', 'grillz', 'welcome']);
 
 const reply = (status: number, body: unknown): ApiResult => ({ status, body, headers: { 'Cache-Control': 'no-store' } });
 
@@ -54,24 +55,6 @@ export async function slugAvailable(slug: string, env: TenantEnv): Promise<ApiRe
   if (!hasDb(env)) return reply(503, { error: 'unavailable' });
   const taken = await createDb(env).count('tenants', { slug: `eq.${slug}` });
   return reply(200, taken ? { available: false, message: 'That link is taken. Try another.' } : { available: true });
-}
-
-type LinkResponse = { action_link?: string; id?: string; email_confirmed_at?: string | null; invited_at?: string | null; last_sign_in_at?: string | null; properties?: { action_link?: string } };
-
-async function signInLink(db: Db, email: string, redirect: string): Promise<{ link: string; userId: string } | null> {
-  let result = await db.authAdmin<LinkResponse>('generate_link', { type: 'invite', email, redirect_to: redirect });
-  let existing = false;
-  if (!result.ok && (result.status === 422 || /already/i.test(result.message))) {
-    existing = true;
-    result = await db.authAdmin<LinkResponse>('generate_link', { type: 'magiclink', email, redirect_to: redirect });
-  }
-  if (!result.ok) return null;
-  const data = result.data;
-  const link = data.action_link ?? data.properties?.action_link;
-  if (!data.id || !link) return null;
-  // Same rule as team invites: a brand-new account, or one its owner has used.
-  const trusted = existing ? Boolean(data.last_sign_in_at && data.email_confirmed_at) : Boolean(data.invited_at && !data.email_confirmed_at) || Boolean(data.last_sign_in_at);
-  return trusted ? { link, userId: data.id } : null;
 }
 
 export async function handleSignup(payload: unknown, ip: string, env: SignupEnv): Promise<ApiResult> {
@@ -116,7 +99,8 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   if (await db.count('tenants', { slug: `eq.${slug}` })) return reply(409, { error: 'taken', field: 'slug', message: 'That link is taken. Try another.' });
 
   const origin = (env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com').replace(/\/$/, '');
-  const access = await signInLink(db, email, `${origin}/dashboard`);
+  const signIn = await signInLink(db, email, origin, slug);
+  const access = signIn.ok ? { link: signIn.url, userId: signIn.userId } : null;
   if (!access) {
     // An account in an odd state: don't create anything, answer the same way.
     await log('blocked');
@@ -154,6 +138,7 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   await sendEmail(
     {
       fromName: 'VVS Lab',
+      fromLocal: 'hello',
       to: [email],
       subject: 'Set up your VVS Lab builder',
       text: `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. Set it up and switch it on here: ${access.link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${origin}/dashboard. Your free trial runs ${TRIAL_DAYS} days.`,
@@ -162,7 +147,7 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
 <h1 style="font-size:22px;margin:0 0 12px">Your builder is ready to set up</h1>
 <p style="font-size:15px;line-height:1.5;margin:0 0 8px">${shop} gets its own 3D grillz builder at <strong>${origin.replace(/^https?:\/\//, '')}/b/${slug}</strong>.</p>
 <p style="font-size:15px;line-height:1.5;margin:0 0 22px">Add your logo and prices, then switch it on. It takes about 10 minutes. Your free trial runs ${TRIAL_DAYS} days.</p>
-<p style="margin:0 0 22px"><a href="${access.link}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Set up my builder</a></p>
+<p style="margin:0 0 22px"><a href="${access.link.replace(/&/g, '&amp;')}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Set up my builder</a></p>
 <p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. After that, sign in at <a href="${origin}/dashboard" style="color:#8a8178">${origin.replace(/^https?:\/\//, '')}/dashboard</a>. Didn't sign up? Ignore this email.</p></div>`,
       headers: { 'X-Entity-Ref-ID': `signup-${tenantId}` },
     },

@@ -6,7 +6,7 @@ import { isAdmin } from './data';
 import { NewShop } from './NewShop';
 import { ShopEditor } from './ShopEditor';
 import { ShopList } from './ShopList';
-import { supabase } from './supabase';
+import { friendlyAuthError, supabase } from './supabase';
 import './admin.css';
 
 // /admin: Magpollo's console to create, configure, preview and publish shops.
@@ -25,7 +25,7 @@ function SignIn() {
       options: { emailRedirectTo: `${window.location.origin}/admin`, shouldCreateUser: false },
     });
     if (authError) {
-      setError(authError.message);
+      setError(friendlyAuthError(authError.message));
       setState('error');
     } else setState('sent');
   };

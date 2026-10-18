@@ -1,4 +1,5 @@
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
+import { signInLink } from './authLinks.js';
 import { createDb, DbError, hasDb, type Db } from './db.js';
 import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } from './domains.js';
 import { sendEmail, type EmailEnv } from './email.js';
@@ -93,15 +94,6 @@ async function publish(db: Db, userId: string, payload: Record<string, unknown>)
   return reply(200, { version, reset: locked.reset, live: tenant?.status === 'live', slug: tenant?.slug });
 }
 
-type LinkResponse = {
-  action_link?: string;
-  id?: string;
-  email_confirmed_at?: string | null;
-  invited_at?: string | null;
-  last_sign_in_at?: string | null;
-  properties?: { action_link?: string };
-};
-
 const strip = (value: string) => value.replace(/[<>&"'\r\n]/g, '').slice(0, 80);
 
 async function invite(db: Db, user: { id: string; email?: string }, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
@@ -136,23 +128,13 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
 
   const origin = (env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com').replace(/\/$/, '');
   const redirect = `${origin}/dashboard`;
-  let link = await db.authAdmin<LinkResponse>('generate_link', { type: 'invite', email, redirect_to: redirect });
-  let existing = false;
-  if (!link.ok && (link.status === 422 || /already/i.test(link.message))) {
-    existing = true;
-    link = await db.authAdmin<LinkResponse>('generate_link', { type: 'magiclink', email, redirect_to: redirect });
-  }
-  if (!link.ok) return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
-  const data = link.data;
-  const actionLink = data.action_link ?? data.properties?.action_link;
-  if (!data.id || !actionLink) return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
-  // Only a brand-new invited account, or an account its owner has actually used.
-  const trusted = existing ? Boolean(data.last_sign_in_at && data.email_confirmed_at) : Boolean(data.invited_at && !data.email_confirmed_at) || Boolean(data.last_sign_in_at);
-  if (!trusted) {
+  const link = await signInLink(db, email, origin, tenant.slug);
+  if (!link.ok && link.reason === 'auth') return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
+  if (!link.ok) {
     console.error('invite skipped: account in an unexpected state', tenantId);
     return done;
   }
-  const already = await db.count('members', { tenant_id: `eq.${tenantId}`, user_id: `eq.${data.id}` });
+  const already = await db.count('members', { tenant_id: `eq.${tenantId}`, user_id: `eq.${link.userId}` });
   if (already) return done;
 
   await db.insert('member_invites', { tenant_id: tenantId, email, role: memberRole, invited_by: user.id });
@@ -161,16 +143,17 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
   await sendEmail(
     {
       fromName: 'VVS Lab',
+      fromLocal: 'hello',
       to: [email],
       subject: 'You’re invited to join a shop on VVS Lab',
-      text: `${inviter} invited you to join "${shop}" on VVS Lab.\n\nAccept and sign in: ${actionLink}\n\nThe link works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ${redirect}. If you weren't expecting this, ignore it.`,
+      text: `${inviter} invited you to join "${shop}" on VVS Lab.\n\nAccept and sign in: ${link.url}\n\nThe link works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ${redirect}. If you weren't expecting this, ignore it.`,
       html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1b1714">
 <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a8178;margin:0 0 18px">VVS Lab</p>
 <h1 style="font-size:22px;margin:0 0 12px">Join “${shop}”</h1>
 <p style="font-size:15px;line-height:1.5;margin:0 0 22px">${inviter} invited you to join this shop on VVS Lab as ${memberRole === 'owner' ? 'an owner' : 'staff'}. You'll see its design requests${memberRole === 'owner' ? ' and can change its prices and options' : ''}.</p>
-<p style="margin:0 0 22px"><a href="${actionLink}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Accept and sign in</a></p>
+<p style="margin:0 0 22px"><a href="${link.url.replace(/&/g, '&amp;')}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Accept and sign in</a></p>
 <p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at <a href="${redirect}" style="color:#8a8178">${redirect.replace(/^https?:\/\//, '')}</a>. Not expecting this? Ignore it and nothing happens.</p></div>`,
-      headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${data.id}` },
+      headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${link.userId}` },
     },
     env,
   );

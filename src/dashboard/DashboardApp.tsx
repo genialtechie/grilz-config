@@ -1,11 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link, Navigate, NavLink, Route, Routes, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
 import { BarChart3, ExternalLink, Globe, Inbox, LogOut, Mail, Store, Users } from 'lucide-react';
 import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
-import { supabase } from '../admin/supabase';
+import { friendlyAuthError, supabase } from '../admin/supabase';
+import { takeEmailSignIn } from '../lib/emailSignIn';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
@@ -18,7 +19,7 @@ import './dashboard.css';
 // see the week's numbers and manage the team. Row-level security limits every
 // query to the shops the person belongs to.
 
-function SignIn() {
+function SignIn({ notice }: { notice?: string }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -34,7 +35,7 @@ function SignIn() {
     // Same answer whether or not the address has an account, so the form can't
     // be used to find out who's a customer.
     if (authError && !/signups? not allowed|not found|otp/i.test(authError.message)) {
-      setError(authError.message);
+      setError(friendlyAuthError(authError.message));
       setState('error');
     } else setState('sent');
   };
@@ -47,7 +48,7 @@ function SignIn() {
           <p>If {email} is on a shop&apos;s team, a sign-in link is on its way. You can close this tab.</p>
         ) : (
           <>
-            <p className="admin-muted">Sign in to see your design requests and update your prices.</p>
+            {notice ? <p className="admin-error" role="alert">{notice}</p> : <p className="admin-muted">Sign in to see your design requests and update your prices.</p>}
             <label className="admin-field">
               <span>Email</span>
               <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
@@ -62,6 +63,39 @@ function SignIn() {
       </form>
     </main>
   );
+}
+
+const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+
+// /dashboard/welcome?token_hash=…&type=invite|magiclink&shop=<slug>: the link in
+// our signup and team-invite emails. The browser client runs in PKCE mode, so it
+// can't take the session from an implicit-flow link; it verifies the token
+// itself, which also means a link scanner's GET doesn't spend it.
+function Welcome() {
+  const navigate = useNavigate();
+  const started = useRef(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    // main.tsx already took the token out of the URL (before analytics saw it).
+    const link = takeEmailSignIn();
+    if (!link) {
+      setFailed(true);
+      return;
+    }
+    const { tokenHash, type, shop } = link;
+    void supabase()
+      .auth.verifyOtp({ token_hash: tokenHash, type })
+      .then(({ error }) => {
+        if (error) setFailed(true);
+        else navigate(SLUG.test(shop) ? `/dashboard/${shop}` : '/dashboard', { replace: true });
+      });
+  }, [navigate]);
+
+  if (failed) return <SignIn notice="That link has expired or was already used. Enter your email and we'll send a new one." />;
+  return <div className="admin-loading">Signing you in…</div>;
 }
 
 function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
@@ -132,8 +166,15 @@ function ShopPicker({ shops }: { shops: MyShop[] }) {
 
 export default function DashboardApp() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [shops, setShops] = useState<MyShop[] | null>(null);
-  const [error, setError] = useState('');
+  // Shops (or the error loading them) belong to the person they were loaded for:
+  // right after someone else signs in from an emailed link, the previous
+  // person's list counts as still loading, never as the new person's.
+  const [loaded, setLoaded] = useState<{ userId: string; shops: MyShop[] | null; error: string } | null>(null);
+  const { pathname } = useLocation();
+  const userId = session?.user.id;
+  const current = loaded && loaded.userId === userId ? loaded : null;
+  const shops = current?.shops ?? null;
+  const error = current?.error ?? '';
 
   useEffect(() => {
     const db = supabase();
@@ -144,17 +185,21 @@ export default function DashboardApp() {
   }, []);
 
   useEffect(() => {
-    if (!session) {
-      setShops(null);
-      return;
-    }
+    // Per person, not per session object: token refreshes don't reload the shops.
+    if (!userId) return;
+    let cancelled = false;
     // Accept any pending invites for this email first, then list the shops.
     acceptInvites()
       .catch(() => 0)
       .then(() => myShops())
-      .then(setShops)
-      .catch((reason: Error) => setError(reason.message));
-  }, [session]);
+      .then((list) => !cancelled && setLoaded({ userId, shops: list, error: '' }))
+      .catch((reason: Error) => !cancelled && setLoaded({ userId, shops: null, error: reason.message }));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (pathname.replace(/\/$/, '') === '/dashboard/welcome') return <Welcome />;
 
   if (session === undefined || (session && !shops && !error)) return <div className="admin-loading">Loading…</div>;
   if (!session) return <SignIn />;
@@ -173,7 +218,7 @@ export default function DashboardApp() {
   return (
     <Routes>
       <Route index element={<ShopPicker shops={shops} />} />
-      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} reload={() => void myShops().then(setShops)} />} />
+      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} reload={() => void myShops().then((list) => setLoaded({ userId: session.user.id, shops: list, error: '' }))} />} />
     </Routes>
   );
 }
