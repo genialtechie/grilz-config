@@ -129,7 +129,7 @@ describe.skipIf(!url || !key)('lead pipeline (integration)', () => {
     expect(shop.attachments?.map((item) => item.content_id)).toEqual(['photo']);
     expect(shop.reply_to).toEqual(['ava@example.com']);
     const customer = sent.find((email) => email.to.includes('ava@example.com'))!;
-    expect(customer.subject).toBe('Your grillz design was sent to Fixture Jewelers');
+    expect(customer.subject).toBe('Fixture Jewelers has your grillz design');
 
     // The fallback timer firing later sends nothing more.
     expect(await notifyLead(leadId, 'timeout', env)).toBe('already');

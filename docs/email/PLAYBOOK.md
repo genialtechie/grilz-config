@@ -48,22 +48,55 @@ The pattern behind every standout email we studied:
 8. **Sender and preheader do work.** "Name from Brand" for letters, "Brand"
    for product mail. The preheader continues the subject; it doesn't repeat it.
 
-## 2. Anatomy (the kit's components)
+## 2. Plan from the smallest form out
+
+Design an email the way a mascot designer starts from the silhouette: get the
+smallest form right before adding anything. Write this plan before any layout.
+
+0. **The moment.** What triggered it, who reads it, where they are (usually a
+   phone, mid-task), how they feel, and the **one job** the email does for
+   them.
+1. **The inbox row** (sender · subject · preheader). Most people only ever see
+   this. It must deliver the point on its own; the preheader adds a fact the
+   subject doesn't have, never repeats it.
+2. **The first screen** (about 600px on a phone). Headline, the one visual,
+   the one action. If a reader stops here they have what they need.
+3. **The details.** Only what helps the reader do the job, ranked.
+4. **The reference.** Fine print and footer.
+
+Then audit every element with two questions: **why does this reader need it
+now, and what will they do with it?** No answer → cut it. Rules that fall out
+of this:
+
+- **Each fact appears once.** No subline repeating the headline, no table
+  repeating the spec list.
+- **Five sizes only:** headline (44–54px) · hero visual · body (17px) ·
+  details (15–16px) · fine print (13px). Importance decides the tier, not the
+  data type.
+- **No eyebrows or shouty uppercase labels.** The headline says what kind of
+  email it is; section labels are quiet sentence case.
+- **Don't show state you don't know.** If a deposit may not be paid yet,
+  don't list it as if it were.
+- **People's own words beat fields.** A customer's note is shown as a quote,
+  not a table row.
+
+## 3. Anatomy (the kit's components)
 
 | Piece | Component | Rules |
 | --- | --- | --- |
 | Frame | `EmailFrame` | One surface colour, centred logo, content column, footer. Max 600px. |
 | Illustration | `Illustration` | Under the headline, centred, 440px. Lifecycle mail only. |
-| Eyebrow | `Eyebrow` | 12px, uppercase, tracked. Says what kind of email this is. |
 | Headline | `Headline` | Serif, `*one word*` in italic highlight colour. `align: 'center'`, size 54 on lifecycle mail; 44 left on transactional. |
 | Body | `Paragraph` | 17px, line-height 1.6. Muted variant for fine print. |
 | Sign-off | `SignOff` | "— The VVS Lab team" (from `brand.signOff`). |
 | Ask | `CTA` | One per email. Pill, ≥ 44px tall. Verb + object. |
-| Details | `Facts`, `Lines`, `SectionLabel` | Label/value rows with hairlines; small price lines. |
+| Details | `SectionLabel` + `Paragraph` | Quiet sentence-case label, one line per item. |
+| Quote | `Quote` | Someone's own words (a customer's note), serif italic with an accent rule. |
+| Steps | `Steps` | Numbered "what happens next". |
 | Image | `Photo` | 2× resolution, `width` attribute set, rounded 16px, caption if AI-made. |
 | Footer | built into `EmailFrame` | Rule, social tiles, ©, address, links + Unsubscribe (marketing), reason, app-icon mark (or "Powered by"). |
 
-## 3. Type
+## 4. Type
 
 - Headline: brand serif via web font, with a real fallback stack:
   `'Instrument Serif', Georgia, 'Times New Roman', serif`. **Apple Mail shows
@@ -73,7 +106,7 @@ The pattern behind every standout email we studied:
 - Scale: lifecycle headline 54px (44 on phones), transactional 44, subhead
   20–24, body 17, fine print 12–13.
 
-## 4. Colour, contrast, dark mode
+## 5. Colour, contrast, dark mode
 
 - Off-black and off-white, never pure: they survive client inversion better.
 - **Contrast (WCAG AA):** body text and inline links ≥ 4.5:1 against the card;
@@ -91,7 +124,7 @@ The pattern behind every standout email we studied:
      that read on both.
 - Check every email in both modes before shipping (`email-preview.ts`).
 
-## 5. Illustration
+## 6. Illustration
 
 - One house style per brand, written down: shapes, outline weight, palette,
   ornaments. (VVS Lab: flat shapes, warm gold gradients, 5–7px ink outlines,
@@ -105,7 +138,7 @@ The pattern behind every standout email we studied:
   (Wispr's motorbike rider), commission an illustrator or generate with an
   image model in a locked style, then approve the set.
 
-## 6. Copy
+## 7. Copy
 
 - Write like a person at the brand, not like the brand. Contractions, short
   sentences, plain words.
@@ -117,7 +150,7 @@ The pattern behind every standout email we studied:
 - Transactional emails stay transactional: no promotions in receipts or
   sign-in mail (it changes their legal status).
 
-## 7. Sequences
+## 8. Sequences
 
 ### Trial (14 days, B2B to small shop owners)
 
@@ -143,7 +176,7 @@ Either one hero feature per email (Wispr) or a strict digest grid (Stripe:
 image, title, two lines, "Learn more"). Credit the users who asked for it
 (Arc). A monthly founder letter works well (Raycast).
 
-## 8. Rendering realities
+## 9. Rendering realities
 
 | Feature | Apple Mail | Gmail | Outlook (classic Windows) |
 | --- | --- | --- | --- |
@@ -161,7 +194,7 @@ image, title, two lines, "Learn more"). Credit the users who asked for it
 - Accessibility: `lang` on `<html>`, `role="presentation"` tables (React Email
   does this), alt text, 16px body, 44px tap targets, no text in images.
 
-## 9. Deliverability and compliance
+## 10. Deliverability and compliance
 
 - **Separate streams.** Transactional (sign-in, receipts, lead
   notifications) on one subdomain, marketing on another (e.g.
@@ -185,7 +218,7 @@ image, title, two lines, "Learn more"). Credit the users who asked for it
   run event-triggered sequences. Verify the unsubscribe headers on a real send
   ("Show original" in Gmail).
 
-## 10. Pre-send QA checklist
+## 11. Pre-send QA checklist
 
 1. SPF, DKIM, DMARC pass and align (Gmail → Show original).
 2. Marketing: List-Unsubscribe headers present; a test POST unsubscribes;
@@ -204,14 +237,15 @@ image, title, two lines, "Learn more"). Credit the users who asked for it
 12. Right segment and topic, suppressions applied, send time sensible.
 13. A second person approves; volume within the warm-up plan.
 
-## 11. Making a new brand
+## 12. Making a new brand
 
 1. Write a `Brand` in `server/email/brand.ts` (colours light and dark, fonts,
    logo, footer mark, legal line, links, social). Check contrast for
    `highlight` (3:1) and `link` (4.5:1) against the card in both modes.
 2. Define the illustration style in a sentence and draw the first piece in
    `scripts/email-art.ts`.
-3. Build the welcome email first; review it next to the reference email.
+3. Write the plan (section 2) for each email, then build the welcome email
+   first and review it next to the reference email.
 4. Run the QA checklist, then the trial sequence.
 
 ## Sources

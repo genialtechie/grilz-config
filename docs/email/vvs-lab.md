@@ -41,6 +41,49 @@ Brand-specific companion to [`PLAYBOOK.md`](PLAYBOOK.md).
 | Announcements | marketing | to do |
 | Win-back | marketing | to do |
 
+## Email plans
+
+Written with the method in PLAYBOOK §2: moment → inbox row → first screen →
+details → reference.
+
+### New design request (to the jeweler)
+
+- **Moment:** a customer just sent a design and is waiting; the shop that
+  answers first usually wins. Read on a phone, between jobs.
+- **Job:** judge the lead and reach the customer, fast.
+- **Inbox row:** VVS Lab · "New design from Marcus Reed · $4,150" · preheader
+  = their note in quotes (or what they designed).
+- **First screen:** headline "New $4,150 design from *Marcus*" (who + worth
+  it?) → the studio photo (what they want) → their note as a quote (urgency,
+  intent) → **Text Marcus** button.
+- **Details:** name, phone, email as tappable links (to call or copy); "What
+  they designed" (what to make).
+- **Reference (13px):** how the estimate adds up and which price list made
+  it; whether the customer saw a "from"/hidden price; reply-to.
+- **Cut:** eyebrow; the dotted subline (repeated the headline); the facts
+  table (repeated name and estimate); the deposit (not paid when this sends;
+  the dashboard shows when it is); the separate price lines (now one line of
+  fine print).
+
+### Customer confirmation (shop's brand, to the customer)
+
+- **Moment:** they just tapped send: excited, slightly unsure it went through.
+- **Job:** confirm it arrived, keep the design, say what happens next and what
+  it costs.
+- **Inbox row:** {shop} · "{shop} has your grillz design" · preheader "Next:
+  they'll reach out on {contact}."
+- **First screen:** headline "{shop} has your *design*" → "Thanks, Marcus.
+  Your estimate is $4,150." → their design photo (a keepsake).
+- **Details:** What happens next (1. the shop contacts you at {contact} to
+  confirm the final price; 2. a deposit holds your spot) → Message {shop} →
+  "Your design" list.
+- **Reference:** questions/reply, sign-off from the shop.
+
+### Studio photo follow-up (to the jeweler, same thread)
+
+- **Job:** show the photo that was still rendering; same action as before.
+- Headline "Marcus's *studio photo*" → photo → Text Marcus. Nothing else.
+
 ## Trial sequence plan
 
 Send by behaviour: skip a step the shop has already done (published prices,

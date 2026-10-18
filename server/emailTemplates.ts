@@ -1,10 +1,10 @@
-import { createElement as h, Fragment, type ReactElement, type ReactNode } from 'react';
+import { createElement as h, Fragment, type ReactElement } from 'react';
 import { render } from '@react-email/render';
 import { displayContact } from '../src/lib/contact.js';
 import { displayTotal, type PriceBreakdown } from '../src/lib/pricing.js';
 import type { TenantConfig } from '../src/lib/tenant/schema.js';
 import { shopBrand, vvsBrand, type Brand } from './email/brand.js';
-import { CTA, EmailFrame, Eyebrow, Facts, Headline, Illustration, InlineLink, Lines, Paragraph, Photo, SectionLabel, SignOff } from './email/components.js';
+import { CTA, EmailFrame, Headline, Illustration, InlineLink, Paragraph, Photo, Quote, SectionLabel, SignOff, Steps } from './email/components.js';
 
 // Every email we send, built from the kit in server/email/ (React Email,
 // written with createElement so Vercel bundles it). Design photos are inline
@@ -49,13 +49,14 @@ function designPhoto(brand: Brand, images: EmailImages, caption: string) {
   return cid ? h(Photo, { brand, src: `cid:${cid}`, alt: caption, caption }) : null;
 }
 
-function specList(brand: Brand, summary: string[]) {
+/** What the customer designed, one line per choice. */
+function specList(brand: Brand, label: string, summary: string[]) {
   if (!summary.length) return null;
   return h(
     Fragment,
     null,
-    h(SectionLabel, { brand }, 'The design'),
-    ...summary.map((line, index) => h(Paragraph, { key: index, brand, size: 15, margin: '0 0 5px' }, line)),
+    h(SectionLabel, { brand }, label),
+    ...summary.map((line, index) => h(Paragraph, { key: index, brand, size: 16, margin: '0 0 4px' }, line)),
   );
 }
 
@@ -68,55 +69,51 @@ export type ShopEmailInput = {
   test: boolean;
 };
 
-/** The jeweler's notification: everything needed to quote and reach the customer. */
+/**
+ * The jeweler's notification. Planned from the smallest form out (see
+ * docs/email/vvs-lab.md): the inbox row says who and how much; the first
+ * screen shows the design, the customer's words and the one action (reach
+ * them, fast); everything below is reference. Each fact appears once.
+ */
 export async function shopEmail({ lead, config, origin, images, photoPending, test }: ShopEmailInput): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
   const reach = contactLink(lead.contact);
   const first = firstName(lead.name);
-  const headline = lead.summary[0] ?? 'Custom grillz';
-  const subject = `${test ? '[Test shop] ' : ''}New design from ${lead.name} · ${headline} · ${usd(lead.total)}`;
-  const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' (customer saw it as a "from" price)' : ' (customer saw "price on request")';
-  const rows: [string, ReactNode][] = [
-    ['Customer', lead.name],
-    [reach.action === 'Text' ? 'Phone' : 'Instagram', h(InlineLink, { brand, href: reach.href }, reach.label)],
-    ...(lead.email ? [['Email', h(InlineLink, { brand, href: `mailto:${lead.email}` }, lead.email)] as [string, ReactNode]] : []),
-    ['Estimate', h('strong', null, usd(lead.total))],
-    ...(lead.deposit !== null ? [['Deposit', usd(lead.deposit)] as [string, ReactNode]] : []),
-    ...(lead.note ? [['Their note', lead.note] as [string, ReactNode]] : []),
-  ];
+  const total = usd(lead.total);
+  const subject = `${test ? '[Test shop] ' : ''}New design from ${lead.name} · ${total}`;
+  const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' The customer saw it as a "from" price.' : ' The customer saw "price on request".';
+  const contacts = [h(InlineLink, { key: 'reach', brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])];
+  const breakdown = lead.price.lines.map((line) => `${line.label} ${usd(line.amount)}`).join(' + ');
   const element = h(
     EmailFrame,
     {
       brand,
       title: subject,
-      preheader: `${lead.name} · ${headline} · ${usd(lead.total)}`,
+      // The preheader adds what the subject can't: their own words, or what they designed.
+      preheader: lead.note ? `“${lead.note}”` : lead.summary.join(' · '),
       footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Change it in your dashboard. Lead ${lead.id.slice(0, 8)}.` },
     },
-    h(Eyebrow, { brand }, `${test ? 'Test · ' : ''}New design request`),
-    h(Headline, { brand, text: `New design from *${first}*` }),
-    h(Paragraph, { brand, muted: true, margin: '14px 0 0' }, `${headline} · estimate `, h('strong', null, usd(lead.total)), shown),
+    test && h(Paragraph, { brand, muted: true, size: 14, margin: '0 0 12px' }, 'Test request from your own builder.'),
+    h(Headline, { brand, text: `New ${total} design from *${first}*` }),
     designPhoto(brand, images, images.photo ? 'AI studio photo of the customer’s design' : '3D design the customer built'),
     photoPending && h(Paragraph, { brand, muted: true, size: 13, margin: '6px 0 0' }, 'The studio photo is still rendering. It will follow in this thread.'),
-    h(CTA, { brand, href: reach.href, margin: '26px 0 22px' }, `${reach.action} ${first}`),
-    h(Facts, { brand, rows }),
-    specList(brand, lead.summary),
-    h(Lines, { brand, lines: lead.price.lines.map((line) => [line.label, usd(line.amount)] as [string, string]) }),
-    h(Paragraph, { brand, muted: true, size: 12, margin: '22px 0 0' }, `Priced with your price list v${lead.configVersion}.${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
+    lead.note && h(Quote, { brand }, lead.note),
+    h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, `${reach.action} ${first}`),
+    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, ...contacts),
+    specList(brand, 'What they designed', lead.summary),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
   );
   const text = [
-    `New design from ${lead.name}`,
-    `${headline} · estimate ${usd(lead.total)}${shown}`,
+    `New ${total} design from ${lead.name}`,
+    lead.note ? `"${lead.note}"` : '',
     '',
-    `Contact: ${reach.label} (${reach.href})`,
+    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
-    lead.note ? `Note: ${lead.note}` : '',
     '',
-    'Design:',
+    'What they designed:',
     ...lead.summary.map((line) => `- ${line}`),
     '',
-    ...lead.price.lines.map((line) => `${line.label}: ${usd(line.amount)}`),
-    `Estimate: ${usd(lead.total)}`,
-    lead.deposit !== null ? `Deposit: ${usd(lead.deposit)}` : '',
+    `${total} from your price list v${lead.configVersion}: ${breakdown}.${shown}`,
     photoPending ? '\nThe studio photo is still rendering and will follow in this thread.' : '',
     `\nLead ${lead.id}`,
   ]
@@ -138,8 +135,7 @@ export async function shopPhotoEmail({ lead, config, origin, subject }: { lead: 
       preheader: `Studio photo for ${lead.name}`,
       footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Lead ${lead.id.slice(0, 8)}.` },
     },
-    h(Eyebrow, { brand }, 'Studio photo'),
-    h(Headline, { brand, size: 34, text: `The photo for *${first}*’s design` }),
+    h(Headline, { brand, text: `${first}’s *studio photo*` }),
     designPhoto(brand, { photo: true, preview: false }, 'AI studio photo of the customer’s design'),
     h(CTA, { brand, href: reach.href }, `${reach.action} ${first}`),
   );
@@ -150,51 +146,55 @@ export async function shopPhotoEmail({ lead, config, origin, subject }: { lead: 
   };
 }
 
-/** The customer's confirmation, in the shop's brand: their design, the price as the shop shows it, and what happens next. */
+/**
+ * The customer's confirmation, in the shop's brand. They just hit send: the
+ * inbox row confirms it arrived, the first screen keeps their design, and the
+ * steps answer "what now, and what will it cost?".
+ */
 export async function customerEmail({ lead, config, origin, images }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages }): Promise<RenderedEmail> {
   const shop = config.brand;
   const brand = shopBrand(shop, origin);
-  const total = displayTotal(config.pricing, lead.total, usd).text;
+  const price = displayTotal(config.pricing, lead.total, usd).text;
+  const hidden = config.pricing.display === 'hidden';
   const reach = contactLink(lead.contact);
   const ig = shop.instagram ? `https://instagram.com/${encodeURIComponent(shop.instagram.replace(/^@/, ''))}` : null;
+  const steps = [
+    `${shop.name} contacts you at ${reach.label} to go over your design${hidden ? ' and give you a price' : ' and confirm the final price'}.`,
+    ...(lead.deposit !== null ? [`A ${usd(lead.deposit)} deposit holds your spot.`] : []),
+  ];
   const element = h(
     EmailFrame,
     {
       brand,
-      title: `Your design is with ${shop.name}`,
-      preheader: `${shop.name} has your design`,
+      title: `${shop.name} has your design`,
+      preheader: `Next: they'll reach out on ${reach.label}.`,
       footer: { reason: `You're getting this because you sent a design to ${shop.name} with the VVS Lab builder. This is a one-time confirmation.` },
     },
-    h(Headline, { brand, text: 'Your design is *on its way*' }),
-    h(Paragraph, { brand, margin: '20px 0 0' }, `Thanks, ${firstName(lead.name)}. ${shop.name} has your design and will reach out on ${reach.label} to confirm the details and the final price.`),
+    h(Headline, { brand, text: `${shop.name.replace(/\*/g, '')} has your *design*` }),
+    h(Paragraph, { brand, margin: '18px 0 0' }, `Thanks, ${firstName(lead.name)}. `, hidden ? 'They’ll price it for you.' : h(Fragment, null, 'Your estimate is ', h('strong', null, price), '.')),
     designPhoto(brand, images, images.photo ? AI_DISCLOSURE : 'Your 3D design'),
-    specList(brand, lead.summary),
-    h(Facts, {
-      brand,
-      rows: [
-        [config.pricing.display === 'hidden' ? 'Price' : 'Estimate', h('strong', null, total)],
-        ...(lead.deposit !== null ? [['Deposit to hold your spot', usd(lead.deposit)] as [string, ReactNode]] : []),
-      ],
-    }),
-    h(Paragraph, { brand, muted: true, size: 12, margin: '8px 0 0' }, `Final price is confirmed by ${shop.name}.`),
-    ig && h(CTA, { brand, href: ig, margin: '24px 0 0' }, 'Message on Instagram'),
-    h(Paragraph, { brand, muted: true, size: 14, margin: '22px 0 0' }, `Questions? Reply to this email${shop.phone ? ` or call ${displayContact(shop.phone)}` : ''}.`),
+    h(SectionLabel, { brand }, 'What happens next'),
+    h(Steps, { brand, steps }),
+    ig && h(CTA, { brand, href: ig, margin: '18px 0 0' }, `Message ${shop.name}`),
+    specList(brand, 'Your design', lead.summary),
+    h(Paragraph, { brand, muted: true, size: 14, margin: '24px 0 0' }, `Questions? Reply to this email${shop.phone ? ` or call ${displayContact(shop.phone)}` : ''}.`),
     h(SignOff, { brand }),
   );
   const text = [
-    `Your design is with ${shop.name}`,
-    `Thanks, ${firstName(lead.name)}. ${shop.name} will reach out on ${reach.label} to confirm the details and the final price.`,
+    `${shop.name} has your design. Thanks, ${firstName(lead.name)}.`,
+    hidden ? 'They’ll price it for you.' : `Your estimate is ${price}.`,
     '',
+    'What happens next:',
+    ...steps.map((step, index) => `${index + 1}. ${step}`),
+    '',
+    'Your design:',
     ...lead.summary.map((line) => `- ${line}`),
-    '',
-    `${config.pricing.display === 'hidden' ? 'Price' : 'Estimate'}: ${total}`,
-    lead.deposit !== null ? `Deposit to hold your spot: ${usd(lead.deposit)}` : '',
     images.photo ? `\n${AI_DISCLOSURE}` : '',
     '\nQuestions? Reply to this email.',
   ]
     .filter((line) => line !== '')
     .join('\n');
-  return { subject: `Your grillz design was sent to ${shop.name}`, html: await html(element), text };
+  return { subject: `${shop.name} has your grillz design`, html: await html(element), text };
 }
 
 /** Self-serve signup: the one-time link that signs the new owner in. */
@@ -231,7 +231,6 @@ export async function inviteEmail({ shop, inviter, role, link, origin }: { shop:
   const element = h(
     EmailFrame,
     { brand, title: `Join ${shop}`, preheader: `${inviter} invited you to ${shop} on VVS Lab`, footer: { reason: `You're getting this because ${inviter} invited this address to ${shop}.` } },
-    h(Eyebrow, { brand }, 'Team invite'),
     h(Headline, { brand, text: `Join *${shop.replace(/\*/g, '')}*` }),
     h(
       Paragraph,

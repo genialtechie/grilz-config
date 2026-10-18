@@ -110,7 +110,7 @@ describe('lead emails', () => {
     const hidden = structuredClone(VVSLAB_CONFIG);
     hidden.pricing.display = 'hidden';
     const email = await customerEmail({ lead: lead(), config: hidden, origin, images: { photo: true, preview: false } });
-    expect(email.html).toContain('Price on request');
+    expect(email.html).toContain('price it for you');
     expect(email.html).not.toContain(`$${lead().total.toLocaleString('en-US')}<`);
     expect(email.html).toContain('handmade and may vary');
   });

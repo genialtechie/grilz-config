@@ -124,9 +124,6 @@ export function Headline({ brand, text, size = 44, align = 'left' }: WithBrand &
   );
 }
 
-export const Eyebrow = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
-  h(Text, { className: 'em-muted', style: { margin: '0 0 14px', fontFamily: brand.fonts.sans, fontSize: '12px', fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: brand.light.muted } }, children);
-
 export const Paragraph = ({ brand, children, muted, size = 17, margin = '0 0 16px' }: WithBrand & { children?: ReactNode; muted?: boolean; size?: number; margin?: string }) =>
   h(Text, { className: muted ? 'em-muted' : 'em-text', style: { margin, fontFamily: brand.fonts.sans, fontSize: `${size}px`, lineHeight: '1.6', color: muted ? brand.light.muted : brand.light.text } }, children);
 
@@ -149,28 +146,9 @@ export const CTA = ({ brand, href, children, margin = '24px 0 18px' }: WithBrand
     ),
   );
 
-/** Label / value rows with hairlines. */
-export function Facts({ brand, rows }: WithBrand & { rows: [string, ReactNode][] }) {
-  const c = brand.light;
-  return h(
-    Section,
-    { className: 'em-line', style: { borderTop: `1px solid ${c.line}` } },
-    ...rows.map(([label, value]) =>
-      h(Row, {
-        key: label,
-        className: 'em-line',
-        style: { borderBottom: `1px solid ${c.line}` },
-        children: [
-          h(Column, { key: 'label', className: 'em-muted', style: { width: '120px', padding: '11px 12px 11px 0', verticalAlign: 'top', fontFamily: brand.fonts.sans, fontSize: '13px', color: c.muted } }, label),
-          h(Column, { key: 'value', className: 'em-text', style: { padding: '11px 0', fontFamily: brand.fonts.sans, fontSize: '15px', lineHeight: '1.45', color: c.text } }, value),
-        ],
-      }),
-    ),
-  );
-}
-
+/** A quiet sentence-case label over a block of details (never shouty caps). */
 export const SectionLabel = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
-  h(Text, { className: 'em-muted', style: { margin: '24px 0 8px', fontFamily: brand.fonts.sans, fontSize: '12px', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: brand.light.muted } }, children);
+  h(Text, { className: 'em-text', style: { margin: '28px 0 6px', fontFamily: brand.fonts.sans, fontSize: '15px', fontWeight: 600, lineHeight: '1.4', color: brand.light.text } }, children);
 
 export const Photo = ({ brand, src, alt, caption }: WithBrand & { src: string; alt: string; caption?: string }) =>
   h(
@@ -178,22 +156,6 @@ export const Photo = ({ brand, src, alt, caption }: WithBrand & { src: string; a
     { style: { margin: '22px 0 6px' } },
     h(Img, { src, alt, width: 536, style: { display: 'block', width: '100%', maxWidth: '536px', height: 'auto', borderRadius: '16px', background: brand.light.line } }),
     caption && h(Text, { className: 'em-muted', style: { margin: '8px 0 0', fontFamily: brand.fonts.sans, fontSize: '12px', lineHeight: '1.45', color: brand.light.muted } }, caption),
-  );
-
-/** Small label/amount lines (e.g. a price breakdown). */
-export const Lines = ({ brand, lines }: WithBrand & { lines: [string, string][] }) =>
-  h(
-    Section,
-    { style: { marginTop: '18px' } },
-    ...lines.map(([label, value], index) =>
-      h(Row, {
-        key: `${label}-${index}`,
-        children: [
-          h(Column, { key: 'label', className: 'em-muted', style: { padding: '3px 0', fontFamily: brand.fonts.sans, fontSize: '13px', color: brand.light.muted } }, label),
-          h(Column, { key: 'value', align: 'right', className: 'em-muted', style: { padding: '3px 0', fontFamily: brand.fonts.sans, fontSize: '13px', color: brand.light.muted } }, value),
-        ],
-      }),
-    ),
   );
 
 /** The email's one illustration, centred under the headline. */
@@ -207,3 +169,27 @@ export const Illustration = ({ src, width = 440 }: { src: string; width?: number
 /** "— The VVS Lab team": the person or team the email is from. */
 export const SignOff = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
   h(Paragraph, { brand, margin: '28px 0 0' }, children ?? brand.signOff);
+
+/** Someone's own words, set apart (a customer's note to the shop). */
+export const Quote = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
+  h(
+    Section,
+    { className: 'em-line', style: { margin: '22px 0 0', borderLeft: `3px solid ${brand.light.highlight}`, paddingLeft: '16px' } },
+    h(Text, { className: 'em-text', style: { margin: 0, fontFamily: brand.fonts.serif, fontStyle: 'italic', fontSize: '22px', lineHeight: '1.35', color: brand.light.text } }, children),
+  );
+
+/** Numbered "what happens next" steps. */
+export const Steps = ({ brand, steps }: WithBrand & { steps: ReactNode[] }) =>
+  h(
+    Section,
+    { style: { margin: '6px 0 0' } },
+    ...steps.map((step, index) =>
+      h(Row, {
+        key: index,
+        children: [
+          h(Column, { key: 'n', style: { width: '28px', verticalAlign: 'top', padding: '4px 0' } }, h(Text, { className: 'em-hl', style: { margin: 0, fontFamily: brand.fonts.sans, fontWeight: 700, fontSize: '17px', lineHeight: '1.55', color: brand.light.highlight } }, `${index + 1}.`)),
+          h(Column, { key: 'text', style: { verticalAlign: 'top', padding: '4px 0' } }, h(Text, { className: 'em-text', style: { margin: '0 0 10px', fontFamily: brand.fonts.sans, fontSize: '17px', lineHeight: '1.55', color: brand.light.text } }, step)),
+        ],
+      }),
+    ),
+  );
