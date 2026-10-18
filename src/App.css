@@ -1829,16 +1829,18 @@
 /* ---------- Shop pages (/b/<slug>) ---------- */
 .shop-brand {
   min-width: 0;
+  flex-shrink: 0;
   gap: 12px;
 }
 
+/* A fixed height gives the image a real size; with only max-* limits the flex row collapsed it to 0px. */
 .shop-brand__logo {
   display: block;
-  max-width: 160px;
-  max-height: 36px;
+  height: 36px;
   width: auto;
-  height: auto;
+  max-width: 160px;
   object-fit: contain;
+  object-position: left center;
 }
 
 .shop-brand__wordmark {
@@ -1943,8 +1945,8 @@
 
 @media (max-width: 860px) {
   .shop-brand__logo {
+    height: 30px;
     max-width: 120px;
-    max-height: 30px;
   }
 
   .shop-brand__ig {
