@@ -13,6 +13,10 @@
       "destination": "/api/tenant?slug=:slug"
     },
     {
+      "source": "/api/dashboard/:action",
+      "destination": "/api/dashboard?action=:action"
+    },
+    {
       "source": "/b/:slug",
       "destination": "/api/shop-page?slug=:slug"
     },
@@ -26,6 +30,14 @@
     },
     {
       "source": "/configurator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard/:path*",
       "destination": "/index.html"
     },
     {
