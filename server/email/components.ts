@@ -17,23 +17,23 @@ function styles(brand: Brand) {
   return `
   :root { color-scheme: light dark; supported-color-schemes: light dark; }
   @media (max-width: 620px) {
-    .em-pad { padding: 28px 22px !important; }
-    .em-pad-x { padding-left: 22px !important; padding-right: 22px !important; }
-    .em-h1 { font-size: 32px !important; }
+    .em-pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .em-h1 { font-size: 44px !important; }
   }
   @media (prefers-color-scheme: dark) {
     .em-page { background: ${d.page} !important; }
-    .em-card { background: ${d.card} !important; }
     .em-text { color: ${d.text} !important; }
     .em-muted { color: ${d.muted} !important; }
     .em-line { border-color: ${d.line} !important; }
+    .em-rule { border-color: ${d.muted} !important; }
     .em-hl { color: ${d.highlight} !important; }
     .em-link { color: ${d.link} !important; }
     .em-btn { background: ${d.button} !important; color: ${d.buttonText} !important; }
   }
-  [data-ogsc] .em-card { background: ${d.card} !important; }
+  [data-ogsc] .em-page { background: ${d.page} !important; }
   [data-ogsc] .em-text { color: ${d.text} !important; }
-  [data-ogsc] .em-muted { color: ${d.muted} !important; }`;
+  [data-ogsc] .em-muted { color: ${d.muted} !important; }
+  [data-ogsc] .em-hl { color: ${d.highlight} !important; }`;
 }
 
 export type FooterProps = {
@@ -43,51 +43,45 @@ export type FooterProps = {
   unsubscribe?: string;
 };
 
+/** Heavy rule, social tiles, legal line, links, why you got this, then the app-icon mark. */
 function Footer({ brand, reason, unsubscribe }: WithBrand & FooterProps) {
   const c = brand.light;
-  const small = { margin: '0 0 8px', fontFamily: brand.fonts.sans, fontSize: '12px', lineHeight: '1.6', color: c.footerText } as const;
-  const linkStyle = { color: c.footerLink, textDecoration: 'underline' } as const;
+  const small = { margin: '0 0 10px', fontFamily: brand.fonts.sans, fontSize: '13px', lineHeight: '1.6', color: c.muted, textAlign: 'center' } as const;
+  const linkStyle = { color: c.muted, textDecoration: 'underline' } as const;
+  const links = [...brand.links, ...(unsubscribe ? [{ label: 'Unsubscribe', href: unsubscribe }] : [])];
   const mark = brand.footerMark;
-  const markCell =
-    'src' in mark
-      ? h(Img, { src: mark.src, alt: mark.alt, height: mark.height, style: { height: `${mark.height}px`, width: 'auto', display: 'inline-block' } })
-      : h(Text, { style: { ...small, margin: 0 } }, 'Powered by ', h(Link, { href: mark.poweredBy.href, style: linkStyle }, mark.poweredBy.label));
   return h(
     Section,
-    { style: { padding: '28px 32px 36px', textAlign: 'center' }, className: 'em-pad-x' },
-    h(
-      Row,
-      {
-        style: { width: 'auto', margin: '0 auto 14px' },
-        children: [
-          h(Column, { key: 'mark', style: { padding: '0 10px', verticalAlign: 'middle' } }, markCell),
-          brand.instagram &&
-            h(
-              Column,
-              { key: 'instagram', style: { padding: '0 10px', verticalAlign: 'middle' } },
-              h(Link, { href: `https://instagram.com/${brand.instagram.handle}` }, h(Img, { src: brand.instagram.icon, alt: 'Instagram', width: 24, height: 24, style: { display: 'inline-block' } })),
-            ),
-        ],
-      },
-    ),
-    brand.links.length > 0 &&
+    { className: 'em-pad', style: { padding: '0 40px 48px' } },
+    h(Section, { className: 'em-rule', style: { borderTop: `2px solid ${c.text}`, margin: '8px 0 32px' } }),
+    brand.socials.length > 0 &&
+      h(Row, {
+        style: { width: 'auto', margin: '0 auto 22px' },
+        children: brand.socials.map((social) =>
+          h(Column, { key: social.href, style: { padding: '0 6px' } }, h(Link, { href: social.href }, h(Img, { src: social.icon, alt: social.label, width: 40, height: 40, style: { display: 'block' } }))),
+        ),
+      }),
+    h(Text, { className: 'em-muted', style: small }, `©${new Date().getFullYear()} ${brand.company}`),
+    links.length > 0 &&
       h(
         Text,
-        { style: { ...small, margin: '0 0 10px' } },
-        ...brand.links.map((item, index) => h(Fragment, { key: item.href }, index > 0 ? '  ·  ' : '', h(Link, { href: item.href, style: linkStyle }, item.label))),
+        { className: 'em-muted', style: small },
+        ...links.map((item, index) => h(Fragment, { key: item.href }, index > 0 ? '\u00a0\u00a0|\u00a0\u00a0' : '', h(Link, { href: item.href, className: 'em-muted', style: linkStyle }, item.label))),
       ),
-    h(Text, { style: small }, reason),
-    unsubscribe && h(Text, { style: small }, h(Link, { href: unsubscribe, style: linkStyle }, 'Unsubscribe'), ' from these emails.'),
-    h(Text, { style: { ...small, margin: 0 } }, brand.company),
+    h(Text, { className: 'em-muted', style: { ...small, margin: '0 0 24px' } }, reason),
+    'src' in mark
+      ? h(Img, { src: mark.src, alt: mark.alt, width: mark.height, height: mark.height, style: { display: 'block', margin: '0 auto', borderRadius: '10px' } })
+      : h(Text, { className: 'em-muted', style: { ...small, margin: 0 } }, 'Powered by ', h(Link, { href: mark.poweredBy.href, className: 'em-muted', style: linkStyle }, mark.poweredBy.label)),
   );
 }
 
-export function EmailFrame({ brand, title, preheader, hero, footer, children }: WithBrand & { title: string; preheader: string; hero?: ReactNode; footer: FooterProps; children?: ReactNode }) {
+/** One surface edge to edge: logo, the content column, the footer. */
+export function EmailFrame({ brand, title, preheader, footer, children }: WithBrand & { title: string; preheader: string; footer: FooterProps; children?: ReactNode }) {
   const c = brand.light;
   const logo =
     'src' in brand.logo
       ? h(Img, { src: brand.logo.src, alt: brand.logo.alt, height: brand.logo.height, style: { height: `${brand.logo.height}px`, width: 'auto', maxWidth: '220px', margin: '0 auto' } })
-      : h(Text, { style: { margin: 0, fontFamily: brand.fonts.serif, fontSize: '30px', lineHeight: '1', color: c.text } }, brand.logo.wordmark);
+      : h(Text, { className: 'em-text', style: { margin: 0, fontFamily: brand.fonts.serif, fontSize: '30px', lineHeight: '1', color: c.text } }, brand.logo.wordmark);
   return h(
     Html,
     { lang: 'en' },
@@ -107,14 +101,9 @@ export function EmailFrame({ brand, title, preheader, hero, footer, children }: 
       { className: 'em-page', style: { margin: 0, padding: 0, background: c.page } },
       h(
         Container,
-        { style: { maxWidth: '600px', width: '100%', padding: '0 12px' } },
-        h(Section, { style: { padding: '36px 0 26px', textAlign: 'center' } }, logo),
-        h(
-          Section,
-          { className: 'em-card', style: { background: c.card, borderRadius: '24px' } },
-          hero && h(Section, { style: { padding: '28px 28px 0', textAlign: 'center' } }, hero),
-          h(Section, { className: 'em-pad', style: { padding: '36px 32px 34px' } }, children),
-        ),
+        { className: 'em-page', style: { maxWidth: '600px', width: '100%', background: c.page } },
+        h(Section, { style: { padding: '44px 0 36px', textAlign: 'center' } }, logo),
+        h(Section, { className: 'em-pad', style: { padding: '0 40px 40px' } }, children),
         h(Footer, { brand, ...footer }),
       ),
     ),
@@ -122,11 +111,11 @@ export function EmailFrame({ brand, title, preheader, hero, footer, children }: 
 }
 
 /** "New design from *Ava*": starred words are set in italic in the highlight colour. */
-export function Headline({ brand, text, size = 38 }: WithBrand & { text: string; size?: number }) {
+export function Headline({ brand, text, size = 44, align = 'left' }: WithBrand & { text: string; size?: number; align?: 'left' | 'center' }) {
   const parts = text.split(/(\*[^*]+\*)/g).filter(Boolean);
   return h(
     Text,
-    { className: 'em-text em-h1', style: { margin: 0, fontFamily: brand.fonts.serif, fontWeight: 400, fontSize: `${size}px`, lineHeight: '1.08', letterSpacing: '-0.01em', color: brand.light.text } },
+    { className: size > 44 ? 'em-text em-h1' : 'em-text', style: { margin: 0, fontFamily: brand.fonts.serif, fontWeight: 400, fontSize: `${size}px`, lineHeight: '1.05', letterSpacing: '-0.01em', textAlign: align, color: brand.light.text } },
     ...parts.map((part, index) =>
       part.startsWith('*') && part.endsWith('*')
         ? h('em', { key: index, className: 'em-hl', style: { fontStyle: 'italic', color: brand.light.highlight } }, part.slice(1, -1))
@@ -138,8 +127,8 @@ export function Headline({ brand, text, size = 38 }: WithBrand & { text: string;
 export const Eyebrow = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
   h(Text, { className: 'em-muted', style: { margin: '0 0 14px', fontFamily: brand.fonts.sans, fontSize: '12px', fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: brand.light.muted } }, children);
 
-export const Paragraph = ({ brand, children, muted, size = 16, margin = '0 0 14px' }: WithBrand & { children?: ReactNode; muted?: boolean; size?: number; margin?: string }) =>
-  h(Text, { className: muted ? 'em-muted' : 'em-text', style: { margin, fontFamily: brand.fonts.sans, fontSize: `${size}px`, lineHeight: '1.55', color: muted ? brand.light.muted : brand.light.text } }, children);
+export const Paragraph = ({ brand, children, muted, size = 17, margin = '0 0 16px' }: WithBrand & { children?: ReactNode; muted?: boolean; size?: number; margin?: string }) =>
+  h(Text, { className: muted ? 'em-muted' : 'em-text', style: { margin, fontFamily: brand.fonts.sans, fontSize: `${size}px`, lineHeight: '1.6', color: muted ? brand.light.muted : brand.light.text } }, children);
 
 export const InlineLink = ({ brand, href, children }: WithBrand & { href: string; children?: ReactNode }) =>
   h(Link, { href, className: 'em-link', style: { color: brand.light.link, textDecoration: 'underline' } }, children);
@@ -206,3 +195,15 @@ export const Lines = ({ brand, lines }: WithBrand & { lines: [string, string][] 
       }),
     ),
   );
+
+/** The email's one illustration, centred under the headline. */
+export const Illustration = ({ src, width = 440 }: { src: string; width?: number }) =>
+  h(
+    Section,
+    { style: { padding: '28px 0 12px', textAlign: 'center' } },
+    h(Img, { src, alt: '', width, style: { display: 'block', width: '100%', maxWidth: `${width}px`, height: 'auto', margin: '0 auto' } }),
+  );
+
+/** "— The VVS Lab team": the person or team the email is from. */
+export const SignOff = ({ brand, children }: WithBrand & { children?: ReactNode }) =>
+  h(Paragraph, { brand, margin: '28px 0 0' }, children ?? brand.signOff);

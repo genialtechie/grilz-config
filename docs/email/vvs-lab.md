@@ -6,18 +6,20 @@ Brand-specific companion to [`PLAYBOOK.md`](PLAYBOOK.md).
 
 | | Light | Dark |
 | --- | --- | --- |
-| Page (frame) | ink `#1b1714` | `#141110` |
-| Card | cream `#fbf7f0` | `#221c17` |
+| Page (one surface) | cream `#fbf7f0` | ink `#1b1714` |
 | Text | `#1b1714` | `#f3ede4` |
 | Muted | `#6f655a` (5.3:1) | `#b5a995` |
 | Headline italic | gold `#a87b23` (3.6:1, large text only) | `#e2b85e` |
 | Links | deep gold `#7a5714` (6.1:1) | `#e2b85e` |
 | Button | ink with cream text | gold with ink text |
 
-- Logo: the gold diamond "VVS" mark (`/assets/email/vvs-mark.png`, 2×).
+- Logo: the gold diamond "VVS" mark (`/assets/email/vvs-mark.png`, 2×); the
+  footer closes with the app icon (`vvs-icon.png`: the mark on ink, gold edge).
+- Socials: gold Instagram tile (`instagram-tile.png`); shops get the ink tile.
+- Sign-off: "— The VVS Lab team" (shop mail: "— {shop name}").
 - Type: Instrument Serif headlines (Georgia in Gmail), system sans body.
 - Illustration style: flat shapes, warm gold gradients, 5–7px ink outlines,
-  4-point sparkles, a soft circular cream halo. Grillz culture: gold teeth,
+  4-point sparkles, a cream sticker edge, a speech bubble for character. Grillz culture: gold teeth,
   iced (pavé) stones, smiles. Source: `scripts/email-art.ts`.
 - Voice: a jeweler's friend who knows the trade. Short, warm, confident.
   "Hey there," openings; no hype words.

@@ -22,22 +22,27 @@ contains the email modules before relying on it.
 
 The pattern behind every standout email we studied:
 
-1. **One frame, always the same.** Logo centred on top, one background colour,
-   a 560–640px column, generous padding (32–40px), the same footer every time.
-   Wispr's welcome and feature emails are visibly one system.
-2. **A headline with character.** Display size (36–48px), usually a serif with
-   **one italic or accent word** ("Start typing at the *speed* of thought").
-3. **One owned visual.** Either a custom illustration in one house style
-   (thick outlines + 2–3 brand colours) or the user's own thing (their design,
-   their numbers). Never stock photos, never raw full-window screenshots.
-4. **Short, specific copy.** 60–150 words, one idea, a person's voice
-   ("Hey there,", "it's Pedro here"). Specifics beat adjectives ("Say X →
-   Flow types Y").
+1. **One surface, always the same.** One background colour edge to edge (no
+   card floating on a frame), logo centred on top, a 560–640px column,
+   generous side padding (40px), the same footer every time. Wispr's emails
+   are visibly one system.
+2. **A headline with character.** Display size (48–60px on lifecycle mail,
+   centred; ~44px left-aligned on transactional), a serif with **one italic or
+   accent word** ("One quick *question* for you").
+3. **One owned visual, under the headline.** Either a custom illustration in
+   one house style (thick outlines, 2–3 brand colours, a light "sticker" edge
+   so it lifts off a dark background, a little character: faces, a speech
+   bubble) or the user's own thing (their design, their numbers). Never stock
+   photos, never raw full-window screenshots.
+4. **Short, specific copy.** 60–150 words at 17–18px, one idea, a person's
+   voice ("Hey there,", "it's Pedro here"), signed off by a person or team
+   ("— Written with Wispr Flow"). Specifics beat adjectives.
 5. **One clear ask.** One solid, high-contrast button with verb + object
    ("Set up my builder"). Anything else is a plain text link. Repeat the same
    CTA at the bottom of long emails rather than adding a second ask.
-6. **A proper footer.** Small logo mark, social icons, why you got this,
-   company name and street address, Terms / Privacy, Unsubscribe on marketing.
+6. **A proper footer.** A heavy rule, social icons as filled tiles, ©year,
+   company and street address, links separated by pipes with Unsubscribe
+   among them, why you got this, and the app-icon mark last.
 7. **Personal data as the hero when you have it.** Usage numbers (Loom's "you
    eliminated 9 meetings"), the customer's own design photo, what they built.
 8. **Sender and preheader do work.** "Name from Brand" for letters, "Brand"
@@ -47,15 +52,16 @@ The pattern behind every standout email we studied:
 
 | Piece | Component | Rules |
 | --- | --- | --- |
-| Frame | `EmailFrame` | Page colour, centred logo, rounded card, footer. Max 600px. |
-| Hero (optional) | `hero` prop | Illustration or product image above the text, inside the card. |
+| Frame | `EmailFrame` | One surface colour, centred logo, content column, footer. Max 600px. |
+| Illustration | `Illustration` | Under the headline, centred, 440px. Lifecycle mail only. |
 | Eyebrow | `Eyebrow` | 12px, uppercase, tracked. Says what kind of email this is. |
-| Headline | `Headline` | Serif, `*one word*` in italic highlight colour. ≤ 2 lines on a phone. |
-| Body | `Paragraph` | 16px, line-height 1.55. Muted variant for fine print. |
+| Headline | `Headline` | Serif, `*one word*` in italic highlight colour. `align: 'center'`, size 54 on lifecycle mail; 44 left on transactional. |
+| Body | `Paragraph` | 17px, line-height 1.6. Muted variant for fine print. |
+| Sign-off | `SignOff` | "— The VVS Lab team" (from `brand.signOff`). |
 | Ask | `CTA` | One per email. Pill, ≥ 44px tall. Verb + object. |
 | Details | `Facts`, `Lines`, `SectionLabel` | Label/value rows with hairlines; small price lines. |
 | Image | `Photo` | 2× resolution, `width` attribute set, rounded 16px, caption if AI-made. |
-| Footer | built into `EmailFrame` | Mark, social, links, reason, unsubscribe (marketing), legal address. |
+| Footer | built into `EmailFrame` | Rule, social tiles, ©, address, links + Unsubscribe (marketing), reason, app-icon mark (or "Powered by"). |
 
 ## 3. Type
 
@@ -64,8 +70,8 @@ The pattern behind every standout email we studied:
   the web font; Gmail and Outlook show Georgia.** Design so Georgia looks good
   too. Don't put headlines in images (accessibility, dark mode, clipping).
 - Body: system sans stack (`-apple-system, Segoe UI, Helvetica, Arial`).
-- Scale: headline 36–40px (32 on phones), subhead 20–24, body 16, fine print
-  12–13.
+- Scale: lifecycle headline 54px (44 on phones), transactional 44, subhead
+  20–24, body 17, fine print 12–13.
 
 ## 4. Colour, contrast, dark mode
 
@@ -89,7 +95,7 @@ The pattern behind every standout email we studied:
 
 - One house style per brand, written down: shapes, outline weight, palette,
   ornaments. (VVS Lab: flat shapes, warm gold gradients, 5–7px ink outlines,
-  4-point sparkles, a soft circular halo.)
+  4-point sparkles, a cream sticker edge, a speech bubble.)
 - **Draw in SVG, ship PNG.** Gmail, Outlook and Yahoo don't display SVG.
   `scripts/email-art.ts` draws with code (exact, consistent, regenerable) and
   renders 2× PNGs with `sharp`. Keep each under ~100 KB; set `alt=""` on

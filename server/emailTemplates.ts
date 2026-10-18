@@ -4,7 +4,7 @@ import { displayContact } from '../src/lib/contact.js';
 import { displayTotal, type PriceBreakdown } from '../src/lib/pricing.js';
 import type { TenantConfig } from '../src/lib/tenant/schema.js';
 import { shopBrand, vvsBrand, type Brand } from './email/brand.js';
-import { CTA, EmailFrame, Eyebrow, Facts, Headline, InlineLink, Lines, Paragraph, Photo, SectionLabel } from './email/components.js';
+import { CTA, EmailFrame, Eyebrow, Facts, Headline, Illustration, InlineLink, Lines, Paragraph, Photo, SectionLabel, SignOff } from './email/components.js';
 
 // Every email we send, built from the kit in server/email/ (React Email,
 // written with createElement so Vercel bundles it). Design photos are inline
@@ -166,7 +166,7 @@ export async function customerEmail({ lead, config, origin, images }: { lead: Le
       footer: { reason: `You're getting this because you sent a design to ${shop.name} with the VVS Lab builder. This is a one-time confirmation.` },
     },
     h(Headline, { brand, text: 'Your design is *on its way*' }),
-    h(Paragraph, { brand, margin: '16px 0 0' }, `Thanks, ${firstName(lead.name)}. ${shop.name} has your design and will reach out on ${reach.label} to confirm the details and the final price.`),
+    h(Paragraph, { brand, margin: '20px 0 0' }, `Thanks, ${firstName(lead.name)}. ${shop.name} has your design and will reach out on ${reach.label} to confirm the details and the final price.`),
     designPhoto(brand, images, images.photo ? AI_DISCLOSURE : 'Your 3D design'),
     specList(brand, lead.summary),
     h(Facts, {
@@ -179,6 +179,7 @@ export async function customerEmail({ lead, config, origin, images }: { lead: Le
     h(Paragraph, { brand, muted: true, size: 12, margin: '8px 0 0' }, `Final price is confirmed by ${shop.name}.`),
     ig && h(CTA, { brand, href: ig, margin: '24px 0 0' }, 'Message on Instagram'),
     h(Paragraph, { brand, muted: true, size: 14, margin: '22px 0 0' }, `Questions? Reply to this email${shop.phone ? ` or call ${displayContact(shop.phone)}` : ''}.`),
+    h(SignOff, { brand }),
   );
   const text = [
     `Your design is with ${shop.name}`,
@@ -199,17 +200,12 @@ export async function customerEmail({ lead, config, origin, images }: { lead: Le
 /** Self-serve signup: the one-time link that signs the new owner in. */
 export async function welcomeEmail({ shop, slug, link, origin, trialDays }: { shop: string; slug: string; link: string; origin: string; trialDays: number }): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
-  const hero = h('img', {
-    src: `${origin.replace(/\/$/, '')}/assets/email/welcome.png`,
-    alt: '',
-    width: 480,
-    style: { display: 'block', width: '100%', maxWidth: '480px', height: 'auto', border: 0, margin: '0 auto' },
-  });
   const element = h(
     EmailFrame,
-    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready to set up`, hero, footer: { reason: "You're getting this because you signed up for VVS Lab." } },
-    h(Headline, { brand, text: 'Your builder is *ready*' }),
-    h(Paragraph, { brand, margin: '18px 0 10px' }, 'Hey there,'),
+    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready to set up`, footer: { reason: "You're getting this because you signed up for VVS Lab." } },
+    h(Headline, { brand, align: 'center', size: 54, text: 'Your builder is *ready*' }),
+    h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/email/welcome.png` }),
+    h(Paragraph, { brand, margin: '18px 0 16px' }, 'Hey there,'),
     h(Paragraph, { brand }, `${shop} now has its own 3D grillz builder at `, h('strong', null, `${host(origin)}/b/${slug}`), '. Customers design their set, see your prices and send it straight to you, with a studio photo.'),
     h(Paragraph, { brand }, `Add your logo and prices, then switch it on. It takes about 10 minutes, and your free trial runs ${trialDays} days.`),
     h(CTA, { brand, href: link }, 'Set up my builder'),
@@ -220,6 +216,7 @@ export async function welcomeEmail({ shop, slug, link, origin, trialDays }: { sh
       h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
       ". Didn't sign up? Ignore this email.",
     ),
+    h(SignOff, { brand }),
   );
   return {
     subject: 'Set up your VVS Lab builder',
@@ -249,6 +246,7 @@ export async function inviteEmail({ shop, inviter, role, link, origin }: { shop:
       h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
       '. Not expecting this? Ignore it and nothing happens.',
     ),
+    h(SignOff, { brand }),
   );
   return {
     subject: 'You’re invited to join a shop on VVS Lab',

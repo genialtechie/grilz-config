@@ -1,13 +1,15 @@
 // Generates the email artwork into public/assets/email/ (SVG source + PNG for
 // mail clients, which don't show SVG). Re-run after changing the drawing:
 //   npx tsx scripts/email-art.ts
-// House style: flat shapes, warm gold gradients, ink outlines, sparkles.
+// House style: flat shapes, warm gold gradients, ink outlines, sparkles, and a
+// cream "sticker" edge so the art lifts off a dark background (dark mode).
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 const OUT = 'public/assets/email';
 const INK = '#1b1714';
+const CREAM = '#fbf7f0';
 const GOLD_STOPS = `<stop offset="0" stop-color="#f8de98"/><stop offset=".55" stop-color="#d9ad4b"/><stop offset="1" stop-color="#a87b23"/>`;
 
 type Point = [number, number];
@@ -62,8 +64,9 @@ const yAt = (p: Point[], x: number) => {
 };
 
 function welcomeIllustration() {
-  const W = 1200;
-  const H = 640;
+  // Cropped tight to the drawing (sticker edges included).
+  const W = 960;
+  const H = 520;
   const upperInner: Point[] = [[364, 300], [452, 222], [748, 222], [836, 300]];
   const lowerInner: Point[] = [[364, 300], [440, 452], [760, 452], [836, 300]];
   const mouth = `${curve(upperInner)}${curve([...lowerInner].reverse() as Point[]).replace('M', 'L')}Z`;
@@ -84,37 +87,51 @@ function welcomeIllustration() {
     const centre = 1 - Math.abs(x - 600) / 200;
     teeth += tooth(x, yAt(lowerInner, x), lowerSlot - 7, 34 + 22 * Math.max(0, centre), false, false);
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">${GOLD_STOPS}</linearGradient><clipPath id="mouth"><path d="${mouth}"/></clipPath></defs>
-<circle cx="600" cy="320" r="272" fill="#f3e6c8"/>
-<circle cx="600" cy="320" r="302" fill="none" stroke="#e8d6ac" stroke-width="3" stroke-dasharray="2 14" stroke-linecap="round"/>
+  // A speech bubble: the customer messages that the builder brings in.
+  const scribble = [0, 1, 2].map((i) => `M${862 + i * 52} 138c14-10 30-34 18-42c-12-8-24 20-12 40c8 12 24 8 34 0`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="140 24 ${W} ${H}" width="${W}" height="${H}">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">${GOLD_STOPS}</linearGradient><clipPath id="mouth"><path d="${mouth}"/></clipPath>
+<filter id="sticker" x="-10%" y="-10%" width="120%" height="120%"><feMorphology in="SourceAlpha" operator="dilate" radius="14" result="grown"/><feFlood flood-color="${CREAM}"/><feComposite in2="grown" operator="in" result="edge"/><feMerge><feMergeNode in="edge"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<g filter="url(#sticker)">
 <path d="M300 296C396 160 804 160 900 296C836 520 364 520 300 296Z" fill="#9c4a3f" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/>
 <path d="${mouth}" fill="#2a1511"/>
 <g clip-path="url(#mouth)">${teeth}</g>
 <path d="${mouth}" fill="none" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/>
 <path d="M336 292C316 280 302 282 288 296M864 292C884 280 898 282 912 296" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round"/>
 <path d="M468 206C516 192 558 190 598 192" fill="none" stroke="#c9776a" stroke-width="8" stroke-linecap="round" opacity=".85"/>
-${sparkle(250, 176, 42, 'url(#gold)')}
-${sparkle(966, 160, 32, 'url(#gold)')}
-${sparkle(1010, 436, 22, '#ffffff')}
-${sparkle(196, 446, 18, '#ffffff')}
-${sparkle(640, 96, 14, INK, INK, 2)}
-<circle cx="926" cy="248" r="7" fill="${INK}"/><circle cx="284" cy="380" r="6" fill="${INK}"/><circle cx="770" cy="560" r="5" fill="#d9ad4b"/>
+</g>
+<g filter="url(#sticker)">
+<path d="M876 52H1036Q1076 52 1076 92V132Q1076 172 1036 172H930L896 210L900 172H876Q836 172 836 132V92Q836 52 876 52Z" fill="#f0b65a" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/>
+<path d="${scribble}" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g filter="url(#sticker)">${sparkle(232, 170, 44, 'url(#gold)')}</g>
+<g filter="url(#sticker)">${sparkle(1010, 410, 24, '#ffffff')}</g>
+<g filter="url(#sticker)">${sparkle(190, 430, 20, '#ffffff')}</g>
+${sparkle(620, 96, 14, INK, INK, 2)}
+<circle cx="980" cy="300" r="7" fill="${INK}"/><circle cx="276" cy="330" r="6" fill="${INK}"/>
 </svg>`;
 }
 
-const instagramIcon = (color: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-<rect x="7" y="7" width="34" height="34" rx="10" fill="none" stroke="${color}" stroke-width="3.5"/>
-<circle cx="24" cy="24" r="8" fill="none" stroke="${color}" stroke-width="3.5"/><circle cx="34" cy="14" r="2.4" fill="${color}"/></svg>`;
+/** A 2x footer tile (shown at 40px): the Instagram glyph on a rounded square. */
+const instagramTile = (tile: string, glyph: string, edge?: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+<rect x="2" y="2" width="76" height="76" rx="18" fill="${tile}"${edge ? ` stroke="${edge}" stroke-width="3"` : ''}/>
+<rect x="21" y="21" width="38" height="38" rx="11" fill="none" stroke="${glyph}" stroke-width="5"/>
+<circle cx="40" cy="40" r="9" fill="none" stroke="${glyph}" stroke-width="5"/><circle cx="51.5" cy="28.5" r="3" fill="${glyph}"/></svg>`;
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const welcome = welcomeIllustration();
   writeFileSync(`${OUT}/welcome.svg`, welcome);
   await sharp(Buffer.from(welcome)).resize(960).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(`${OUT}/welcome.png`);
-  for (const [name, color] of [['instagram-light', '#d9c9a6'], ['instagram-dark', '#6f655a']] as const) {
-    await sharp(Buffer.from(instagramIcon(color))).resize(48).png().toFile(`${OUT}/${name}.png`);
-  }
+  // Gold tile for VVS Lab mail; ink tile with a light edge for shop mail (any accent).
+  await sharp(Buffer.from(instagramTile('#e2b85e', INK))).png().toFile(`${OUT}/instagram-tile.png`);
+  await sharp(Buffer.from(instagramTile(INK, CREAM, '#e7ddcd'))).png().toFile(`${OUT}/instagram-tile-ink.png`);
+  // The app-icon mark that closes the footer: the gold mark on an ink square, 2x of 40px.
+  const mark = await sharp('public/assets/vvs/logo-mark.png').resize({ width: 62 }).png().toBuffer();
+  await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect x="1.5" y="1.5" width="77" height="77" rx="18" fill="${INK}" stroke="#e2b85e" stroke-width="3"/></svg>`))
+    .composite([{ input: mark, gravity: 'center' }])
+    .png({ compressionLevel: 9 })
+    .toFile(`${OUT}/vvs-icon.png`);
   // The gold mark at 2x its email size (48px tall), so it's light to load.
   await sharp('public/assets/vvs/logo-mark.png').resize({ height: 96 }).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(`${OUT}/vvs-mark.png`);
   console.log('email art written to', OUT);
