@@ -1258,11 +1258,68 @@
   flex-direction: column;
 }
 
+.builder-panel .panel-scroll-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .builder-panel .panel-scroll {
   flex: 1;
   height: auto;
   min-height: 0;
   padding-top: 18px;
+}
+
+/* "More below" cue: a fade over the panel's bottom edge and a small button,
+   shown only while there is more to scroll to. */
+.panel-more {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 64px;
+  padding-bottom: 8px;
+  background: linear-gradient(to bottom, rgba(250, 248, 245, 0), var(--surface) 78%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.panel-more--on {
+  opacity: 1;
+}
+
+.panel-more__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 1px solid #ddd6cb;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(27, 23, 20, 0.08);
+  color: #3b342e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel-more--on .panel-more__button {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-more {
+    transition: none;
+  }
 }
 
 .step-pills {
@@ -1678,13 +1735,16 @@
 }
 
 @media (max-width: 860px) {
+  /* The options get the larger share on phones (MAG-85): at 44% the panel
+     showed a third of each step; the model still frames well at 44%. */
   .visualizer {
-    height: 56%;
+    height: 44%;
+    min-height: 220px;
   }
 
   .builder-panel,
   .builder-panel--closed {
-    height: 44%;
+    height: 56%;
   }
 
   .step-pills {

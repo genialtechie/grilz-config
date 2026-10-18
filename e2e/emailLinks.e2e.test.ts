@@ -109,8 +109,12 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     const mailUrl = `http://127.0.0.1:${(mailServer.address() as AddressInfo).port}`;
 
     app = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
+      // Only what the app needs: real service keys in the shell (Stripe, Turnstile,
+      // PostHog…) must never reach the test server, and would change its behavior.
       env: {
-        ...process.env,
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS,
         SUPABASE_URL: url,
         SUPABASE_SERVICE_ROLE_KEY: key,
         VITE_SUPABASE_URL: url,
