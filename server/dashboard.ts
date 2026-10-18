@@ -3,6 +3,7 @@ import { signInLink } from './authLinks.js';
 import { createDb, DbError, hasDb, type Db } from './db.js';
 import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } from './domains.js';
 import { sendEmail, type EmailEnv } from './email.js';
+import { inviteEmail } from './emailTemplates.js';
 import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
 import { offboardTenant } from './offboard.js';
@@ -128,7 +129,6 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
   const done = reply(200, { invited: true, message: `If ${email} can be added, they'll get an email to join. They appear on the team once they sign in.` });
 
   const origin = (env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com').replace(/\/$/, '');
-  const redirect = `${origin}/dashboard`;
   const link = await signInLink(db, email, origin, tenant.slug);
   if (!link.ok && link.reason === 'auth') return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
   if (!link.ok) {
@@ -139,25 +139,8 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
   if (already) return done;
 
   await db.insert('member_invites', { tenant_id: tenantId, email, role: memberRole, invited_by: user.id });
-  const shop = strip(tenant.name);
-  const inviter = strip(user.email ?? 'The shop owner');
-  await sendEmail(
-    {
-      fromName: 'VVS Lab',
-      fromLocal: 'hello',
-      to: [email],
-      subject: 'You’re invited to join a shop on VVS Lab',
-      text: `${inviter} invited you to join "${shop}" on VVS Lab.\n\nAccept and sign in: ${link.url}\n\nThe link works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ${redirect}. If you weren't expecting this, ignore it.`,
-      html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1b1714">
-<p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a8178;margin:0 0 18px">VVS Lab</p>
-<h1 style="font-size:22px;margin:0 0 12px">Join “${shop}”</h1>
-<p style="font-size:15px;line-height:1.5;margin:0 0 22px">${inviter} invited you to join this shop on VVS Lab as ${memberRole === 'owner' ? 'an owner' : 'staff'}. You'll see its design requests${memberRole === 'owner' ? ' and can change its prices and options' : ''}.</p>
-<p style="margin:0 0 22px"><a href="${link.url.replace(/&/g, '&amp;')}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Accept and sign in</a></p>
-<p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at <a href="${redirect}" style="color:#8a8178">${redirect.replace(/^https?:\/\//, '')}</a>. Not expecting this? Ignore it and nothing happens.</p></div>`,
-      headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${link.userId}` },
-    },
-    env,
-  );
+  const invitation = inviteEmail({ shop: strip(tenant.name), inviter: strip(user.email ?? 'The shop owner'), role: memberRole, link: link.url, origin });
+  await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...invitation, headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${link.userId}` } }, env);
   return done;
 }
 
