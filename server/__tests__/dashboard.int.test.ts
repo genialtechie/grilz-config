@@ -139,7 +139,7 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
       headers: { apikey: anon!, Authorization: `Bearer ${ownerToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify({ tenant_id: tenantId, version: 900, config, status: 'draft' }),
     });
-    const [row] = await response.json();
+    const [row] = (await response.json()) as { id: string; config: { ai: { monthlyGenerations: number }; brand: { poweredBy: boolean } } }[];
     expect(row.config.ai.monthlyGenerations).toBe(300);
     expect(row.config.brand.poweredBy).toBe(true);
     await rest(`tenant_configs?id=eq.${row.id}`, { method: 'DELETE' });
