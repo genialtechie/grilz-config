@@ -1,7 +1,8 @@
 # Karat, the VVS Lab mascot
 
 **Name: Karat.** Gold purity is measured in karats and diamonds in carats,
-and Karat is both: a gold tooth with a diamond set in its crown. It's the
+and Karat is both: a gold tooth with diamond bling, iced-out stones in his
+eyebrow piercing and his grill. It's the
 jeweler's word, it sounds like a name, and it carries the craftsman side of
 the brief.
 
@@ -96,8 +97,8 @@ Expressions all come from the same parts later, so the pick is the
 
 Resting face **Cool** (heavy lids, slow grin: confident, flashy, unbothered,
 matching "Your DMs are losing custom orders"); **Hype** for wins. Polished
-gold with side shading and highlights, a brilliant-cut stone set in the crown
-as the signature, and a cream sticker edge on dark backgrounds.
+gold with side shading and highlights, an eyebrow piercing (a curved gold
+barbell with an iced-out stone on each end) as the signature, and a cream sticker edge on dark backgrounds.
 
 ![Expressions](round-4-expressions.png)
 
