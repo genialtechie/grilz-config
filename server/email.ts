@@ -7,6 +7,8 @@ export type Attachment = { filename: string; content: Uint8Array; contentId: str
 
 export type Email = {
   fromName: string;
+  /** Sender mailbox on the email domain: leads@ (default) for lead mail, hello@ for account mail. */
+  fromLocal?: 'leads' | 'hello';
   to: string[];
   subject: string;
   html: string;
@@ -39,7 +41,7 @@ async function sendOnce(email: Email, env: EmailEnv): Promise<SendResult> {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `${safeName(email.fromName)} <leads@${fromDomain(env)}>`,
+        from: `${safeName(email.fromName)} <${email.fromLocal ?? 'leads'}@${fromDomain(env)}>`,
         to: email.to,
         subject: email.subject.replace(/[\r\n]+/g, ' ').slice(0, 200),
         html: email.html,

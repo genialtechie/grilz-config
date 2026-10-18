@@ -39,9 +39,19 @@ jobs:
       - name: Lead pipeline and dashboard integration tests
         run: |
           npx -y tsx@4.19.2 scripts/tenant-seed-sql.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q
+          # pipeline.int.test.ts uses the gold-block demo shop for its cross-shop token check.
+          npx -y tsx@4.19.2 scripts/demo-shops.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q
           export INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321
           export INTEGRATION_SERVICE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')
           export INTEGRATION_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')
           npx vitest run server/__tests__/pipeline.int.test.ts server/__tests__/dashboard.int.test.ts server/__tests__/signup.int.test.ts
+      # Signup and team-invite emails: open the real emailed link in a fresh browser.
+      - run: npx playwright install --with-deps chromium
+      - name: Email sign-in links (e2e)
+        run: |
+          export INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321
+          export INTEGRATION_SERVICE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')
+          export INTEGRATION_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')
+          npx vitest run e2e/emailLinks.e2e.test.ts
       - if: always()
         run: supabase stop --no-backup

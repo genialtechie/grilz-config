@@ -15,6 +15,10 @@ export function supabase(): SupabaseClient {
   return client;
 }
 
+/** Supabase sign-in errors in our words. Its rate limit ("…only request this after 16 seconds") means a link was just sent. */
+export const friendlyAuthError = (message: string) =>
+  /only request this after|rate limit|too many requests/i.test(message) ? 'We just sent a link. Check your email, or try again in a minute.' : message;
+
 export async function accessToken(): Promise<string | null> {
   const { data } = await supabase().auth.getSession();
   return data.session?.access_token ?? null;

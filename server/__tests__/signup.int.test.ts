@@ -53,7 +53,11 @@ describe.skipIf(!url || !key || !anon)('self-serve signup (integration)', () => 
     expect(config.config.ai.monthlyGenerations).toBe(TRIAL_GENERATIONS);
     expect(config.config.leads.email).toEqual([email]);
     expect(config.config.brand.instagram).toBe('signup.test');
-    expect(sent.find((mail) => mail.to.includes(email))?.html).toContain('/auth/v1/verify');
+    const welcome = sent.find((mail) => mail.to.includes(email)) as { html: string; from?: string } | undefined;
+    expect(welcome?.html).toContain(`https://shop.test/dashboard/welcome?token_hash=`);
+    expect(welcome?.html).toContain(`&amp;shop=${slug}`);
+    expect(welcome?.html).not.toContain('/auth/v1/verify');
+    expect(welcome?.from).toBe('VVS Lab <hello@vvslab.magpollo.com>');
 
     // not a member until they accept by signing in
     expect(await rest(`members?tenant_id=eq.${tenant.id}&select=user_id`)).toHaveLength(0);

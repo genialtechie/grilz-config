@@ -1,8 +1,9 @@
+import { checkoutTrialEnd } from '../src/lib/trial.js';
 import { createDb, hasDb, type Db } from './db.js';
 import { verifyLeadToken, type LeadEnv } from './leads.js';
 import { stripe, stripeV2, StripeError, verifyStripeSignature, type StripeEnv } from './stripe.js';
 import type { ApiResult } from './tenantApi.js';
-import type { TenantEnv } from './tenants.js';
+import { forgetTenant, type TenantEnv } from './tenants.js';
 
 // Stage 5: money.
 //   Billing — a shop's $199/mo subscription through Stripe Checkout (trial days
@@ -72,10 +73,9 @@ export async function billingCheckout(db: Db, env: BillingEnv, tenantId: string,
       customer = created.id;
       await db.update('tenants', { id: `eq.${tenant.id}` }, { stripe_customer_id: customer });
     }
-    // Trial days left carry over, so starting the plan early never costs a day.
-    // Stripe needs trial_end at least 48 hours out; closer than that, billing starts now.
-    const trialEnd = tenant.trial_ends_at ? Math.floor(new Date(tenant.trial_ends_at).getTime() / 1000) : 0;
-    const carryTrial = trialEnd - Date.now() / 1000 > 48 * 3600;
+    // Trial days left carry over (the same whole days the dashboard shows), so
+    // starting the plan early never costs a day. Within 48 hours, billing starts now.
+    const trialEnd = checkoutTrialEnd(tenant);
     const back = `${origin(env)}/dashboard/${tenant.slug}`;
     const session = await stripe<{ url: string }>(
       env,
@@ -86,7 +86,7 @@ export async function billingCheckout(db: Db, env: BillingEnv, tenantId: string,
         customer,
         client_reference_id: tenant.id,
         line_items: [{ price: env.STRIPE_PRICE_ID, quantity: 1 }],
-        subscription_data: { metadata: { tenant_id: tenant.id }, trial_end: carryTrial ? trialEnd : undefined },
+        subscription_data: { metadata: { tenant_id: tenant.id }, trial_end: trialEnd ?? undefined },
         metadata: { tenant_id: tenant.id, purpose: 'plan' },
         allow_promotion_codes: true,
         success_url: `${back}?billing=done`,
@@ -238,6 +238,9 @@ async function applySubscription(db: Db, subscription: Record<string, unknown>) 
     await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.paused' }, { status: 'live' });
   }
   if (status === 'canceled') await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.live' }, { status: 'paused' });
+  // Billing decides whether the public page is on (status, and the trial gate), so
+  // the page must not wait for its cache to expire.
+  await forgetTenant(tenant.slug);
 }
 
 async function applyDeposit(db: Db, session: Record<string, unknown>, account: string | undefined) {
