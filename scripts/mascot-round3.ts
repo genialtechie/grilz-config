@@ -2,7 +2,7 @@
 // obvious gold fangs, like the hero image, and one iced-out tooth; eyes and brows carry the
 // personality. Each face is shown large and at 64px (avatar size).
 //   npx tsx scripts/mascot-round3.ts
-// Writes docs/brand/mascot/round-3-faces.png (+ .svg).
+// Writes docs/brand/mascot/round-3-faces.png (+ .svg) and a close-up of the grin.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
@@ -19,10 +19,8 @@ type Face = {
   eyes: [Eye, Eye];
   /** Brow strokes as [x1, y1, x2, y2], or none. */
   brows?: [number, number, number, number][];
-  /** Mouth: top-left and top-right corners of the grin, and how deep it opens. */
-  mouth: { l: [number, number]; r: [number, number]; depth: number };
-  /** Fang length. */
-  fang: number;
+  /** Mouth: top edge height, how far it opens, and a tilt in degrees (a smirk). */
+  mouth: { y: number; open: number; tilt?: number };
 };
 
 function eye(kind: Eye, x: number, y: number) {
@@ -39,27 +37,59 @@ function eye(kind: Eye, x: number, y: number) {
   }
 }
 
+/**
+ * The grill, built like the hero image: separate gold caps with rounded tips
+ * hanging from the upper lip, long tapered fangs on the canines, the centre
+ * tooth iced out (white, with a pavé of stones), natural white teeth below.
+ */
 function grin(face: Face, id: string) {
-  const { l, r, depth } = face.mouth;
-  const mid: [number, number] = [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2];
-  const mouth = `M${l[0]} ${l[1]}L${r[0]} ${r[1]}Q${mid[0] + 6} ${mid[1] + depth * 1.6} ${l[0]} ${l[1]}Z`;
-  const at = (t: number): [number, number] => [l[0] + (r[0] - l[0]) * t, l[1] + (r[1] - l[1]) * t];
-  // A gold grill row along the top of the mouth, and two long fang caps.
-  const row = `M${l[0]} ${l[1] - 2}L${r[0]} ${r[1] - 2}L${r[0]} ${r[1] + 14}L${l[0]} ${l[1] + 14}Z`;
-  // One tooth in the row is iced out: white with a pavé of stones.
-  const iced = (a: [number, number], b: [number, number]) => {
-    const stones = [0.25, 0.75].flatMap((u) => [2.5, 7, 11.5].map((dy) => `<circle cx="${a[0] + (b[0] - a[0]) * u}" cy="${a[1] + (b[1] - a[1]) * u + dy}" r="2.3" fill="#ffffff" stroke="#8d99a6" stroke-width=".8"/>`));
-    return `<path d="M${a[0]} ${a[1] - 2}L${b[0]} ${b[1] - 2}L${b[0]} ${b[1] + 14}L${a[0]} ${a[1] + 14}Z" fill="#e3eaf0"/>${stones.join('')}`;
-  };
-  const fang = (t: number) => {
-    const [x, y] = at(t);
-    return `<path d="M${x - 8} ${y + 4}L${x + 8} ${y + 4}L${x + 1.5} ${y + 4 + face.fang}Q${x} ${y + 7 + face.fang} ${x - 1.5} ${y + 4 + face.fang}Z" fill="url(#gold)" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`;
-  };
-  return `<clipPath id="m${id}"><path d="${mouth}"/></clipPath>
+  const { y, open, tilt = 0 } = face.mouth;
+  // A wide, square-cornered open mouth so the fangs at the ends have room.
+  const m0 = 57;
+  const m1 = 143;
+  const mouth = `M${m0} ${y}L${m1} ${y}C${m1} ${y + open * 0.95} ${m1 - 14} ${y + open} 100 ${y + open}C${m0 + 14} ${y + open} ${m0} ${y + open * 0.95} ${m0} ${y}Z`;
+  const x0 = m0 + 5;
+  const x1 = m1 - 5;
+  const gap = 1;
+  // Fang, lateral, central (iced), central, lateral, fang.
+  const widths = [12, 12, 15, 15, 12, 12];
+  const scale = (x1 - x0 - gap * (widths.length - 1)) / widths.reduce((sum, w) => sum + w, 0);
+  let cursor = x0;
+  const teeth = widths.map((raw, index) => {
+    const w = raw * scale;
+    const x = cursor;
+    cursor += w + gap;
+    const outline = `stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"`;
+    if (index === 0 || index === widths.length - 1) {
+      const length = open * 0.78;
+      const tip = x + w * (index === 0 ? 0.6 : 0.4);
+      return `<path d="M${x} ${y}L${x + w} ${y}C${x + w} ${y + length * 0.45} ${tip + 2} ${y + length * 0.8} ${tip} ${y + length}C${tip - 2} ${y + length * 0.8} ${x} ${y + length * 0.45} ${x} ${y}Z" fill="url(#gold)" ${outline}/><path d="M${x + 2.5} ${y + 3}L${x + 3.5} ${y + length * 0.4}" stroke="#fff6d8" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>`;
+    }
+    const h = open * (index === 2 || index === 3 ? 0.46 : 0.38);
+    const r = Math.min(4, w / 3);
+    const cap = `M${x} ${y}L${x + w} ${y}L${x + w} ${y + h - r}Q${x + w} ${y + h} ${x + w - r} ${y + h}L${x + r} ${y + h}Q${x} ${y + h} ${x} ${y + h - r}Z`;
+    if (index === 2) {
+      // Pavé: a tight grid of small stones, each with a glint.
+      const stones = [0.22, 0.5, 0.78].flatMap((u) => [0.16, 0.38, 0.6, 0.82].map((v) => `<circle cx="${x + w * u}" cy="${y + h * v}" r="${w * 0.11}" fill="#ffffff" stroke="#9aa6b2" stroke-width=".5"/><circle cx="${x + w * u - w * 0.03}" cy="${y + h * v - w * 0.03}" r="${w * 0.035}" fill="#d6e6f2"/>`));
+      return `<path d="${cap}" fill="#cfd9e2" ${outline}/>${stones.join('')}`;
+    }
+    return `<path d="${cap}" fill="url(#gold)" ${outline}/><path d="M${x + 2.5} ${y + 3}L${x + 2.5} ${y + h * 0.6}" stroke="#fff6d8" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>`;
+  });
+  const lower = [0, 1, 2, 3]
+    .map((i) => {
+      const w = 9.5;
+      const x = 100 - 2 * (w + 1) + i * (w + 1);
+      const h = open * 0.26;
+      const top = y + open * 0.92 - h;
+      return `<path d="M${x} ${top + 3}Q${x} ${top} ${x + 3} ${top}L${x + w - 3} ${top}Q${x + w} ${top} ${x + w} ${top + 3}L${x + w} ${top + h + 4}L${x} ${top + h + 4}Z" fill="#fbf7f0" stroke="${INK}" stroke-width="1.5"/>`;
+    })
+    .join('');
+  return `<g transform="rotate(${tilt} 100 ${y})">
+<clipPath id="m${id}"><path d="${mouth}"/></clipPath>
 <path d="${mouth}" fill="#2a1511"/>
-<g clip-path="url(#m${id})"><path d="${row}" fill="url(#gold)"/>${iced(at(0.4), at(0.6))}${[0.32, 0.4, 0.6, 0.68].map((t) => `<path d="M${at(t)[0]} ${at(t)[1] - 2}l0 16" stroke="#a87b23" stroke-width="1.5"/>`).join('')}</g>
-<g clip-path="url(#m${id})">${fang(0.25)}${fang(0.75)}</g>
-<path d="${mouth}" fill="none" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>`;
+<g clip-path="url(#m${id})">${lower}${teeth.join('')}</g>
+<path d="${mouth}" fill="none" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+</g>`;
 }
 
 function character(face: Face, id: string) {
@@ -72,31 +102,28 @@ ${eye(face.eyes[0], 80, 64)}${eye(face.eyes[1], 120, 64)}${brows}${grin(face, id
 }
 
 const faces: Face[] = [
-  { name: 'Grin', idea: 'Friendly default: open grin, two fangs', eyes: ['round', 'round'], mouth: { l: [68, 90], r: [132, 90], depth: 30 }, fang: 24 },
+  { name: 'Grin', idea: 'Friendly default: open grin, two fangs', eyes: ['round', 'round'], mouth: { y: 88, open: 40 } },
   {
     name: 'Smirk',
     idea: 'One side up, one brow: confident',
     eyes: ['round', 'round'],
     brows: [[70, 46, 88, 48], [112, 44, 130, 38]],
-    mouth: { l: [70, 94], r: [132, 86], depth: 26 },
-    fang: 22,
+    mouth: { y: 89, open: 36, tilt: -6 },
   },
   {
     name: 'Cool',
     idea: 'Heavy lids, slow grin: flashy, unbothered',
     eyes: ['lidded', 'lidded'],
-    mouth: { l: [68, 90], r: [132, 90], depth: 26 },
-    fang: 22,
+    mouth: { y: 89, open: 34 },
   },
-  { name: 'Wink', idea: 'A wink as the signature (like Freddie)', eyes: ['round', 'wink'], mouth: { l: [68, 91], r: [132, 88], depth: 30 }, fang: 24 },
-  { name: 'Hype', idea: 'Eyes shut, big laugh: celebrating', eyes: ['happy', 'happy'], mouth: { l: [64, 88], r: [136, 88], depth: 40 }, fang: 28 },
+  { name: 'Wink', idea: 'A wink as the signature (like Freddie)', eyes: ['round', 'wink'], mouth: { y: 88, open: 40, tilt: -3 } },
+  { name: 'Hype', idea: 'Eyes shut, big laugh: celebrating', eyes: ['happy', 'happy'], mouth: { y: 86, open: 50 } },
   {
     name: 'Boss',
     idea: 'Low brows, wide grin: the craftsman',
     eyes: ['round', 'round'],
     brows: [[68, 48, 90, 54], [110, 54, 132, 48]],
-    mouth: { l: [66, 92], r: [134, 92], depth: 24 },
-    fang: 22,
+    mouth: { y: 90, open: 34 },
   },
 ];
 
@@ -127,10 +154,16 @@ const sheet = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" w
 ${cells}
 </svg>`;
 
+/** The grin up close, to judge the teeth themselves. */
+const closeup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 76 96 64" width="960" height="640">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">${GOLD}</linearGradient></defs>
+<rect x="52" y="76" width="96" height="64" fill="#d9ad4b"/>${grin(faces[0], 'close')}</svg>`;
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   writeFileSync(`${OUT}/round-3-faces.svg`, sheet);
   await sharp(Buffer.from(sheet)).png({ compressionLevel: 9 }).toFile(`${OUT}/round-3-faces.png`);
+  await sharp(Buffer.from(closeup)).png({ compressionLevel: 9 }).toFile(`${OUT}/round-3-grin-closeup.png`);
   console.log('written', OUT);
 }
 

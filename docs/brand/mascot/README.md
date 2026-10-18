@@ -72,11 +72,14 @@ Source: `scripts/mascot-round2.ts`. What it shows:
 
 ## Round 3: the face
 
-Chosen body: **F, Root fang**. The grin carries the grillz: two obvious gold
-fangs and one iced-out tooth in the centre, set against a dark mouth so they
-read even at 64px (avatar size).
+Chosen body: **F, Root fang**. The grin carries the grillz, built like the
+hero image: separate gold caps with rounded tips, long tapered gold fangs on
+the canines, the centre tooth iced out in pavé, natural white teeth below,
+in a wide open mouth so they read even at 64px (avatar size).
 
 ![Round 3 faces](round-3-faces.png)
+
+![The grin up close](round-3-grin-closeup.png)
 
 Source: `scripts/mascot-round3.ts`. Six faces, one personality each: Grin
 (friendly default), Smirk (confident), Cool (flashy, unbothered), Wink (a
