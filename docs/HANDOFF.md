@@ -242,6 +242,10 @@ also change team roles, revoke invites and upload the logo.
 2. **Billing enforcement** (`enforceBilling`): pauses live shops whose trial
    ended with no plan, and shops `past_due` for more than 7 days
    (`GRACE_DAYS`).
+3. **Spend and error alerts** (`server/alerts.ts`): emails `ALERT_EMAIL` (or
+   `PLATFORM_LEADS_EMAIL`) only when Black Forest Labs credits are low, the
+   last 24 hours used 80% of the daily AI budget, photos were refused or
+   failed, or emails to shops failed.
 
 The run logs one `daily {…}` JSON line with counts.
 
@@ -382,6 +386,7 @@ ships to the browser.
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | yes | Connect webhook (`?connect=1`) | Deposits never marked paid |
 | `VERCEL_DOMAINS_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` | for domains | Custom domains | "Domains aren't switched on yet" |
 | `RENDER_DAILY_GENERATIONS` | optional | Global daily AI budget | Default 45 |
+| `ALERT_EMAIL`, `ALERT_LOW_CREDITS` | optional | Where daily spend/error alerts go (falls back to `PLATFORM_LEADS_EMAIL`); credit level that triggers a warning (default 1000 ≈ $10) | No alert email |
 | `POSTHOG_PERSONAL_API_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_HOST` | optional | Dashboard Stats tab | Stats shows lead numbers only |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | optional | Daily render budget only when there is no database (local dev) | Per-instance counting |
 
@@ -430,11 +435,23 @@ with **200** when all checks pass and **503** otherwise:
 It does not check Stripe, BFL credits, Resend reachability, the cron or the
 Supabase sign-up setting. It is public and returns no counts or customer data.
 
+**Uptime** is watched from outside Vercel: a `pg_cron` job in Supabase asks
+`/api/health` every 5 minutes through `pg_net` (migration
+`20261019000002_uptime.sql`). Two failures in a row email an alert, it
+repeats hourly while down, and a recovery email follows. The Resend key and
+recipient live in Supabase Vault (`uptime_resend_api_key`,
+`uptime_alert_email`); checks and alerts are recorded in `uptime_checks` and
+`uptime_alerts`. It can't report a Supabase outage, since it runs there.
+
+**Load test:** `npx tsx scripts/load-test.ts --origin <url> --users 50 --seconds 60`
+runs 50 virtual customers over the public read paths and fails on >1% errors
+or a p95 over 1.5 s.
+
 Logging is `console.error`/`console.log` into Vercel function logs. Useful
 grep targets: `lead failed`, `lead email failed`, `lead daily cap reached`,
 `render paused:`, `reservation failed`, `stripe`, `tenant lookup failed`,
 `signup refused`, `invite refused`, `daily {` (cron summary). There is no error
-tracker or alerting yet.
+tracker (Sentry) yet.
 
 ## CI and tests
 
@@ -480,13 +497,13 @@ remaining Stage 7b runbooks.
 1. ~~**Offboarding is partly manual.**~~ Fixed: offboarding runs on the server
    (plan cancels at period end, domain removed, logos purged with the leads).
    See [`runbooks/offboarding.md`](runbooks/offboarding.md).
-2. **No backup or restore procedure is documented or tested**, and nothing in
-   the repo shows which Supabase backup tier is enabled. Storage objects
-   (`lead-media`, `tenant-assets`) are not part of Postgres backups.
-3. **No alerting.** `/api/health` exists but nothing watches it. It also
-   reports 503 for missing env vars, so a monitor should target production
-   only (previews may lack secrets), and failures of the daily cron are only
-   visible in the logs.
+2. **The restore procedure is documented but not yet drilled**
+   ([`runbooks/restore.md`](runbooks/restore.md)), and nothing in the repo
+   shows which Supabase backup tier is enabled. Storage objects (`lead-media`,
+   `tenant-assets`) are not part of Postgres backups.
+3. ~~**No alerting.**~~ Uptime is watched from Supabase (`pg_cron`), and the
+   daily cron sends spend and error alerts. Still missing: an error tracker
+   (Sentry), and an alert if the daily cron itself stops running.
 4. `.env.example` is out of date: it lists `RENDER_DAILY_CAP`, but the code
    reads `RENDER_DAILY_GENERATIONS`; most server variables are missing.
 5. The comment at the top of `20261018000004_signup.sql` says the trial is
@@ -508,13 +525,10 @@ remaining Stage 7b runbooks.
     resets IP-based rate-limit history.
 11. `VITE_PLAN_PAYMENT_LINK` is declared in `src/vite-env.d.ts` but not used.
 
-## Stage 7b (next)
+## Stage 7b
 
-Planned, not yet in the repo:
-
-- Runbooks: onboarding, incident, restore (offboarding is done:
-  [`runbooks/offboarding.md`](runbooks/offboarding.md)).
-- Backup + restore drill (see gap 2).
-- Load test: 50 concurrent users on the read endpoints (`/api/tenant/<slug>`,
-  `/b/<slug>`, custom-domain `/`, `/embed.js`, `/api/health`).
-- Uptime alerts on `/api/health` (see gap 3).
+- Runbooks: [`runbooks/`](runbooks/) (onboarding, offboarding, incident, restore).
+- Uptime monitor and daily spend/error alerts (see *Health and observability*).
+- Load-test script (`scripts/load-test.ts`); results of production runs are
+  recorded in Linear (MAG-75).
+- Still open: the backup and restore drill (gap 2) and Sentry.
