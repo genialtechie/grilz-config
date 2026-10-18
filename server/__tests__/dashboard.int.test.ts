@@ -185,4 +185,34 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     const result = await handleDashboard('stats', { tenantId, days: 7 }, ownerToken, env);
     expect(result).toMatchObject({ status: 200, body: { available: false } });
   });
+
+  // Last: it closes the shop.
+  it('offboards through the server only: page closed, domain removed, plan locked', async () => {
+    const adminId = await used(`admin-${stamp}@int.test`);
+    await rest('platform_admins', { method: 'POST', body: JSON.stringify({ user_id: adminId }) });
+    const adminToken = await signIn(`admin-${stamp}@int.test`);
+    const offDomain = `off-${stamp}.goldmouth.test`;
+    await rest('tenant_domains', { method: 'POST', body: JSON.stringify({ tenant_id: tenantId, domain: offDomain, status: 'active' }) });
+
+    // A browser session can't skip the server steps, even an admin's.
+    const direct = await realFetch(`${url}/rest/v1/tenants?id=eq.${tenantId}`, {
+      method: 'PATCH',
+      headers: { apikey: anon!, Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'offboarded' }),
+    });
+    expect(direct.ok).toBe(false);
+    expect((await handleDashboard('offboard', { tenantId }, ownerToken, env)).status).toBe(403);
+
+    const result = await handleDashboard('offboard', { tenantId }, adminToken, env);
+    expect(result).toMatchObject({ status: 200, body: { ok: true } });
+    const [row] = await rest(`tenants?id=eq.${tenantId}&select=status,offboarded_at`);
+    expect(row.status).toBe('offboarded');
+    expect(row.offboarded_at).toBeTruthy();
+    expect(await rest(`tenant_domains?tenant_id=eq.${tenantId}&select=id`)).toEqual([]);
+    expect(vercelCalls.some((call) => call === `DELETE https://api.vercel.com/v9/projects/prj_test/domains/${offDomain}`)).toBe(true);
+    expect((await handleDashboard('billing_checkout', { tenantId }, ownerToken, env)).status).toBe(409);
+    // Running it again is harmless.
+    expect((await handleDashboard('offboard', { tenantId }, adminToken, env)).status).toBe(200);
+    await rest(`platform_admins?user_id=eq.${adminId}`, { method: 'DELETE' });
+  });
 });

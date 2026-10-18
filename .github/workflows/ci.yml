@@ -39,6 +39,8 @@ jobs:
       - name: Lead pipeline and dashboard integration tests
         run: |
           npx -y tsx@4.19.2 scripts/tenant-seed-sql.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q
+          # pipeline.int.test.ts uses the gold-block demo shop for its cross-shop token check.
+          npx -y tsx@4.19.2 scripts/demo-shops.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q
           export INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321
           export INTEGRATION_SERVICE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')
           export INTEGRATION_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')

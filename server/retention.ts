@@ -3,7 +3,8 @@ import type { TenantEnv } from './tenants.js';
 
 // Data retention, run daily by Vercel Cron (GET /api/cron/retention):
 // leads older than 24 months, and every lead of a shop offboarded more than 90
-// days ago, are deleted together with their 3D captures and studio photos.
+// days ago, are deleted together with their 3D captures and studio photos; that
+// shop's logos (tenant-assets) go at the same point.
 // Also used when a shop deletes one customer's data on request.
 
 type Expired = { id: string; tenant_id: string; preview_path: string | null; photo_path: string | null; reason: string };
@@ -19,6 +20,28 @@ async function deleteLeads(db: Db, leads: Pick<Expired, 'id' | 'preview_path' | 
   return leads.length;
 }
 
+/** Same window as the leads: 90 days after offboarding. */
+export const OFFBOARD_KEEP_DAYS = 90;
+
+/** Deletes the logos of shops offboarded more than 90 days ago (tenant-assets/<tenant id>/), once per shop. */
+async function purgeOffboardedAssets(db: Db, dryRun: boolean) {
+  const before = new Date(Date.now() - OFFBOARD_KEEP_DAYS * 864e5).toISOString();
+  const shops = await db.select<{ id: string }>('tenants', { status: 'eq.offboarded', offboarded_at: `lt.${before}`, assets_purged_at: 'is.null', select: 'id', limit: '50' });
+  if (dryRun) return { shops: shops.length, files: 0 };
+  let files = 0;
+  for (const shop of shops) {
+    // Pages of up to 1000 until the folder is empty (bounded).
+    for (let round = 0; round < 10; round += 1) {
+      const objects = (await db.listObjects('tenant-assets', shop.id)).filter((item) => item.id !== null);
+      if (!objects.length) break;
+      await db.removeObjects('tenant-assets', objects.map((item) => `${shop.id}/${item.name}`));
+      files += objects.length;
+    }
+    await db.update('tenants', { id: `eq.${shop.id}` }, { assets_purged_at: new Date().toISOString() });
+  }
+  return { shops: shops.length, files };
+}
+
 export async function runRetention(env: TenantEnv, dryRun = false) {
   if (!hasDb(env)) return { ok: false, error: 'database not configured' };
   const db = createDb(env);
@@ -29,10 +52,11 @@ export async function runRetention(env: TenantEnv, dryRun = false) {
     const due = await db.rpc<Expired[]>('expired_leads', { max_rows: 500 });
     if (!due.length) break;
     due.forEach((lead) => { reasons[lead.reason] = (reasons[lead.reason] ?? 0) + 1; });
-    if (dryRun) return { ok: true, dryRun: true, due: due.length, reasons };
+    if (dryRun) return { ok: true, dryRun: true, due: due.length, reasons, assets: await purgeOffboardedAssets(db, true) };
     deleted += await deleteLeads(db, due);
   }
-  return { ok: true, deleted, reasons };
+  const assets = await purgeOffboardedAssets(db, dryRun);
+  return dryRun ? { ok: true, dryRun: true, due: 0, reasons, assets } : { ok: true, deleted, reasons, assets };
 }
 
 /** Deletes one customer's lead (and its files) for the shop, on the customer's request. */

@@ -207,6 +207,10 @@ role for the shop (`platform_admins` → `admin`, else `members.role`).
 | `domain_add`, `domain_remove` | owner, admin | Adds/removes the domain on the Vercel project |
 | `billing_checkout`, `billing_portal`, `connect_onboard` | owner, admin | Stripe |
 | `connect_status` | any member | Refreshes `stripe_charges_enabled` |
+| `offboard` | admin | Closes the page, sets the plan to cancel at period end, removes the custom domain. Safe to re-run (`server/offboard.ts`) |
+
+Billing and Connect actions other than `connect_status` answer 409 for an
+offboarded shop.
 
 Everything else goes straight to Supabase from the browser under RLS: any
 member reads leads, changes lead status, adds notes and edits drafts; owners
@@ -231,6 +235,8 @@ also change team roles, revoke invites and upload the logo.
 1. **Retention** (`server/retention.ts`): `expired_leads()` returns leads older
    than 24 months and every lead of a shop offboarded more than 90 days ago.
    Files are deleted first, then rows, in batches (max 20 × 500 per run).
+   The logos (`tenant-assets/<tenant id>/`) of shops offboarded more than 90
+   days ago go at the same point, once per shop (`assets_purged_at`).
    `?dry=1` reports what would be deleted.
 2. **Billing enforcement** (`enforceBilling`): pauses live shops whose trial
    ended with no plan, and shops `past_due` for more than 7 days
@@ -245,7 +251,7 @@ grants. Migrations in `supabase/migrations/` are the source of truth.
 
 | Table | Purpose | Key columns |
 | --- | --- | --- |
-| `tenants` | One row per shop. Never deleted, so a slug can't be reused | `slug`, `kind` (demo/shop/fixture), `status` (draft/live/paused/offboarded), `plan` (founding/trial/paid/canceled), `published_version`, `trial_ends_at`, `created_via`, `offboarded_at`, `stripe_customer_id`, `stripe_subscription_id`, `billing_status` (none/trialing/active/past_due/canceled), `current_period_end`, `past_due_since`, `stripe_account_id`, `stripe_charges_enabled` |
+| `tenants` | One row per shop. Never deleted, so a slug can't be reused | `slug`, `kind` (demo/shop/fixture), `status` (draft/live/paused/offboarded), `plan` (founding/trial/paid/canceled), `published_version`, `trial_ends_at`, `created_via`, `offboarded_at`, `assets_purged_at`, `stripe_customer_id`, `stripe_subscription_id`, `billing_status` (none/trialing/active/past_due/canceled), `current_period_end`, `past_due_since`, `stripe_account_id`, `stripe_charges_enabled` |
 | `tenant_configs` | Versioned shop config (jsonb, validated by `src/lib/tenant/schema.ts`) | `version`, `status` (draft/published/archived), `published_at` |
 | `members` | User ↔ shop, role owner/staff | trigger `keep_an_owner` |
 | `member_invites` | Append-only invite log (also the invite rate limit) | `accepted_at`, `revoked_at`; valid 7 days |
@@ -270,14 +276,15 @@ write under `<tenant id>/`) and `lead-media` (private; 5 MB; members read
 | `month_generations` / `day_generations` | service role | Allowance month is US Eastern; daily budget day is the DB day (UTC) |
 | `publish_config_service` | service role | Publish a validated config |
 | `publish_config` | admins (browser) | Admin publish |
-| `set_tenant_status` | admins (browser) | Status changes incl. offboarding; refuses `live` without a published version |
+| `set_tenant_status` | admins (browser) | Status changes; refuses `live` without a published version. Can't set `offboarded` (trigger `offboard_on_server_only`) |
 | `accept_member_invites` | signed-in user | Turns pending invites for their confirmed email into memberships |
 | `shop_team`, `shop_stats` | members | Team list with emails; lead-based stats (`shop_stats` is security invoker) |
 | `expired_leads` | service role | Retention queue |
 
 Triggers worth knowing: `lock_member_draft` (members can't change plan fields
 even in drafts), `log_lead_status` (status changes become events),
-`stamp_offboarded` (sets/clears `offboarded_at`), `keep_an_owner`.
+`stamp_offboarded` (sets/clears `offboarded_at`), `keep_an_owner`,
+`offboard_on_server_only` (signed-in sessions can't set `offboarded`).
 
 `supabase/tests/isolation.sql` proves tenant A can't read or change tenant B's
 data. CI runs it on every PR.
@@ -300,9 +307,12 @@ data. CI runs it on every PR.
    │  webhook: subscription canceled ─┘
    │  webhook: active/trialing again ─▶ back to live (if paused for billing)
    │
-   └── admin only (set_tenant_status) ──▶ offboarded
-         page closed; team keeps read access to export leads for 90 days;
-         then the cron deletes the leads. Tenant row and slug stay reserved.
+   └── admin only (Offboard → POST /api/dashboard/offboard) ──▶ offboarded
+         page closed; plan cancels at period end; custom domain removed;
+         team keeps read access to export leads for 90 days; then the cron
+         deletes the leads and logos. Tenant row and slug stay reserved.
+         A browser session can't set 'offboarded' directly (DB trigger).
+         Runbook: docs/runbooks/offboarding.md
 ```
 
 `plan` and `billing_status` are kept in sync by the subscription webhooks:
@@ -463,13 +473,12 @@ them to production by hand, in filename order, then run
 
 ## Known gaps and risks
 
-Verified in the code at the time of writing. Items 1–3 should shape the
-Stage 7b runbooks.
+Verified in the code at the time of writing. Items 2–3 should shape the
+remaining Stage 7b runbooks.
 
-1. **Offboarding is partly manual.** `set_tenant_status(…, 'offboarded')` only
-   changes the row. It does **not** cancel the Stripe subscription, remove the
-   custom domain from Vercel or `tenant_domains`, or delete the shop's logos in
-   `tenant-assets` (retention deletes only `lead-media`).
+1. ~~**Offboarding is partly manual.**~~ Fixed: offboarding runs on the server
+   (plan cancels at period end, domain removed, logos purged with the leads).
+   See [`runbooks/offboarding.md`](runbooks/offboarding.md).
 2. **No backup or restore procedure is documented or tested**, and nothing in
    the repo shows which Supabase backup tier is enabled. Storage objects
    (`lead-media`, `tenant-assets`) are not part of Postgres backups.
@@ -502,7 +511,8 @@ Stage 7b runbooks.
 
 Planned, not yet in the repo:
 
-- Runbooks: onboarding, offboarding (see gap 1), incident, restore.
+- Runbooks: onboarding, incident, restore (offboarding is done:
+  [`runbooks/offboarding.md`](runbooks/offboarding.md)).
 - Backup + restore drill (see gap 2).
 - Load test: 50 concurrent users on the read endpoints (`/api/tenant/<slug>`,
   `/b/<slug>`, custom-domain `/`, `/embed.js`, `/api/health`).

@@ -4,6 +4,7 @@ import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } fro
 import { sendEmail, type EmailEnv } from './email.js';
 import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
+import { offboardTenant } from './offboard.js';
 import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
@@ -216,6 +217,9 @@ async function money(db: Db, user: { id: string; email?: string }, action: strin
   if (!role) return reply(404, { error: 'not_found' });
   if (action === 'connect_status') return connectStatus(db, env, tenantId);
   if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can manage payments.' });
+  // A closed shop can't restart its plan or reopen Stripe (its plan ends at period end).
+  const [tenant] = await db.select<{ status: string }>('tenants', { id: `eq.${tenantId}`, select: 'status' });
+  if (tenant?.status === 'offboarded') return reply(409, { error: 'closed', message: 'This shop is closed. Message VVS Lab.' });
   if (action === 'billing_checkout') return billingCheckout(db, env, tenantId, user.email);
   if (action === 'billing_portal') return billingPortal(db, env, tenantId);
   return connectOnboard(db, env, tenantId, user.email);
@@ -281,6 +285,14 @@ export async function handleDashboard(action: string, payload: unknown, token: s
     if (action.startsWith('domain')) return await domain(db, user.id, action, body, env);
     if (action === 'lead_delete') return await removeLead(db, user.id, body);
     if (action === 'go_live' || action === 'pause') return await setLive(db, user.id, action, body);
+    if (action === 'offboard') {
+      const tenantId = String(body.tenantId ?? '');
+      if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+      const role = await roleFor(db, user.id, tenantId);
+      if (!role) return reply(404, { error: 'not_found' });
+      if (role !== 'admin') return reply(403, { error: 'admin_only', message: 'Only VVS Lab can offboard a shop.' });
+      return await offboardTenant(db, env, tenantId);
+    }
     if (['billing_checkout', 'billing_portal', 'connect_onboard', 'connect_status'].includes(action)) return await money(db, user, action, body, env);
     return reply(404, { error: 'not_found' });
   } catch (error) {

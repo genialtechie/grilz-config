@@ -2,7 +2,7 @@
 begin;
 do $$
 declare
-  ua uuid := gen_random_uuid(); ub uuid := gen_random_uuid();
+  ua uuid := gen_random_uuid(); ub uuid := gen_random_uuid(); uadm uuid := gen_random_uuid();
   ta uuid; tb uuid; la uuid; lb uuid; ca uuid; n int; ok boolean;
 begin
   insert into auth.users (id, instance_id, aud, role, email) values
@@ -126,6 +126,21 @@ begin
   ok := false;
   begin update public.tenant_domains set status = 'active' where tenant_id = ta; get diagnostics n = row_count; if n = 0 then ok := true; end if; exception when others then ok := true; end;
   if not ok then raise exception 'A activated its own domain'; end if;
+
+  -- offboarding goes through the server, even for a platform admin's session
+  reset role;
+  insert into auth.users (id, instance_id, aud, role, email) values (uadm, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'iso-admin@test.local');
+  insert into public.platform_admins (user_id) values (uadm);
+  perform set_config('request.jwt.claims', json_build_object('sub', uadm, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  ok := false;
+  begin update public.tenants set status = 'offboarded' where id = ta; exception when others then ok := true; end;
+  if not ok then raise exception 'an admin session offboarded a shop directly'; end if;
+  ok := false;
+  begin perform public.set_tenant_status(ta, 'offboarded'); exception when others then ok := true; end;
+  if not ok then raise exception 'set_tenant_status offboarded a shop'; end if;
+  perform public.set_tenant_status(ta, 'paused');
+  select count(*) into n from public.tenants where id = ta and status = 'paused'; if n <> 1 then raise exception 'admin could not pause a shop'; end if;
 
   -- act as anon
   reset role;
