@@ -49,6 +49,22 @@ of this:
 - Cut: what was there before and why it went (repeats, state we don't know...).
 ```
 
+## Also decide, per email
+
+- **One success metric**, measured in the product, not opens (Apple Mail
+  Privacy Protection makes opens meaningless): e.g. "booking page published
+  within 48h of the welcome", "lead contacted within an hour".
+- **The trigger and its guard**: the exact event, a short delay and re-check
+  if the event can be undone quickly, and a dedupe key so retries never send
+  twice.
+- **Lock-screen privacy**: subjects and preheaders show on shared lock
+  screens. Who and when is fine; health notes, addresses or anything
+  sensitive stays in the body.
+- **Bursts**: if the event can fire many times in minutes (a viral post),
+  collapse them into one email ("5 new bookings").
+- **Time**: show times in the reader's time zone and say which; give
+  calendar files a stable UID so updates replace the event.
+
 ## Gaps the plan exposes
 
 Planning from the reader's job regularly shows the product is missing a step.
