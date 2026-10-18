@@ -3,6 +3,11 @@
 For anything a jeweler or customer would notice: builder not loading, designs
 not arriving, photos failing, payments failing, a custom domain down.
 
+Alerts that may have brought you here: **"VVS Lab is DOWN"** (the uptime
+monitor in Supabase: two failed health checks in a row) and **"VVS Lab
+alert: …"** (the daily spend and error check). See `HANDOFF.md` →
+*Health and observability*.
+
 ## 1. Triage (5 minutes)
 
 1. **Health:** `curl -s https://vvslab.magpollo.com/api/health`. 200 with
