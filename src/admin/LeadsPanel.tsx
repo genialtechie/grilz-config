@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Download, MessageSquare, Search, Trash2 } from 'lucide-react';
+import { Download, Instagram, Mail, MessageCircle, MessageSquare, Search, Trash2 } from 'lucide-react';
 import { displayContact } from '../lib/contact';
 import { addLeadNote, deleteLeadData, leadNotes, listLeads, setLeadStatus, type LeadEvent } from './data';
 import { LEAD_STATUSES, leadsCsv, STATUS_LABEL } from './leadsCsv';
@@ -10,6 +10,23 @@ const usd = (value: number) => `$${Number(value).toLocaleString('en-US')}`;
 const when = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 type Lead = Awaited<ReturnType<typeof listLeads>>[number];
+
+/** One tap to the customer, the way they asked to be reached (as in the lead email). */
+function ContactActions({ lead }: { lead: Lead }) {
+  const first = lead.name.split(/\s+/)[0] || lead.name;
+  const phone = lead.contact.startsWith('+');
+  const handle = lead.contact.replace(/^@/, '');
+  return (
+    <div className="admin-lead__actions">
+      {phone ? (
+        <a className="admin-button admin-button--small admin-lead__reach" href={`sms:${lead.contact}`}><MessageCircle size={14} /> Text {first}</a>
+      ) : (
+        <a className="admin-button admin-button--small admin-lead__reach" href={`https://ig.me/m/${encodeURIComponent(handle)}`} target="_blank" rel="noopener"><Instagram size={14} /> Message {first}</a>
+      )}
+      {lead.email && <a className="admin-button admin-button--small" href={`mailto:${lead.email}`}><Mail size={14} /> Email</a>}
+    </div>
+  );
+}
 
 function NoteForm({ onSave }: { onSave: (text: string) => Promise<void> }) {
   const [text, setText] = useState('');
@@ -132,6 +149,7 @@ export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { 
                 <div>{displayContact(lead.contact)}{lead.email ? ` · ${lead.email}` : ''}</div>
                 <div className="admin-muted">{(lead.spec.summary ?? []).join(' · ')}</div>
                 {lead.note && <div className="admin-lead__note">“{lead.note}”</div>}
+                <ContactActions lead={lead} />
                 <div className="admin-lead__meta">
                   <strong>{usd(lead.total)}</strong>
                   {lead.deposit !== null && <span>deposit {usd(lead.deposit)}</span>}
@@ -139,7 +157,7 @@ export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { 
                   <span className={lead.delivery === 'email_failed' ? 'admin-error' : ''}>{lead.delivery ? DELIVERY[lead.delivery] ?? lead.delivery : lead.notified_at ? 'Delivered' : 'Waiting for photo'}</span>
                   {lead.source.utm_source && <span>from {lead.source.utm_source}</span>}
                   <button className="admin-link-button" type="button" onClick={() => setOpen(open === lead.id ? null : lead.id)} aria-expanded={open === lead.id}>
-                    <MessageSquare size={13} /> {noteCount ? `${noteCount} note${noteCount > 1 ? 's' : ''}` : 'Notes'}
+                    <MessageSquare size={13} /> {noteCount ? `${noteCount} note${noteCount > 1 ? 's' : ''}` : canDelete ? 'Notes & data' : 'Notes'}
                   </button>
                 </div>
                 {open === lead.id && (

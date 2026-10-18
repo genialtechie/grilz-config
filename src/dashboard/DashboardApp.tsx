@@ -147,7 +147,7 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
       </nav>
       <Routes>
         <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
-        <Route path="shop" element={<><div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} /></div><ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>} />
+        <Route path="shop" element={<><div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} compact /></div><ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>} />
         <Route path="website" element={<WebsitePanel shop={shop} />} />
         <Route path="stats" element={<StatsPanel shop={shop} />} />
         <Route path="team" element={<TeamPanel shop={shop} />} />

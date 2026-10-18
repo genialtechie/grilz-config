@@ -97,6 +97,8 @@ describe('GET /api/tenant/:slug', () => {
     const result = await handleTenant('API-OK', env);
     expect(result.status).toBe(200);
     expect(result.headers['Cache-Control']).toContain('s-maxage=30');
+    // embed.js reads it from shops' own websites.
+    expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
     const body = JSON.stringify(result.body);
     expect(body).not.toContain('owner@icebox.test');
     expect(body).not.toContain('+15555550100');

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { shopStats, viewStats, type MyShop, type ShopStats } from '../admin/data';
 
 // The week at a glance: design requests and how they're moving, popular
@@ -57,6 +58,12 @@ export function StatsPanel({ shop }: { shop: MyShop }) {
       {error && <p className="admin-error" role="alert">{error}</p>}
       {!stats ? (
         <p className="admin-muted">Loading…</p>
+      ) : !stats.now.leads && !views?.views ? (
+        <section className="admin-card admin-section dash-stats-empty">
+          <h2 className="dash-serif">Nothing to count <em>yet</em></h2>
+          <p>No one has opened your builder or sent a design in the {RANGES.find(([value]) => value === days)?.[1].toLowerCase()}. Once they do, you’ll see requests, their value, how many you’ve contacted and what customers pick.</p>
+          <Link className="admin-button" to={`/dashboard/${shop.slug}/website`}>Share your link</Link>
+        </section>
       ) : (
         <>
           <div className="dash-tiles">
