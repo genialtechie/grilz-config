@@ -1,3 +1,5 @@
+// First: takes an emailed sign-in token out of the URL before anything reads it.
+import './lib/emailSignIn.ts';
 import { StrictMode } from 'react';
 import { PostHogProvider } from '@posthog/react';
 import { createRoot } from 'react-dom/client';

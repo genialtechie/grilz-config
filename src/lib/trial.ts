@@ -21,6 +21,18 @@ export const trialExpired = (shop: TrialFields, now = Date.now()) =>
 export const trialDaysLeft = (shop: TrialFields, now = Date.now()) =>
   shop.trial_ends_at ? Math.max(0, Math.ceil((new Date(shop.trial_ends_at).getTime() - now) / 864e5)) : 0;
 
+/**
+ * The trial_end to give Stripe Checkout, as a Unix timestamp. Stripe rounds the
+ * time left down ("13 days free") while the dashboard rounds up ("14 days left"),
+ * so this ends the Stripe trial on the dashboard's whole-day count, plus an hour
+ * so Stripe's rounding lands on the same number. Null within 48 hours of the
+ * end (Stripe's minimum): billing then starts right away.
+ */
+export const checkoutTrialEnd = (shop: TrialFields, now = Date.now()): number | null => {
+  if (!shop.trial_ends_at || new Date(shop.trial_ends_at).getTime() - now <= 48 * 3600_000) return null;
+  return Math.floor((now + trialDaysLeft(shop, now) * 864e5 + 3600_000) / 1000);
+};
+
 // The card is optional at signup. The first visit asks once; after that a
 // reminder pops up at random, more often as the trial runs out:
 //   8+ days left: 1 in 5 visits · 4–7 days: 2 in 5 · 2–3 days: 3 in 4 · last day: every visit.

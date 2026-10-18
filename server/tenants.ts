@@ -1,3 +1,4 @@
+import { dangerouslyDeleteByTag } from '@vercel/functions';
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab.js';
 import { trialExpired } from '../src/lib/trial.js';
@@ -109,8 +110,24 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
     console.error('tenant lookup error', slug, error instanceof Error ? error.message : error);
     return { ok: false, reason: 'unavailable' };
   }
-  cache.set(slug, { at: Date.now(), value });
+  // Only live shops are kept in memory. Instances don't share memory, so a paused
+  // shop that pays (or is switched back on) must show up on the next request.
+  if (value.ok && value.tenant.status === 'live') cache.set(slug, { at: Date.now(), value });
+  else cache.delete(slug);
   return value;
+}
+
+/** The CDN cache tag on a shop's /api/tenant response. */
+export const tenantCacheTag = (slug: string) => `tenant:${slug}`;
+
+/** Drops a shop's cached config here and at the edge, after its status or billing changed. */
+export async function forgetTenant(slug: string) {
+  cache.delete(slug);
+  try {
+    await dangerouslyDeleteByTag(tenantCacheTag(slug));
+  } catch (error) {
+    console.error('tenant cache purge failed', slug, error instanceof Error ? error.message : error);
+  }
 }
 
 /** The public view of a tenant: never includes lead routes or internal ids. */

@@ -117,7 +117,9 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     expect(result.body).toMatchObject({ invited: true });
     const mail = sent.find((item) => item.to.includes(email));
     expect(mail?.subject).not.toContain('Dash Int'); // shop names stay out of subjects
-    expect(mail?.html).toContain('/auth/v1/verify');
+    expect(mail?.html).toContain(`https://shop.test/dashboard/welcome?token_hash=`); // our page signs them in (PKCE-safe)
+    expect(mail?.html).not.toContain('/auth/v1/verify');
+    expect((mail as { from?: string } | undefined)?.from).toBe('VVS Lab <hello@vvslab.magpollo.com>');
     expect(await rest(`members?tenant_id=eq.${tenantId}&select=user_id`)).toHaveLength(2);
     const [invite] = await rest(`member_invites?tenant_id=eq.${tenantId}&email=eq.${email}&select=role,accepted_at`);
     expect(invite).toMatchObject({ role: 'staff', accepted_at: null });

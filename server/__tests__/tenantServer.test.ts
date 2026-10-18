@@ -2,9 +2,12 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { shopHead } from '../shopPage';
 import { handleTenant } from '../tenantApi';
-import { TENANT_ZERO, getPublishedTenant, isValidSlug, publicTenant, type PublishedTenant } from '../tenants';
+import { TENANT_ZERO, forgetTenant, getPublishedTenant, isValidSlug, publicTenant, tenantCacheTag, type PublishedTenant } from '../tenants';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 import { contrast, usableAccent } from '../../src/lib/tenant/theme';
+
+const purge = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('@vercel/functions', () => ({ dangerouslyDeleteByTag: purge }));
 
 const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'service' };
 
@@ -64,6 +67,27 @@ describe('tenant lookup', () => {
     expect(await getPublishedTenant('lookup-flaky', env)).toEqual({ ok: false, reason: 'unavailable' });
     mockFetch(async () => Response.json([row('lookup-flaky', shopConfig())]));
     expect((await getPublishedTenant('lookup-flaky', env)).ok).toBe(true);
+  });
+
+  it('caches live shops only, so a paused shop that pays shows up on the next request', async () => {
+    const paused = vi.fn(async () => Response.json([row('lookup-paused', shopConfig(), { status: 'paused' })]));
+    vi.stubGlobal('fetch', paused);
+    expect(await getPublishedTenant('lookup-paused', env)).toMatchObject({ ok: true, tenant: { status: 'paused' } });
+    const live = vi.fn(async () => Response.json([row('lookup-paused', shopConfig())]));
+    vi.stubGlobal('fetch', live);
+    expect(await getPublishedTenant('lookup-paused', env)).toMatchObject({ ok: true, tenant: { status: 'live' } });
+    await getPublishedTenant('lookup-paused', env);
+    expect(live).toHaveBeenCalledTimes(1); // live is cached
+  });
+
+  it('forgets a shop in memory and purges its edge cache tag', async () => {
+    const first = vi.fn(async () => Response.json([row('lookup-forget', shopConfig())]));
+    vi.stubGlobal('fetch', first);
+    await getPublishedTenant('lookup-forget', env);
+    await forgetTenant('lookup-forget');
+    expect(purge).toHaveBeenCalledWith(tenantCacheTag('lookup-forget'));
+    await getPublishedTenant('lookup-forget', env);
+    expect(first).toHaveBeenCalledTimes(2);
   });
 });
 

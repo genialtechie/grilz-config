@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onFreeTrial, pickPrompt, reminderChance, TRIAL_DAYS, trialDaysLeft, trialExpired } from '../../src/lib/trial';
+import { checkoutTrialEnd, onFreeTrial, pickPrompt, reminderChance, TRIAL_DAYS, trialDaysLeft, trialExpired } from '../../src/lib/trial';
 
 const now = Date.parse('2026-11-01T12:00:00Z');
 const at = (days: number) => new Date(now + days * 864e5).toISOString();
@@ -24,6 +24,23 @@ describe('free trial', () => {
     expect(trialDaysLeft({ trial_ends_at: at(13.2) }, now)).toBe(14);
     expect(trialDaysLeft({ trial_ends_at: at(0.1) }, now)).toBe(1);
     expect(trialDaysLeft({ trial_ends_at: at(-1) }, now)).toBe(0);
+  });
+
+  it('gives Stripe Checkout the same whole days the dashboard shows', () => {
+    // Stripe shows floor(days to trial_end); the dashboard shows ceil(days to trial_ends_at).
+    for (const left of [13.97, 13.2, 7.5, 2.1]) {
+      const shop = { trial_ends_at: at(left) };
+      const end = checkoutTrialEnd(shop, now)!;
+      const stripeDays = Math.floor((end * 1000 - now) / 864e5);
+      expect(stripeDays).toBe(trialDaysLeft(shop, now));
+      // ...even if the customer opens Checkout a few minutes later.
+      expect(Math.floor((end * 1000 - (now + 10 * 60_000)) / 864e5)).toBe(trialDaysLeft(shop, now));
+    }
+  });
+
+  it('starts billing right away within 48 hours of the end', () => {
+    expect(checkoutTrialEnd({ trial_ends_at: at(1.9) }, now)).toBeNull();
+    expect(checkoutTrialEnd({ trial_ends_at: null }, now)).toBeNull();
   });
 });
 
