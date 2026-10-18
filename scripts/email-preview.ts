@@ -6,7 +6,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
-import { customerEmail, inviteEmail, shopEmail, welcomeEmail, type LeadForEmail } from '../server/emailTemplates';
+import { customerEmail, depositPaidEmail, inviteEmail, shopEmail, welcomeEmail, type LeadForEmail } from '../server/emailTemplates';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab';
 
 const out = process.argv[2] ?? 'email-preview';
@@ -32,14 +32,15 @@ const lead: LeadForEmail = {
 };
 
 const shop = structuredClone(VVSLAB_CONFIG);
-shop.brand = { ...shop.brand, name: 'Gold Mouth Jewelers', instagram: 'goldmouth.atl', logo: '/assets/vvs/logo-mark.png', accent: '#1F5C4A' };
+shop.brand = { ...shop.brand, name: 'Gold Mouth Jewelers', instagram: 'goldmouth.atl', logo: '/assets/vvs/logo-mark.png' };
 
 const photo = `${local}/assets/vvs/photo-mixed.webp`;
 const withPhoto = (html: string) => html.replace(/cid:(photo|preview)/g, photo);
 
 const emails: Record<string, string> = {
   'design-request': withPhoto((await shopEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, photoPending: false, test: false })).html),
-  'customer-confirmation': withPhoto((await customerEmail({ lead, config: shop, origin, images: { photo: true, preview: false } })).html),
+  'customer-confirmation': withPhoto((await customerEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, depositHref: `${origin}/api/deposit?lead=x&t=x` })).html),
+  'deposit-paid': (await depositPaidEmail({ lead, config: shop, origin, amount: 500 })).html,
   welcome: (await welcomeEmail({ shop: 'Gold Mouth Jewelers', slug: 'gold-mouth', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin, trialDays: 14 })).html,
   invite: (await inviteEmail({ shop: 'Gold Mouth Jewelers', inviter: 'dre@goldmouth.com', role: 'staff', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin })).html,
 };

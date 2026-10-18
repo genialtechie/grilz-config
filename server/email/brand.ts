@@ -51,15 +51,17 @@ const vvsLinks = (origin: string) => [
   { label: 'Privacy', href: at(origin, '/privacy') },
 ];
 
-/** VVS Lab writing to jewelers: one cream surface (ink in dark mode), gold mark. */
+/** VVS Lab writing to jewelers: one cream surface (ink in dark mode), the gold
+ * mark, and the product's red accent (#ce4257, as in src/App.css). */
 export function vvsBrand(origin: string): Brand {
   return {
     name: 'VVS Lab',
     logo: { src: at(origin, '/assets/email/vvs-mark.png'), alt: 'VVS Lab', height: 44 },
     signOff: '— The VVS Lab team',
     footerMark: { src: at(origin, '/assets/email/vvs-icon.png'), alt: 'VVS Lab', height: 40 },
-    light: { page: '#fbf7f0', text: '#1b1714', muted: '#6f655a', line: '#e7ddcd', highlight: '#a87b23', link: '#7a5714', button: '#1b1714', buttonText: '#fbf7f0' },
-    dark: { page: '#1b1714', text: '#f3ede4', muted: '#b5a995', line: '#3b332b', highlight: '#e2b85e', link: '#e2b85e', button: '#e2b85e', buttonText: '#1b1714' },
+    // Contrast on the page: highlight 4.3:1 (large text), link 5.9:1, button text 4.6:1; dark 6.2:1.
+    light: { page: '#fbf7f0', text: '#1b1714', muted: '#6f655a', line: '#e7ddcd', highlight: '#ce4257', link: '#b02f45', button: '#ce4257', buttonText: '#ffffff' },
+    dark: { page: '#1b1714', text: '#f3ede4', muted: '#b5a995', line: '#3b332b', highlight: '#ec7385', link: '#ec7385', button: '#ec7385', buttonText: '#1b1714' },
     fonts: { serif: SERIF, sans: SANS, webFontCss: INSTRUMENT_SERIF },
     company: MAGPOLLO,
     links: vvsLinks(origin),

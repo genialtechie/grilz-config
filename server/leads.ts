@@ -1,8 +1,9 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { depositFor, priceBreakdown } from '../src/lib/pricing.js';
 import { parseRenderSpec, summarizeDesign } from '../src/lib/renderSpec.js';
 import { createDb, DbError, hasDb } from './db.js';
+import { checkLeadToken, signLeadToken } from './leadTokens.js';
 import { notifyLead, type NotifyEnv } from './notify.js';
 import { hashIp, isEmail, LIMITS, looksAutomated, normaliseContact, verifyTurnstile, type SpamEnv } from './spam.js';
 import { configForSession, getPublishedTenant, tenantIdFor } from './tenants.js';
@@ -27,26 +28,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const secretFor = (env: LeadEnv) => env.LEAD_TOKEN_SECRET || env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-/** How long a lead's render token stays valid. */
-const TOKEN_TTL_S = 30 * 60;
-
-const sign = (payload: string, env: LeadEnv) => createHmac('sha256', secretFor(env)).update(payload).digest('base64url').slice(0, 32);
-
 /** Proves a render request may attach its photo to this lead, at this shop, for the next 30 minutes. */
-export const leadToken = (leadId: string, tenantId: string, env: LeadEnv, now = Date.now()) => {
-  const expires = Math.floor(now / 1000) + TOKEN_TTL_S;
-  return `${expires}.${sign(`lead:${tenantId}:${leadId}:${expires}`, env)}`;
-};
+export const leadToken = (leadId: string, tenantId: string, env: LeadEnv, now = Date.now()) => signLeadToken('lead', leadId, tenantId, env, now);
 
-export const verifyLeadToken = (leadId: unknown, tenantId: string | null, token: unknown, env: LeadEnv, now = Date.now()): leadId is string => {
-  if (typeof leadId !== 'string' || typeof token !== 'string' || !tenantId || !/^[0-9a-f-]{36}$/.test(leadId) || !secretFor(env)) return false;
-  const [expiresText, signature = ''] = token.split('.');
-  const expires = Number(expiresText);
-  if (!Number.isInteger(expires) || expires < now / 1000) return false;
-  const expected = Buffer.from(sign(`lead:${tenantId}:${leadId}:${expires}`, env));
-  const given = Buffer.from(signature);
-  return expected.length === given.length && timingSafeEqual(expected, given);
-};
+export const verifyLeadToken = (leadId: unknown, tenantId: string | null, token: unknown, env: LeadEnv, now = Date.now()): leadId is string =>
+  checkLeadToken('lead', leadId, tenantId, token, env, now);
 
 /** The browser's 3D capture, decoded and re-encoded so only a real, bounded JPEG is stored. */
 async function readPreview(value: unknown): Promise<Uint8Array | null> {

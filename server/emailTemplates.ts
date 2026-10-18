@@ -147,20 +147,76 @@ export async function shopPhotoEmail({ lead, config, origin, subject }: { lead: 
 }
 
 /**
+ * Tells the jeweler a customer paid their deposit: the moment a lead turns into
+ * a job. Inbox row: who paid how much. First screen: that, where the money is,
+ * and the one action (reach them to book the next step). Then what they
+ * designed and what's left to pay.
+ */
+export async function depositPaidEmail({ lead, config, origin, amount }: { lead: LeadForEmail; config: TenantConfig; origin: string; amount: number }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
+  const reach = contactLink(lead.contact);
+  const first = firstName(lead.name);
+  const left = Math.max(0, lead.total - amount);
+  const balance = left > 0 ? `${usd(left)} left on the ${usd(lead.total)} estimate.` : `That covers the ${usd(lead.total)} estimate.`;
+  const subject = `${lead.name} paid a ${usd(amount)} deposit`;
+  const element = h(
+    EmailFrame,
+    {
+      brand,
+      title: subject,
+      preheader: balance,
+      footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Lead ${lead.id.slice(0, 8)}.` },
+    },
+    h(Headline, { brand, text: `*${first}* paid a ${usd(amount)} deposit` }),
+    h(Paragraph, { brand, margin: '20px 0 0' }, `It's in your Stripe account and their spot is held. Reach out to book the next step.`),
+    h(CTA, { brand, href: reach.href, margin: '24px 0 10px' }, `${reach.action} ${first}`),
+    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, h(InlineLink, { brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])),
+    specList(brand, 'What they designed', lead.summary),
+    h(Paragraph, { brand, size: 16, margin: '16px 0 0' }, balance),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, 'Paid by card through Stripe Checkout on your account. Refunds and payouts are in your Stripe dashboard.'),
+  );
+  const text = [
+    `${lead.name} paid a ${usd(amount)} deposit.`,
+    "It's in your Stripe account and their spot is held. Reach out to book the next step.",
+    '',
+    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
+    lead.email ? `Email: ${lead.email}` : '',
+    '',
+    'What they designed:',
+    ...lead.summary.map((line) => `- ${line}`),
+    '',
+    balance,
+    `\nLead ${lead.id}`,
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
+  return { subject, html: await html(element), text };
+}
+
+/**
  * The customer's confirmation, in the shop's brand. They just hit send: the
  * inbox row confirms it arrived, the first screen keeps their design, and the
  * steps answer "what now, and what will it cost?".
  */
-export async function customerEmail({ lead, config, origin, images }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages }): Promise<RenderedEmail> {
+export async function customerEmail({ lead, config, origin, images, depositHref = null }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages; depositHref?: string | null }): Promise<RenderedEmail> {
   const shop = config.brand;
   const brand = shopBrand(shop, origin);
   const price = displayTotal(config.pricing, lead.total, usd).text;
   const hidden = config.pricing.display === 'hidden';
   const reach = contactLink(lead.contact);
   const ig = shop.instagram ? `https://instagram.com/${encodeURIComponent(shop.instagram.replace(/^@/, ''))}` : null;
-  const steps = [
-    `${shop.name} contacts you at ${reach.label} to go over your design${hidden ? ' and give you a price' : ' and confirm the final price'}.`,
-    ...(lead.deposit !== null ? [`A ${usd(lead.deposit)} deposit holds your spot.`] : []),
+  const deposit = lead.deposit !== null && lead.deposit > 0 ? usd(lead.deposit) : null;
+  // With a pay link, the deposit is the one action; otherwise it's messaging the shop.
+  const pay = deposit && depositHref ? { href: depositHref, label: `Pay ${deposit} deposit` } : null;
+  const contactStep = `${shop.name} contacts you at ${reach.label} to go over your design${hidden ? ' and give you a price' : ' and confirm the final price'}.`;
+  const steps = pay
+    ? [`Hold your spot with a ${deposit} deposit.`, contactStep]
+    : [contactStep, ...(deposit ? [`A ${deposit} deposit holds your spot. ${shop.name} will tell you how to pay.`] : [])];
+  const questions = [
+    'Questions? Reply to this email',
+    ...(shop.phone ? [`, call ${displayContact(shop.phone)}`] : []),
+    ...(pay && ig ? [', or ', h(InlineLink, { key: 'ig', brand, href: ig }, 'message them on Instagram')] : []),
+    '.',
   ];
   const element = h(
     EmailFrame,
@@ -175,9 +231,9 @@ export async function customerEmail({ lead, config, origin, images }: { lead: Le
     designPhoto(brand, images, images.photo ? AI_DISCLOSURE : 'Your 3D design'),
     h(SectionLabel, { brand }, 'What happens next'),
     h(Steps, { brand, steps }),
-    ig && h(CTA, { brand, href: ig, margin: '18px 0 0' }, `Message ${shop.name}`),
+    pay ? h(CTA, { brand, href: pay.href, margin: '18px 0 0' }, pay.label) : ig && h(CTA, { brand, href: ig, margin: '18px 0 0' }, `Message ${shop.name}`),
     specList(brand, 'Your design', lead.summary),
-    h(Paragraph, { brand, muted: true, size: 14, margin: '24px 0 0' }, `Questions? Reply to this email${shop.phone ? ` or call ${displayContact(shop.phone)}` : ''}.`),
+    h(Paragraph, { brand, muted: true, size: 14, margin: '24px 0 0' }, ...questions),
     h(SignOff, { brand }),
   );
   const text = [
@@ -186,6 +242,7 @@ export async function customerEmail({ lead, config, origin, images }: { lead: Le
     '',
     'What happens next:',
     ...steps.map((step, index) => `${index + 1}. ${step}`),
+    pay ? `\n${pay.label}: ${pay.href}` : '',
     '',
     'Your design:',
     ...lead.summary.map((line) => `- ${line}`),

@@ -4,7 +4,8 @@ import { priceBreakdown } from '../../src/lib/pricing';
 import { summarizeDesign } from '../../src/lib/renderSpec';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 import { DESIGNS } from '../../src/lib/__tests__/designs';
-import { contactLink, customerEmail, shopEmail, type LeadForEmail } from '../emailTemplates';
+import { contactLink, customerEmail, depositPaidEmail, shopEmail, type LeadForEmail } from '../emailTemplates';
+import { checkLeadToken, signLeadToken } from '../leadTokens';
 import { leadToken, verifyLeadToken } from '../leads';
 import { recipientsFor } from '../notify';
 import { hashIp, looksAutomated } from '../spam';
@@ -71,6 +72,16 @@ describe('lead tokens', () => {
     const [, signature] = token.split('.');
     expect(verifyLeadToken(id, shop, `${Math.floor(issued / 1000) + 99_999}.${signature}`, env, issued)).toBe(false);
   });
+
+  it('makes 30-day deposit links that only work as deposit links', () => {
+    const issued = Date.UTC(2026, 9, 16, 12, 0, 0);
+    const deposit = signLeadToken('deposit', id, shop, env, issued);
+    expect(checkLeadToken('deposit', id, shop, deposit, env, issued + 29 * 86_400_000)).toBe(true);
+    expect(checkLeadToken('deposit', id, shop, deposit, env, issued + 31 * 86_400_000)).toBe(false);
+    // A deposit link can't attach photos, and a render token isn't a deposit link.
+    expect(verifyLeadToken(id, shop, deposit, env, issued)).toBe(false);
+    expect(checkLeadToken('deposit', id, shop, leadToken(id, shop, env, issued), env, issued)).toBe(false);
+  });
 });
 
 const lead = (patch: Partial<LeadForEmail> = {}): LeadForEmail => {
@@ -113,6 +124,23 @@ describe('lead emails', () => {
     expect(email.html).toContain('price it for you');
     expect(email.html).not.toContain(`$${lead().total.toLocaleString('en-US')}<`);
     expect(email.html).toContain('handmade and may vary');
+  });
+
+  it('makes paying the deposit the customer’s one action when there is a pay link', async () => {
+    const withLink = await customerEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: false }, depositHref: 'https://pay.test/deposit' });
+    expect(withLink.html).toContain('href="https://pay.test/deposit"');
+    expect(withLink.html).toContain('Pay $500 deposit');
+    expect(withLink.text).toContain('https://pay.test/deposit');
+    const without = await customerEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: false } });
+    expect(without.html).not.toContain('Pay $500 deposit');
+    expect(without.html).toContain('will tell you how to pay');
+  });
+
+  it('tells the shop when a deposit is paid and what is left', async () => {
+    const email = await depositPaidEmail({ lead: lead({ total: 1200 }), config: VVSLAB_CONFIG, origin, amount: 300 });
+    expect(email.subject).toBe('Ava <b>Test</b> paid a $300 deposit');
+    expect(email.html).toContain('$900 left on the $1,200 estimate.');
+    expect(email.html).not.toContain('<b>Test</b>');
   });
 
   it('tells the shop when the photo will follow', async () => {

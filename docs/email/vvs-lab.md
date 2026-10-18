@@ -9,9 +9,12 @@ Brand-specific companion to [`PLAYBOOK.md`](PLAYBOOK.md).
 | Page (one surface) | cream `#fbf7f0` | ink `#1b1714` |
 | Text | `#1b1714` | `#f3ede4` |
 | Muted | `#6f655a` (5.3:1) | `#b5a995` |
-| Headline italic | gold `#a87b23` (3.6:1, large text only) | `#e2b85e` |
-| Links | deep gold `#7a5714` (6.1:1) | `#e2b85e` |
-| Button | ink with cream text | gold with ink text |
+| Headline italic | red `#ce4257` (4.3:1, large text) | `#ec7385` |
+| Links | deep red `#b02f45` (5.9:1) | `#ec7385` |
+| Button | red `#ce4257`, white text (4.6:1) | `#ec7385`, ink text |
+
+Red is the product's accent (`--accent` in `src/App.css`); gold belongs to the
+mark and the illustrations (the metal), not to type or buttons.
 
 - Logo: the gold diamond "VVS" mark (`/assets/email/vvs-mark.png`, 2×); the
   footer closes with the app icon (`vvs-icon.png`: the mark on ink, gold edge).
@@ -74,10 +77,26 @@ details → reference.
   they'll reach out on {contact}."
 - **First screen:** headline "{shop} has your *design*" → "Thanks, Marcus.
   Your estimate is $4,150." → their design photo (a keepsake).
-- **Details:** What happens next (1. the shop contacts you at {contact} to
-  confirm the final price; 2. a deposit holds your spot) → Message {shop} →
-  "Your design" list.
+- **Details:** What happens next → the one button → "Your design" list.
+  - With a pay link (shop takes card deposits, or has its own payment link):
+    1. hold your spot with a deposit, 2. the shop contacts you. Button: **Pay
+    $500 deposit** (a 30-day signed link, `GET /api/deposit`, that opens the
+    shop's Stripe Checkout). Instagram drops to a text link.
+  - Without: 1. the shop contacts you, 2. a deposit holds your spot and the
+    shop will say how to pay. Button: **Message {shop}**.
 - **Reference:** questions/reply, sign-off from the shop.
+
+### Deposit paid (to the jeweler)
+
+- **Moment:** a customer just paid: the lead became a job.
+- **Job:** know the money is in, and book the next step with the customer.
+- **Inbox row:** {shop} via VVS Lab · "Marcus Reed paid a $500 deposit" ·
+  preheader "$3,650 left on the $4,150 estimate."
+- **First screen:** headline "*Marcus* paid a $500 deposit" → "It's in your
+  Stripe account and their spot is held." → **Text Marcus**.
+- **Details:** contact links, what they designed, what's left to pay.
+- **Reference:** paid through Stripe Checkout; refunds and payouts live in
+  Stripe. Sent once, from the Stripe webhook.
 
 ### Studio photo follow-up (to the jeweler, same thread)
 
