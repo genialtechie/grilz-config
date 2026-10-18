@@ -178,7 +178,8 @@ export function LeadCapture({
       <p className="fine-print">
         {demo
           ? 'Demo: your details go to MagPollo (not a jeweler) so we can follow up about setting this up for your store.'
-          : `Your design and contact go only to ${shopName}. Studio photos are AI-generated from your design.`}
+          : `Your design and contact go only to ${shopName}. Studio photos are AI-generated from your design.`}{' '}
+        <a href="https://vvslab.magpollo.com/privacy" target="_blank" rel="noopener">Privacy</a>
       </p>
     </form>
   );

@@ -2,6 +2,9 @@ import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.j
 import { createDb, DbError, hasDb, type Db } from './db.js';
 import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } from './domains.js';
 import { sendEmail, type EmailEnv } from './email.js';
+import { deleteLead } from './retention.js';
+import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
+import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
 
@@ -15,7 +18,8 @@ import type { TenantEnv } from './tenants.js';
 
 export type DashboardEnv = TenantEnv &
   EmailEnv &
-  DomainEnv & {
+  DomainEnv &
+  BillingEnv & {
     PUBLIC_ORIGIN?: string;
     POSTHOG_PERSONAL_API_KEY?: string;
     POSTHOG_PROJECT_ID?: string;
@@ -78,12 +82,12 @@ async function publish(db: Db, userId: string, payload: Record<string, unknown>)
 
   const parsed = parseTenantConfig(row.config);
   if (!parsed.ok) return reply(422, { error: 'invalid_config', issues: parsed.issues.slice(0, 10) });
-  const [tenant] = await db.select<TenantRow>('tenants', { id: `eq.${row.tenant_id}`, select: 'id,slug,name,kind,status,stripe_account_id' });
+  const [tenant] = await db.select<TenantRow & { stripe_charges_enabled: boolean }>('tenants', { id: `eq.${row.tenant_id}`, select: 'id,slug,name,kind,status,stripe_account_id,stripe_charges_enabled' });
   const [liveRow] = await db.select<{ config: unknown }>('tenant_configs', { tenant_id: `eq.${row.tenant_id}`, status: 'eq.published', select: 'config' });
   const liveParsed = liveRow ? parseTenantConfig(liveRow.config) : null;
   const live = liveParsed?.ok ? liveParsed.config : null;
 
-  const locked = role === 'admin' ? { config: parsed.config, reset: [] as string[] } : lockPlanFields(parsed.config, live, Boolean(tenant?.stripe_account_id));
+  const locked = role === 'admin' ? { config: parsed.config, reset: [] as string[] } : lockPlanFields(parsed.config, live, Boolean(tenant?.stripe_charges_enabled));
   if ('error' in locked && locked.error) return reply(422, { error: 'deposit', message: locked.error });
   const version = await db.rpc<number>('publish_config_service', { config_id: row.id, final_config: locked.config, actor: userId });
   return reply(200, { version, reset: locked.reset, live: tenant?.status === 'live', slug: tenant?.slug });
@@ -204,6 +208,49 @@ async function stats(db: Db, userId: string, payload: Record<string, unknown>, e
   }
 }
 
+/** Plan billing and Stripe Connect. Owners only, except reading the Connect status. */
+async function money(db: Db, user: { id: string; email?: string }, action: string, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
+  const tenantId = String(payload.tenantId ?? '');
+  if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+  const role = await roleFor(db, user.id, tenantId);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (action === 'connect_status') return connectStatus(db, env, tenantId);
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can manage payments.' });
+  if (action === 'billing_checkout') return billingCheckout(db, env, tenantId, user.email);
+  if (action === 'billing_portal') return billingPortal(db, env, tenantId);
+  return connectOnboard(db, env, tenantId, user.email);
+}
+
+/** Owners switch their own page on (once it has a published version) or pause it. */
+async function setLive(db: Db, userId: string, action: string, payload: Record<string, unknown>): Promise<ApiResult> {
+  const tenantId = String(payload.tenantId ?? '');
+  if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+  const role = await roleFor(db, userId, tenantId);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can switch the page on or off.' });
+  const [tenant] = await db.select<{ status: string; published_version: number | null } & TrialFields>('tenants', { id: `eq.${tenantId}`, select: 'status,published_version,plan,trial_ends_at,billing_status' });
+  if (!tenant || tenant.status === 'offboarded') return reply(409, { error: 'closed', message: 'This shop is closed. Message VVS Lab.' });
+  if (action === 'go_live' && trialExpired(tenant)) return reply(402, { error: 'trial_over', message: 'Your free trial has ended. Start your plan to switch your builder back on.' });
+  if (action === 'go_live' && tenant.published_version === null) return reply(409, { error: 'unpublished', message: 'Publish your page first.' });
+  const status = action === 'go_live' ? 'live' : 'paused';
+  await db.update('tenants', { id: `eq.${tenantId}`, status: 'in.(draft,live,paused)' }, { status });
+  return reply(200, { status });
+}
+
+/** A customer asked the shop to delete their data: the lead, its history and its files. Owners only. */
+async function removeLead(db: Db, userId: string, payload: Record<string, unknown>): Promise<ApiResult> {
+  const leadId = String(payload.leadId ?? '');
+  if (!UUID.test(leadId)) return reply(400, { error: 'invalid' });
+  const [lead] = await db.select<{ tenant_id: string }>('leads', { id: `eq.${leadId}`, select: 'tenant_id' });
+  if (!lead) return reply(404, { error: 'not_found' });
+  const role = await roleFor(db, userId, lead.tenant_id);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can delete a customer’s data.' });
+  await deleteLead(db, leadId);
+  console.log('lead deleted on request', lead.tenant_id);
+  return reply(200, { deleted: true });
+}
+
 // domain: read · domain_check: re-check DNS (any member) · domain_add / domain_remove: owners.
 async function domain(db: Db, userId: string, action: string, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
   const tenantId = String(payload.tenantId ?? '');
@@ -232,6 +279,9 @@ export async function handleDashboard(action: string, payload: unknown, token: s
     if (action === 'invite') return await invite(db, user, body, env);
     if (action === 'stats') return await stats(db, user.id, body, env);
     if (action.startsWith('domain')) return await domain(db, user.id, action, body, env);
+    if (action === 'lead_delete') return await removeLead(db, user.id, body);
+    if (action === 'go_live' || action === 'pause') return await setLive(db, user.id, action, body);
+    if (['billing_checkout', 'billing_portal', 'connect_onboard', 'connect_status'].includes(action)) return await money(db, user, action, body, env);
     return reply(404, { error: 'not_found' });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

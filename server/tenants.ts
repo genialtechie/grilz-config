@@ -1,5 +1,6 @@
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab.js';
+import { trialExpired } from '../src/lib/trial.js';
 
 // Loads a tenant's published config from Supabase (PostgREST, service role).
 // Shared by /api/tenant, /api/render and the link-preview page. Tenant zero
@@ -47,6 +48,9 @@ type Row = {
   status: string;
   kind: string;
   published_version: number | null;
+  plan: string | null;
+  trial_ends_at: string | null;
+  billing_status: string | null;
   tenant_configs: { version: number; config: unknown }[];
 };
 
@@ -65,7 +69,7 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
     const query = new URLSearchParams({
       slug: `eq.${slug}`,
       status: 'in.(live,paused,offboarded)',
-      select: 'id,slug,name,status,kind,published_version,tenant_configs!tenant_configs_tenant_id_fkey!inner(version,config)',
+      select: 'id,slug,name,status,kind,published_version,plan,trial_ends_at,billing_status,tenant_configs!tenant_configs_tenant_id_fkey!inner(version,config)',
       'tenant_configs.status': 'eq.published',
     });
     const response = await fetch(`${url.replace(/\/$/, '')}/rest/v1/tenants?${query}`, {
@@ -92,7 +96,8 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
             id: row.id,
             slug: row.slug,
             name: row.name,
-            status: row.status as TenantStatus,
+            // The trial gate takes effect the moment it ends, not at the nightly cron.
+            status: row.status === 'live' && trialExpired(row) ? 'paused' : (row.status as TenantStatus),
             kind: row.kind as PublishedTenant['kind'],
             version: published.version,
             config: parsed.config,

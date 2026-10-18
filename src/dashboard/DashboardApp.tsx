@@ -9,6 +9,7 @@ import { supabase } from '../admin/supabase';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
+import { CardPrompt, GettingStarted, TrialBanner, TrialGate } from './GettingStarted';
 import '../admin/admin.css';
 import './dashboard.css';
 
@@ -63,9 +64,10 @@ function SignIn() {
   );
 }
 
-function ShopShell({ shops, email }: { shops: MyShop[]; email: string }) {
+function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
   const { slug = '' } = useParams();
   const shop = shops.find((item) => item.slug === slug);
+  const [cardOpen, setCardOpen] = useState(false);
   if (!shop) return <Navigate to="/dashboard" replace />;
   const base = `/dashboard/${shop.slug}`;
   const tabs = [
@@ -89,6 +91,9 @@ function ShopShell({ shops, email }: { shops: MyShop[]; email: string }) {
           <button className="admin-icon-button" type="button" onClick={() => void supabase().auth.signOut()} aria-label="Sign out"><LogOut size={16} /></button>
         </div>
       </header>
+      <TrialBanner shop={shop} onCard={() => setCardOpen(true)} />
+      <CardPrompt key={`${shop.id}-${cardOpen}`} shop={shop} forced={cardOpen} onClose={() => setCardOpen(false)} />
+      <TrialGate shop={shop}>
       <nav className="dash-nav" aria-label="Dashboard">
         {tabs.map((tab) => (
           <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => (isActive ? 'is-active' : '')}>
@@ -97,13 +102,14 @@ function ShopShell({ shops, email }: { shops: MyShop[]; email: string }) {
         ))}
       </nav>
       <Routes>
-        <Route index element={<main className="admin-main"><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} /></main>} />
-        <Route path="shop" element={<ShopEditor mode="shop" slug={shop.slug} role={shop.role} />} />
+        <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
+        <Route path="shop" element={<><div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} /></div><ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>} />
         <Route path="website" element={<WebsitePanel shop={shop} />} />
         <Route path="stats" element={<StatsPanel shop={shop} />} />
         <Route path="team" element={<TeamPanel shop={shop} />} />
         <Route path="*" element={<Navigate to={base} replace />} />
       </Routes>
+      </TrialGate>
     </div>
   );
 }
@@ -167,7 +173,7 @@ export default function DashboardApp() {
   return (
     <Routes>
       <Route index element={<ShopPicker shops={shops} />} />
-      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} />} />
+      <Route path=":slug/*" element={<ShopShell shops={shops} email={session.user.email ?? ''} reload={() => void myShops().then(setShops)} />} />
     </Routes>
   );
 }

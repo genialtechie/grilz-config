@@ -7,6 +7,9 @@ const Configurator = lazy(() => import('./components/Configurator'));
 const ShopPage = lazy(() => import('./components/ShopPage'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const DashboardApp = lazy(() => import('./dashboard/DashboardApp'));
+const SignupPage = lazy(() => import('./components/signup/SignupPage'));
+const PrivacyPage = lazy(() => import('./components/legal/LegalPage').then((module) => ({ default: module.PrivacyPage })));
+const TermsPage = lazy(() => import('./components/legal/LegalPage').then((module) => ({ default: module.TermsPage })));
 
 // On a shop's own domain (build.theirshop.com) the server marks the page with
 // <meta name="vvs-shop">, and "/" is that shop's builder instead of our landing page.
@@ -52,6 +55,9 @@ function App() {
           </Suspense>
         }
       />
+      <Route path="/signup" element={<Suspense fallback={null}><SignupPage /></Suspense>} />
+      <Route path="/privacy" element={<Suspense fallback={null}><PrivacyPage /></Suspense>} />
+      <Route path="/terms" element={<Suspense fallback={null}><TermsPage /></Suspense>} />
       <Route
         path="/dashboard/*"
         element={
