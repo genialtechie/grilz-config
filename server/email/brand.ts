@@ -25,7 +25,7 @@ export type Brand = {
   logo: { src: string; alt: string; height: number } | { wordmark: string };
   /** Sign-off line under the body, e.g. "— The VVS Lab team". */
   signOff: string;
-  /** App-icon mark closing the footer, or a "Powered by" line for white-label mail. */
+  /** Mark closing the footer (VVS Lab: Karat), or a "Powered by" line for white-label mail. */
   footerMark: { src: string; alt: string; height: number } | { poweredBy: { label: string; href: string } };
   light: Palette;
   /** Applied by clients that support prefers-color-scheme (Apple Mail, iOS Mail, Outlook apps). */
@@ -58,7 +58,7 @@ export function vvsBrand(origin: string): Brand {
     name: 'VVS Lab',
     logo: { src: at(origin, '/assets/email/vvs-mark.png'), alt: 'VVS Lab', height: 44 },
     signOff: '— The VVS Lab team',
-    footerMark: { src: at(origin, '/assets/email/vvs-icon.png'), alt: 'VVS Lab', height: 40 },
+    footerMark: { src: at(origin, '/assets/mascot/karat-cool.png'), alt: 'Karat, the VVS Lab mascot', height: 64 },
     // Contrast on the page: highlight 4.3:1 (large text), link 5.9:1, button text 4.6:1; dark 6.2:1.
     light: { page: '#fbf7f0', text: '#1b1714', muted: '#6f655a', line: '#e7ddcd', highlight: '#ce4257', link: '#b02f45', button: '#ce4257', buttonText: '#ffffff' },
     dark: { page: '#1b1714', text: '#f3ede4', muted: '#b5a995', line: '#3b332b', highlight: '#ec7385', link: '#ec7385', button: '#ec7385', buttonText: '#1b1714' },

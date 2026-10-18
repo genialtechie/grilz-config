@@ -16,13 +16,16 @@ Brand-specific companion to [`PLAYBOOK.md`](PLAYBOOK.md).
 Red is the product's accent (`--accent` in `src/App.css`); gold belongs to the
 mark and the illustrations (the metal), not to type or buttons.
 
-- Logo: the gold diamond "VVS" mark (`/assets/email/vvs-mark.png`, 2×); the
-  footer closes with the app icon (`vvs-icon.png`: the mark on ink, gold edge).
+- Logo: the gold diamond "VVS" mark (`/assets/email/vvs-mark.png`, 2×).
+- Mascot: **Karat** (`docs/brand/mascot/`), a gold fanged tooth with an
+  iced-out grill and an eyebrow piercing. Cool closes every VVS footer; Wink
+  welcomes; Hype celebrates wins (deposit paid); Nudge, Working and Tarnished
+  are for reminders, loading and win-back. PNGs in `/assets/mascot/`.
 - Socials: gold Instagram tile (`instagram-tile.png`); shops get the ink tile.
 - Sign-off: "— The VVS Lab team" (shop mail: "— {shop name}").
 - Type: Instrument Serif headlines (Georgia in Gmail), system sans body.
-- Illustration style: flat shapes, warm gold gradients, 5–7px ink outlines,
-  4-point sparkles, a cream sticker edge, a speech bubble for character. Grillz culture: gold teeth,
+- Illustration style: Karat's: flat shapes, warm gold gradients, 5px ink
+  outlines, 4-point sparkles, a cream sticker edge on dark backgrounds. Grillz culture: gold teeth,
   iced (pavé) stones, smiles. Source: `scripts/email-art.ts`.
 - Voice: a jeweler's friend who knows the trade. Short, warm, confident.
   "Hey there," openings; no hype words.

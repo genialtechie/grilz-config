@@ -8,7 +8,7 @@ The kit that implements it is in `server/email/` (React Email):
 `brand.ts` (one object per brand), `components.ts` (the building blocks), and
 `server/emailTemplates.ts` (the emails). `scripts/email-preview.ts` renders
 everything at phone and desktop width, light and dark. `scripts/email-art.ts`
-draws the illustrations.
+draws the small art; the mascot comes from `scripts/mascot-model.ts`.
 
 The components are written with `createElement` in `.ts` files, not JSX:
 Vercel's Node functions compile and bundle only `.ts`, so a `.tsx` server

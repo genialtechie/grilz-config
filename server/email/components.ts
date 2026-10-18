@@ -70,7 +70,7 @@ function Footer({ brand, reason, unsubscribe }: WithBrand & FooterProps) {
       ),
     h(Text, { className: 'em-muted', style: { ...small, margin: '0 0 24px' } }, reason),
     'src' in mark
-      ? h(Img, { src: mark.src, alt: mark.alt, width: mark.height, height: mark.height, style: { display: 'block', margin: '0 auto', borderRadius: '10px' } })
+      ? h(Img, { src: mark.src, alt: mark.alt, width: mark.height, height: mark.height, style: { display: 'block', margin: '0 auto' } })
       : h(Text, { className: 'em-muted', style: { ...small, margin: 0 } }, 'Powered by ', h(Link, { href: mark.poweredBy.href, className: 'em-muted', style: linkStyle }, mark.poweredBy.label)),
   );
 }
@@ -158,12 +158,12 @@ export const Photo = ({ brand, src, alt, caption }: WithBrand & { src: string; a
     caption && h(Text, { className: 'em-muted', style: { margin: '8px 0 0', fontFamily: brand.fonts.sans, fontSize: '12px', lineHeight: '1.45', color: brand.light.muted } }, caption),
   );
 
-/** The email's one illustration, centred under the headline. */
-export const Illustration = ({ src, width = 440 }: { src: string; width?: number }) =>
+/** The email's one illustration: centred under a centred headline, or left above a left one. */
+export const Illustration = ({ src, width = 440, align = 'center', alt = '' }: { src: string; width?: number; align?: 'left' | 'center'; alt?: string }) =>
   h(
     Section,
-    { style: { padding: '28px 0 12px', textAlign: 'center' } },
-    h(Img, { src, alt: '', width, style: { display: 'block', width: '100%', maxWidth: `${width}px`, height: 'auto', margin: '0 auto' } }),
+    { style: { padding: align === 'center' ? '28px 0 12px' : '0 0 8px', textAlign: align } },
+    h(Img, { src, alt, width, style: { display: 'block', width: '100%', maxWidth: `${width}px`, height: 'auto', margin: align === 'center' ? '0 auto' : '0' } }),
   );
 
 /** "— The VVS Lab team": the person or team the email is from. */
