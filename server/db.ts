@@ -77,6 +77,14 @@ export function createDb(env: TenantEnv) {
         ? request<unknown>(`/storage/v1/object/${bucket}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: paths }) })
         : Promise.resolve(null),
 
+    /** Object names directly under a folder (one page). */
+    listObjects: (bucket: string, folder: string, limit = 1000) =>
+      request<{ name: string; id: string | null }[]>(`/storage/v1/object/list/${bucket}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: folder, limit, offset: 0 }),
+      }),
+
     download: async (bucket: string, path: string): Promise<Uint8Array> => {
       const response = await fetch(`${base}/storage/v1/object/${bucket}/${path}`, { headers: headers() });
       if (!response.ok) throw new DbError(response.status, `download ${bucket} → ${response.status}`);

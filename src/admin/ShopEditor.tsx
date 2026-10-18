@@ -5,7 +5,7 @@ import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS
 import { describeChanges } from '../lib/tenant/diff';
 import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
 import { contrast, usableAccent } from '../lib/tenant/theme';
-import { getTenant, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
+import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
 import { WebsitePanel } from '../dashboard/WebsitePanel';
@@ -245,11 +245,20 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       await reload();
       return tenant.status === 'live' ? `v${version} is live. Customers see it within a minute.` : `v${version} published. Switch the shop live when it's ready.`;
     });
-  const onStatus = (next: TenantRow['status']) =>
+  const onStatus = (next: Exclude<TenantRow['status'], 'offboarded'>) =>
     run('status', async () => {
       await setStatus(tenant.id, next);
       await reload();
-      return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : next === 'offboarded' ? `${config.brand.name} is offboarded. Leads are deleted in 90 days.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
+      return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
+    });
+  const onOffboard = () =>
+    run('status', async () => {
+      try {
+        const result = await offboardShop(tenant.id);
+        return `${result.message} Leads are deleted in 90 days.`;
+      } finally {
+        await reload();
+      }
     });
 
   const onLogo = async (file: File | undefined) => {
@@ -315,9 +324,13 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
           ) : (
             <button className="admin-button" type="button" onClick={() => onStatus('live')} disabled={!!busy || !published}><Play size={15} /> Go live</button>
           )}
-          {tenant.status !== 'offboarded' && (
+          {tenant.status === 'offboarded' ? (
+            <button className="admin-button" type="button" disabled={!!busy} onClick={() => void onOffboard()} title="Runs any offboarding step that didn't finish">
+              <Archive size={15} /> Finish offboarding
+            </button>
+          ) : (
             <button className="admin-button" type="button" disabled={!!busy} onClick={() => {
-              if (window.confirm(`Offboard ${config.brand.name}? The page closes, the team keeps read access to export leads for 90 days, then leads are deleted. The link stays reserved.`)) void onStatus('offboarded');
+              if (window.confirm(`Offboard ${config.brand.name}? The page closes, their plan ends at the end of the paid period (no further charges), and their custom domain is removed. The team keeps read access to export leads for 90 days, then leads and logos are deleted. The link stays reserved.`)) void onOffboard();
             }}><Archive size={15} /> Offboard</button>
           )}
         </div>

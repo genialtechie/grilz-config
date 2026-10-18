@@ -181,6 +181,8 @@ async function api<T>(action: string, body: Record<string, unknown>): Promise<T>
 }
 
 export const publishAsMember = (configId: string) => api<{ version: number; reset: string[]; live: boolean; slug: string }>('publish', { configId });
+/** Platform admins: closes the page, ends the plan at period end, removes the custom domain. Safe to run again. */
+export const offboardShop = (tenantId: string) => api<{ ok: boolean; message: string }>('offboard', { tenantId });
 export const inviteMember = (tenantId: string, email: string, role: MemberRole) => api<{ invited: boolean; message: string }>('invite', { tenantId, email, role });
 
 /** Joins any shops this (confirmed) email was invited to. Returns how many. */
