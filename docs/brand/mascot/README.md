@@ -70,7 +70,20 @@ Source: `scripts/mascot-round2.ts`. What it shows:
   fang in the **face**: the grin wears gold fang caps like the hero image, so
   the smile (your third pick) and the fang both stay.
 
-Next rounds: 3 eyes and face (where the
-personality lives) · 4 colour (gold body, ink outline, one iced stone) ·
+## Round 3: the face
+
+Chosen body: **F, Root fang**. The grin carries the grillz: two obvious gold
+fangs and one iced-out tooth in the centre, set against a dark mouth so they
+read even at 64px (avatar size).
+
+![Round 3 faces](round-3-faces.png)
+
+Source: `scripts/mascot-round3.ts`. Six faces, one personality each: Grin
+(friendly default), Smirk (confident), Cool (flashy, unbothered), Wink (a
+signature, like Freddie's), Hype (celebrating), Boss (the craftsman).
+Expressions all come from the same parts later, so the pick is the
+**resting** face; the others become the expression sheet.
+
+Next rounds: 4 colour (gold body, ink outline, one iced stone) ·
 5 model sheet (front, ¾, side) and expression sheet (happy, celebrating,
 nudging, sleepy/dull for win-back, thinking).
