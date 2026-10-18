@@ -39,33 +39,36 @@ function eye(kind: Eye, x: number, y: number) {
 
 /**
  * The grill, built like the hero image: separate gold caps with rounded tips
- * hanging from the upper lip, long tapered fangs on the canines, the centre
- * tooth iced out (white, with a pavé of stones), natural white teeth below.
+ * hanging from the upper lip, the centre tooth iced out (pavé), and long
+ * tapered fangs on the canines that hang over the lower lip, so the mouth
+ * itself can stay small.
  */
 function grin(face: Face, id: string) {
   const { y, open, tilt = 0 } = face.mouth;
-  // A wide, square-cornered open mouth so the fangs at the ends have room.
-  const m0 = 57;
-  const m1 = 143;
+  // A compact, square-cornered grin; the fangs overhang it.
+  const m0 = 64;
+  const m1 = 136;
   const mouth = `M${m0} ${y}L${m1} ${y}C${m1} ${y + open * 0.95} ${m1 - 14} ${y + open} 100 ${y + open}C${m0 + 14} ${y + open} ${m0} ${y + open * 0.95} ${m0} ${y}Z`;
-  const x0 = m0 + 5;
-  const x1 = m1 - 5;
+  const x0 = m0 + 4;
+  const x1 = m1 - 4;
   const gap = 1;
   // Fang, lateral, central (iced), central, lateral, fang.
   const widths = [12, 12, 15, 15, 12, 12];
   const scale = (x1 - x0 - gap * (widths.length - 1)) / widths.reduce((sum, w) => sum + w, 0);
   let cursor = x0;
+  const fangs: string[] = [];
   const teeth = widths.map((raw, index) => {
     const w = raw * scale;
     const x = cursor;
     cursor += w + gap;
-    const outline = `stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"`;
+    const outline = `stroke="${INK}" stroke-width="2" stroke-linejoin="round"`;
     if (index === 0 || index === widths.length - 1) {
-      const length = open * 0.78;
+      const length = open + 13;
       const tip = x + w * (index === 0 ? 0.6 : 0.4);
-      return `<path d="M${x} ${y}L${x + w} ${y}C${x + w} ${y + length * 0.45} ${tip + 2} ${y + length * 0.8} ${tip} ${y + length}C${tip - 2} ${y + length * 0.8} ${x} ${y + length * 0.45} ${x} ${y}Z" fill="url(#gold)" ${outline}/><path d="M${x + 2.5} ${y + 3}L${x + 3.5} ${y + length * 0.4}" stroke="#fff6d8" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>`;
+      fangs.push(`<path d="M${x} ${y}L${x + w} ${y}C${x + w} ${y + length * 0.45} ${tip + 2} ${y + length * 0.8} ${tip} ${y + length}C${tip - 2} ${y + length * 0.8} ${x} ${y + length * 0.45} ${x} ${y}Z" fill="url(#gold)" ${outline}/><path d="M${x + 2.5} ${y + 3}L${x + 3.5} ${y + length * 0.4}" stroke="#fff6d8" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>`);
+      return '';
     }
-    const h = open * (index === 2 || index === 3 ? 0.46 : 0.38);
+    const h = open * (index === 2 || index === 3 ? 0.78 : 0.66);
     const r = Math.min(4, w / 3);
     const cap = `M${x} ${y}L${x + w} ${y}L${x + w} ${y + h - r}Q${x + w} ${y + h} ${x + w - r} ${y + h}L${x + r} ${y + h}Q${x} ${y + h} ${x} ${y + h - r}Z`;
     if (index === 2) {
@@ -75,20 +78,12 @@ function grin(face: Face, id: string) {
     }
     return `<path d="${cap}" fill="url(#gold)" ${outline}/><path d="M${x + 2.5} ${y + 3}L${x + 2.5} ${y + h * 0.6}" stroke="#fff6d8" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>`;
   });
-  const lower = [0, 1, 2, 3]
-    .map((i) => {
-      const w = 9.5;
-      const x = 100 - 2 * (w + 1) + i * (w + 1);
-      const h = open * 0.26;
-      const top = y + open * 0.92 - h;
-      return `<path d="M${x} ${top + 3}Q${x} ${top} ${x + 3} ${top}L${x + w - 3} ${top}Q${x + w} ${top} ${x + w} ${top + 3}L${x + w} ${top + h + 4}L${x} ${top + h + 4}Z" fill="#fbf7f0" stroke="${INK}" stroke-width="1.5"/>`;
-    })
-    .join('');
   return `<g transform="rotate(${tilt} 100 ${y})">
 <clipPath id="m${id}"><path d="${mouth}"/></clipPath>
 <path d="${mouth}" fill="#2a1511"/>
-<g clip-path="url(#m${id})">${lower}${teeth.join('')}</g>
+<g clip-path="url(#m${id})">${teeth.join('')}</g>
 <path d="${mouth}" fill="none" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+${fangs.join('')}
 </g>`;
 }
 
@@ -102,28 +97,28 @@ ${eye(face.eyes[0], 80, 64)}${eye(face.eyes[1], 120, 64)}${brows}${grin(face, id
 }
 
 const faces: Face[] = [
-  { name: 'Grin', idea: 'Friendly default: open grin, two fangs', eyes: ['round', 'round'], mouth: { y: 88, open: 40 } },
+  { name: 'Grin', idea: 'Friendly default: open grin, two fangs', eyes: ['round', 'round'], mouth: { y: 92, open: 22 } },
   {
     name: 'Smirk',
     idea: 'One side up, one brow: confident',
     eyes: ['round', 'round'],
     brows: [[70, 46, 88, 48], [112, 44, 130, 38]],
-    mouth: { y: 89, open: 36, tilt: -6 },
+    mouth: { y: 92, open: 20, tilt: -6 },
   },
   {
     name: 'Cool',
     idea: 'Heavy lids, slow grin: flashy, unbothered',
     eyes: ['lidded', 'lidded'],
-    mouth: { y: 89, open: 34 },
+    mouth: { y: 92, open: 18 },
   },
-  { name: 'Wink', idea: 'A wink as the signature (like Freddie)', eyes: ['round', 'wink'], mouth: { y: 88, open: 40, tilt: -3 } },
-  { name: 'Hype', idea: 'Eyes shut, big laugh: celebrating', eyes: ['happy', 'happy'], mouth: { y: 86, open: 50 } },
+  { name: 'Wink', idea: 'A wink as the signature (like Freddie)', eyes: ['round', 'wink'], mouth: { y: 92, open: 22, tilt: -3 } },
+  { name: 'Hype', idea: 'Eyes shut, big laugh: celebrating', eyes: ['happy', 'happy'], mouth: { y: 90, open: 30 } },
   {
     name: 'Boss',
     idea: 'Low brows, wide grin: the craftsman',
     eyes: ['round', 'round'],
     brows: [[68, 48, 90, 54], [110, 54, 132, 48]],
-    mouth: { y: 90, open: 34 },
+    mouth: { y: 93, open: 18 },
   },
 ];
 
@@ -155,9 +150,9 @@ ${cells}
 </svg>`;
 
 /** The grin up close, to judge the teeth themselves. */
-const closeup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 76 96 64" width="960" height="640">
+const closeup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="56 80 88 50" width="1056" height="600">
 <defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">${GOLD}</linearGradient></defs>
-<rect x="52" y="76" width="96" height="64" fill="#d9ad4b"/>${grin(faces[0], 'close')}</svg>`;
+<rect x="56" y="80" width="88" height="50" fill="#d9ad4b"/>${grin(faces[0], 'close')}</svg>`;
 
 async function main() {
   mkdirSync(OUT, { recursive: true });

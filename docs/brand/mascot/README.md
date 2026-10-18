@@ -73,9 +73,9 @@ Source: `scripts/mascot-round2.ts`. What it shows:
 ## Round 3: the face
 
 Chosen body: **F, Root fang**. The grin carries the grillz, built like the
-hero image: separate gold caps with rounded tips, long tapered gold fangs on
-the canines, the centre tooth iced out in pavé, natural white teeth below,
-in a wide open mouth so they read even at 64px (avatar size).
+hero image: separate gold caps with rounded tips, the centre tooth iced out
+in pavé, and long tapered gold fangs that hang over the lower lip. No bottom
+teeth, so the mouth stays small and the fangs do the talking, even at 64px.
 
 ![Round 3 faces](round-3-faces.png)
 
