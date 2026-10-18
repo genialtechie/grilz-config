@@ -70,6 +70,7 @@ export function TermsPage() {
 
       <h2>Price</h2>
       <p>$199 a month, unless we've agreed something else in writing. Founding shops keep their price for 12 months. You can cancel any time; the service runs to the end of the period you've paid for.</p>
+      <p>Shops that sign up on their own get a 14-day free trial. You don't need a card to start. If you add one during the trial, you're not charged until the trial ends, and you can cancel before then to pay nothing. After that the plan renews every month until you cancel. If the trial ends without a plan, your page stops taking designs until you start one.</p>
 
       <h2>Your part</h2>
       <ul>

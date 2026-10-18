@@ -93,7 +93,7 @@ export default function SignupPage() {
       <form className="admin-card admin-auth__card signup__card" onSubmit={submit} noValidate>
         <a className="signup__brand" href="/">VVS Lab</a>
         <h1>Your own 3D grillz builder</h1>
-        <p className="admin-muted">Customers design their set, see your price and send you the order with a studio photo. Free for 7 days, then $199 a month.</p>
+        <p className="admin-muted">Customers design their set, see your price and send you the order with a studio photo. Free for 14 days, then $199 a month.</p>
 
         <label className="admin-field">
           <span>Shop name</span>
@@ -139,7 +139,7 @@ export default function SignupPage() {
         <button className="admin-button admin-button--primary signup__submit" type="submit" disabled={state === 'sending' || (available !== null && !available.ok)}>
           {state === 'sending' ? <Loader2 className="spin" size={16} /> : <ArrowRight size={16} />} {state === 'sending' ? 'Creating your shop…' : 'Start free trial'}
         </button>
-        <p className="admin-muted dash-small">No card needed. Already have a shop? <a href="/dashboard">Sign in</a></p>
+        <p className="admin-muted dash-small">No card needed to start. Already have a shop? <a href="/dashboard">Sign in</a></p>
       </form>
     </main>
   );

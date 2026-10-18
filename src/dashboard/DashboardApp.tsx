@@ -9,7 +9,7 @@ import { supabase } from '../admin/supabase';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
-import { GettingStarted, TrialBanner } from './GettingStarted';
+import { CardPrompt, GettingStarted, TrialBanner, TrialGate } from './GettingStarted';
 import '../admin/admin.css';
 import './dashboard.css';
 
@@ -67,6 +67,7 @@ function SignIn() {
 function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
   const { slug = '' } = useParams();
   const shop = shops.find((item) => item.slug === slug);
+  const [cardOpen, setCardOpen] = useState(false);
   if (!shop) return <Navigate to="/dashboard" replace />;
   const base = `/dashboard/${shop.slug}`;
   const tabs = [
@@ -90,7 +91,9 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
           <button className="admin-icon-button" type="button" onClick={() => void supabase().auth.signOut()} aria-label="Sign out"><LogOut size={16} /></button>
         </div>
       </header>
-      <TrialBanner shop={shop} />
+      <TrialBanner shop={shop} onCard={() => setCardOpen(true)} />
+      <CardPrompt key={`${shop.id}-${cardOpen}`} shop={shop} forced={cardOpen} onClose={() => setCardOpen(false)} />
+      <TrialGate shop={shop}>
       <nav className="dash-nav" aria-label="Dashboard">
         {tabs.map((tab) => (
           <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => (isActive ? 'is-active' : '')}>
@@ -106,6 +109,7 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
         <Route path="team" element={<TeamPanel shop={shop} />} />
         <Route path="*" element={<Navigate to={base} replace />} />
       </Routes>
+      </TrialGate>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } fro
 import { sendEmail, type EmailEnv } from './email.js';
 import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
+import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
 
@@ -227,8 +228,9 @@ async function setLive(db: Db, userId: string, action: string, payload: Record<s
   const role = await roleFor(db, userId, tenantId);
   if (!role) return reply(404, { error: 'not_found' });
   if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can switch the page on or off.' });
-  const [tenant] = await db.select<{ status: string; published_version: number | null }>('tenants', { id: `eq.${tenantId}`, select: 'status,published_version' });
+  const [tenant] = await db.select<{ status: string; published_version: number | null } & TrialFields>('tenants', { id: `eq.${tenantId}`, select: 'status,published_version,plan,trial_ends_at,billing_status' });
   if (!tenant || tenant.status === 'offboarded') return reply(409, { error: 'closed', message: 'This shop is closed. Message VVS Lab.' });
+  if (action === 'go_live' && trialExpired(tenant)) return reply(402, { error: 'trial_over', message: 'Your free trial has ended. Start your plan to switch your builder back on.' });
   if (action === 'go_live' && tenant.published_version === null) return reply(409, { error: 'unpublished', message: 'Publish your page first.' });
   const status = action === 'go_live' ? 'live' : 'paused';
   await db.update('tenants', { id: `eq.${tenantId}`, status: 'in.(draft,live,paused)' }, { status });

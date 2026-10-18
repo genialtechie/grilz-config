@@ -1,4 +1,5 @@
 import { TEMPLATES } from '../src/admin/templates.js';
+import { TRIAL_DAYS } from '../src/lib/trial.js';
 import { createDb, hasDb, type Db } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
 import { hashIp, looksAutomated, verifyTurnstile, type SpamEnv } from './spam.js';
@@ -6,7 +7,7 @@ import type { ApiResult } from './tenantApi.js';
 import { isValidSlug, type TenantEnv } from './tenants.js';
 
 // POST /api/signup: a jeweler creates their shop without us.
-// Creates the shop (draft, 7-day trial, small AI allowance, their email as the
+// Creates the shop (draft, 14-day trial with the card optional, small AI allowance, their email as the
 // lead inbox), records an owner invite and emails a sign-in link. They finish
 // setup in /dashboard and switch the shop live themselves.
 //
@@ -16,7 +17,7 @@ import { isValidSlug, type TenantEnv } from './tenants.js';
 
 export type SignupEnv = TenantEnv & EmailEnv & SpamEnv & { PUBLIC_ORIGIN?: string; LEAD_TOKEN_SECRET?: string };
 
-export const TRIAL_DAYS = 7;
+export { TRIAL_DAYS };
 export const TRIAL_GENERATIONS = 30;
 export const SIGNUP_LIMITS = { perIpDay: 3, perEmailDay: 2, globalDay: 60 };
 

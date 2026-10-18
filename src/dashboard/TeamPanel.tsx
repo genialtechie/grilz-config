@@ -138,7 +138,7 @@ export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?:
               : shop.billing_status === 'trialing' ? `Plan started. Your first payment is ${shop.current_period_end ? new Date(shop.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'when your trial ends'}.`
               : shop.billing_status === 'past_due' ? 'Your last payment didn’t go through. Update your card to keep your builder on.'
               : shop.billing_status === 'canceled' ? 'Your plan is cancelled. Start it again any time.'
-              : shop.plan === 'trial' ? 'You’re on the free trial. Start your plan to keep your builder on after it ends: $199 a month, cancel any time.'
+              : shop.plan === 'trial' ? 'You’re on the 14-day free trial. Add your card to keep your builder on when it ends: $199 a month after the trial, cancel any time.'
               : 'Your plan is managed by VVS Lab. Message us with any billing questions.'}
           </p>
           {['active', 'trialing', 'past_due'].includes(shop.billing_status ?? '') ? (

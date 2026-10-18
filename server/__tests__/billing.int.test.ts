@@ -1,5 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { TEMPLATES } from '../../src/admin/templates';
+import { getPublishedTenant } from '../tenants';
 import { billingCheckout, connectOnboard, connectStatus, enforceBilling, handleDeposit, handleStripeWebhook } from '../billing';
 import { createDb } from '../db';
 import { leadToken } from '../leads';
@@ -111,6 +113,11 @@ describe.skipIf(!url || !key || !stripeKey?.startsWith('sk_test_') || !price)('b
 
   it('pauses a live shop whose trial ended without a plan', async () => {
     const other = await db().insert<{ id: string }>('tenants', { slug: `${slug}-t`, name: 'Expired Trial', kind: 'shop', status: 'live', plan: 'trial', trial_ends_at: new Date(Date.now() - 3600_000).toISOString() });
+    await db().insert('tenant_configs', { tenant_id: other.id, version: 1, config: TEMPLATES[0].build('Expired Trial'), status: 'published' });
+    await db().update('tenants', { id: `eq.${other.id}` }, { published_version: 1 });
+    // the public page is off as soon as the trial ends, before the nightly job runs
+    const lookup = await getPublishedTenant(`${slug}-t`, env);
+    expect(lookup.ok && lookup.tenant.status).toBe('paused');
     await enforceBilling(env);
     const [row] = await db().select<{ status: string }>('tenants', { id: `eq.${other.id}`, select: 'status' });
     expect(row.status).toBe('paused');
