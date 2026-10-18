@@ -134,6 +134,9 @@ function Configurator() {
   const [depositReached, setDepositReached] = useState(false);
   const threeState = useRef<RootState | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
+  // Phones show the options in a short bottom sheet: say when more sits below.
+  const [moreBelow, setMoreBelow] = useState(false);
+  const [scrolledStep, setScrolledStep] = useState<string | null>(null);
   const render = useAiRender(tenant.slug);
   const [lead, setLead] = useState<Lead | null>(null);
   const [receipt, setReceipt] = useState<LeadReceipt | null>(null);
@@ -168,6 +171,22 @@ function Configurator() {
   const steps: StepId[] = ['teeth', 'metal', 'style', ...(anyIced ? (['stones'] as const) : []), 'extras', ...(hasVisionStep ? (['vision'] as const) : []), 'photo'];
   const stepIndex = Math.max(0, steps.indexOf(step));
   const nextStep = steps.at(stepIndex + 1);
+
+  useEffect(() => {
+    const el = panelScroll.current;
+    if (!el) return;
+    const update = () => setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 24);
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    // The step's content changes height as options open (e.g. stones), and the panel with the window.
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, [step, panelOpen]);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
 
   // The inscription only counts once it has text and sits on a tooth in the set.
@@ -583,7 +602,8 @@ function Configurator() {
             ))}
           </nav>
 
-          <div className="panel-scroll" ref={panelScroll}>
+          <div className="panel-scroll-wrap">
+          <div className="panel-scroll" ref={panelScroll} onScroll={(event) => { if (event.currentTarget.scrollTop > 8) setScrolledStep(step); }}>
             <div className="panel-view" key={step}>
               <div className="panel-heading panel-heading--compact">
                 <h1>{intro.title}</h1>
@@ -977,6 +997,24 @@ function Configurator() {
                 </>
               )}
             </div>
+          </div>
+          <div className={`panel-more${moreBelow ? ' panel-more--on' : ''}`} aria-hidden={!moreBelow}>
+            {scrolledStep !== step && (
+              <button
+                type="button"
+                className="panel-more__button"
+                tabIndex={moreBelow ? 0 : -1}
+                onClick={() => {
+                  const el = panelScroll.current;
+                  if (!el) return;
+                  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                  el.scrollBy({ top: Math.round(el.clientHeight * 0.7), behavior: reduce ? 'auto' : 'smooth' });
+                }}
+              >
+                More options <ChevronDown size={14} />
+              </button>
+            )}
+          </div>
           </div>
 
           <footer className="panel-footer">
