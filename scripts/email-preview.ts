@@ -7,6 +7,8 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { trialEmail, type TrialShop } from '../server/trialEmails';
+import { ANNOUNCEMENTS, announcementEmail } from '../server/announcements';
+import { winbackEmail } from '../server/winback';
 import { customerEmail, depositPaidEmail, inviteEmail, shopEmail, welcomeEmail, type LeadForEmail } from '../server/emailTemplates';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab';
 
@@ -51,6 +53,9 @@ const emails: Record<string, string> = {
   'trial-day-7': (await trialEmail('day-7', { ...trialShop, live: true }, origin, unsubscribe)).html,
   'trial-day-12': (await trialEmail('day-12', { ...trialShop, live: true, leads: 3, estimates: 9450 }, origin, unsubscribe)).html,
   'trial-day-14': (await trialEmail('day-14', { ...trialShop, daysLeft: 1 }, origin, unsubscribe)).html,
+  'winback-paused': (await winbackEmail('paused', { id: 'x', slug: 'gold-mouth', name: 'Gold Mouth Jewelers', reason: 'trial', since: '2026-10-12T15:00:00Z', leads: 4 }, origin, unsubscribe)).html,
+  'winback-last': (await winbackEmail('last', { id: 'x', slug: 'gold-mouth', name: 'Gold Mouth Jewelers', reason: 'trial', since: '2026-09-18T15:00:00Z', leads: 4 }, origin, unsubscribe)).html,
+  announcement: (await announcementEmail(ANNOUNCEMENTS[0], origin, unsubscribe.replace('topic=tips', 'topic=news'))).html,
   invite: (await inviteEmail({ shop: 'Gold Mouth Jewelers', inviter: 'dre@goldmouth.com', role: 'staff', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin })).html,
 };
 

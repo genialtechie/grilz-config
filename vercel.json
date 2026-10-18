@@ -5,6 +5,9 @@
     },
     "api/leads.ts": {
       "maxDuration": 60
+    },
+    "api/cron/marketing.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
