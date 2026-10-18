@@ -127,3 +127,7 @@
 .admin .dash-start__go:hover { background: #b83a4e; border-color: #b83a4e; }
 .dash-mark { display: block; width: 41px; height: auto; padding-right: 10px; border-right: 1px solid var(--a-line); grid-row: span 2; }
 .dash-header__shop:has(.dash-mark) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+.dash-start-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 4px; padding: 12px 14px; border: 1px solid #e4dacb; border-radius: 12px; background: #fbf7f0; font-size: 14px; }
+.dash-start-bar__go { min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #ce4257; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.dash-start-bar__go:disabled { opacity: 0.6; }
+.dash-stats-empty { display: grid; gap: 8px; justify-items: start; } .dash-stats-empty p { margin: 0; line-height: 1.5; color: var(--a-muted); max-width: 520px; }

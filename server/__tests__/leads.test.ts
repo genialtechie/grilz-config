@@ -4,7 +4,7 @@ import { priceBreakdown } from '../../src/lib/pricing';
 import { summarizeDesign } from '../../src/lib/renderSpec';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 import { DESIGNS } from '../../src/lib/__tests__/designs';
-import { contactLink, customerEmail, depositPaidEmail, shopEmail, type LeadForEmail } from '../emailTemplates';
+import { contactLink, customerEmail, reachCta, depositPaidEmail, shopEmail, type LeadForEmail } from '../emailTemplates';
 import { checkLeadToken, signLeadToken } from '../leadTokens';
 import { leadToken, verifyLeadToken } from '../leads';
 import { recipientsFor } from '../notify';
@@ -113,7 +113,9 @@ describe('lead emails', () => {
   });
 
   it('gives the jeweler a one-tap way to reach the customer', () => {
-    expect(contactLink('+14045550199')).toEqual({ href: 'sms:+14045550199', label: '(404) 555-0199', action: 'Text' });
+    expect(contactLink('+14045550199')).toEqual({ href: 'sms:+14045550199', label: '(404) 555-0199', action: 'Text', channel: 'text' });
+    expect(reachCta(contactLink('+14045550199'), 'Ava')).toBe('Text Ava');
+    expect(reachCta(contactLink('@ava.test'), 'Ava')).toBe('Message Ava on Instagram');
     expect(contactLink('@ava.test').href).toBe('https://instagram.com/ava.test');
   });
 

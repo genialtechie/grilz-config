@@ -998,7 +998,7 @@ function Configurator() {
               )}
             </div>
           </div>
-          <div className={`panel-more${moreBelow ? ' panel-more--on' : ''}`} aria-hidden={!moreBelow}>
+          <div className={`panel-more${moreBelow && scrolledStep !== step ? ' panel-more--on' : ''}`} aria-hidden={!moreBelow}>
             {scrolledStep !== step && (
               <button
                 type="button"

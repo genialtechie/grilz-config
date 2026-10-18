@@ -33,11 +33,15 @@ const usd = (value: number) => `$${value.toLocaleString('en-US', { maximumFracti
 export const AI_DISCLOSURE = 'AI studio photo of your design. The finished piece is handmade and may vary.';
 
 /** A link the jeweler can tap to reach the customer, and what to call it. */
-export function contactLink(contact: string): { href: string; label: string; action: string } {
-  if (contact.startsWith('+')) return { href: `sms:${contact}`, label: displayContact(contact), action: 'Text' };
+export function contactLink(contact: string): { href: string; label: string; action: string; channel: 'text' | 'instagram' } {
+  if (contact.startsWith('+')) return { href: `sms:${contact}`, label: displayContact(contact), action: 'Text', channel: 'text' };
   const handle = contact.replace(/^@/, '');
-  return { href: `https://instagram.com/${encodeURIComponent(handle)}`, label: `@${handle}`, action: 'Message on Instagram' };
+  return { href: `https://instagram.com/${encodeURIComponent(handle)}`, label: `@${handle}`, action: 'Message', channel: 'instagram' };
 }
+
+/** The button: "Text Marcus", "Message Marcus on Instagram". */
+export const reachCta = (reach: ReturnType<typeof contactLink>, name: string) =>
+  reach.channel === 'instagram' ? `${reach.action} ${name} on Instagram` : `${reach.action} ${name}`;
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 const host = (origin: string) => origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -98,7 +102,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     designPhoto(brand, images, images.photo ? 'AI studio photo of the customer’s design' : '3D design the customer built'),
     photoPending && h(Paragraph, { brand, muted: true, size: 13, margin: '6px 0 0' }, 'The studio photo is still rendering. It will follow in this thread.'),
     lead.note && h(Quote, { brand }, lead.note),
-    h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, `${reach.action} ${first}`),
+    h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, reachCta(reach, first)),
     h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, ...contacts),
     specList(brand, 'What they designed', lead.summary),
     h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
@@ -107,7 +111,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     `New ${total} design from ${lead.name}`,
     lead.note ? `"${lead.note}"` : '',
     '',
-    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
+    `${reachCta(reach, first)}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
     '',
     'What they designed:',
@@ -137,7 +141,7 @@ export async function shopPhotoEmail({ lead, config, origin, subject }: { lead: 
     },
     h(Headline, { brand, text: `${first}’s *studio photo*` }),
     designPhoto(brand, { photo: true, preview: false }, 'AI studio photo of the customer’s design'),
-    h(CTA, { brand, href: reach.href }, `${reach.action} ${first}`),
+    h(CTA, { brand, href: reach.href }, reachCta(reach, first)),
   );
   return {
     subject: subject.startsWith('Re: ') ? subject : `Re: ${subject}`,
@@ -170,7 +174,7 @@ export async function depositPaidEmail({ lead, config, origin, amount }: { lead:
     h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-hype.png`, width: 132, align: 'left', alt: 'Karat celebrating' }),
     h(Headline, { brand, text: `*${first}* paid a ${usd(amount)} deposit` }),
     h(Paragraph, { brand, margin: '20px 0 0' }, `It's in your Stripe account and their spot is held. Reach out to book the next step.`),
-    h(CTA, { brand, href: reach.href, margin: '24px 0 10px' }, `${reach.action} ${first}`),
+    h(CTA, { brand, href: reach.href, margin: '24px 0 10px' }, reachCta(reach, first)),
     h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, h(InlineLink, { brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])),
     specList(brand, 'What they designed', lead.summary),
     h(Paragraph, { brand, size: 16, margin: '16px 0 0' }, balance),
@@ -180,7 +184,7 @@ export async function depositPaidEmail({ lead, config, origin, amount }: { lead:
     `${lead.name} paid a ${usd(amount)} deposit.`,
     "It's in your Stripe account and their spot is held. Reach out to book the next step.",
     '',
-    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
+    `${reachCta(reach, first)}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
     '',
     'What they designed:',
@@ -224,7 +228,7 @@ export async function customerEmail({ lead, config, origin, images, depositHref 
     {
       brand,
       title: `${shop.name} has your design`,
-      preheader: `Next: they'll reach out on ${reach.label}.`,
+      preheader: reach.channel === 'instagram' ? `Next: they'll message you on Instagram at ${reach.label}.` : `Next: they'll text you at ${reach.label}.`,
       footer: { reason: `You're getting this because you sent a design to ${shop.name} with the VVS Lab builder. This is a one-time confirmation.` },
     },
     h(Headline, { brand, text: `${shop.name.replace(/\*/g, '')} has your *design*` }),

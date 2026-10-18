@@ -52,7 +52,7 @@ const DELIVERABLES = [
 
 const INCLUDED = [
   'Your own builder link for your site and IG bio',
-  'Your prices and options loaded in',
+  'Your prices and options, set up in minutes',
   'AI studio photo for every finished design',
   'Leads, specs and deposits sent to you',
 ];
@@ -64,7 +64,7 @@ const FAQS = [
   },
   {
     q: 'Whose prices does it show?',
-    a: 'Yours. We load your metal, stone and per-tooth pricing during setup, so the live total matches what you’d quote.',
+    a: 'Yours. You set your metal, stone and per-tooth prices in your dashboard, so the live total matches what you’d quote.',
   },
   {
     q: 'Where does the deposit go?',
@@ -76,7 +76,7 @@ const FAQS = [
   },
   {
     q: 'Is there a contract?',
-    a: 'No. $199 a month, no setup fee, cancel any month.',
+    a: 'No. 14 days free with no card needed, then $199 a month. No setup fee, cancel any month.',
   },
 ];
 
@@ -101,8 +101,14 @@ export default function LandingPage() {
     posthog.capture('contact_clicked', { placement, channel: 'instagram_dm' });
   };
 
+  const TrialButton = ({ placement }: { placement: string }) => (
+    <Link className="vvs-btn vvs-btn-gold" to="/signup" onClick={() => posthog.capture('signup_cta_clicked', { placement })}>
+      Start free trial <ArrowRight size={18} strokeWidth={1.8} />
+    </Link>
+  );
+
   const BuilderButton = ({ placement, label = 'Try the builder' }: { placement: string; label?: string }) => (
-    <Link className="vvs-btn vvs-btn-gold" to="/configurator" onClick={() => captureBuilderClick(placement)}>
+    <Link className="vvs-btn vvs-btn-line" to="/configurator" onClick={() => captureBuilderClick(placement)}>
       {label} <ArrowRight size={18} strokeWidth={1.8} />
     </Link>
   );
@@ -129,8 +135,8 @@ export default function LandingPage() {
         <nav className="vvs-nav" aria-label="Page navigation">
           <a href="#how">How it works</a>
           <a href="#pricing">Pricing</a>
-          <Link className="vvs-nav-cta" to="/configurator" onClick={() => captureBuilderClick('header')}>
-            Try the builder
+          <Link className="vvs-nav-cta" to="/signup" onClick={() => posthog.capture('signup_cta_clicked', { placement: 'header' })}>
+            Start free trial
           </Link>
         </nav>
       </header>
@@ -147,8 +153,8 @@ export default function LandingPage() {
               and get a studio photo of it. You get the lead, the spec and the deposit.
             </p>
             <div className="vvs-actions">
+              <TrialButton placement="hero" />
               <BuilderButton placement="hero" />
-              <DmButton placement="hero" />
             </div>
             <p className="vvs-price-line">$199/mo · No setup fee · Month to month</p>
           </div>
@@ -251,13 +257,14 @@ export default function LandingPage() {
             <h2 id="pricing-title" className="vvs-serif">
               $199<span>/mo</span>
             </h2>
-            <p className="vvs-price-sub">No setup fee. Month to month.</p>
+            <p className="vvs-price-sub">14 days free, no card needed. Then month to month, no setup fee.</p>
             <ul>
               {INCLUDED.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
             <div className="vvs-actions vvs-actions-center">
+              <TrialButton placement="pricing" />
               <DmButton placement="pricing" />
             </div>
           </div>
@@ -278,11 +285,11 @@ export default function LandingPage() {
         <section className="vvs-final">
           <img className="vvs-logo" src="/assets/vvs/logo-mark.png" alt="" width="640" height="281" />
           <h2 className="vvs-serif">
-            DM “<em>BUILD</em>” for a demo.
+            Put it in your bio <em>tonight</em>.
           </h2>
-          <p>Or try the builder your customers would use, right now.</p>
+          <p>14 days free, no card needed. Or DM “BUILD” and we’ll walk you through it.</p>
           <div className="vvs-actions vvs-actions-center">
-            <BuilderButton placement="final" />
+            <TrialButton placement="final" />
             <DmButton placement="final" />
           </div>
         </section>

@@ -95,10 +95,10 @@ export function EmailFrame({ brand, title, preheader, footer, children }: WithBr
       brand.fonts.webFontCss && h('link', { href: brand.fonts.webFontCss, rel: 'stylesheet' }),
       h('style', null, styles(brand)),
     ),
-    h(Preview, null, preheader),
     h(
       Body,
       { className: 'em-page', style: { margin: 0, padding: 0, background: c.page } },
+      h(Preview, null, preheader),
       h(
         Container,
         { className: 'em-page', style: { maxWidth: '600px', width: '100%', background: c.page } },

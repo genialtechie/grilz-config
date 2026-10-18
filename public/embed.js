@@ -53,15 +53,61 @@
     return node;
   }
 
+  // Readable text on the shop's accent: dark on light accents, white otherwise.
+  function textOn(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return '#ffffff';
+    var n = parseInt(m[1], 16);
+    var lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.62 ? '#1b1714' : '#ffffff';
+  }
+
+  // On phones: a card in the shop's own look (logo, accent) with a studio photo
+  // of a set, opening the builder full screen. It draws straight away in neutral
+  // colours and picks up the shop's brand when its public config arrives.
   function button(slug) {
-    var card = el('div', { boxSizing: 'border-box', width: '100%', padding: '28px 20px', borderRadius: '16px', background: '#0b0b0b', color: '#f3eee4', textAlign: 'center', fontFamily: '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif' });
-    card.appendChild(el('div', { fontSize: '20px', fontWeight: '700', marginBottom: '6px' }, 'Design your grillz in 3D'));
-    card.appendChild(el('div', { fontSize: '14px', opacity: '0.75', marginBottom: '18px' }, 'Pick your teeth, metal and style, see the price, and get a photo of your set.'));
-    var link = el('a', { display: 'inline-block', padding: '13px 22px', borderRadius: '999px', background: '#e6c97f', color: '#0b0b0b', fontWeight: '700', fontSize: '15px', textDecoration: 'none' }, 'Start designing');
+    var card = el('div', { boxSizing: 'border-box', width: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.08)', background: '#fbf7f0', color: '#1b1714', textAlign: 'center', fontFamily: '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif' });
+    var photo = el('img', { display: 'block', width: '100%', height: '180px', objectFit: 'cover', background: '#1b1714' });
+    photo.src = origin + '/assets/vvs/options/type-iced.webp';
+    photo.alt = '';
+    photo.loading = 'lazy';
+    card.appendChild(photo);
+    var body = el('div', { padding: '20px 20px 24px' });
+    var brand = el('div', { minHeight: '0', marginBottom: '8px', fontSize: '13px', fontWeight: '600', letterSpacing: '0.02em', opacity: '0.7' });
+    body.appendChild(brand);
+    body.appendChild(el('div', { fontFamily: 'Georgia, \'Times New Roman\', serif', fontSize: '26px', lineHeight: '1.1', marginBottom: '8px' }, 'Design your grillz in 3D'));
+    body.appendChild(el('div', { fontSize: '15px', lineHeight: '1.45', opacity: '0.75', marginBottom: '18px' }, 'Pick your teeth, metal and style, see the price, and get a studio photo of your set.'));
+    var link = el('a', { display: 'inline-block', padding: '14px 26px', borderRadius: '999px', background: '#1b1714', color: '#ffffff', fontWeight: '700', fontSize: '16px', textDecoration: 'none' }, 'Start designing');
     link.href = builderUrl(slug, false);
     link.target = '_blank';
     link.rel = 'noopener';
-    card.appendChild(link);
+    body.appendChild(link);
+    card.appendChild(body);
+
+    if (window.fetch) {
+      fetch(origin + '/api/tenant/' + slug)
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (data) {
+          var shop = data && data.config && data.config.brand;
+          if (!shop) return;
+          if (shop.accent) {
+            link.style.background = shop.accent;
+            link.style.color = textOn(shop.accent);
+          }
+          if (shop.logo) {
+            var logo = el('img', { display: 'inline-block', maxHeight: '36px', maxWidth: '160px', width: 'auto', height: 'auto' });
+            logo.src = /^https?:/.test(shop.logo) ? shop.logo : origin + shop.logo;
+            logo.alt = shop.name || '';
+            brand.style.opacity = '1';
+            brand.appendChild(logo);
+          } else if (shop.name) {
+            brand.textContent = shop.name;
+          }
+        })
+        .catch(function () {
+          // Keep the neutral card.
+        });
+    }
     return card;
   }
 

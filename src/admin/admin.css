@@ -104,6 +104,9 @@
 .admin-lead__top { display: flex; justify-content: space-between; gap: 8px; }
 .admin-lead__note { font-style: italic; }
 .admin-lead__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--a-muted); }
+.admin-lead__actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+.admin .admin-lead__reach { background: #ce4257; border-color: #ce4257; color: #fff; border-radius: 999px; }
+.admin-lead__actions .admin-button { border-radius: 999px; }
 .admin-lead__meta strong { color: var(--a-text); }
 .admin-lead select { width: auto; }
 

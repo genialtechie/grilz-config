@@ -6,6 +6,10 @@
   --muted: #9a9388;
   --gold: #c9a45c;
   --gold2: #e6c97f;
+  /* Red is the product's accent (buttons, the italic word); gold stays for the metal. */
+  --red: #ce4257;
+  --red-hover: #b83a4e;
+  --red-text: #ec7385;
   --line: rgba(243, 238, 228, 0.14);
   --gutter: clamp(20px, 6vw, 96px);
   min-height: 100vh;
@@ -28,7 +32,7 @@
 .vvs-page a { color: inherit; text-decoration: none; }
 .vvs-page img { display: block; max-width: 100%; }
 .vvs-serif { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
-.vvs-page em { font-style: italic; color: var(--gold2); }
+.vvs-page em { font-style: italic; color: var(--red-text); }
 .vvs-gold-text { color: var(--gold) !important; }
 
 /* header */
@@ -48,11 +52,12 @@
 .vvs-nav a:hover { color: var(--ink); }
 .vvs-nav-cta {
   padding: 11px 18px;
-  border: 1px solid var(--gold);
-  color: var(--gold2) !important;
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  color: var(--ink) !important;
   letter-spacing: 0.02em;
 }
-.vvs-nav-cta:hover { background: rgba(201, 164, 92, 0.12); }
+.vvs-nav-cta:hover { background: var(--red); }
 
 /* buttons */
 .vvs-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 36px; }
@@ -68,10 +73,11 @@
   transition: background 0.2s, color 0.2s, transform 0.2s;
 }
 .vvs-btn:active { transform: translateY(1px); }
-.vvs-btn-gold { background: var(--gold); color: #0b0b0b !important; }
-.vvs-btn-gold:hover { background: var(--gold2); }
+.vvs-btn-gold { background: var(--red); color: #fff !important; border-radius: 999px; }
+.vvs-btn-gold:hover { background: var(--red-hover); }
 .vvs-btn-line { border: 1px solid var(--line); color: var(--ink); }
-.vvs-btn-line:hover { border-color: var(--gold); color: var(--gold2); }
+.vvs-btn-line { border-radius: 999px; }
+.vvs-btn-line:hover { border-color: var(--ink); color: var(--ink); }
 
 /* hero */
 .vvs-hero {

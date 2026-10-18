@@ -234,7 +234,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       setConfirming(false);
       await reload();
       const kept = result.reset.map((path) => RESET_LABEL[path] ?? path);
-      const base = result.live ? `Published. Customers see v${result.version} within a minute.` : `Published v${result.version}. Customers see it once you switch your builder on at the top of this page.`;
+      const base = result.live ? `Published. Customers see v${result.version} within a minute.` : `Published v${result.version}. Customers see it once you switch your builder on (top of this page).`;
       return kept.length ? `${base} ${kept.join(' and ')} stay as your plan sets them.` : base;
     });
 

@@ -183,7 +183,8 @@ export function TrialGate({ shop, children }: { shop: MyShop; children: ReactNod
   );
 }
 
-export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => void }) {
+/** The checklist on Leads; `compact` is the one-line version for the Shop tab, where the steps happen. */
+export function GettingStarted({ shop, onLive, compact = false }: { shop: MyShop; onLive: () => void; compact?: boolean }) {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -224,6 +225,16 @@ export function GettingStarted({ shop, onLive }: { shop: MyShop; onLive: () => v
       setBusy(false);
     }
   };
+
+  if (compact) {
+    return (
+      <section className="dash-start-bar" aria-label="Builder status">
+        <span><strong>Your builder is off.</strong> Customers can’t use /b/{shop.slug} until you switch it on.</span>
+        {owner && <button className="dash-start-bar__go" type="button" disabled={busy} onClick={() => void goLiveNow()}>{busy ? 'Switching on…' : 'Switch it on'}</button>}
+        {error && <span className="admin-error" role="alert">{error}</span>}
+      </section>
+    );
+  }
 
   return (
     <section className="admin-card admin-section dash-start">
