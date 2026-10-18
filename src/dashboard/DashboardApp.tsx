@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useParams } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
 import { BarChart3, ExternalLink, Inbox, LogOut, Mail, Store, Users } from 'lucide-react';
-import { myShops, type MyShop } from '../admin/data';
+import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
 import { supabase } from '../admin/supabase';
@@ -139,7 +139,12 @@ export default function DashboardApp() {
       setShops(null);
       return;
     }
-    myShops().then(setShops).catch((reason: Error) => setError(reason.message));
+    // Accept any pending invites for this email first, then list the shops.
+    acceptInvites()
+      .catch(() => 0)
+      .then(() => myShops())
+      .then(setShops)
+      .catch((reason: Error) => setError(reason.message));
   }, [session]);
 
   if (session === undefined || (session && !shops && !error)) return <div className="admin-loading">Loading…</div>;

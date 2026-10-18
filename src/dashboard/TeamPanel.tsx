@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Trash2, UserPlus } from 'lucide-react';
-import { inviteMember, removeMember, setMemberRole, shopTeam, type MemberRole, type MyShop, type TeamMember } from '../admin/data';
+import { inviteMember, pendingInvites, removeMember, revokeInvite, setMemberRole, shopTeam, type MemberRole, type MyShop, type PendingInvite, type TeamMember } from '../admin/data';
 import { supabase } from '../admin/supabase';
 import './dashboard.css';
 
-// Who can sign in to the shop. Owners add people (the server creates the account
-// and emails a sign-in link), change roles and remove them. Staff work leads
+// Who can sign in to the shop. Owners invite people (the server emails a sign-in link;
+// they join when they accept), change roles and remove them. Staff work leads
 // and edit drafts; owners also publish, upload the logo and manage the team.
 
 export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?: boolean }) {
   const [team, setTeam] = useState<TeamMember[] | null>(null);
+  const [pending, setPending] = useState<PendingInvite[]>([]);
   const [me, setMe] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<MemberRole>('staff');
@@ -17,7 +18,16 @@ export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?:
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const owner = shop.role === 'owner' || shop.role === 'admin';
 
-  const load = useCallback(() => shopTeam(shop.id).then(setTeam).catch((reason: Error) => setNotice({ kind: 'error', text: reason.message })), [shop.id]);
+  const load = useCallback(
+    () =>
+      Promise.all([shopTeam(shop.id), pendingInvites(shop.id)])
+        .then(([members, invites]) => {
+          setTeam(members);
+          setPending(invites);
+        })
+        .catch((reason: Error) => setNotice({ kind: 'error', text: reason.message })),
+    [shop.id],
+  );
 
   useEffect(() => {
     void load();
@@ -43,8 +53,7 @@ export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?:
     void act(async () => {
       const result = await inviteMember(shop.id, email, role);
       setEmail('');
-      if (!result.added) return result.message ?? 'Already on the team.';
-      return result.emailed ? `Added. We emailed ${email} a sign-in link.` : `Added. The email didn't send, so ask them to sign in at ${window.location.origin}/dashboard.`;
+      return result.message;
     });
   };
 
@@ -84,6 +93,27 @@ export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?:
               </li>
             ))}
           </ul>
+        )}
+        {pending.length > 0 && (
+          <>
+            <h3>Invited</h3>
+            <ul className="dash-team">
+              {pending.map((invite) => (
+                <li key={invite.id}>
+                  <div>
+                    <strong>{invite.email}</strong>
+                    <div className="admin-muted dash-small">Invited {new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · joins when they sign in</div>
+                  </div>
+                  <span className="admin-muted">{invite.role === 'owner' ? 'Owner' : 'Staff'}</span>
+                  {owner && (
+                    <button className="admin-icon-button" type="button" disabled={busy} aria-label={`Cancel invite for ${invite.email}`} onClick={() => void act(async () => { await revokeInvite(invite.id); return 'Invite cancelled.'; })}>
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
       {owner && (

@@ -55,3 +55,13 @@ select id from auth.users where email = 'name@magpollo.com' and email_confirmed_
 npx -y tsx@4.19.2 scripts/tenant-seed-sql.ts | psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -q
 INTEGRATION_SUPABASE_URL=http://127.0.0.1:54321 INTEGRATION_SERVICE_KEY=<local service key> npx vitest run server/__tests__/pipeline.int.test.ts
 ```
+
+## Shop dashboard (Stage 4)
+
+`/dashboard` is the jeweler's console: leads (search, notes, CSV), shop editor with a live preview, stats and team.
+
+- **Accounts are invitation only.** Turn off public sign-up in Supabase (Authentication → Sign In / Providers → "Allow new users to sign up" off; keep the Email provider on). `POST /api/dashboard/invite` refuses to run while sign-up is on.
+- Add `https://vvslab.magpollo.com/dashboard` to Authentication → URL Configuration → Redirect URLs.
+- Invites are pending in `member_invites` until the invitee signs in with that email (`accept_member_invites()`); admins add a shop's first owner from the shop's Team tab in `/admin`.
+- Members publish through `POST /api/dashboard/publish` (validated; AI allowance and footer kept from the live config). Drafts written by members are locked the same way by a trigger.
+- Optional: `POSTHOG_PERSONAL_API_KEY` and `POSTHOG_PROJECT_ID` (prod) add builder views to the Stats tab.

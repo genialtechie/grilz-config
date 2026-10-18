@@ -90,6 +90,12 @@ export function createDb(env: TenantEnv) {
       return { ok: true, data };
     },
 
+    /** Public Auth settings; disable_signup must be true for invite-only accounts. */
+    authSettings: async (): Promise<{ disable_signup?: boolean } | null> => {
+      const response = await fetch(`${base}/auth/v1/settings`, { headers: { apikey: key } });
+      return response.ok ? ((await response.json()) as { disable_signup?: boolean }) : null;
+    },
+
     /** The signed-in user behind a Supabase access token, or null. */
     userFromToken: async (token: string): Promise<{ id: string; email?: string } | null> => {
       const response = await fetch(`${base}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` } });

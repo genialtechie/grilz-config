@@ -97,3 +97,20 @@ describe('dashboard API guards', () => {
     expect((await handleDashboard('publish', { configId: '22222222-2222-2222-2222-222222222222' }, 'tok', env)).status).toBe(404);
   });
 });
+
+describe('invites need sign-up switched off', () => {
+  it('refuses to invite while public sign-up is on', async () => {
+    const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'service' };
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'u1', email: 'owner@test' });
+      if (url.includes('/rest/v1/platform_admins')) return new Response(null, { status: 200, headers: { 'content-range': '*/0' } });
+      if (url.includes('/rest/v1/members')) return Response.json([{ role: 'owner' }]);
+      if (url.includes('/rest/v1/tenants')) return Response.json([{ id: '11111111-1111-1111-1111-111111111111', slug: 's', name: 'S', kind: 'shop', status: 'live', stripe_account_id: null }]);
+      if (url.endsWith('/auth/v1/settings')) return Response.json({ disable_signup: false });
+      return new Response('unexpected', { status: 500 });
+    }));
+    const result = await handleDashboard('invite', { tenantId: '11111111-1111-1111-1111-111111111111', email: 'new@test.com', role: 'staff' }, 'tok', env);
+    expect(result.status).toBe(503);
+  });
+});

@@ -181,7 +181,23 @@ async function api<T>(action: string, body: Record<string, unknown>): Promise<T>
 }
 
 export const publishAsMember = (configId: string) => api<{ version: number; reset: string[]; live: boolean; slug: string }>('publish', { configId });
-export const inviteMember = (tenantId: string, email: string, role: MemberRole) => api<{ added: boolean; emailed?: boolean; message?: string }>('invite', { tenantId, email, role });
+export const inviteMember = (tenantId: string, email: string, role: MemberRole) => api<{ invited: boolean; message: string }>('invite', { tenantId, email, role });
+
+/** Joins any shops this (confirmed) email was invited to. Returns how many. */
+export async function acceptInvites() {
+  return must(await supabase().rpc('accept_member_invites')) as number;
+}
+
+export type PendingInvite = { id: string; email: string; role: MemberRole; created_at: string };
+
+export async function pendingInvites(tenantId: string) {
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  return must(await supabase().from('member_invites').select('id,email,role,created_at').eq('tenant_id', tenantId).is('accepted_at', null).is('revoked_at', null).gte('created_at', since).order('created_at', { ascending: false })) as PendingInvite[];
+}
+
+export async function revokeInvite(id: string) {
+  must(await supabase().from('member_invites').update({ revoked_at: new Date().toISOString() }).eq('id', id).select('id'));
+}
 export const viewStats = (tenantId: string, days: number) => api<{ available: boolean; views?: number; started?: number; depositClicks?: number }>('stats', { tenantId, days });
 
 export type TeamMember = { user_id: string; email: string; role: MemberRole; created_at: string; last_sign_in_at: string | null };

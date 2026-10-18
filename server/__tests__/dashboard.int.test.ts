@@ -3,7 +3,8 @@ import { handleDashboard } from '../dashboard';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 
 // Dashboard API against a real (local) Supabase: publishing keeps plan fields,
-// staff can't publish, invites create the account and the membership.
+// staff can't publish, invites stay pending until the invitee accepts, and
+// members' drafts can't carry plan changes.
 // Runs in CI's database job; skipped unless INTEGRATION_SUPABASE_URL is set.
 
 const url = process.env.INTEGRATION_SUPABASE_URL;
@@ -16,7 +17,7 @@ const stamp = Date.now();
 const slug = `dash-int-${stamp}`;
 
 const admin = (path: string, body: unknown, method = 'POST') =>
-  realFetch(`${url}/auth/v1/admin/${path}`, { method, headers: { apikey: key!, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+  realFetch(`${url}/auth/v1/admin/${path}`, { method, headers: { apikey: key!, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }).then((r) => r.json());
 const rest = async (path: string, init: RequestInit = {}) => {
   const response = await realFetch(`${url}/rest/v1/${path}`, { ...init, headers: { apikey: key!, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers ?? {}) } });
   const text = await response.text();
@@ -27,6 +28,7 @@ const signIn = async (email: string) => {
   return ((await response.json()) as { access_token: string }).access_token;
 };
 const user = async (email: string) => ((await admin('users', { email, password: 'Int-test-pass-1!', email_confirm: true })) as { id: string }).id;
+const used = async (email: string) => { const id = await user(email); await signIn(email); return id; };
 
 let tenantId = '';
 let ownerToken = '';
@@ -42,8 +44,8 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
       }
       return realFetch(input, init);
     });
-    const owner = await user(`owner-${stamp}@int.test`);
-    const staff = await user(`staff-${stamp}@int.test`);
+    const owner = await used(`owner-${stamp}@int.test`);
+    const staff = await used(`staff-${stamp}@int.test`);
     const [tenant] = await rest('tenants', { method: 'POST', body: JSON.stringify({ slug, name: 'Dash Int', kind: 'fixture', status: 'live' }) });
     tenantId = tenant.id;
     const live = structuredClone(VVSLAB_CONFIG);
@@ -98,24 +100,54 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     expect(result.status).toBe(422);
   });
 
-  it('invites a new person: account created, membership added, email sent', async () => {
+  it('invites a new person: pending until they accept, same answer every time', async () => {
     const email = `new-${stamp}@int.test`;
     const result = await handleDashboard('invite', { tenantId, email, role: 'staff' }, ownerToken, env);
     expect(result.status).toBe(200);
-    expect(result.body).toMatchObject({ added: true, emailed: true });
+    expect(result.body).toMatchObject({ invited: true });
     const mail = sent.find((item) => item.to.includes(email));
-    expect(mail?.subject).toContain('Dash Int');
+    expect(mail?.subject).not.toContain('Dash Int'); // shop names stay out of subjects
     expect(mail?.html).toContain('/auth/v1/verify');
-    const members = await rest(`members?tenant_id=eq.${tenantId}&select=role,user_id`);
-    expect(members).toHaveLength(3);
-    // inviting again is a no-op
-    const again = await handleDashboard('invite', { tenantId, email, role: 'staff' }, ownerToken, env);
-    expect(again.body).toMatchObject({ added: false });
+    expect(await rest(`members?tenant_id=eq.${tenantId}&select=user_id`)).toHaveLength(2);
+    const [invite] = await rest(`member_invites?tenant_id=eq.${tenantId}&email=eq.${email}&select=role,accepted_at`);
+    expect(invite).toMatchObject({ role: 'staff', accepted_at: null });
+
+    // they accept by signing in with that email
+    const users = (await admin('users?per_page=1000', undefined, 'GET')) as { users: { id: string; email: string }[] };
+    const invitee = users.users.find((item) => item.email === email)!;
+    await admin(`users/${invitee.id}`, { password: 'Int-test-pass-1!', email_confirm: true }, 'PUT');
+    const token = await signIn(email);
+    const accepted = await realFetch(`${url}/rest/v1/rpc/accept_member_invites`, { method: 'POST', headers: { apikey: anon!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json());
+    expect(accepted).toBe(1);
+    expect(await rest(`members?tenant_id=eq.${tenantId}&select=user_id`)).toHaveLength(3);
+
+    // an existing account that has never been used isn't added, but the answer is the same
+    const idle = `idle-${stamp}@int.test`;
+    await user(idle);
+    const quiet = await handleDashboard('invite', { tenantId, email: idle, role: 'owner' }, ownerToken, env);
+    expect(quiet).toMatchObject({ status: 200, body: { invited: true } });
+    expect(await rest(`member_invites?tenant_id=eq.${tenantId}&email=eq.${idle}&select=id`)).toHaveLength(0);
+  });
+
+  it("a member's draft can't change plan fields, even before publishing", async () => {
+    const [liveRow] = await rest(`tenant_configs?tenant_id=eq.${tenantId}&status=eq.published&select=config,version`);
+    const config = structuredClone(liveRow.config);
+    config.ai.monthlyGenerations = 50000;
+    config.brand.poweredBy = false;
+    const response = await realFetch(`${url}/rest/v1/tenant_configs`, {
+      method: 'POST',
+      headers: { apikey: anon!, Authorization: `Bearer ${ownerToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ tenant_id: tenantId, version: 900, config, status: 'draft' }),
+    });
+    const [row] = await response.json();
+    expect(row.config.ai.monthlyGenerations).toBe(300);
+    expect(row.config.brand.poweredBy).toBe(true);
+    await rest(`tenant_configs?id=eq.${row.id}`, { method: 'DELETE' });
   });
 
   it("staff can't invite, and nobody can invite into a shop they're not in", async () => {
     expect((await handleDashboard('invite', { tenantId, email: `x-${stamp}@int.test`, role: 'owner' }, staffToken, env)).status).toBe(403);
-    const outsider = await user(`outsider-${stamp}@int.test`);
+    const outsider = await used(`outsider-${stamp}@int.test`);
     expect(outsider).toBeTruthy();
     const token = await signIn(`outsider-${stamp}@int.test`);
     expect((await handleDashboard('invite', { tenantId, email: `y-${stamp}@int.test`, role: 'owner' }, token, env)).status).toBe(404);

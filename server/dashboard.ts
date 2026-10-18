@@ -1,6 +1,6 @@
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
 import { createDb, DbError, hasDb, type Db } from './db.js';
-import { fromDomain, sendEmail, type EmailEnv } from './email.js';
+import { sendEmail, type EmailEnv } from './email.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
 
@@ -8,7 +8,8 @@ import type { TenantEnv } from './tenants.js';
 // The two things a member can't do through row-level security alone:
 //   publish  — validate the draft with the shared schema and keep the fields the
 //              plan controls (AI allowance, "Powered by" footer), then publish.
-//   invite   — add a teammate: create or find their account and send a sign-in link.
+//   invite   — invite a teammate: create or find their account, record a pending
+//              invite and email a sign-in link. They join when they accept.
 // Plus stats, which reads views from PostHog when it's configured.
 
 export type DashboardEnv = TenantEnv &
@@ -86,7 +87,16 @@ async function publish(db: Db, userId: string, payload: Record<string, unknown>)
   return reply(200, { version, reset: locked.reset, live: tenant?.status === 'live', slug: tenant?.slug });
 }
 
-type LinkResponse = { action_link?: string; id?: string; email?: string; email_confirmed_at?: string | null; properties?: { action_link?: string } };
+type LinkResponse = {
+  action_link?: string;
+  id?: string;
+  email_confirmed_at?: string | null;
+  invited_at?: string | null;
+  last_sign_in_at?: string | null;
+  properties?: { action_link?: string };
+};
+
+const strip = (value: string) => value.replace(/[<>&"'\r\n]/g, '').slice(0, 80);
 
 async function invite(db: Db, user: { id: string; email?: string }, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
   const tenantId = String(payload.tenantId ?? '');
@@ -98,49 +108,67 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
   if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can add people.' });
   const [tenant] = await db.select<TenantRow>('tenants', { id: `eq.${tenantId}`, select: 'id,slug,name,kind,status,stripe_account_id' });
   if (!tenant) return reply(404, { error: 'not_found' });
-  const addedToday = await db.count('members', { tenant_id: `eq.${tenantId}`, created_at: `gte.${new Date(Date.now() - 864e5).toISOString()}` });
-  if (addedToday >= 20) return reply(429, { error: 'limit', message: 'Too many invites today. Try again tomorrow.' });
+
+  // Accounts are created only here. If public sign-up were on, someone could
+  // register a teammate's address first and keep a password to it.
+  const settings = await db.authSettings();
+  if (!settings?.disable_signup) {
+    console.error('invite refused: public sign-up is enabled in Supabase Auth');
+    return reply(503, { error: 'signup_open', message: 'Invites are switched off for now. Message VVS Lab to add someone.' });
+  }
+
+  // Limits come from the append-only invite log, which removing people doesn't reset.
+  const since = new Date(Date.now() - 864e5).toISOString();
+  const [perShop, perEmail] = await Promise.all([
+    db.count('member_invites', { tenant_id: `eq.${tenantId}`, created_at: `gte.${since}` }),
+    db.count('member_invites', { email: `eq.${email}`, created_at: `gte.${since}` }),
+  ]);
+  if (perShop >= 20 || perEmail >= 3) return reply(429, { error: 'limit', message: 'Too many invites today. Try again tomorrow.' });
+
+  // Every outcome gets the same answer, so this can't be used to learn who has an account.
+  const done = reply(200, { invited: true, message: `If ${email} can be added, they'll get an email to join. They appear on the team once they sign in.` });
 
   const origin = (env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com').replace(/\/$/, '');
   const redirect = `${origin}/dashboard`;
-  // A new address gets an account created here (public sign-up is off), so nobody
-  // can register it first. An existing account must already be confirmed.
   let link = await db.authAdmin<LinkResponse>('generate_link', { type: 'invite', email, redirect_to: redirect });
   let existing = false;
   if (!link.ok && (link.status === 422 || /already/i.test(link.message))) {
     existing = true;
     link = await db.authAdmin<LinkResponse>('generate_link', { type: 'magiclink', email, redirect_to: redirect });
   }
-  if (!link.ok) return reply(502, { error: 'auth', message: 'Couldn’t create the sign-in link. Try again in a minute.' });
+  if (!link.ok) return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
   const data = link.data;
   const actionLink = data.action_link ?? data.properties?.action_link;
-  if (!data.id || !actionLink) return reply(502, { error: 'auth', message: 'Couldn’t create the sign-in link. Try again in a minute.' });
-  if (existing && !data.email_confirmed_at) {
-    return reply(409, { error: 'unconfirmed', message: 'That email has an unfinished account. Ask VVS Lab support to add them.' });
+  if (!data.id || !actionLink) return reply(502, { error: 'auth', message: 'Couldn’t send the invite. Try again in a minute.' });
+  // Only a brand-new invited account, or an account its owner has actually used.
+  const trusted = existing ? Boolean(data.last_sign_in_at && data.email_confirmed_at) : Boolean(data.invited_at && !data.email_confirmed_at) || Boolean(data.last_sign_in_at);
+  if (!trusted) {
+    console.error('invite skipped: account in an unexpected state', tenantId);
+    return done;
   }
+  const already = await db.count('members', { tenant_id: `eq.${tenantId}`, user_id: `eq.${data.id}` });
+  if (already) return done;
 
-  const already = await db.select<{ role: string }>('members', { tenant_id: `eq.${tenantId}`, user_id: `eq.${data.id}`, select: 'role' });
-  if (already.length) return reply(200, { added: false, message: `${email} is already on the team.` });
-  await db.insert('members', { tenant_id: tenantId, user_id: data.id, role: memberRole });
-
-  const shop = tenant.name.replace(/[<>&"']/g, '');
-  const sent = await sendEmail(
+  await db.insert('member_invites', { tenant_id: tenantId, email, role: memberRole, invited_by: user.id });
+  const shop = strip(tenant.name);
+  const inviter = strip(user.email ?? 'The shop owner');
+  await sendEmail(
     {
       fromName: 'VVS Lab',
       to: [email],
-      subject: `You're invited to manage ${shop} on VVS Lab`,
-      text: `${user.email ?? 'The shop owner'} added you to ${shop} on VVS Lab.\n\nSign in: ${actionLink}\n\nThe link works once and expires in 24 hours. Afterwards, sign in any time at ${redirect}.`,
+      subject: 'You’re invited to join a shop on VVS Lab',
+      text: `${inviter} invited you to join "${shop}" on VVS Lab.\n\nAccept and sign in: ${actionLink}\n\nThe link works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ${redirect}. If you weren't expecting this, ignore it.`,
       html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1b1714">
 <p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a8178;margin:0 0 18px">VVS Lab</p>
-<h1 style="font-size:22px;margin:0 0 12px">You're on the ${shop} team</h1>
-<p style="font-size:15px;line-height:1.5;margin:0 0 22px">${(user.email ?? 'The shop owner').replace(/[<>&"']/g, '')} added you to ${shop} on VVS Lab. You can see the shop's design requests and${memberRole === 'owner' ? ' change its prices and options' : ' work its leads'}.</p>
-<p style="margin:0 0 22px"><a href="${actionLink}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Sign in to ${shop}</a></p>
-<p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. After that, sign in any time at <a href="${redirect}" style="color:#8a8178">${redirect.replace(/^https?:\/\//, '')}</a>.</p></div>`,
+<h1 style="font-size:22px;margin:0 0 12px">Join “${shop}”</h1>
+<p style="font-size:15px;line-height:1.5;margin:0 0 22px">${inviter} invited you to join this shop on VVS Lab as ${memberRole === 'owner' ? 'an owner' : 'staff'}. You'll see its design requests${memberRole === 'owner' ? ' and can change its prices and options' : ''}.</p>
+<p style="margin:0 0 22px"><a href="${actionLink}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Accept and sign in</a></p>
+<p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at <a href="${redirect}" style="color:#8a8178">${redirect.replace(/^https?:\/\//, '')}</a>. Not expecting this? Ignore it and nothing happens.</p></div>`,
       headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${data.id}` },
     },
     env,
   );
-  return reply(200, { added: true, emailed: sent.ok, from: `leads@${fromDomain(env)}` });
+  return done;
 }
 
 async function stats(db: Db, userId: string, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {

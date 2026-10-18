@@ -50,6 +50,12 @@ declare
   shop uuid := old.tenant_id;
 begin
   if old.role <> 'owner' then return coalesce(new, old); end if;
+  -- Deleting an account (cascade from auth.users) or offboarding as the service
+  -- role is always allowed; the shop is then fixed by an admin.
+  if tg_op = 'DELETE' and not exists (select 1 from auth.users where id = old.user_id) then return old; end if;
+  if coalesce(auth.jwt() ->> 'role', '') = 'service_role' then return coalesce(new, old); end if;
+  -- One owner change per shop at a time, so two owners can't remove each other at once.
+  perform 1 from public.tenants where id = shop for update;
   if tg_op = 'UPDATE' and new.role = 'owner' and new.tenant_id = old.tenant_id then return new; end if;
   if not exists (select 1 from public.tenants where id = shop) then return coalesce(new, old); end if;
   if (select count(*) from public.members where tenant_id = shop and role = 'owner' and user_id <> old.user_id) = 0 then
@@ -73,6 +79,55 @@ create policy members_admin_insert on public.members for insert to authenticated
   with check (public.is_platform_admin());
 revoke update on public.members from authenticated;
 grant update (role) on public.members to authenticated;
+
+-- Invitations. The server records an invite and emails a sign-in link; the
+-- membership is created only when the invited person signs in with that email
+-- and accepts (accept_member_invites), so nobody is added to a shop without
+-- their consent. The log is append-only, so it also rate-limits invites.
+create table public.member_invites (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants (id) on delete cascade,
+  email text not null check (email = lower(email) and char_length(email) <= 254),
+  role text not null check (role in ('owner', 'staff')),
+  invited_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz,
+  revoked_at timestamptz
+);
+create index member_invites_email_idx on public.member_invites (email) where accepted_at is null and revoked_at is null;
+create index member_invites_tenant_idx on public.member_invites (tenant_id, created_at desc);
+alter table public.member_invites enable row level security;
+create policy invites_read on public.member_invites for select to authenticated using (public.is_member(tenant_id) or public.is_platform_admin());
+create policy invites_revoke on public.member_invites for update to authenticated
+  using (public.is_owner(tenant_id) or public.is_platform_admin())
+  with check (public.is_owner(tenant_id) or public.is_platform_admin());
+revoke all on public.member_invites from anon, authenticated;
+grant select on public.member_invites to authenticated;
+grant update (revoked_at) on public.member_invites to authenticated;
+
+create function public.accept_member_invites() returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  me auth.users;
+  invite public.member_invites;
+  added integer := 0;
+begin
+  select * into me from auth.users where id = auth.uid();
+  if me is null or me.email_confirmed_at is null then return 0; end if;
+  for invite in
+    select * from public.member_invites
+    where email = lower(me.email) and accepted_at is null and revoked_at is null and created_at > now() - interval '7 days'
+    for update
+  loop
+    insert into public.members (tenant_id, user_id, role) values (invite.tenant_id, me.id, invite.role)
+    on conflict (tenant_id, user_id) do nothing;
+    update public.member_invites set accepted_at = now() where id = invite.id;
+    added := added + 1;
+  end loop;
+  return added;
+end $$;
+revoke all on function public.accept_member_invites() from public, anon;
+grant execute on function public.accept_member_invites() to authenticated;
 
 -- Members see each other's email in the team list (only for shops they belong to).
 create function public.shop_team(target uuid) returns table (user_id uuid, email text, role text, created_at timestamptz, last_sign_in_at timestamptz)
@@ -128,3 +183,21 @@ language sql stable security invoker set search_path = public as $$
 $$;
 revoke all on function public.shop_stats(uuid, timestamptz) from public, anon;
 grant execute on function public.shop_stats(uuid, timestamptz) to authenticated;
+
+-- ---------- 5. Plan fields are locked in drafts too ----------
+-- A member's draft always carries the live AI allowance and footer setting, so a
+-- draft edited by a shop can't pass a plan change through any publish path
+-- (including an admin publishing it). Admins and the server are not affected.
+create function public.lock_member_draft() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  live jsonb;
+begin
+  if auth.uid() is null or public.is_platform_admin() then return new; end if;
+  select config into live from public.tenant_configs where tenant_id = new.tenant_id and status = 'published';
+  new.config := jsonb_set(new.config, '{ai,monthlyGenerations}', coalesce(live #> '{ai,monthlyGenerations}', to_jsonb(300)), true);
+  new.config := jsonb_set(new.config, '{brand,poweredBy}', coalesce(live #> '{brand,poweredBy}', 'true'::jsonb), true);
+  return new;
+end $$;
+create trigger tenant_configs_lock_member_draft before insert or update of config on public.tenant_configs
+  for each row execute function public.lock_member_draft();
