@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Turnstile } from '../Turnstile';
-import '../../admin/admin.css';
-import './signup.css';
+import { AuthPage } from '../auth/AuthPage';
 
 // /signup: a jeweler starts a free trial on their own. We create the shop and
 // email a sign-in link; they finish setup in /dashboard and switch it on.
@@ -78,69 +77,69 @@ export default function SignupPage() {
 
   if (state === 'sent') {
     return (
-      <main className="admin-auth signup">
-        <div className="admin-card admin-auth__card">
-          <h1>Check your email</h1>
-          <p>We sent a link to <strong>{email}</strong>. Open it on this device to set up {name || 'your shop'}: add your logo and prices, then switch your builder on.</p>
-          <p className="admin-muted">Nothing there in a minute? Check spam, or message <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>.</p>
-        </div>
-      </main>
+      <AuthPage
+        karat="wink"
+        title={<>Check your <em>email</em></>}
+        lead={<>We sent a link to <strong>{email}</strong>. Open it on this phone to set up {name || 'your shop'}: add your logo and prices, then switch your builder on.</>}
+        foot={<p>Nothing there in a minute? Check spam, or email <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>.</p>}
+      />
     );
   }
 
   return (
-    <main className="admin-auth signup">
-      <form className="admin-card admin-auth__card signup__card" onSubmit={submit} noValidate>
-        <a className="signup__brand" href="/">VVS Lab</a>
-        <h1>Your own 3D grillz builder</h1>
-        <p className="admin-muted">Customers design their set, see your price and send you the order with a studio photo. Free for 14 days, then $199 a month.</p>
-
-        <label className="admin-field">
+    <AuthPage
+      karat="wink"
+      title={<>Your own 3D grillz <em>builder</em></>}
+      lead="Customers design their set, see your price and send you the order with a studio photo. Free for 14 days, then $199 a month."
+      foot={<p>Already have a shop? <a href="/dashboard">Sign in</a></p>}
+    >
+      <form className="auth-form" onSubmit={submit} noValidate>
+        <label className="auth-field">
           <span>Shop name</span>
           <input value={name} maxLength={60} required onChange={(event) => setName(event.target.value)} autoComplete="organization" />
-          {error?.field === 'name' && <small className="admin-error">{error.message}</small>}
+          {error?.field === 'name' && <small className="auth-error">{error.message}</small>}
         </label>
 
-        <label className="admin-field">
+        <label className="auth-field">
           <span>Your link</span>
-          <div className="admin-prefix signup__slug"><em>{host}/b/</em>
-            <input value={slug} maxLength={40} required onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)); }} aria-describedby="slug-status" />
+          <div className="auth-prefix"><em>{host}/b/</em>
+            <input value={slug} maxLength={40} required onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)); }} aria-describedby="slug-status" autoCapitalize="none" spellCheck={false} />
           </div>
-          <small id="slug-status" className={available && !available.ok ? 'admin-error' : 'admin-muted'}>
-            {error?.field === 'slug' ? error.message : available ? (available.ok ? <><Check size={12} /> Available</> : available.message) : 'This is what you’ll put in your Instagram bio.'}
+          <small id="slug-status" className={error?.field === 'slug' || (available && !available.ok) ? 'auth-error' : available?.ok ? 'auth-ok' : undefined}>
+            {error?.field === 'slug' ? error.message : available ? (available.ok ? <><Check size={13} /> Available</> : available.message) : 'This is what you’ll put in your Instagram bio.'}
           </small>
         </label>
 
-        <label className="admin-field">
+        <label className="auth-field">
           <span>Email</span>
-          <input type="email" value={email} required onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
-          <small className="admin-muted">{error?.field === 'email' ? <span className="admin-error">{error.message}</span> : 'Design requests arrive here. You can add more later.'}</small>
+          <input type="email" value={email} required onChange={(event) => setEmail(event.target.value)} autoComplete="email" inputMode="email" />
+          <small className={error?.field === 'email' ? 'auth-error' : undefined}>{error?.field === 'email' ? error.message : 'Design requests arrive here. You can add more later.'}</small>
         </label>
 
-        <label className="admin-field">
-          <span>Instagram (optional)</span>
-          <div className="admin-prefix"><em>@</em><input value={instagram} maxLength={31} onChange={(event) => setInstagram(event.target.value.replace(/^@/, ''))} /></div>
-          {error?.field === 'instagram' && <small className="admin-error">{error.message}</small>}
+        <label className="auth-field">
+          <span>Instagram <span className="auth-optional">(optional)</span></span>
+          <div className="auth-prefix"><em>@</em><input value={instagram} maxLength={31} onChange={(event) => setInstagram(event.target.value.replace(/^@/, ''))} autoCapitalize="none" spellCheck={false} /></div>
+          {error?.field === 'instagram' && <small className="auth-error">{error.message}</small>}
         </label>
 
-        <div className="signup__trap" aria-hidden="true">
+        <div className="auth-trap" aria-hidden="true">
           <label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} /></label>
         </div>
 
-        <label className="admin-check signup__terms">
+        <label className="auth-check">
           <input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} />
-          <span>I agree to the <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy</a> policy.</span>
+          <span>I agree to the <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy policy</a>.</span>
         </label>
-        {error?.field === 'terms' && <small className="admin-error">{error.message}</small>}
+        {error?.field === 'terms' && <small className="auth-error">{error.message}</small>}
 
         <Turnstile onToken={setTurnstile} />
-        {error && !error.field && <p className="admin-error" role="alert">{error.message}</p>}
+        {error && !error.field && <p className="auth-error" role="alert">{error.message}</p>}
 
-        <button className="admin-button admin-button--primary signup__submit" type="submit" disabled={state === 'sending' || (available !== null && !available.ok)}>
-          {state === 'sending' ? <Loader2 className="spin" size={16} /> : <ArrowRight size={16} />} {state === 'sending' ? 'Creating your shop…' : 'Start free trial'}
+        <button className="auth-button" type="submit" disabled={state === 'sending' || (available !== null && !available.ok)}>
+          {state === 'sending' ? <><Loader2 className="auth-spinner" size={18} /> Creating your shop…</> : 'Start my free trial'}
         </button>
-        <p className="admin-muted dash-small">No card needed to start. Already have a shop? <a href="/dashboard">Sign in</a></p>
+        <p className="auth-note">No card needed to start.</p>
       </form>
-    </main>
+    </AuthPage>
   );
 }

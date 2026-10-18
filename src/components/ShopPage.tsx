@@ -75,7 +75,7 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
 
   if (!loaded) return <Loading />;
   if (loaded.state === 'not_found') {
-    return <StatePage title="This builder doesn't exist" text="Check the link with the shop that sent it, or ask them for a new one." />;
+    return <StatePage title="This builder isn’t open" text="The link may be wrong, or the shop hasn’t switched its builder on yet. Check with the shop that sent it." action={{ label: 'Shop owner? Sign in', href: '/dashboard' }} />;
   }
   if (loaded.state === 'sign_in') {
     return <StatePage title="Sign in to preview" text="Drafts are only visible to the shop's team and VVS Lab." action={{ label: 'Sign in', href: '/admin' }} />;

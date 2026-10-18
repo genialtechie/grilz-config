@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { BarChart3, ExternalLink, Globe, Inbox, LogOut, Mail, Store, Users } from 'lucide-react';
+import { BarChart3, ExternalLink, Globe, Inbox, LogOut, Store, Users } from 'lucide-react';
 import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
@@ -10,16 +10,17 @@ import { takeEmailSignIn } from '../lib/emailSignIn';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
+import { AuthPage } from '../components/auth/AuthPage';
 import { CardPrompt, GettingStarted, TrialBanner, TrialGate } from './GettingStarted';
 import '../admin/admin.css';
 import './dashboard.css';
 
-// /dashboard: the jeweler's own console. Sign in with a magic link (accounts are
-// created by invitation only), then work leads, change prices and options,
+// /dashboard: the jeweler's own console. Sign in with a magic link (accounts come
+// from signup or a team invite), then work leads, change prices and options,
 // see the week's numbers and manage the team. Row-level security limits every
 // query to the shops the person belongs to.
 
-function SignIn({ notice }: { notice?: string }) {
+function SignIn({ expired }: { expired?: boolean }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -29,7 +30,7 @@ function SignIn({ notice }: { notice?: string }) {
     setState('sending');
     const { error: authError } = await supabase().auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      // Invitation only: an address without an account gets no email.
+      // Accounts come from signup or a team invite: an address without one gets no email.
       options: { emailRedirectTo: `${window.location.origin}/dashboard`, shouldCreateUser: false },
     });
     // Same answer whether or not the address has an account, so the form can't
@@ -40,28 +41,38 @@ function SignIn({ notice }: { notice?: string }) {
     } else setState('sent');
   };
 
+  if (state === 'sent') {
+    return (
+      <AuthPage
+        karat="working"
+        title={<>Check your <em>email</em></>}
+        lead={<>If <strong>{email}</strong> has a VVS Lab shop, a sign-in link is on its way. Open it on this device.</>}
+        foot={<p>Nothing there in a minute? Check spam, or <button className="auth-link" type="button" onClick={() => setState('idle')}>try another email</button>.</p>}
+      />
+    );
+  }
+
   return (
-    <main className="admin-auth">
-      <form className="admin-card admin-auth__card" onSubmit={submit}>
-        <h1>Your VVS Lab shop</h1>
-        {state === 'sent' ? (
-          <p>If {email} is on a shop&apos;s team, a sign-in link is on its way. You can close this tab.</p>
-        ) : (
-          <>
-            {notice ? <p className="admin-error" role="alert">{notice}</p> : <p className="admin-muted">Sign in to see your design requests and update your prices.</p>}
-            <label className="admin-field">
-              <span>Email</span>
-              <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
-            </label>
-            {state === 'error' && <p className="admin-error" role="alert">{error}</p>}
-            <button className="admin-button admin-button--primary" type="submit" disabled={state === 'sending'}>
-              <Mail size={16} /> {state === 'sending' ? 'Sending…' : 'Email me a sign-in link'}
-            </button>
-            <p className="admin-muted dash-small">New here? Your shop owner adds you from their dashboard.</p>
-          </>
-        )}
+    <AuthPage
+      karat={expired ? 'nudge' : 'cool'}
+      title={expired ? <>That link has <em>expired</em></> : <>Sign in to your <em>shop</em></>}
+      lead={expired ? 'Sign-in links work once and expire after an hour. Enter your email and we’ll send a fresh one.' : 'We’ll email you a link. No password to remember.'}
+      foot={<>
+        <p>New to VVS Lab? <a href="/signup">Start a free trial</a></p>
+        <p>Joining a shop’s team? Open the invite in your email.</p>
+      </>}
+    >
+      <form className="auth-form" onSubmit={submit}>
+        <label className="auth-field">
+          <span>Email</span>
+          <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" inputMode="email" />
+        </label>
+        {state === 'error' && <p className="auth-error" role="alert">{error}</p>}
+        <button className="auth-button" type="submit" disabled={state === 'sending'}>
+          {state === 'sending' ? 'Sending…' : 'Email me a sign-in link'}
+        </button>
       </form>
-    </main>
+    </AuthPage>
   );
 }
 
@@ -94,8 +105,8 @@ function Welcome() {
       });
   }, [navigate]);
 
-  if (failed) return <SignIn notice="That link has expired or was already used. Enter your email and we'll send a new one." />;
-  return <div className="admin-loading">Signing you in…</div>;
+  if (failed) return <SignIn expired />;
+  return <AuthPage karat="working" title={<>Signing you <em>in</em></>} lead="One moment." />;
 }
 
 function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
@@ -116,6 +127,7 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
     <div className="admin dash">
       <header className="admin-header">
         <div className="dash-header__shop">
+          <img className="dash-mark" src="/assets/email/vvs-mark.png" alt="VVS Lab" width="41" height="18" />
           <span className="admin-header__brand">{shop.name}</span>
           {shops.length > 1 && <Link to="/dashboard" className="admin-muted dash-small">Switch shop</Link>}
         </div>
@@ -205,13 +217,14 @@ export default function DashboardApp() {
   if (!session) return <SignIn />;
   if (error || !shops?.length) {
     return (
-      <main className="admin-auth">
-        <div className="admin-card admin-auth__card">
-          <h1>No shop yet</h1>
-          <p>{error || `${session.user.email} isn't on a shop's team. Ask the shop owner to add you, or message VVS Lab.`}</p>
-          <button className="admin-button" type="button" onClick={() => void supabase().auth.signOut()}>Sign out</button>
-        </div>
-      </main>
+      <AuthPage
+        karat="nudge"
+        title={error ? <>Couldn’t load your <em>shop</em></> : <>No shop <em>yet</em></>}
+        lead={error || <><strong>{session.user.email}</strong> isn’t on a shop’s team. Start your own, or ask the shop owner to invite this email.</>}
+        foot={<p><button className="auth-link" type="button" onClick={() => void supabase().auth.signOut()}>Sign out</button></p>}
+      >
+        {!error && <a className="auth-button" href="/signup">Start a free trial</a>}
+      </AuthPage>
     );
   }
 

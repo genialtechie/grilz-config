@@ -1,6 +1,7 @@
 /* Jeweler dashboard: the admin look, made for a phone first. */
 .dash-small { font-size: 12px; }
 .dash-h1 { margin: 0 0 16px; }
+.admin h1.dash-h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 32px; letter-spacing: -0.01em; }
 .dash-header__shop { display: flex; flex-direction: column; min-width: 0; }
 .dash-header__shop .admin-header__brand { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -105,3 +106,24 @@
 .dash-gate h1 { margin: 0; font-size: 24px; }
 .dash-gate p { margin: 0; line-height: 1.5; }
 .dash-gate__data { margin-top: 12px; }
+
+/* Serif headlines with one red italic word, like the emails and sign-in pages. */
+.admin .dash-serif, .dash-serif { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.01em; margin: 0 0 4px; }
+.dash-serif em { color: #ce4257; }
+.dash-start { border-color: var(--a-line); background: #fffdf9; }
+
+.dash-live { position: relative; margin-bottom: 20px; display: grid; justify-items: center; gap: 10px; text-align: center; background: #fbf7f0; border-color: #e4dacb; padding: 28px 20px; }
+.dash-live img { width: 112px; height: 112px; }
+.admin .dash-live .dash-serif { font-size: 44px; }
+.dash-live p { margin: 0; max-width: 420px; line-height: 1.5; }
+.dash-live__x { position: absolute; top: 10px; right: 10px; }
+.dash-live__link { display: flex; align-items: center; gap: 8px; width: min(100%, 420px); padding: 6px 6px 6px 14px; border: 1px solid #e4dacb; border-radius: 12px; background: #fff; box-sizing: border-box; }
+.dash-live__link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; text-align: left; }
+.dash-live__link button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: #1b1714; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.dash-live__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.dash-live__primary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 20px; border-radius: 999px; background: #ce4257; color: #fff; font-weight: 600; text-decoration: none; }
+.dash-live__actions .admin-button { min-height: 44px; border-radius: 999px; }
+.admin .dash-start__go { min-height: 48px; padding: 0 22px; border-radius: 999px; background: #ce4257; border-color: #ce4257; }
+.admin .dash-start__go:hover { background: #b83a4e; border-color: #b83a4e; }
+.dash-mark { display: block; width: 41px; height: auto; padding-right: 10px; border-right: 1px solid var(--a-line); grid-row: span 2; }
+.dash-header__shop:has(.dash-mark) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }

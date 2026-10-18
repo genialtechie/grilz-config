@@ -1,0 +1,112 @@
+/* Same palette as the VVS Lab emails (docs/email/vvs-lab.md). Light only, like the dashboard. */
+.auth {
+  --au-bg: #fbf7f0;
+  --au-text: #1b1714;
+  --au-muted: #6f655a;
+  --au-line: #e4dacb;
+  --au-accent: #ce4257;
+  --au-link: #b02f45;
+  --au-err: #b42318;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  padding: 28px 16px 20px;
+  box-sizing: border-box;
+  background: var(--au-bg);
+  color: var(--au-text);
+  font-family: Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.auth a { color: var(--au-link); }
+.auth__column { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: stretch; text-align: center; }
+.auth__mark { align-self: center; display: block; margin-bottom: 20px; }
+.auth__mark img { display: block; width: 73px; height: auto; }
+.auth__karat { align-self: center; width: 132px; height: 132px; margin: 4px 0 8px; }
+.auth__title {
+  margin: 0 0 10px;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: 44px;
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.auth__title em { color: var(--au-accent); }
+.auth__lead { margin: 0 0 24px; color: var(--au-muted); text-wrap: pretty; }
+.auth__lead strong { color: var(--au-text); font-weight: 600; }
+
+.auth-form { display: grid; gap: 16px; text-align: left; }
+.auth-field { display: grid; gap: 6px; }
+.auth-field > span { font-size: 15px; font-weight: 600; }
+.auth-field small { font-size: 13px; color: var(--au-muted); min-height: 1em; }
+.auth-field small svg { vertical-align: -1px; }
+.auth-input,
+.auth-field input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1px solid var(--au-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--au-text);
+  /* 16px+ keeps iOS from zooming into the field. */
+  font: inherit;
+  font-size: 17px;
+  box-sizing: border-box;
+}
+.auth-field input:focus-visible, .auth-prefix:focus-within { outline: 2px solid var(--au-accent); outline-offset: 1px; border-color: transparent; }
+.auth-prefix { display: flex; align-items: center; min-height: 50px; border: 1px solid var(--au-line); border-radius: 12px; background: #fff; overflow: hidden; }
+.auth-prefix em { padding: 0 0 0 14px; color: var(--au-muted); font-style: normal; font-size: 15px; white-space: nowrap; }
+.auth-prefix input { border: 0; border-radius: 0; min-height: 48px; padding-left: 2px; }
+.auth-prefix input:focus-visible { outline: none; }
+.auth-check { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--au-muted); cursor: pointer; }
+.auth-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--au-accent); flex: none; }
+.auth-check a { color: inherit; }
+.auth-error { color: var(--au-err); font-size: 15px; margin: 0; }
+.auth-field small.auth-error { color: var(--au-err); }
+.auth-ok { color: #1f7a4d; }
+
+.auth-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--au-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.auth-button:hover { background: #b83a4e; }
+.auth-button:disabled { opacity: 0.55; cursor: default; }
+.auth-button:focus-visible { outline: 2px solid var(--au-text); outline-offset: 3px; }
+.auth-button--quiet { background: none; color: var(--au-text); border: 1px solid var(--au-line); }
+.auth-button--quiet:hover { background: #fff; }
+
+.auth__foot { margin-top: 24px; display: grid; gap: 6px; font-size: 15px; color: var(--au-muted); }
+.auth__foot p { margin: 0; }
+.auth__legal { margin-top: 32px; font-size: 13px; color: var(--au-muted); }
+.auth__legal a { color: inherit; }
+
+.auth-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.auth-spinner { animation: auth-spin 1s linear infinite; }
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+
+@media (min-width: 640px) {
+  .auth { padding-top: 56px; }
+  .auth__title { font-size: 54px; }
+}
+.auth-optional { font-weight: 400; color: var(--au-muted); }
+.auth-note { margin: -4px 0 0; text-align: center; font-size: 13px; color: var(--au-muted); }
+.auth-link { padding: 0; border: 0; background: none; color: var(--au-link); font: inherit; text-decoration: underline; cursor: pointer; }
+.auth .auth-button { color: #fff; }
