@@ -87,6 +87,34 @@ signature, like Freddie's), Hype (celebrating), Boss (the craftsman).
 Expressions all come from the same parts later, so the pick is the
 **resting** face; the others become the expression sheet.
 
-Next rounds: 4 colour (gold body, ink outline, one iced stone) ·
+## Round 4: the model and its expressions
+
+Resting face **Cool** (heavy lids, slow grin: confident, flashy, unbothered,
+matching "Your DMs are losing custom orders"); **Hype** for wins. Polished
+gold with side shading and highlights, a brilliant-cut stone set in the crown
+as the signature, and a cream sticker edge on dark backgrounds.
+
+![Expressions](round-4-expressions.png)
+
+![On the dark background](round-4-on-dark.png)
+
+![Sizes](round-4-sizes.png)
+
+| Expression | Use |
+| --- | --- |
+| Cool | Resting: avatar, email footer, dashboard |
+| Hype | Wins: first design request, deposit paid, builder live |
+| Nudge | Reminders: finish setup, trial ending |
+| Working | Loading: the studio photo rendering |
+| Tarnished | Win-back: "I'm losing my shine" (dull metal, droopy eyes) |
+| Wink | Sign-offs, thanks, welcome |
+
+Source: `scripts/mascot-model.ts` (one set of parts, so every expression
+stays on-model; `mascot(expression)` returns the SVG).
+
+Remaining: a name; a ¾ and side view for motion and Instagram; the PNG
+exports for email (2×) and the app icon.
+
+Earlier plan, for reference: 4 colour (gold body, ink outline, one iced stone) ·
 5 model sheet (front, ¾, side) and expression sheet (happy, celebrating,
 nudging, sleepy/dull for win-back, thinking).
