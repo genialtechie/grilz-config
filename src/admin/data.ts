@@ -158,13 +158,13 @@ export async function setLeadStatus(leadId: string, status: string) {
 // validate the config and keep plan-controlled fields.
 
 export type MemberRole = 'owner' | 'staff';
-export type MyShop = TenantRow & { role: MemberRole | 'admin'; plan?: string; trial_ends_at?: string | null };
+export type MyShop = TenantRow & { role: MemberRole | 'admin'; plan?: string; trial_ends_at?: string | null; billing_status?: string; current_period_end?: string | null };
 
 export async function myShops(): Promise<MyShop[]> {
   const db = supabase();
   const { data: user } = await db.auth.getUser();
   if (!user.user) return [];
-  const rows = must(await db.from('members').select('role,tenants(id,slug,name,kind,status,published_version,created_at,plan,trial_ends_at)').eq('user_id', user.user.id)) as unknown as { role: MemberRole; tenants: (TenantRow & { plan: string; trial_ends_at: string | null }) | null }[];
+  const rows = must(await db.from('members').select('role,tenants(id,slug,name,kind,status,published_version,created_at,plan,trial_ends_at,billing_status,current_period_end)').eq('user_id', user.user.id)) as unknown as { role: MemberRole; tenants: (TenantRow & { plan: string; trial_ends_at: string | null; billing_status: string; current_period_end: string | null }) | null }[];
   return rows.filter((row) => row.tenants).map((row) => ({ ...(row.tenants as TenantRow), role: row.role })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -258,3 +258,9 @@ export async function exportShopData(tenant: { id: string; slug: string; name: s
 
 export const goLive = (tenantId: string) => api<{ status: string }>('go_live', { tenantId });
 export const pauseShop = (tenantId: string) => api<{ status: string }>('pause', { tenantId });
+
+export const startPlan = (tenantId: string) => api<{ url: string }>('billing_checkout', { tenantId });
+export const billingPortal = (tenantId: string) => api<{ url: string }>('billing_portal', { tenantId });
+export const connectStripe = (tenantId: string) => api<{ url: string }>('connect_onboard', { tenantId });
+export type ConnectStatus = { connected: boolean; chargesEnabled: boolean; detailsSubmitted?: boolean; due?: number };
+export const stripeStatus = (tenantId: string) => api<ConnectStatus>('connect_status', { tenantId });

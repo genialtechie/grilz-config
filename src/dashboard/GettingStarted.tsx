@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Circle, Rocket } from 'lucide-react';
-import { getTenant, goLive, type MyShop } from '../admin/data';
+import { billingPortal, getTenant, goLive, startPlan, type MyShop } from '../admin/data';
 import { parseTenantConfig } from '../lib/tenant/schema';
 
 // First-run checklist for a shop that isn't live yet, and the trial banner.
@@ -9,14 +9,36 @@ import { parseTenantConfig } from '../lib/tenant/schema';
 type Step = { done: boolean; title: string; text: string; to?: string };
 
 export function TrialBanner({ shop }: { shop: MyShop }) {
-  if (shop.plan !== 'trial' || !shop.trial_ends_at) return null;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const status = shop.billing_status ?? 'none';
+  const owner = shop.role !== 'staff';
+  const go = (work: () => Promise<{ url: string }>) => async () => {
+    setBusy(true);
+    setError('');
+    try {
+      window.location.href = (await work()).url;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      setBusy(false);
+    }
+  };
+  if (status === 'past_due') {
+    return (
+      <div className="dash-trial is-urgent">
+        <span>Your last payment didn’t go through. Update your card to keep your builder on.</span>
+        {owner && <button type="button" disabled={busy} onClick={go(() => billingPortal(shop.id))}>Update card</button>}
+        {error && <span>{error}</span>}
+      </div>
+    );
+  }
+  if (status === 'active' || status === 'trialing' || shop.plan !== 'trial' || !shop.trial_ends_at) return null;
   const days = Math.ceil((new Date(shop.trial_ends_at).getTime() - Date.now()) / 864e5);
-  const link = import.meta.env.VITE_PLAN_PAYMENT_LINK;
-  const href = link ? `${link}${link.includes('?') ? '&' : '?'}client_reference_id=${encodeURIComponent(shop.slug)}` : `mailto:salesteam@magpollo.com?subject=${encodeURIComponent(`Start my plan: ${shop.name}`)}`;
   return (
     <div className={`dash-trial ${days <= 3 ? 'is-urgent' : ''}`}>
-      <span>{days > 0 ? `Free trial · ${days} day${days === 1 ? '' : 's'} left` : 'Your free trial has ended'}</span>
-      <a href={href} target="_blank" rel="noopener">Start your plan · $199/mo</a>
+      <span>{days > 0 ? `Free trial · ${days} day${days === 1 ? '' : 's'} left` : 'Your free trial has ended. Your builder is paused.'}</span>
+      {owner && <button type="button" disabled={busy} onClick={go(() => startPlan(shop.id))}>{busy ? 'Opening…' : 'Start your plan · $199/mo'}</button>}
+      {error && <span>{error}</span>}
     </div>
   );
 }

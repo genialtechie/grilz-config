@@ -62,6 +62,21 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(result.body))
     })
+    server.middlewares.use('/api/deposit', async (req, res) => {
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(chunk as Buffer)
+      let payload: unknown = null
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+      } catch {
+        // handled as invalid
+      }
+      const { handleDeposit } = await server.ssrLoadModule('/server/billing.ts')
+      const result = await handleDeposit(payload, env)
+      res.statusCode = result.status
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(result.body))
+    })
     server.middlewares.use('/api/leads', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405

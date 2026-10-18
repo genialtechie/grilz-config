@@ -40,6 +40,8 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
   const [search] = useSearchParams();
   // ?preview=<version>: a signed-in admin or shop member checking an unpublished draft.
   const previewVersion = Number(search.get('preview')) || null;
+  // Back from the shop's Stripe checkout after paying a deposit.
+  const [depositPaid, setDepositPaid] = useState(search.get('deposit') === 'paid');
   const posthog = usePostHog();
   const [loaded, setLoaded] = useState<LoadedTenant | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -105,6 +107,13 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
     );
   }
   return (
+    <>
+    {depositPaid && (
+      <div className="deposit-toast" role="status">
+        <span>Deposit received. {loaded.config.brand.name} will reach out to confirm your design.</span>
+        <button type="button" onClick={() => setDepositPaid(false)} aria-label="Dismiss">×</button>
+      </div>
+    )}
     <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo} version={loaded.version} preview={loaded.preview}>
       {loaded.preview && (
         <div className="preview-banner" role="status">
@@ -115,5 +124,6 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
         <Configurator />
       </Suspense>
     </TenantProvider>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import { getTenant, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
 import { WebsitePanel } from '../dashboard/WebsitePanel';
+import { StripeConnect } from '../dashboard/StripeConnect';
 import { SAMPLE_PRICING } from './templates';
 
 // One page per shop: edit the config as a draft, preview it, publish it, and
@@ -101,6 +102,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const [confirming, setConfirming] = useState(false);
   const [showPreview, setShowPreview] = useState(() => typeof window === 'undefined' || window.innerWidth > 1080);
   const [previewKey, setPreviewKey] = useState(0);
+  const [cardReady, setCardReady] = useState(false);
   const saving = useRef<Promise<unknown> | null>(null);
 
   const reload = useCallback(async () => {
@@ -512,12 +514,13 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
             <Issue issues={issues} path="pricing" />
           </Section>
 
-          <Section title="Deposit" hint={shop ? 'Card checkout through your own Stripe account is coming soon. Until then, use your payment link or no deposit.' : "Stripe deposits arrive in Stage 5. Until then, use the shop's own payment link or no deposit."}>
+          <Section title="Deposit" hint="Optional. Customers see it after they send their design. Card deposits go straight to your own Stripe account.">
             <div className="admin-radios">
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'none'} onChange={() => update((next) => { next.deposit.mode = 'none'; })} /> No deposit</label>
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'link'} onChange={() => update((next) => { next.deposit.mode = 'link'; })} /> Shop&apos;s payment link</label>
-              <label className="admin-check admin-check--disabled"><input type="radio" name="deposit" disabled checked={deposit.mode === 'stripe'} readOnly /> Stripe checkout (soon)</label>
+              <label className={cardReady ? 'admin-check' : 'admin-check admin-check--disabled'}><input type="radio" name="deposit" disabled={!cardReady && deposit.mode !== 'stripe'} checked={deposit.mode === 'stripe'} onChange={() => update((next) => { next.deposit.mode = 'stripe'; })} /> Card, through Stripe</label>
             </div>
+            <StripeConnect tenantId={tenant.id} canManage={role !== 'staff'} onStatus={(status) => setCardReady(status.chargesEnabled)} />
             {deposit.mode !== 'none' && (
               <>
                 {deposit.mode === 'link' && (

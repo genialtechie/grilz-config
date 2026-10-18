@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Download, Trash2, UserPlus } from 'lucide-react';
-import { exportShopData, inviteMember, pendingInvites, removeMember, revokeInvite, setMemberRole, shopTeam, type MemberRole, type MyShop, type PendingInvite, type TeamMember } from '../admin/data';
+import { billingPortal, exportShopData, inviteMember, startPlan, pendingInvites, removeMember, revokeInvite, setMemberRole, shopTeam, type MemberRole, type MyShop, type PendingInvite, type TeamMember } from '../admin/data';
 import { supabase } from '../admin/supabase';
 import './dashboard.css';
 
@@ -128,6 +128,24 @@ export function TeamPanel({ shop, embedded = false }: { shop: MyShop; embedded?:
             </select>
             <button className="admin-button admin-button--primary" type="submit" disabled={busy}><UserPlus size={15} /> Add</button>
           </form>
+        </section>
+      )}
+      {owner && !embedded && (
+        <section className="admin-card admin-section">
+          <h2>Plan</h2>
+          <p className="admin-muted admin-section__hint">
+            {shop.billing_status === 'active' ? `VVS Lab · $199 a month${shop.current_period_end ? `. Next payment ${new Date(shop.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}.`
+              : shop.billing_status === 'trialing' ? `Plan started. Your first payment is ${shop.current_period_end ? new Date(shop.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'when your trial ends'}.`
+              : shop.billing_status === 'past_due' ? 'Your last payment didn’t go through. Update your card to keep your builder on.'
+              : shop.billing_status === 'canceled' ? 'Your plan is cancelled. Start it again any time.'
+              : shop.plan === 'trial' ? 'You’re on the free trial. Start your plan to keep your builder on after it ends: $199 a month, cancel any time.'
+              : 'Your plan is managed by VVS Lab. Message us with any billing questions.'}
+          </p>
+          {['active', 'trialing', 'past_due'].includes(shop.billing_status ?? '') ? (
+            <button className="admin-button" type="button" disabled={busy} onClick={() => void act(async () => { window.location.href = (await billingPortal(shop.id)).url; return 'Opening Stripe…'; })}>Manage billing</button>
+          ) : shop.plan === 'trial' || shop.billing_status === 'canceled' ? (
+            <button className="admin-button admin-button--primary" type="button" disabled={busy} onClick={() => void act(async () => { window.location.href = (await startPlan(shop.id)).url; return 'Opening Stripe…'; })}>Start your plan</button>
+          ) : null}
         </section>
       )}
       {owner && !embedded && (

@@ -136,6 +136,8 @@ function Configurator() {
   const panelScroll = useRef<HTMLDivElement | null>(null);
   const render = useAiRender(tenant.slug);
   const [lead, setLead] = useState<Lead | null>(null);
+  const [receipt, setReceipt] = useState<LeadReceipt | null>(null);
+  const [depositError, setDepositError] = useState('');
   const [showPhoto, setShowPhoto] = useState(false);
   const {
     selectedTeeth,
@@ -336,6 +338,7 @@ function Configurator() {
       return outcome.error;
     }
     setLead(submitted);
+    setReceipt(outcome.receipt);
     setShowPhoto(true);
     // The demo's leads are Magpollo's own prospects; a shop's customers stay out of our analytics.
     posthog.capture('sample_lead_submitted', {
@@ -392,6 +395,7 @@ function Configurator() {
   const handleReset = () => {
     render.reset();
     setLead(null);
+    setReceipt(null);
     setShowPhoto(false);
     setDepositReached(false);
     resetAll();
@@ -414,6 +418,23 @@ function Configurator() {
     posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit, mold });
     const { mode, link } = tenant.config.deposit;
     if (!tenant.demo && mode === 'link' && link) window.open(link, '_blank', 'noopener');
+    if (!tenant.demo && mode === 'stripe' && receipt) {
+      // Card deposit on the shop's own Stripe account. Open the tab first so it
+      // isn't blocked as a popup, then send it to Stripe's checkout page.
+      const tab = window.open('', '_blank');
+      setDepositError('');
+      void fetch('/api/deposit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leadId: receipt.leadId, token: receipt.token }) })
+        .then(async (response) => {
+          const body = (await response.json().catch(() => ({}))) as { url?: string; message?: string };
+          if (!response.ok || !body.url) throw new Error(body.message ?? 'Card deposits aren’t available right now. The shop will reach out to you.');
+          if (tab) tab.location.href = body.url;
+          else window.location.href = body.url;
+        })
+        .catch((error: Error) => {
+          tab?.close();
+          setDepositError(error.message);
+        });
+    }
     setDepositReached(true);
   };
 
@@ -923,13 +944,14 @@ function Configurator() {
                           })}
                         </div>
                       </fieldset>
-                      {deposit !== null && (tenant.demo || tenant.config.deposit.mode === 'link') && (
+                      {deposit !== null && (tenant.demo || tenant.config.deposit.mode === 'link' || (tenant.config.deposit.mode === 'stripe' && receipt)) && (
                         <button className="primary-button" type="button" onClick={reserveDeposit}>
                           <CreditCard size={17} />
                           {priceHidden ? 'Hold your spot' : 'Reserve with deposit'}
                           <span>{formatPrice(deposit)}</span>
                         </button>
                       )}
+                      {depositError && <p className="inline-note" role="alert">{depositError}</p>}
                       {!tenant.demo && (deposit === null || tenant.config.deposit.mode === 'stripe') && (
                         <p className="fine-print">{brand.name} will reach out on {lead.contact} to confirm your design and next steps.</p>
                       )}
