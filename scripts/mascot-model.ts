@@ -107,8 +107,12 @@ export function mascot(expression: Expression, id: string, { sticker = false, sh
   const { rotate = 0, lift = 0 } = expression.pose ?? {};
   const fill = expression.dull ? 'url(#dull)' : 'url(#gold)';
   const brows = (expression.brows ?? []).map(([x1, y1, x2, y2]) => `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>`).join('');
-  // The signature: one brilliant-cut stone set in the crown.
-  const stone = `<g transform="translate(136 44) rotate(18)"><path d="M-11 -4L-6 -10L6 -10L11 -4L0 10Z" fill="${expression.dull ? '#c9c6bd' : '#f4f9fc'}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/><path d="M-11 -4L11 -4M-6 -10L-3 -4L0 10L3 -4L6 -10" fill="none" stroke="#9aa6b2" stroke-width="1"/></g>`;
+  // The signature: an eyebrow piercing at the outer end of his right brow, a
+  // curved gold barbell with an iced-out stone on each end.
+  const ice = expression.dull ? '#c9c6bd' : '#f4f9fc';
+  const gem = (cx: number, cy: number, r: number) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${ice}" stroke="${INK}" stroke-width="2.2"/><path d="M${cx - r * 0.5} ${cy}L${cx} ${cy - r * 0.5}L${cx + r * 0.5} ${cy}L${cx} ${cy + r * 0.5}Z" fill="#dbe7f0" stroke="#9aa6b2" stroke-width=".8"/>${expression.dull ? '' : `<circle cx="${cx - r * 0.35}" cy="${cy - r * 0.35}" r="${r * 0.28}" fill="#fff"/>`}`;
+  const stone = `<g><path d="M130 40Q142 47 137 58" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/><path d="M130 40Q142 47 137 58" fill="none" stroke="${expression.dull ? '#b3a684' : '#ebc464'}" stroke-width="3" stroke-linecap="round"/>${gem(130, 39, 6.2)}${gem(137, 59, 6.8)}</g>`;
   const body = `<g transform="translate(0 ${-lift}) rotate(${rotate} 100 120)"${sticker ? ' filter="url(#sticker)"' : ''}>
 <path d="${BODY}" fill="${fill}" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
 <path d="${BODY}" fill="url(#shade)"/>
@@ -222,7 +226,7 @@ function side(id: string) {
 <path d="${SIDE}" fill="url(#shade)" transform="scale(-1 1) translate(-196 0)" opacity=".7"/>
 <path d="${SIDE}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
 <path d="M76 54Q78 42 88 37" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".85"/>
-<g transform="translate(84 44) rotate(-12) scale(0.8 0.9)"><path d="M-11 -4L-6 -10L6 -10L11 -4L0 10Z" fill="#f4f9fc" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/></g>
+<path d="M120 42Q128 47 125 56" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M120 42Q128 47 125 56" fill="none" stroke="#ebc464" stroke-width="2.4" stroke-linecap="round"/><circle cx="120" cy="41" r="4.5" fill="#f4f9fc" stroke="${INK}" stroke-width="2"/><circle cx="125" cy="57" r="4.5" fill="#f4f9fc" stroke="${INK}" stroke-width="2"/>
 <path d="M110 63A8 11 0 0 0 126 63Z" fill="${INK}"/><path d="M107 62L128 59" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><circle cx="121" cy="66" r="2.3" fill="#fff"/>
 <clipPath id="side${id}"><path d="M98 90L129 90L127 103Q116 108 102 100Z"/></clipPath>
 <path d="M98 90L129 90L127 103Q116 108 102 100Z" fill="#2a1511"/>
