@@ -142,6 +142,15 @@ begin
   perform public.set_tenant_status(ta, 'paused');
   select count(*) into n from public.tenants where id = ta and status = 'paused'; if n <> 1 then raise exception 'admin could not pause a shop'; end if;
 
+  -- a shop brought back from offboarding has its logo-purge marker cleared (as the service side)
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+  update public.tenants set status = 'offboarded' where id = ta;
+  update public.tenants set assets_purged_at = now() where id = ta;
+  update public.tenants set status = 'paused' where id = ta;
+  select count(*) into n from public.tenants where id = ta and assets_purged_at is null and offboarded_at is null;
+  if n <> 1 then raise exception 'leaving offboarded did not reset the purge marker'; end if;
+
   -- act as anon
   reset role;
   set local role anon;

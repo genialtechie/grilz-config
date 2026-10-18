@@ -5,7 +5,7 @@
 -- SQL are unaffected.
 
 create function public.offboard_on_server_only() returns trigger
-language plpgsql security definer set search_path = public as $$
+language plpgsql set search_path = public as $$
 begin
   if new.status = 'offboarded' and old.status is distinct from 'offboarded'
      and coalesce(auth.jwt() ->> 'role', '') = 'authenticated' then
@@ -19,3 +19,16 @@ create trigger tenants_offboard_on_server_only before update of status on public
 -- The daily cron deletes an offboarded shop's logos (tenant-assets/<tenant id>/)
 -- with its leads, 90 days after offboarding; this marks it done.
 alter table public.tenants add column assets_purged_at timestamptz;
+
+-- A shop brought back from offboarding starts fresh: if it's offboarded again,
+-- its new logos are purged too.
+create or replace function public.stamp_offboarded() returns trigger
+language plpgsql as $$
+begin
+  if new.status = 'offboarded' and old.status is distinct from 'offboarded' then new.offboarded_at := now(); end if;
+  if new.status <> 'offboarded' then
+    new.offboarded_at := null;
+    new.assets_purged_at := null;
+  end if;
+  return new;
+end $$;

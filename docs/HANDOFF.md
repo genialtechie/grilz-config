@@ -235,8 +235,9 @@ also change team roles, revoke invites and upload the logo.
 1. **Retention** (`server/retention.ts`): `expired_leads()` returns leads older
    than 24 months and every lead of a shop offboarded more than 90 days ago.
    Files are deleted first, then rows, in batches (max 20 × 500 per run).
-   The logos (`tenant-assets/<tenant id>/`) of shops offboarded more than 90
-   days ago go at the same point, once per shop (`assets_purged_at`).
+   Then the logos (`tenant-assets/<tenant id>/`) of shops offboarded more than
+   90 days ago, up to 50 shops a run, each marked once its folder is empty
+   (`assets_purged_at`, cleared if the shop comes back).
    `?dry=1` reports what would be deleted.
 2. **Billing enforcement** (`enforceBilling`): pauses live shops whose trial
    ended with no plan, and shops `past_due` for more than 7 days

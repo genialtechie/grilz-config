@@ -48,11 +48,14 @@ export async function offboardTenant(db: Db, env: OffboardEnv, tenantId: string)
         env,
         'POST',
         `/v1/subscriptions/${encodeURIComponent(tenant.stripe_subscription_id)}`,
+        // No idempotency key: this update is already safe to repeat, and a fixed key
+        // would replay a cached failure (or a success from before an undo) for 24 hours.
         { cancel_at_period_end: true, metadata: { offboarded: 'true' } },
-        { idempotencyKey: `offboard-${tenant.stripe_subscription_id}` },
       );
       const ends = subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString().slice(0, 10) : null;
-      steps.subscription = { ok: true, detail: ends ? `Plan ends ${ends}; no further charges.` : 'Plan set to end at period end.' };
+      // A past-due plan still has an open invoice that Stripe keeps retrying.
+      const after = tenant.billing_status === 'past_due' ? 'Stripe may still collect the unpaid invoice.' : 'No further charges.';
+      steps.subscription = { ok: true, detail: ends ? `Plan ends ${ends}. ${after}` : `Plan set to end at period end. ${after}` };
     } catch (error) {
       console.error('offboard subscription', tenant.id, error instanceof StripeError ? `${error.status} ${error.code}` : error);
       steps.subscription = { ok: false, detail: 'Couldn’t cancel the plan in Stripe.' };

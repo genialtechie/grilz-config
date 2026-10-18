@@ -23,23 +23,41 @@ async function deleteLeads(db: Db, leads: Pick<Expired, 'id' | 'preview_path' | 
 /** Same window as the leads: 90 days after offboarding. */
 export const OFFBOARD_KEEP_DAYS = 90;
 
-/** Deletes the logos of shops offboarded more than 90 days ago (tenant-assets/<tenant id>/), once per shop. */
+/**
+ * Deletes the logos of shops offboarded more than 90 days ago (tenant-assets/<tenant id>/).
+ * A shop is marked purged only once its folder lists empty; a failing shop is
+ * retried the next day and never blocks the others (or the rest of the cron).
+ */
 async function purgeOffboardedAssets(db: Db, dryRun: boolean) {
   const before = new Date(Date.now() - OFFBOARD_KEEP_DAYS * 864e5).toISOString();
-  const shops = await db.select<{ id: string }>('tenants', { status: 'eq.offboarded', offboarded_at: `lt.${before}`, assets_purged_at: 'is.null', select: 'id', limit: '50' });
+  let shops: { id: string }[];
+  try {
+    shops = await db.select<{ id: string }>('tenants', { status: 'eq.offboarded', offboarded_at: `lt.${before}`, assets_purged_at: 'is.null', select: 'id', limit: '50' });
+  } catch (error) {
+    console.error('logo purge skipped', error instanceof Error ? error.message : error);
+    return { shops: 0, files: 0, failed: 1 };
+  }
   if (dryRun) return { shops: shops.length, files: 0 };
   let files = 0;
+  let failed = 0;
   for (const shop of shops) {
-    // Pages of up to 1000 until the folder is empty (bounded).
-    for (let round = 0; round < 10; round += 1) {
-      const objects = (await db.listObjects('tenant-assets', shop.id)).filter((item) => item.id !== null);
-      if (!objects.length) break;
-      await db.removeObjects('tenant-assets', objects.map((item) => `${shop.id}/${item.name}`));
-      files += objects.length;
+    try {
+      // Pages of up to 1000 until the folder is empty (bounded); logos sit at the folder's top level.
+      let empty = false;
+      for (let round = 0; round < 10 && !empty; round += 1) {
+        const objects = (await db.listObjects('tenant-assets', shop.id)).filter((item) => item.id !== null);
+        empty = objects.length === 0;
+        if (empty) break;
+        await db.removeObjects('tenant-assets', objects.map((item) => `${shop.id}/${item.name}`));
+        files += objects.length;
+      }
+      if (empty) await db.update('tenants', { id: `eq.${shop.id}` }, { assets_purged_at: new Date().toISOString() });
+    } catch (error) {
+      failed += 1;
+      console.error('logo purge failed', shop.id, error instanceof Error ? error.message : error);
     }
-    await db.update('tenants', { id: `eq.${shop.id}` }, { assets_purged_at: new Date().toISOString() });
   }
-  return { shops: shops.length, files };
+  return { shops: shops.length, files, failed };
 }
 
 export async function runRetention(env: TenantEnv, dryRun = false) {

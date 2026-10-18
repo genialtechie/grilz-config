@@ -11,7 +11,7 @@ const env = {
   VERCEL_PROJECT_ID: 'prj_test',
 };
 
-type Call = { method: string; url: string; body: string };
+type Call = { method: string; url: string; body: string; headers?: Record<string, string> };
 
 /** A fake Supabase + Stripe + Vercel. `role` is the caller's role for the shop. */
 function fakeServices(options: { role: 'admin' | 'owner' | 'staff'; status?: string; subscription?: string | null; billing?: string; domain?: string | null; stripeFails?: boolean }) {
@@ -19,7 +19,7 @@ function fakeServices(options: { role: 'admin' | 'owner' | 'staff'; status?: str
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? 'GET';
-    calls.push({ method, url, body: String(init?.body ?? '') });
+    calls.push({ method, url, body: String(init?.body ?? ''), headers: init?.headers as Record<string, string> });
     if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'u1', email: 'admin@test' });
     if (url.includes('/rest/v1/platform_admins')) return new Response(null, { status: 200, headers: { 'content-range': `*/${options.role === 'admin' ? 1 : 0}` } });
     if (url.includes('/rest/v1/members')) return Response.json(options.role === 'admin' ? [] : [{ role: options.role }]);
@@ -52,6 +52,9 @@ describe('offboarding', () => {
     const cancel = calls.find((call) => call.url.startsWith('https://api.stripe.com/v1/subscriptions/sub_1'));
     expect(cancel?.method).toBe('POST');
     expect(new URLSearchParams(cancel?.body).get('cancel_at_period_end')).toBe('true');
+    // No idempotency key: a cached Stripe failure (or a success from before an undo) must not be replayed on retry.
+    expect(cancel?.headers?.['Idempotency-Key']).toBeUndefined();
+    expect(result.body).toMatchObject({ message: expect.stringContaining('No further charges.') });
     expect(calls.some((call) => call.method === 'DELETE' && call.url.startsWith('https://api.vercel.com/v9/projects/prj_test/domains/build.goldmouth.test'))).toBe(true);
     expect(calls.some((call) => call.method === 'DELETE' && call.url.includes('/rest/v1/tenant_domains'))).toBe(true);
   });
@@ -70,6 +73,12 @@ describe('offboarding', () => {
     expect(result.status).toBe(502);
     expect(result.body).toMatchObject({ ok: false, steps: { page: { ok: true }, subscription: { ok: false }, domain: { ok: true } }, message: expect.stringContaining('Run Offboard again') });
     expect(calls.some((call) => call.method === 'DELETE' && call.url.startsWith('https://api.vercel.com/'))).toBe(true);
+  });
+
+  it('says a past-due shop can still be charged its open invoice', async () => {
+    fakeServices({ role: 'admin', subscription: 'sub_1', billing: 'past_due' });
+    const result = await handleDashboard('offboard', { tenantId: TENANT }, 'tok', env);
+    expect(result.body).toMatchObject({ ok: true, message: expect.stringContaining('Stripe may still collect the unpaid invoice.') });
   });
 
   it('is for platform admins only', async () => {
@@ -115,6 +124,38 @@ describe('retention: logos of offboarded shops', () => {
     const removed = calls.find((call) => call.method === 'DELETE' && call.url.endsWith('/storage/v1/object/tenant-assets'));
     expect(JSON.parse(removed!.body)).toEqual({ prefixes: [`${TENANT}/logo-1.png`, `${TENANT}/logo-2.webp`] });
     expect(calls.some((call) => call.method === 'PATCH' && call.body.includes('assets_purged_at'))).toBe(true);
+  });
+
+  it("one shop's failure doesn't block the others, and it isn't marked done", async () => {
+    const OTHER = '22222222-2222-2222-2222-222222222222';
+    const patched: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (url.includes('/rpc/expired_leads')) return Response.json([]);
+      if (url.includes('/rest/v1/tenants') && method === 'GET') return Response.json([{ id: TENANT }, { id: OTHER }]);
+      if (url.includes('/storage/v1/object/list/tenant-assets')) {
+        return JSON.parse(String(init?.body)).prefix === TENANT ? new Response('storage down', { status: 500 }) : Response.json([]);
+      }
+      if (url.includes('/rest/v1/tenants') && method === 'PATCH') {
+        patched.push(url);
+        return Response.json([{}]);
+      }
+      return new Response(`unexpected ${method} ${url}`, { status: 500 });
+    }));
+    expect(await runRetention(env)).toMatchObject({ ok: true, assets: { shops: 2, failed: 1 } });
+    expect(patched).toHaveLength(1);
+    expect(patched[0]).toContain(OTHER);
+  });
+
+  it('still runs when the purge query fails (code deployed before its migration)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+      if (String(input).includes('/rpc/expired_leads')) return Response.json([]);
+      return Response.json({ message: 'column tenants.assets_purged_at does not exist' }, { status: 400 });
+    }));
+    expect(await runRetention(env)).toMatchObject({ ok: true, deleted: 0, assets: { failed: 1 } });
   });
 
   it('only reports in a dry run', async () => {
