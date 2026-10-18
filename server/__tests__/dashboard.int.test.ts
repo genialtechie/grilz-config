@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { handleDashboard } from '../dashboard';
+import { slugForHost } from '../tenants';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 
 // Dashboard API against a real (local) Supabase: publishing keeps plan fields,
@@ -10,10 +11,13 @@ import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 const url = process.env.INTEGRATION_SUPABASE_URL;
 const key = process.env.INTEGRATION_SERVICE_KEY;
 const anon = process.env.INTEGRATION_ANON_KEY;
-const env = { SUPABASE_URL: url ?? '', SUPABASE_SERVICE_ROLE_KEY: key ?? '', RESEND_API_KEY: 'test', RESEND_BASE_URL: 'https://resend.test', PUBLIC_ORIGIN: 'https://shop.test' };
+const env = { SUPABASE_URL: url ?? '', SUPABASE_SERVICE_ROLE_KEY: key ?? '', RESEND_API_KEY: 'test', RESEND_BASE_URL: 'https://resend.test', PUBLIC_ORIGIN: 'https://shop.test', VERCEL_DOMAINS_TOKEN: 'test', VERCEL_PROJECT_ID: 'prj_test' };
 const realFetch = globalThis.fetch;
 const sent: { to: string[]; subject: string; html: string }[] = [];
 const stamp = Date.now();
+const vercelCalls: string[] = [];
+let dnsReady = false;
+const domainName = `build-${stamp}.goldmouth.test`;
 const slug = `dash-int-${stamp}`;
 
 const admin = (path: string, body: unknown, method = 'POST') =>
@@ -38,6 +42,12 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
   beforeAll(async () => {
     vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
       const target = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (target.startsWith('https://api.vercel.com/')) {
+        vercelCalls.push(`${init?.method ?? 'GET'} ${target.split('?')[0]}`);
+        if (target.includes('/config')) return Response.json({ misconfigured: dnsReady ? false : true });
+        if ((init?.method ?? 'GET') === 'DELETE') return Response.json({});
+        return Response.json({ name: domainName, verified: true, verification: [] });
+      }
       if (target.startsWith('https://resend.test/')) {
         sent.push(JSON.parse(String(init?.body)));
         return Response.json({ id: `email-${sent.length}` });
@@ -151,6 +161,24 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     expect(outsider).toBeTruthy();
     const token = await signIn(`outsider-${stamp}@int.test`);
     expect((await handleDashboard('invite', { tenantId, email: `y-${stamp}@int.test`, role: 'owner' }, token, env)).status).toBe(404);
+  });
+
+  it('connects a custom domain: pending until DNS points at us, then serves the shop', async () => {
+    expect((await handleDashboard('domain_add', { tenantId, domain: domainName }, staffToken, env)).status).toBe(403);
+    const added = await handleDashboard('domain_add', { tenantId, domain: domainName.toUpperCase() }, ownerToken, env);
+    expect(added).toMatchObject({ status: 200, body: { domain: domainName, status: 'pending' } });
+    expect((await rest(`tenant_domains?domain=eq.${domainName}&select=status`))[0].status).toBe('pending'); // not live until verified
+    const waiting = await handleDashboard('domain_check', { tenantId }, staffToken, env);
+    expect(waiting.body).toMatchObject({ status: 'pending', problem: expect.stringContaining('DNS') });
+    dnsReady = true;
+    const live = await handleDashboard('domain_check', { tenantId }, ownerToken, env);
+    expect(live.body).toMatchObject({ status: 'active' });
+    expect(await slugForHost(`${domainName}:443`, env)).toBe(slug);
+    // one domain per shop, and a domain can't be claimed twice
+    expect((await handleDashboard('domain_add', { tenantId, domain: `other-${stamp}.goldmouth.test` }, ownerToken, env)).status).toBe(409);
+    const removed = await handleDashboard('domain_remove', { tenantId }, ownerToken, env);
+    expect(removed.body).toMatchObject({ removed: true });
+    expect(vercelCalls.some((call) => call.startsWith('DELETE https://api.vercel.com/v9/projects/prj_test/domains/'))).toBe(true);
   });
 
   it('stats report analytics as unavailable without PostHog', async () => {

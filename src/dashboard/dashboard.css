@@ -62,3 +62,13 @@
   .dash-invite input { grid-column: 1 / -1; }
   .dash-popular li { grid-template-columns: 1fr 60px auto; }
 }
+
+/* Share: link, embed code, domain */
+.dash-copy { display: grid; gap: 4px; margin-bottom: 12px; }
+.dash-copy__row { display: flex; gap: 8px; align-items: flex-start; }
+.dash-copy__row input, .dash-copy__row textarea { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; resize: none; }
+.dash-guide-tabs { margin-top: 8px; flex-wrap: wrap; }
+.dash-steps { margin: 8px 0 12px; padding-left: 20px; line-height: 1.7; }
+.dash-dns { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 13px; }
+.dash-dns th, .dash-dns td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--a-line); vertical-align: top; }
+.dash-dns code { word-break: break-all; }

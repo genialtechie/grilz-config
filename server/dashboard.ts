@@ -1,5 +1,6 @@
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
 import { createDb, DbError, hasDb, type Db } from './db.js';
+import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } from './domains.js';
 import { sendEmail, type EmailEnv } from './email.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
@@ -13,7 +14,8 @@ import type { TenantEnv } from './tenants.js';
 // Plus stats, which reads views from PostHog when it's configured.
 
 export type DashboardEnv = TenantEnv &
-  EmailEnv & {
+  EmailEnv &
+  DomainEnv & {
     PUBLIC_ORIGIN?: string;
     POSTHOG_PERSONAL_API_KEY?: string;
     POSTHOG_PROJECT_ID?: string;
@@ -202,6 +204,22 @@ async function stats(db: Db, userId: string, payload: Record<string, unknown>, e
   }
 }
 
+// domain: read · domain_check: re-check DNS (any member) · domain_add / domain_remove: owners.
+async function domain(db: Db, userId: string, action: string, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
+  const tenantId = String(payload.tenantId ?? '');
+  if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+  const role = await roleFor(db, userId, tenantId);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (action === 'domain') return reply(200, { domain: await domainState(db, tenantId) });
+  if (action === 'domain_check') {
+    const result = await checkDomain(db, env, tenantId);
+    return reply(result.status, result.body);
+  }
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can change the domain.' });
+  const result = action === 'domain_add' ? await addDomain(db, env, tenantId, userId, String(payload.domain ?? '')) : action === 'domain_remove' ? await removeDomain(db, env, tenantId) : { status: 404, body: { error: 'not_found' } };
+  return reply(result.status, result.body);
+}
+
 export async function handleDashboard(action: string, payload: unknown, token: string | null, env: DashboardEnv): Promise<ApiResult> {
   if (!token) return reply(401, { error: 'sign_in' });
   if (!hasDb(env)) return reply(503, { error: 'unavailable' });
@@ -213,6 +231,7 @@ export async function handleDashboard(action: string, payload: unknown, token: s
     if (action === 'publish') return await publish(db, user.id, body);
     if (action === 'invite') return await invite(db, user, body, env);
     if (action === 'stats') return await stats(db, user.id, body, env);
+    if (action.startsWith('domain')) return await domain(db, user.id, action, body, env);
     return reply(404, { error: 'not_found' });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

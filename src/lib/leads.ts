@@ -31,6 +31,11 @@ export function leadSource(): Record<string, string> {
     const value = params.get(key);
     if (value) source[key] = value.slice(0, 120);
   }
+  // Embedded on the shop's own website: embed.js passes the site's hostname.
+  const embed = params.get('embed');
+  if (embed && /^[a-z0-9.-]{1,253}$/i.test(embed)) source.embed = embed.toLowerCase();
+  // On the shop's own domain (build.theirshop.com).
+  if (document.querySelector('meta[name="vvs-shop"]')) source.domain = window.location.host.toLowerCase();
   try {
     if (document.referrer) source.ref = new URL(document.referrer).host;
   } catch {

@@ -8,6 +8,7 @@ import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
+import { WebsitePanel } from '../dashboard/WebsitePanel';
 import { SAMPLE_PRICING } from './templates';
 
 // One page per shop: edit the config as a draft, preview it, publish it, and
@@ -95,7 +96,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string; link?: { href: string; label: string } } | null>(null);
-  const [tab, setTab] = useState<'setup' | 'leads' | 'team'>('setup');
+  const [tab, setTab] = useState<'setup' | 'leads' | 'team' | 'website'>('setup');
   const [emailsText, setEmailsText] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [showPreview, setShowPreview] = useState(() => typeof window === 'undefined' || window.innerWidth > 1080);
@@ -348,10 +349,13 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
         <button role="tab" aria-selected={tab === 'setup'} className={tab === 'setup' ? 'is-active' : ''} type="button" onClick={() => setTab('setup')}>Setup</button>
         <button role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'is-active' : ''} type="button" onClick={() => setTab('leads')}>Leads</button>
         <button role="tab" aria-selected={tab === 'team'} className={tab === 'team' ? 'is-active' : ''} type="button" onClick={() => setTab('team')}>Team</button>
+        <button role="tab" aria-selected={tab === 'website'} className={tab === 'website' ? 'is-active' : ''} type="button" onClick={() => setTab('website')}>Share</button>
       </div>
       )}
 
-      {tab === 'team' && !shop ? (
+      {tab === 'website' && !shop ? (
+        <WebsitePanel shop={{ ...tenant, role: 'admin' }} embedded />
+      ) : tab === 'team' && !shop ? (
         <TeamPanel shop={{ ...tenant, role: 'admin' }} embedded />
       ) : tab === 'leads' && !shop ? (
         <LeadsPanel tenantId={tenant.id} shopName={config.brand.name} />

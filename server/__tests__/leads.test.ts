@@ -149,3 +149,11 @@ describe('AI allowance warning', () => {
     expect(crossedWarning(0, 5, 0)).toBe(false);
   });
 });
+
+describe('lead source', () => {
+  it('keeps UTM tags and where the builder ran (hostnames only), drops anything else', async () => {
+    const { readSource } = await import('../leads');
+    expect(readSource({ utm_source: 'embed', embed: 'GoldMouth.myshopify.com', domain: 'build.goldmouth.com', email: 'a@b.c' })).toEqual({ utm_source: 'embed', embed: 'goldmouth.myshopify.com', domain: 'build.goldmouth.com' });
+    expect(readSource({ embed: '<script>', domain: 'javascript:alert(1)' })).toEqual({});
+  });
+});

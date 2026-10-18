@@ -232,3 +232,11 @@ export async function addLeadNote(lead: { id: string }, tenantId: string, text: 
   const { data: user } = await db.auth.getUser();
   must(await db.from('lead_events').insert({ lead_id: lead.id, tenant_id: tenantId, type: 'note', actor: user.user?.id, data: { text: text.slice(0, 1000) } }).select('lead_id'));
 }
+
+export type DnsRecord = { type: 'CNAME' | 'A' | 'TXT'; name: string; value: string; why: string };
+export type DomainInfo = { domain: string; status: 'pending' | 'active'; records: DnsRecord[]; problem?: string };
+
+export const getDomain = (tenantId: string) => api<{ domain: DomainInfo | null }>('domain', { tenantId }).then((result) => result.domain);
+export const connectDomain = (tenantId: string, domain: string) => api<DomainInfo>('domain_add', { tenantId, domain });
+export const checkDomain = (tenantId: string) => api<DomainInfo>('domain_check', { tenantId });
+export const disconnectDomain = (tenantId: string) => api<{ removed: boolean }>('domain_remove', { tenantId });
