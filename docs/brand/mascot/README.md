@@ -1,4 +1,9 @@
-# VVS Lab mascot
+# Karat, the VVS Lab mascot
+
+**Name: Karat.** Gold purity is measured in karats and diamonds in carats,
+and Karat is both: a gold tooth with a diamond set in its crown. It's the
+jeweler's word, it sounds like a name, and it carries the craftsman side of
+the brief.
 
 Built the way character designers work: the job and personality first, then
 the silhouette (shape only, no detail), then the face, then the model and
@@ -112,8 +117,18 @@ as the signature, and a cream sticker edge on dark backgrounds.
 Source: `scripts/mascot-model.ts` (one set of parts, so every expression
 stays on-model; `mascot(expression)` returns the SVG).
 
-Remaining: a name; a ¾ and side view for motion and Instagram; the PNG
-exports for email (2×) and the app icon.
+## Turnaround and exports
+
+![Model sheet](karat-turnaround.png)
+
+Front, ¾ and side on shared guides (crown, eyes, grin, root tips), so motion
+and Instagram work stays on-model.
+
+Exports in `public/assets/mascot/` (regenerate with `npx tsx scripts/mascot-model.ts`):
+- `karat-{cool,hype,nudge,working,tarnished,wink}.png`: 432px (2× of 216),
+  transparent, with the cream sticker edge so they hold up in dark mode.
+- `karat-icon-{1024,512,180}.png`: Karat on the ink square (app stores,
+  social avatars, Apple touch icon).
 
 Earlier plan, for reference: 4 colour (gold body, ink outline, one iced stone) ·
 5 model sheet (front, ¾, side) and expression sheet (happy, celebrating,

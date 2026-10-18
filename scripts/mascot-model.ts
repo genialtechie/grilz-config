@@ -1,9 +1,10 @@
-// The VVS Lab mascot, round 4: the polished model and its expressions.
+// Karat, the VVS Lab mascot: the polished model, its expressions, turnaround and exports.
 // Body F (Root fang), resting face Cool, Hype for wins. Everything is built
 // from one set of parts so every expression stays on-model.
 //   npx tsx scripts/mascot-model.ts
-// Writes docs/brand/mascot/round-4-expressions.png, round-4-on-dark.png and
-// round-4-sizes.png (+ .svg).
+// Writes the sheets to docs/brand/mascot/ (expressions, on dark, sizes,
+// turnaround) and the PNG exports (each expression, app icons) to
+// public/assets/mascot/.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
@@ -16,6 +17,7 @@ const BODY = 'M46 60Q46 26 78 28Q100 40 122 28Q154 26 154 60Q154 98 142 120L130 
 const defs = `<defs>
 <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe7ab"/><stop offset=".35" stop-color="#ebc464"/><stop offset=".7" stop-color="#d1a03f"/><stop offset="1" stop-color="#a37624"/></linearGradient>
 <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0"><stop offset=".55" stop-color="#7a5414" stop-opacity="0"/><stop offset="1" stop-color="#7a5414" stop-opacity=".35"/></linearGradient>
+<linearGradient id="turn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6e4a10" stop-opacity=".55"/><stop offset=".3" stop-color="#6e4a10" stop-opacity="0"/></linearGradient>
 <linearGradient id="dull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9d2bf"/><stop offset=".6" stop-color="#b3a684"/><stop offset="1" stop-color="#8c7f60"/></linearGradient>
 <filter id="sticker" x="-15%" y="-15%" width="130%" height="130%"><feMorphology in="SourceAlpha" operator="dilate" radius="7" result="grown"/><feFlood flood-color="${CREAM}"/><feComposite in2="grown" operator="in" result="edge"/><feMerge><feMergeNode in="edge"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>`;
@@ -101,7 +103,7 @@ const sparkle = (cx: number, cy: number, r: number, fill = '#ebc464') =>
   `<path d="M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z" fill="${fill}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
 
 /** The whole character in its 200×200 box. `sticker` adds a cream edge for dark backgrounds. */
-export function mascot(expression: Expression, id: string, { sticker = false, shadow = true } = {}) {
+export function mascot(expression: Expression, id: string, { sticker = false, shadow = true, turn = 0 } = {}) {
   const { rotate = 0, lift = 0 } = expression.pose ?? {};
   const fill = expression.dull ? 'url(#dull)' : 'url(#gold)';
   const brows = (expression.brows ?? []).map(([x1, y1, x2, y2]) => `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>`).join('');
@@ -112,8 +114,11 @@ export function mascot(expression: Expression, id: string, { sticker = false, sh
 <path d="${BODY}" fill="url(#shade)"/>
 <path d="${BODY}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
 ${expression.dull ? '' : '<path d="M60 56Q60 42 72 37" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".85"/><path d="M58 70L58 78" stroke="#fff6d8" stroke-width="5" stroke-linecap="round" opacity=".7"/>'}
+${turn ? `<path d="${BODY}" fill="url(#turn)" opacity="${turn}"/><path d="${BODY}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` : ''}
+<g transform="translate(${100 + turn * 14} 0) scale(${1 - turn * 0.14} 1) translate(-100 0)">
 ${stone}
 ${eye(expression.eyes[0], 80, 64)}${eye(expression.eyes[1], 120, 64)}${brows}${grin(expression, id)}
+</g>
 </g>`;
   const ground = shadow ? `<ellipse cx="100" cy="194" rx="${62 - lift}" ry="5" fill="${INK}" opacity=".12"/>` : '';
   return `${ground}${body}${expression.extra ?? ''}`;
@@ -201,11 +206,77 @@ async function write(name: string, svg: string) {
   await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(`${OUT}/${name}.png`);
 }
 
+// ---------- Turnaround (model sheet) ----------
+
+/** ¾ view: the body turns (its left side falls into shade) and the face slides toward the near side. */
+function threeQuarter(expression: Expression, id: string) {
+  return `<g transform="translate(100 0) scale(0.9 1) translate(-100 0)">${mascot(expression, id, { turn: 1 })}</g>`;
+}
+
+const SIDE = 'M68 42Q70 26 96 26Q126 26 132 50Q136 76 128 104Q124 118 118 126L112 186Q109 195 101 189L96 146Q92 138 86 146L82 176Q79 184 72 179L70 122Q62 104 63 76Q64 56 68 42Z';
+
+/** Side view, facing right: one eye, the grin's corner and one fang over the lip. */
+function side(id: string) {
+  return `<ellipse cx="98" cy="194" rx="44" ry="5" fill="${INK}" opacity=".12"/>
+<path d="${SIDE}" fill="url(#gold)" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+<path d="${SIDE}" fill="url(#shade)" transform="scale(-1 1) translate(-196 0)" opacity=".7"/>
+<path d="${SIDE}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+<path d="M76 54Q78 42 88 37" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+<g transform="translate(84 44) rotate(-12) scale(0.8 0.9)"><path d="M-11 -4L-6 -10L6 -10L11 -4L0 10Z" fill="#f4f9fc" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/></g>
+<path d="M110 63A8 11 0 0 0 126 63Z" fill="${INK}"/><path d="M107 62L128 59" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><circle cx="121" cy="66" r="2.3" fill="#fff"/>
+<clipPath id="side${id}"><path d="M98 90L129 90L127 103Q116 108 102 100Z"/></clipPath>
+<path d="M98 90L129 90L127 103Q116 108 102 100Z" fill="#2a1511"/>
+<g clip-path="url(#side${id})"><rect x="100" y="90" width="9" height="12" rx="2" fill="url(#gold)" stroke="${INK}" stroke-width="2"/><rect x="110" y="90" width="8" height="12" rx="2" fill="url(#gold)" stroke="${INK}" stroke-width="2"/></g>
+<path d="M98 90L129 90L127 103Q116 108 102 100Z" fill="none" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+<path d="M119 90L126 90C126 99 124 108 122 116C120 108 119 99 119 90Z" fill="url(#gold)" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`;
+}
+
+function turnaround() {
+  const W = 1080;
+  const H = 520;
+  const guides = [26, 64, 92, 189].map((y) => `<line x1="20" x2="${W - 20}" y1="${80 + y * 1.8}" y2="${80 + y * 1.8}" stroke="#c9bba3" stroke-width="1.5" stroke-dasharray="6 6"/>`).join('');
+  const view = (x: number, content: string, label: string) => `<g transform="translate(${x} 80) scale(1.8)">${content}</g><text x="${x + 180}" y="${H - 22}" text-anchor="middle" font-family="Inter" font-size="18" font-weight="700" fill="${INK}">${label}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}
+<rect width="${W}" height="${H}" fill="${CREAM}"/>
+<text x="30" y="44" font-family="Inter" font-size="24" font-weight="700" fill="${INK}">Karat · model sheet (guides: crown, eyes, grin, root tips)</text>
+${guides}
+${view(0, mascot(expressions[0], 'tf'), 'Front')}
+${view(360, threeQuarter(expressions[0], 'tq'), '¾')}
+${view(720, side('ts'), 'Side')}
+</svg>`;
+}
+
+// ---------- Exports ----------
+
+const ASSETS = 'public/assets/mascot';
+
+/** Email/web PNGs at 2×, transparent, with the sticker edge so they hold up in dark mode too. */
+async function exportExpressions() {
+  mkdirSync(ASSETS, { recursive: true });
+  for (const [index, expression] of expressions.entries()) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 216 216" width="432" height="432">${defs}${mascot(expression, `x${index}`, { sticker: true, shadow: false })}</svg>`;
+    await sharp(Buffer.from(svg)).png({ compressionLevel: 9, palette: true, quality: 95 }).toFile(`${ASSETS}/karat-${expression.name.toLowerCase()}.png`);
+  }
+}
+
+/** App icon: Karat (Cool) on the ink square, at the sizes stores and browsers ask for. */
+async function exportIcons() {
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="1024" height="1024">${defs}
+<rect width="200" height="200" fill="${INK}"/>
+<g transform="translate(100 104) scale(0.86) translate(-100 -104)">${mascot(expressions[0], 'icon', { sticker: true, shadow: false })}</g></svg>`;
+  for (const size of [1024, 512, 180]) {
+    await sharp(Buffer.from(icon)).resize(size).png({ compressionLevel: 9 }).toFile(`${ASSETS}/karat-icon-${size}.png`);
+  }
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   await write('round-4-expressions', sheet('VVS Lab mascot · round 4: Cool (resting) + expressions', CREAM, false, INK, '#ffffff'));
   await write('round-4-on-dark', sheet('On the dark brand background (Instagram, OG images): cream sticker edge', INK, true, '#f3ede4', '#241e19'));
   await write('round-4-sizes', sizes());
+  await write('karat-turnaround', turnaround());
+  await exportExpressions();
+  await exportIcons();
   console.log('written', OUT);
 }
 
