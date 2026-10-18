@@ -156,7 +156,7 @@ export default function LandingPage() {
               <TrialButton placement="hero" />
               <BuilderButton placement="hero" />
             </div>
-            <p className="vvs-price-line">$199/mo · No setup fee · Month to month</p>
+            <p className="vvs-price-line">14 days free · then $199/mo · Month to month</p>
           </div>
         </section>
 

@@ -96,8 +96,10 @@
   width: 100%;
   max-width: 640px;
   justify-self: end;
-  background: url(/assets/vvs/hero.webp) center 40% / cover no-repeat;
-  box-shadow: 0 0 0 1px var(--line), 0 40px 120px rgba(0, 0, 0, 0.6);
+  /* The set cut out of its studio backdrop, on a warm glow so it sits on the page. */
+  background:
+    url(/assets/vvs/hero-cutout.webp) center / 92% no-repeat,
+    radial-gradient(closest-side, rgba(201, 164, 92, 0.22), rgba(201, 164, 92, 0.06) 62%, transparent);
 }
 .vvs-hero-copy { grid-column: 1; grid-row: 1; max-width: 640px; }
 .vvs-hero h1 { font-size: clamp(56px, 7.4vw, 112px); line-height: 0.98; }
