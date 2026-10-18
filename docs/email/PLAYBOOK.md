@@ -189,6 +189,18 @@ Send by behaviour, not only by day: skip a step the user has already done.
 | 12 | Trial ending: recap what they built and what they'd lose | Keep my account |
 | 14 | Last day: plain founder letter, offer help | Upgrade (secondary: reply to me) |
 
+**How the kit runs it** (VVS Lab: `server/trialSequence.ts`): a daily cron
+computes each shop's state (setup progress, live, requests, payments set up,
+card) and picks the one step due. Rules that matter:
+- at most one email per person per day;
+- each step has a window (e.g. days 3–4); outside it the step is skipped,
+  so an outage never dumps three emails at once;
+- the ending emails count *days left*, not days since signup, so "last day"
+  can't arrive after the trial ended;
+- each step is claimed once in the send log (`trial-day-3:<account>`);
+- the founder letter comes from a person's name and needs a reply-to that
+  reaches a real inbox (marketing subdomains usually don't receive mail).
+
 ### Win-back
 
 No guilt, a loss-framed fact, one easy way back (Duolingo). Typical cadence:

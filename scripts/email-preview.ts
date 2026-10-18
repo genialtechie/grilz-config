@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { trialEmail, type TrialShop } from '../server/trialEmails';
 import { customerEmail, depositPaidEmail, inviteEmail, shopEmail, welcomeEmail, type LeadForEmail } from '../server/emailTemplates';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab';
 
@@ -37,11 +38,19 @@ shop.brand = { ...shop.brand, name: 'Gold Mouth Jewelers', instagram: 'goldmouth
 const photo = `${local}/assets/vvs/photo-mixed.webp`;
 const withPhoto = (html: string) => html.replace(/cid:(photo|preview)/g, photo);
 
+const trialShop: TrialShop = { id: 'x', slug: 'gold-mouth', name: 'Gold Mouth Jewelers', live: false, hasLogo: true, pricesSet: false, leads: 0, estimates: 0, stripeReady: false, hasCard: false, daysLeft: 3 };
+const unsubscribe = `${origin}/api/unsubscribe?e=preview&topic=tips&s=preview`;
+
 const emails: Record<string, string> = {
   'design-request': withPhoto((await shopEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, photoPending: false, test: false })).html),
   'customer-confirmation': withPhoto((await customerEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, depositHref: `${origin}/api/deposit?lead=x&t=x` })).html),
   'deposit-paid': (await depositPaidEmail({ lead, config: shop, origin, amount: 500 })).html,
   welcome: (await welcomeEmail({ shop: 'Gold Mouth Jewelers', slug: 'gold-mouth', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin, trialDays: 14 })).html,
+  'trial-day-1': (await trialEmail('day-1', trialShop, origin, unsubscribe)).html,
+  'trial-day-3': (await trialEmail('day-3', { ...trialShop, live: true, pricesSet: true }, origin, unsubscribe)).html,
+  'trial-day-7': (await trialEmail('day-7', { ...trialShop, live: true }, origin, unsubscribe)).html,
+  'trial-day-12': (await trialEmail('day-12', { ...trialShop, live: true, leads: 3, estimates: 9450 }, origin, unsubscribe)).html,
+  'trial-day-14': (await trialEmail('day-14', { ...trialShop, daysLeft: 1 }, origin, unsubscribe)).html,
   invite: (await inviteEmail({ shop: 'Gold Mouth Jewelers', inviter: 'dre@goldmouth.com', role: 'staff', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin })).html,
 };
 
