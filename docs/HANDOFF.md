@@ -72,8 +72,8 @@ Routing lives in [`vercel.json`](../vercel.json) (rewrites, headers, cron) and
 | `POST /api/leads` | `api/leads.ts` | Customer sends a design. `maxDuration` 60 s |
 | `POST /api/render` | `api/render.ts` | AI studio photo. `maxDuration` 120 s |
 | `POST /api/deposit` | `api/deposit.ts` | Stripe Checkout on the shop's own account. `GET ?lead=&t=` is the 30-day pay link in the customer email (redirects to Checkout) |
-| `GET/POST /api/unsubscribe` | `api/unsubscribe.ts` | Marketing unsubscribe: GET shows the confirm page, POST acts (page buttons, or one-click `List-Unsubscribe-Post`) |
-| `POST /api/resend-webhook` | `api/resend-webhook.ts` | Resend events (Svix-signed); complaints and hard bounces become opt-outs |
+| `GET/POST /api/unsubscribe` | `api/email.ts` (rewrite) | Marketing unsubscribe: GET shows the confirm page, POST acts (page buttons, or one-click `List-Unsubscribe-Post`) |
+| `POST /api/resend-webhook` | `api/email.ts` (rewrite) | Resend events (Svix-signed); complaints and hard bounces become opt-outs |
 | `GET/POST /api/signup` | `api/signup.ts` | Slug availability / create a shop |
 | `POST /api/dashboard/<action>` | `api/dashboard.ts` | Signed-in member actions (see below) |
 | `POST /api/stripe/webhook[?connect=1]` | `api/stripe/webhook.ts` | Platform events / connected-account events |
@@ -498,6 +498,13 @@ them to production by hand, in filename order, then run
 `supabase/tests/isolation.sql`.
 
 ## Known gaps and risks
+
+- **Vercel function limit.** The project is on Vercel's Hobby plan, which caps a
+  deployment at **12 serverless functions** (every file under `api/` is one) and
+  is meant for non-commercial use. It's at 12. A 13th fails the production
+  deploy (`exceeded_serverless_functions_per_deployment`) while the previous
+  build keeps serving. Add routes to an existing function behind a rewrite
+  (as `/api/dashboard/:action` and `/api/email` do), or move to Pro.
 
 Verified in the code at the time of writing. Items 2–3 should shape the
 remaining Stage 7b runbooks.

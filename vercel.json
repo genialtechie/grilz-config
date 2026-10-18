@@ -27,6 +27,14 @@
       "destination": "/api/dashboard?action=:action"
     },
     {
+      "source": "/api/unsubscribe",
+      "destination": "/api/email?route=unsubscribe"
+    },
+    {
+      "source": "/api/resend-webhook",
+      "destination": "/api/email?route=resend-webhook"
+    },
+    {
       "source": "/b/:slug",
       "destination": "/api/shop-page?slug=:slug"
     },
