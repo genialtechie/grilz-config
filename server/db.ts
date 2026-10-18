@@ -57,6 +57,10 @@ export function createDb(env: TenantEnv) {
         body: JSON.stringify(patch),
       }),
 
+    /** DELETE rows matching the filter. */
+    remove: (table: string, filter: Record<string, string>) =>
+      request<unknown>(`/rest/v1/${table}?${new URLSearchParams(filter)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }),
+
     rpc: <T>(fn: string, args: Record<string, unknown> = {}) =>
       request<T>(`/rest/v1/rpc/${fn}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) }),
 

@@ -14,6 +14,7 @@ begin
   insert into public.leads (tenant_id, name, contact, spec, price, total, config_version) values (ta, 'A lead', '@a', '{}', '{}', 100, 1) returning id into la;
   insert into public.leads (tenant_id, name, contact, spec, price, total, config_version) values (tb, 'B lead', '@b', '{}', '{}', 100, 1) returning id into lb;
   insert into public.tenant_configs (tenant_id, version, config) values (ta, 1, '{}') returning id into ca;
+  insert into public.tenant_domains (tenant_id, domain) values (ta, 'build.iso-a.test'), (tb, 'build.iso-b.test');
 
   -- nothing grants platform admin automatically: a confirmed new account is not an admin
   insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at) values
@@ -116,6 +117,15 @@ begin
   ok := false;
   begin insert into public.platform_admins (user_id) values (ua); exception when others then ok := true; end;
   if not ok then raise exception 'A made itself a platform admin'; end if;
+
+  -- Stage 6: a shop sees only its own domain and can't write domains directly
+  select count(*) into n from public.tenant_domains; if n <> 1 then raise exception 'A sees % domains', n; end if;
+  ok := false;
+  begin insert into public.tenant_domains (tenant_id, domain) values (ta, 'evil.example.com'); exception when others then ok := true; end;
+  if not ok then raise exception 'A inserted a domain directly'; end if;
+  ok := false;
+  begin update public.tenant_domains set status = 'active' where tenant_id = ta; get diagnostics n = row_count; if n = 0 then ok := true; end if; exception when others then ok := true; end;
+  if not ok then raise exception 'A activated its own domain'; end if;
 
   -- act as anon
   reset role;

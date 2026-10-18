@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useParams } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { BarChart3, ExternalLink, Inbox, LogOut, Mail, Store, Users } from 'lucide-react';
+import { BarChart3, ExternalLink, Globe, Inbox, LogOut, Mail, Store, Users } from 'lucide-react';
 import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
 import { supabase } from '../admin/supabase';
 import { StatsPanel } from './StatsPanel';
 import { TeamPanel } from './TeamPanel';
+import { WebsitePanel } from './WebsitePanel';
 import '../admin/admin.css';
 import './dashboard.css';
 
@@ -70,6 +71,7 @@ function ShopShell({ shops, email }: { shops: MyShop[]; email: string }) {
   const tabs = [
     { to: base, end: true, icon: <Inbox size={16} />, label: 'Leads' },
     { to: `${base}/shop`, end: false, icon: <Store size={16} />, label: 'Shop' },
+    { to: `${base}/website`, end: false, icon: <Globe size={16} />, label: 'Share' },
     { to: `${base}/stats`, end: false, icon: <BarChart3 size={16} />, label: 'Stats' },
     { to: `${base}/team`, end: false, icon: <Users size={16} />, label: 'Team' },
   ];
@@ -97,6 +99,7 @@ function ShopShell({ shops, email }: { shops: MyShop[]; email: string }) {
       <Routes>
         <Route index element={<main className="admin-main"><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} /></main>} />
         <Route path="shop" element={<ShopEditor mode="shop" slug={shop.slug} role={shop.role} />} />
+        <Route path="website" element={<WebsitePanel shop={shop} />} />
         <Route path="stats" element={<StatsPanel shop={shop} />} />
         <Route path="team" element={<TeamPanel shop={shop} />} />
         <Route path="*" element={<Navigate to={base} replace />} />

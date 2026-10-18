@@ -68,13 +68,18 @@ async function readPreview(value: unknown): Promise<Uint8Array | null> {
 const text = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
 /** UTM tags and the landing path only; anything else the browser sends is dropped. */
-const readSource = (value: unknown) => {
+export const readSource = (value: unknown) => {
   if (!value || typeof value !== 'object') return {};
   const raw = value as Record<string, unknown>;
   const source: Record<string, string> = {};
   for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'ref', 'path']) {
     const item = text(raw[key], 120);
     if (item) source[key] = item;
+  }
+  // Where the builder ran: embedded on the shop's site, or on its custom domain (hostnames only).
+  for (const key of ['embed', 'domain']) {
+    const item = text(raw[key], 253).toLowerCase();
+    if (/^[a-z0-9.-]{1,253}(:\d{1,5})?$/.test(item)) source[key] = item;
   }
   return source;
 };

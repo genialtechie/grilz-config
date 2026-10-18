@@ -34,8 +34,9 @@ function Loading() {
   );
 }
 
-export default function ShopPage() {
-  const { slug = '' } = useParams();
+export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
+  const params = useParams();
+  const slug = slugProp ?? params.slug ?? '';
   const [search] = useSearchParams();
   // ?preview=<version>: a signed-in admin or shop member checking an unpublished draft.
   const previewVersion = Number(search.get('preview')) || null;

@@ -173,3 +173,27 @@ export async function configForSession(tenant: PublishedTenant, version: unknown
     return current;
   }
 }
+
+const hostCache = new Map<string, { at: number; slug: string | null }>();
+
+/** The shop slug behind an active custom domain, or null. Cached for 60s (10s when not found, so a newly verified domain goes live quickly). */
+export async function slugForHost(host: string, env: TenantEnv): Promise<string | null> {
+  const domain = host.toLowerCase().replace(/:\d+$/, '');
+  if (!/^[a-z0-9.-]{4,253}$/.test(domain)) return null;
+  const hit = hostCache.get(domain);
+  if (hit && Date.now() - hit.at < (hit.slug ? 60_000 : 10_000)) return hit.slug;
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const query = new URLSearchParams({ domain: `eq.${domain}`, status: 'eq.active', select: 'tenants(slug,status)' });
+    const response = await fetch(`${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/tenant_domains?${query}`, {
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+    });
+    if (!response.ok) return null;
+    const rows = (await response.json()) as { tenants: { slug: string; status: string } | null }[];
+    const slug = rows[0]?.tenants?.slug ?? null;
+    hostCache.set(domain, { at: Date.now(), slug });
+    return slug;
+  } catch {
+    return null;
+  }
+}
