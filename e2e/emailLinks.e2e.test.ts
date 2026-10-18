@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { chromium, type Browser } from 'playwright';
@@ -15,6 +16,8 @@ const url = process.env.INTEGRATION_SUPABASE_URL;
 const key = process.env.INTEGRATION_SERVICE_KEY;
 const anon = process.env.INTEGRATION_ANON_KEY;
 const stamp = Date.now();
+// Throwaway accounts in the local test database; generated so no password sits in the repo.
+const PASSWORD = `${randomBytes(12).toString('base64url')}-Aa1`;
 const PORT = 5180 + (stamp % 500);
 const origin = `http://127.0.0.1:${PORT}`;
 
@@ -45,7 +48,7 @@ async function linkFor(email: string) {
 /** A shop with an owner who can sign in with a password (for calling the invite API). */
 async function shopWithOwner(slug: string, name: string) {
   const ownerEmail = `owner-${slug}@e2e.test`;
-  const owner = (await authAdmin('users', { email: ownerEmail, password: 'E2e-test-pass-1!', email_confirm: true })) as { id: string };
+  const owner = (await authAdmin('users', { email: ownerEmail, password: PASSWORD, email_confirm: true })) as { id: string };
   const [tenant] = await rest('tenants', { method: 'POST', body: JSON.stringify({ slug, name, kind: 'fixture', status: 'live' }) });
   tenantIds.push(tenant.id);
   const config = structuredClone(VVSLAB_CONFIG);
@@ -67,7 +70,7 @@ async function passwordToken(email: string) {
   const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: anon!, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: 'E2e-test-pass-1!' }),
+    body: JSON.stringify({ email, password: PASSWORD }),
   });
   return ((await response.json()) as { access_token: string }).access_token;
 }
@@ -167,7 +170,7 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     const slug = `e2e-invite-${stamp}`;
     const ownerEmail = `inviter-${stamp}@e2e.test`;
     const invitee = `staff-${stamp}@e2e.test`;
-    const owner = (await authAdmin('users', { email: ownerEmail, password: 'E2e-test-pass-1!', email_confirm: true })) as { id: string };
+    const owner = (await authAdmin('users', { email: ownerEmail, password: PASSWORD, email_confirm: true })) as { id: string };
     const [tenant] = await rest('tenants', { method: 'POST', body: JSON.stringify({ slug, name: 'E2E Invite Shop', kind: 'fixture', status: 'live' }) });
     tenantIds.push(tenant.id);
     const config = structuredClone(VVSLAB_CONFIG);
@@ -178,7 +181,7 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     const session = (await (await fetch(`${url}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: { apikey: anon!, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: ownerEmail, password: 'E2e-test-pass-1!' }),
+      body: JSON.stringify({ email: ownerEmail, password: PASSWORD }),
     })).json()) as { access_token: string };
 
     const invited = await fetch(`${origin}/api/dashboard/invite`, {
@@ -212,7 +215,7 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     // An existing, used account that already belongs to another shop (so a stale
     // list would land on the shop picker) is invited to shop C: a magic link.
     const existing = `existing-${stamp}@e2e.test`;
-    const user = (await authAdmin('users', { email: existing, password: 'E2e-test-pass-1!', email_confirm: true })) as { id: string };
+    const user = (await authAdmin('users', { email: existing, password: PASSWORD, email_confirm: true })) as { id: string };
     await passwordToken(existing); // has signed in before
     const shopB = await shopWithOwner(`e2e-b-${stamp}`, 'E2E Shop B');
     await rest('members', { method: 'POST', body: JSON.stringify({ tenant_id: shopB.tenantId, user_id: user.id, role: 'staff' }) });
