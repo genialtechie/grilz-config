@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1410 440" width="1410" height="440">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8de98"/><stop offset=".55" stop-color="#d9ad4b"/><stop offset="1" stop-color="#a87b23"/></linearGradient></defs>
+<rect width="1410" height="440" fill="#fbf7f0"/>
+<text x="30" y="40" font-family="Inter" font-size="22" font-weight="700" fill="#1b1714">Rough sketch, not final: gold body, ink outline, big eyes, a gold-grill grin, one iced stone</text>
+<g transform="translate(0 40)">
+<g transform="translate(20 20) scale(1.6)">
+  <ellipse cx="100" cy="196" rx="70" ry="6" fill="#e7ddcd"/>
+  <g fill="url(#gold)" stroke="#1b1714" stroke-width="5" stroke-linejoin="round"><path d="M46 60Q46 26 78 28Q100 40 122 28Q154 26 154 60Q154 98 142 120L130 186Q126 196 118 188L106 142Q100 132 94 142L84 172Q80 182 72 176L60 120Q46 98 46 60Z"/></g>
+  <path d="M66 48Q66 36 76 34" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <ellipse cx="80" cy="82" rx="10" ry="14" fill="#1b1714"/><ellipse cx="120" cy="82" rx="10" ry="14" fill="#1b1714"/>
+  <circle cx="83" cy="77" r="3.5" fill="#fff"/><circle cx="123" cy="77" r="3.5" fill="#fff"/>
+  <path d="M74 112Q100 134 126 112Z" fill="#2a1511" stroke="#1b1714" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M82 114L86 121L91 116L96 123L100 117L104 123L109 116L114 121L118 114Z" fill="url(#gold)" stroke="#1b1714" stroke-width="1.5" stroke-linejoin="round"/>
+  <g transform="translate(134 40) rotate(20)"><path d="M-9 -4L-4 -9L4 -9L9 -4L0 8Z" fill="#eef4f8" stroke="#1b1714" stroke-width="2.5" stroke-linejoin="round"/></g>
+</g>
+<text x="40" y="380" font-family="Inter" font-size="18" font-weight="700" fill="#1b1714">F. Root fang (recommended)</text>
+</g>
+<g transform="translate(350 40)">
+<g transform="translate(20 20) scale(1.6)">
+  <ellipse cx="100" cy="196" rx="70" ry="6" fill="#e7ddcd"/>
+  <g fill="url(#gold)" stroke="#1b1714" stroke-width="5" stroke-linejoin="round"><path d="M48 58Q48 24 78 26Q100 38 122 26Q152 24 152 58L150 106Q148 138 124 158L100 184L76 158Q52 138 50 106Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+  <path d="M66 48Q66 36 76 34" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <ellipse cx="80" cy="82" rx="10" ry="14" fill="#1b1714"/><ellipse cx="120" cy="82" rx="10" ry="14" fill="#1b1714"/>
+  <circle cx="83" cy="77" r="3.5" fill="#fff"/><circle cx="123" cy="77" r="3.5" fill="#fff"/>
+  <path d="M74 112Q100 134 126 112Z" fill="#2a1511" stroke="#1b1714" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M82 114L86 121L91 116L96 123L100 117L104 123L109 116L114 121L118 114Z" fill="url(#gold)" stroke="#1b1714" stroke-width="1.5" stroke-linejoin="round"/>
+  <g transform="translate(134 40) rotate(20)"><path d="M-9 -4L-4 -9L4 -9L9 -4L0 8Z" fill="#eef4f8" stroke="#1b1714" stroke-width="2.5" stroke-linejoin="round"/></g>
+</g>
+<text x="40" y="380" font-family="Inter" font-size="18" font-weight="700" fill="#1b1714">D. Cusp fang</text>
+</g>
+<g transform="translate(700 40)">
+<g transform="translate(20 20) scale(1.6)">
+  <ellipse cx="100" cy="196" rx="70" ry="6" fill="#e7ddcd"/>
+  <g fill="url(#gold)" stroke="#1b1714" stroke-width="5" stroke-linejoin="round"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L148 104Q146 136 122 158L100 184L78 158Q54 136 52 104Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+  <path d="M66 48Q66 36 76 34" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <ellipse cx="80" cy="82" rx="10" ry="14" fill="#1b1714"/><ellipse cx="120" cy="82" rx="10" ry="14" fill="#1b1714"/>
+  <circle cx="83" cy="77" r="3.5" fill="#fff"/><circle cx="123" cy="77" r="3.5" fill="#fff"/>
+  <path d="M74 112Q100 134 126 112Z" fill="#2a1511" stroke="#1b1714" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M82 114L86 121L91 116L96 123L100 117L104 123L109 116L114 121L118 114Z" fill="url(#gold)" stroke="#1b1714" stroke-width="1.5" stroke-linejoin="round"/>
+  <g transform="translate(134 40) rotate(20)"><path d="M-9 -4L-4 -9L4 -9L9 -4L0 8Z" fill="#eef4f8" stroke="#1b1714" stroke-width="2.5" stroke-linejoin="round"/></g>
+</g>
+<text x="40" y="380" font-family="Inter" font-size="18" font-weight="700" fill="#1b1714">A. Crown fang</text>
+</g>
+<g transform="translate(1050 40)">
+<g transform="translate(20 20) scale(1.6)">
+  <ellipse cx="100" cy="196" rx="70" ry="6" fill="#e7ddcd"/>
+  <g fill="url(#gold)" stroke="#1b1714" stroke-width="5" stroke-linejoin="round"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L150 106Q150 140 136 162Q126 180 104 188Q112 172 104 160Q76 140 56 120Q50 108 50 96Z"/><ellipse cx="54" cy="174" rx="17" ry="11"/><ellipse cx="146" cy="174" rx="17" ry="11"/></g>
+  <path d="M66 48Q66 36 76 34" fill="none" stroke="#fff6d8" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <ellipse cx="80" cy="82" rx="10" ry="14" fill="#1b1714"/><ellipse cx="120" cy="82" rx="10" ry="14" fill="#1b1714"/>
+  <circle cx="83" cy="77" r="3.5" fill="#fff"/><circle cx="123" cy="77" r="3.5" fill="#fff"/>
+  <path d="M74 112Q100 134 126 112Z" fill="#2a1511" stroke="#1b1714" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M82 114L86 121L91 116L96 123L100 117L104 123L109 116L114 121L118 114Z" fill="url(#gold)" stroke="#1b1714" stroke-width="1.5" stroke-linejoin="round"/>
+  <g transform="translate(134 40) rotate(20)"><path d="M-9 -4L-4 -9L4 -9L9 -4L0 8Z" fill="#eef4f8" stroke="#1b1714" stroke-width="2.5" stroke-linejoin="round"/></g>
+</g>
+<text x="40" y="380" font-family="Inter" font-size="18" font-weight="700" fill="#1b1714">E. Hook fang</text>
+</g>
+</svg>

@@ -3,6 +3,7 @@ import { TRIAL_DAYS } from '../src/lib/trial.js';
 import { signInLink } from './authLinks.js';
 import { createDb, hasDb } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
+import { welcomeEmail } from './emailTemplates.js';
 import { hashIp, looksAutomated, verifyTurnstile, type SpamEnv } from './spam.js';
 import type { ApiResult } from './tenantApi.js';
 import { isValidSlug, type TenantEnv } from './tenants.js';
@@ -134,24 +135,7 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   await db.insert('member_invites', { tenant_id: tenantId, email, role: 'owner', invited_by: access.userId });
   await log('created');
 
-  const shop = name.replace(/[<>&"'\r\n]/g, '');
-  await sendEmail(
-    {
-      fromName: 'VVS Lab',
-      fromLocal: 'hello',
-      to: [email],
-      subject: 'Set up your VVS Lab builder',
-      text: `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. Set it up and switch it on here: ${access.link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${origin}/dashboard. Your free trial runs ${TRIAL_DAYS} days.`,
-      html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1b1714">
-<p style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a8178;margin:0 0 18px">VVS Lab</p>
-<h1 style="font-size:22px;margin:0 0 12px">Your builder is ready to set up</h1>
-<p style="font-size:15px;line-height:1.5;margin:0 0 8px">${shop} gets its own 3D grillz builder at <strong>${origin.replace(/^https?:\/\//, '')}/b/${slug}</strong>.</p>
-<p style="font-size:15px;line-height:1.5;margin:0 0 22px">Add your logo and prices, then switch it on. It takes about 10 minutes. Your free trial runs ${TRIAL_DAYS} days.</p>
-<p style="margin:0 0 22px"><a href="${access.link.replace(/&/g, '&amp;')}" style="display:inline-block;background:#1b1714;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">Set up my builder</a></p>
-<p style="font-size:13px;color:#8a8178;line-height:1.5;margin:0">The button works once and expires in 24 hours. After that, sign in at <a href="${origin}/dashboard" style="color:#8a8178">${origin.replace(/^https?:\/\//, '')}/dashboard</a>. Didn't sign up? Ignore this email.</p></div>`,
-      headers: { 'X-Entity-Ref-ID': `signup-${tenantId}` },
-    },
-    env,
-  );
+  const welcome = await welcomeEmail({ shop: name, slug, link: access.link, origin, trialDays: TRIAL_DAYS });
+  await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...welcome, headers: { 'X-Entity-Ref-ID': `signup-${tenantId}` } }, env);
   return done;
 }

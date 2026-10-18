@@ -1,6 +1,8 @@
 import { checkoutTrialEnd } from '../src/lib/trial.js';
 import { createDb, hasDb, type Db } from './db.js';
+import { checkLeadToken } from './leadTokens.js';
 import { verifyLeadToken, type LeadEnv } from './leads.js';
+import { notifyDepositPaid } from './notify.js';
 import { stripe, stripeV2, StripeError, verifyStripeSignature, type StripeEnv } from './stripe.js';
 import type { ApiResult } from './tenantApi.js';
 import { forgetTenant, type TenantEnv } from './tenants.js';
@@ -174,15 +176,19 @@ export async function connectStatus(db: Db, env: BillingEnv, tenantId: string): 
 
 // ---------- Deposit checkout (customer, right after sending a design) ----------
 
-/** POST /api/deposit { leadId, token }: a Checkout page on the shop's account for the lead's exact deposit. */
+/**
+ * POST /api/deposit { leadId, token }: a Checkout page on the shop's account for
+ * the lead's exact deposit. The token is the browser's 30-minute lead token, or
+ * the 30-day deposit token from the customer's confirmation email (GET link).
+ */
 export async function handleDeposit(payload: unknown, env: BillingEnv): Promise<ApiResult> {
   const body = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
   if (!hasDb(env)) return reply(503, { error: 'unavailable' });
   const db = createDb(env);
   const leadId = typeof body.leadId === 'string' ? body.leadId : '';
   const [lead] = leadId ? await db.select<{ id: string; tenant_id: string; deposit: number | null; deposit_paid_at: string | null; spec: { summary?: string[] } }>('leads', { id: `eq.${leadId}`, select: 'id,tenant_id,deposit,deposit_paid_at,spec' }) : [];
-  // The lead token proves this browser just sent this design (valid 30 minutes).
-  if (!lead || !verifyLeadToken(leadId, lead.tenant_id, body.token, env)) return reply(403, { error: 'expired', message: 'This link expired. The shop will reach out about your deposit.' });
+  const allowed = lead && (verifyLeadToken(leadId, lead.tenant_id, body.token, env) || checkLeadToken('deposit', leadId, lead.tenant_id, body.token, env));
+  if (!lead || !allowed) return reply(403, { error: 'expired', message: 'This link expired. The shop will reach out about your deposit.' });
   if (lead.deposit_paid_at) return reply(409, { error: 'paid', message: 'Your deposit is already paid.' });
   if (!lead.deposit || lead.deposit <= 0) return reply(409, { error: 'no_deposit' });
   const tenant = await tenantById(db, lead.tenant_id);
@@ -243,7 +249,7 @@ async function applySubscription(db: Db, subscription: Record<string, unknown>) 
   await forgetTenant(tenant.slug);
 }
 
-async function applyDeposit(db: Db, session: Record<string, unknown>, account: string | undefined) {
+async function applyDeposit(db: Db, session: Record<string, unknown>, account: string | undefined, env: BillingEnv) {
   const metadata = (session.metadata as Record<string, string> | undefined) ?? {};
   if (metadata.purpose !== 'deposit' || session.payment_status !== 'paid' || !metadata.lead_id) return;
   const [lead] = await db.select<{ id: string; tenant_id: string; status: string; deposit_paid_at: string | null }>('leads', { id: `eq.${metadata.lead_id}`, select: 'id,tenant_id,status,deposit_paid_at' });
@@ -252,8 +258,14 @@ async function applyDeposit(db: Db, session: Record<string, unknown>, account: s
   const [tenant] = await db.select<{ stripe_account_id: string | null }>('tenants', { id: `eq.${lead.tenant_id}`, select: 'stripe_account_id' });
   if (!tenant?.stripe_account_id || tenant.stripe_account_id !== account) return;
   const now = new Date().toISOString();
-  await db.update('leads', { id: `eq.${lead.id}` }, { deposit_paid_at: now, ...(lead.status === 'new' || lead.status === 'contacted' ? { status: 'deposit_paid' } : {}) });
-  await db.insert('lead_events', { lead_id: lead.id, tenant_id: lead.tenant_id, type: 'deposit_paid', data: { amount: Number(session.amount_total ?? 0) / 100, checkout: session.id } });
+  // Claimed atomically, so two events for one payment record (and email) it once.
+  const [claimed] = await db.update<{ id: string }>('leads', { id: `eq.${lead.id}`, deposit_paid_at: 'is.null' }, { deposit_paid_at: now, ...(lead.status === 'new' || lead.status === 'contacted' ? { status: 'deposit_paid' } : {}) });
+  if (!claimed) return;
+  const amount = Number(session.amount_total ?? 0) / 100;
+  await db.insert('lead_events', { lead_id: lead.id, tenant_id: lead.tenant_id, type: 'deposit_paid', data: { amount, checkout: session.id } });
+  // The shop hears about it right away. A failed email never fails the webhook
+  // (Stripe would retry and the deposit is already recorded).
+  await notifyDepositPaid(lead.id, amount, env).catch((error) => console.error('deposit email failed', lead.id, error));
 }
 
 /** POST /api/stripe/webhook (platform events) and ?connect=1 (events from shops' accounts). */
@@ -275,7 +287,7 @@ export async function handleStripeWebhook(rawBody: string, signature: string | n
       break;
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
-      if (connect) await applyDeposit(db, object, event.account);
+      if (connect) await applyDeposit(db, object, event.account, env);
       break;
     case 'account.updated':
       if (connect && event.account) await db.update('tenants', { stripe_account_id: `eq.${event.account}` }, { stripe_charges_enabled: Boolean(object.charges_enabled) });

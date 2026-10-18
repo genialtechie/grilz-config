@@ -1,11 +1,15 @@
+import { createElement as h, Fragment, type ReactElement } from 'react';
+import { render } from '@react-email/render';
 import { displayContact } from '../src/lib/contact.js';
 import { displayTotal, type PriceBreakdown } from '../src/lib/pricing.js';
 import type { TenantConfig } from '../src/lib/tenant/schema.js';
-import { usableAccent } from '../src/lib/tenant/theme.js';
+import { shopBrand, vvsBrand, type Brand } from './email/brand.js';
+import { CTA, EmailFrame, Headline, Illustration, InlineLink, Paragraph, Photo, Quote, SectionLabel, SignOff, Steps } from './email/components.js';
 
-// Branded, table-based emails that render in Gmail, Apple Mail and Outlook.
-// Every interpolated value goes through esc(); images are inline attachments
-// (cid:) so they show without "load remote images" and never expire.
+// Every email we send, built from the kit in server/email/ (React Email,
+// written with createElement so Vercel bundles it). Design photos are inline
+// attachments (cid:) so they show without "load remote images" and never
+// expire; artwork and logos load from our origin.
 
 export type LeadForEmail = {
   id: string;
@@ -22,9 +26,7 @@ export type LeadForEmail = {
 };
 
 export type EmailImages = { photo: boolean; preview: boolean };
-
-const esc = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+export type RenderedEmail = { subject: string; html: string; text: string };
 
 const usd = (value: number) => `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -38,51 +40,25 @@ export function contactLink(contact: string): { href: string; label: string; act
 }
 
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
+const host = (origin: string) => origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
+const dashboardUrl = (origin: string) => `${origin.replace(/\/$/, '')}/dashboard`;
+const html = (element: ReactElement) => render(element);
 
-const shell = (brand: TenantConfig['brand'], origin: string, preheader: string, body: string, footer: string) => {
-  const accent = usableAccent(brand.accent, '#ffffff');
-  const logo = brand.logo ? (brand.logo.startsWith('http') ? brand.logo : `${origin}${brand.logo.startsWith('/') ? '' : '/'}${brand.logo}`) : null;
-  const header = logo
-    ? `<img src="${esc(logo)}" alt="${esc(brand.name)}" height="32" style="height:32px;max-width:200px;display:block;border:0">`
-    : `<span style="font:700 20px/1.2 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1a1714">${esc(brand.name)}</span>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(brand.name)}</title></head>
-<body style="margin:0;padding:0;background:#f4f1ec">
-<span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden">${esc(preheader)}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec"><tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden">
-<tr><td style="height:4px;background:${accent};font-size:0;line-height:0">&nbsp;</td></tr>
-<tr><td style="padding:20px 24px 4px">${header}</td></tr>
-${body}
-</table>
-<p style="margin:16px 0 0;font:12px/1.5 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#8a8178;max-width:560px">${footer}</p>
-</td></tr></table></body></html>`;
-};
-
-const font = 'font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif';
-const row = (label: string, value: string) =>
-  `<tr><td style="${font};font-size:13px;color:#8a8178;padding:6px 0;width:96px;vertical-align:top">${esc(label)}</td><td style="${font};font-size:15px;color:#1a1714;padding:6px 0">${value}</td></tr>`;
-
-const image = (images: EmailImages, caption: string) => {
+function designPhoto(brand: Brand, images: EmailImages, caption: string) {
   const cid = images.photo ? 'photo' : images.preview ? 'preview' : null;
-  if (!cid) return '';
-  return `<tr><td style="padding:16px 24px 0"><img src="cid:${cid}" alt="${esc(caption)}" width="512" style="width:100%;max-width:512px;border-radius:10px;display:block;border:0;background:#f4f1ec">
-<p style="margin:6px 0 0;${font};font-size:12px;color:#8a8178">${esc(caption)}</p></td></tr>`;
-};
+  return cid ? h(Photo, { brand, src: `cid:${cid}`, alt: caption, caption }) : null;
+}
 
-const button = (href: string, text: string, accent: string) =>
-  `<tr><td style="padding:20px 24px 4px"><a href="${esc(href)}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;${font};font-size:15px;font-weight:600;padding:12px 20px;border-radius:999px">${esc(text)}</a></td></tr>`;
-
-const designList = (summary: string[]) =>
-  `<tr><td style="padding:12px 24px 0"><p style="margin:0 0 6px;${font};font-size:13px;color:#8a8178">Design</p>${summary
-    .map((line) => `<p style="margin:0 0 4px;${font};font-size:15px;color:#1a1714">${esc(line)}</p>`)
-    .join('')}</td></tr>`;
-
-const priceTable = (price: PriceBreakdown, deposit: number | null) =>
-  `<tr><td style="padding:12px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ece6de">${price.lines
-    .map((line) => `<tr><td style="${font};font-size:14px;color:#5c544c;padding:6px 0">${esc(line.label)}</td><td align="right" style="${font};font-size:14px;color:#5c544c;padding:6px 0">${usd(line.amount)}</td></tr>`)
-    .join('')}<tr><td style="${font};font-size:15px;font-weight:700;color:#1a1714;padding:8px 0;border-top:1px solid #ece6de">Estimate</td><td align="right" style="${font};font-size:15px;font-weight:700;color:#1a1714;padding:8px 0;border-top:1px solid #ece6de">${usd(price.total)}</td></tr>${
-    deposit !== null ? `<tr><td style="${font};font-size:14px;color:#5c544c;padding:2px 0">Deposit</td><td align="right" style="${font};font-size:14px;color:#5c544c;padding:2px 0">${usd(deposit)}</td></tr>` : ''
-  }</table></td></tr>`;
+/** What the customer designed, one line per choice. */
+function specList(brand: Brand, label: string, summary: string[]) {
+  if (!summary.length) return null;
+  return h(
+    Fragment,
+    null,
+    h(SectionLabel, { brand }, label),
+    ...summary.map((line, index) => h(Paragraph, { key: index, brand, size: 16, margin: '0 0 4px' }, line)),
+  );
+}
 
 export type ShopEmailInput = {
   lead: LeadForEmail;
@@ -93,101 +69,245 @@ export type ShopEmailInput = {
   test: boolean;
 };
 
-/** The jeweler's notification: everything needed to quote and reach the customer. */
-export function shopEmail({ lead, config, origin, images, photoPending, test }: ShopEmailInput) {
-  const accent = usableAccent(config.brand.accent, '#ffffff');
+/**
+ * The jeweler's notification. Planned from the smallest form out (see
+ * docs/email/vvs-lab.md): the inbox row says who and how much; the first
+ * screen shows the design, the customer's words and the one action (reach
+ * them, fast); everything below is reference. Each fact appears once.
+ */
+export async function shopEmail({ lead, config, origin, images, photoPending, test }: ShopEmailInput): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
   const reach = contactLink(lead.contact);
-  const headline = lead.summary[0] ?? 'Custom grillz';
-  const subject = `${test ? '[Test shop] ' : ''}New design from ${lead.name} · ${headline} · ${usd(lead.total)}`;
-  const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' (customer saw it as a "from" price)' : ' (customer saw "price on request")';
-  const body = `
-<tr><td style="padding:12px 24px 0"><h1 style="margin:0;${font};font-size:22px;line-height:1.3;color:#1a1714">New design from ${esc(lead.name)}</h1>
-<p style="margin:6px 0 0;${font};font-size:15px;color:#5c544c">${esc(headline)} · estimate ${usd(lead.total)}${esc(shown)}</p></td></tr>
-${image(images, images.photo ? 'AI studio photo of the customer’s design' : '3D design the customer built')}
-${photoPending ? `<tr><td style="padding:8px 24px 0"><p style="margin:0;${font};font-size:13px;color:#8a8178">The studio photo is still rendering. It will follow in this thread.</p></td></tr>` : ''}
-<tr><td style="padding:16px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-${row('Customer', esc(lead.name))}
-${row(reach.action === 'Text' ? 'Phone' : 'Instagram', `<a href="${esc(reach.href)}" style="color:${accent}">${esc(reach.label)}</a>`)}
-${lead.email ? row('Email', `<a href="mailto:${esc(lead.email)}" style="color:${accent}">${esc(lead.email)}</a>`) : ''}
-${lead.note ? row('Note', esc(lead.note)) : ''}
-</table></td></tr>
-${designList(lead.summary)}
-${priceTable(lead.price, lead.deposit)}
-${button(reach.href, `${reach.action} ${firstName(lead.name)}`, accent)}
-<tr><td style="padding:16px 24px 24px"><p style="margin:0;${font};font-size:12px;color:#8a8178">Priced with your price list v${lead.configVersion}.${lead.email ? ' Reply to this email to answer the customer directly.' : ''}</p></td></tr>`;
-  const footer = `Sent by VVS Lab for ${esc(config.brand.name)} · lead ${esc(lead.id.slice(0, 8))}`;
+  const first = firstName(lead.name);
+  const total = usd(lead.total);
+  const subject = `${test ? '[Test shop] ' : ''}New design from ${lead.name} · ${total}`;
+  const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' The customer saw it as a "from" price.' : ' The customer saw "price on request".';
+  const contacts = [h(InlineLink, { key: 'reach', brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])];
+  const breakdown = lead.price.lines.map((line) => `${line.label} ${usd(line.amount)}`).join(' + ');
+  const element = h(
+    EmailFrame,
+    {
+      brand,
+      title: subject,
+      // The preheader adds what the subject can't: their own words, or what they designed.
+      preheader: lead.note ? `“${lead.note}”` : lead.summary.join(' · '),
+      footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Change it in your dashboard. Lead ${lead.id.slice(0, 8)}.` },
+    },
+    test && h(Paragraph, { brand, muted: true, size: 14, margin: '0 0 12px' }, 'Test request from your own builder.'),
+    h(Headline, { brand, text: `New ${total} design from *${first}*` }),
+    designPhoto(brand, images, images.photo ? 'AI studio photo of the customer’s design' : '3D design the customer built'),
+    photoPending && h(Paragraph, { brand, muted: true, size: 13, margin: '6px 0 0' }, 'The studio photo is still rendering. It will follow in this thread.'),
+    lead.note && h(Quote, { brand }, lead.note),
+    h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, `${reach.action} ${first}`),
+    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, ...contacts),
+    specList(brand, 'What they designed', lead.summary),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
+  );
   const text = [
-    `New design from ${lead.name}`,
-    `${headline} · estimate ${usd(lead.total)}${shown}`,
+    `New ${total} design from ${lead.name}`,
+    lead.note ? `"${lead.note}"` : '',
     '',
-    `Contact: ${reach.label} (${reach.href})`,
+    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
-    lead.note ? `Note: ${lead.note}` : '',
     '',
-    'Design:',
+    'What they designed:',
     ...lead.summary.map((line) => `- ${line}`),
     '',
-    ...lead.price.lines.map((line) => `${line.label}: ${usd(line.amount)}`),
-    `Estimate: ${usd(lead.total)}`,
-    lead.deposit !== null ? `Deposit: ${usd(lead.deposit)}` : '',
+    `${total} from your price list v${lead.configVersion}: ${breakdown}.${shown}`,
     photoPending ? '\nThe studio photo is still rendering and will follow in this thread.' : '',
     `\nLead ${lead.id}`,
   ]
     .filter((line) => line !== '')
     .join('\n');
-  return { subject, html: shell(config.brand, origin, `${lead.name} · ${headline} · ${usd(lead.total)}`, body, footer), text };
+  return { subject, html: await html(element), text };
 }
 
 /** Follow-up in the same thread once the photo is ready. */
-export function shopPhotoEmail({ lead, config, origin, subject }: { lead: LeadForEmail; config: TenantConfig; origin: string; subject: string }) {
-  const accent = usableAccent(config.brand.accent, '#ffffff');
+export async function shopPhotoEmail({ lead, config, origin, subject }: { lead: LeadForEmail; config: TenantConfig; origin: string; subject: string }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
   const reach = contactLink(lead.contact);
-  const body = `
-<tr><td style="padding:12px 24px 0"><h1 style="margin:0;${font};font-size:20px;color:#1a1714">Studio photo for ${esc(lead.name)}’s design</h1></td></tr>
-${image({ photo: true, preview: false }, 'AI studio photo of the customer’s design')}
-${button(reach.href, `${reach.action} ${firstName(lead.name)}`, accent)}
-<tr><td style="padding:16px 24px 24px">&nbsp;</td></tr>`;
+  const first = firstName(lead.name);
+  const element = h(
+    EmailFrame,
+    {
+      brand,
+      title: `Studio photo for ${lead.name}`,
+      preheader: `Studio photo for ${lead.name}`,
+      footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Lead ${lead.id.slice(0, 8)}.` },
+    },
+    h(Headline, { brand, text: `${first}’s *studio photo*` }),
+    designPhoto(brand, { photo: true, preview: false }, 'AI studio photo of the customer’s design'),
+    h(CTA, { brand, href: reach.href }, `${reach.action} ${first}`),
+  );
   return {
     subject: subject.startsWith('Re: ') ? subject : `Re: ${subject}`,
-    html: shell(config.brand, origin, `Studio photo for ${lead.name}`, body, `Sent by VVS Lab for ${esc(config.brand.name)} · lead ${esc(lead.id.slice(0, 8))}`),
+    html: await html(element),
     text: `Studio photo for ${lead.name}'s design is attached.\n\nContact: ${reach.label} (${reach.href})\nLead ${lead.id}`,
   };
 }
 
-/** The customer's confirmation: their design, the price as the shop shows it, and what happens next. */
-export function customerEmail({ lead, config, origin, images }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages }) {
-  const brand = config.brand;
-  const accent = usableAccent(brand.accent, '#ffffff');
-  const total = displayTotal(config.pricing, lead.total, usd).text;
+/**
+ * Tells the jeweler a customer paid their deposit: the moment a lead turns into
+ * a job. Inbox row: who paid how much. First screen: that, where the money is,
+ * and the one action (reach them to book the next step). Then what they
+ * designed and what's left to pay.
+ */
+export async function depositPaidEmail({ lead, config, origin, amount }: { lead: LeadForEmail; config: TenantConfig; origin: string; amount: number }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
   const reach = contactLink(lead.contact);
-  const ig = brand.instagram ? `https://instagram.com/${encodeURIComponent(brand.instagram.replace(/^@/, ''))}` : null;
-  const body = `
-<tr><td style="padding:12px 24px 0"><h1 style="margin:0;${font};font-size:22px;line-height:1.3;color:#1a1714">Your design is with ${esc(brand.name)}</h1>
-<p style="margin:6px 0 0;${font};font-size:15px;color:#5c544c">Thanks, ${esc(firstName(lead.name))}. ${esc(brand.name)} will reach out on ${esc(reach.label)} to confirm the details and the final price.</p></td></tr>
-${image(images, images.photo ? AI_DISCLOSURE : 'Your 3D design')}
-${designList(lead.summary)}
-<tr><td style="padding:12px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ece6de">
-<tr><td style="${font};font-size:15px;font-weight:700;color:#1a1714;padding:8px 0">${config.pricing.display === 'hidden' ? 'Price' : 'Estimate'}</td><td align="right" style="${font};font-size:15px;font-weight:700;color:#1a1714;padding:8px 0">${esc(total)}</td></tr>
-${lead.deposit !== null ? `<tr><td style="${font};font-size:14px;color:#5c544c;padding:2px 0">Deposit to hold your spot</td><td align="right" style="${font};font-size:14px;color:#5c544c;padding:2px 0">${usd(lead.deposit)}</td></tr>` : ''}
-</table><p style="margin:8px 0 0;${font};font-size:12px;color:#8a8178">Final price is confirmed by ${esc(brand.name)}.</p></td></tr>
-${ig ? button(ig, `${brand.name} on Instagram`, accent) : ''}
-<tr><td style="padding:16px 24px 24px"><p style="margin:0;${font};font-size:13px;color:#5c544c">Questions? Reply to this email${brand.phone ? ` or call ${esc(displayContact(brand.phone))}` : ''}.</p></td></tr>`;
+  const first = firstName(lead.name);
+  const left = Math.max(0, lead.total - amount);
+  const balance = left > 0 ? `${usd(left)} left on the ${usd(lead.total)} estimate.` : `That covers the ${usd(lead.total)} estimate.`;
+  const subject = `${lead.name} paid a ${usd(amount)} deposit`;
+  const element = h(
+    EmailFrame,
+    {
+      brand,
+      title: subject,
+      preheader: balance,
+      footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Lead ${lead.id.slice(0, 8)}.` },
+    },
+    h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-hype.png`, width: 132, align: 'left', alt: 'Karat celebrating' }),
+    h(Headline, { brand, text: `*${first}* paid a ${usd(amount)} deposit` }),
+    h(Paragraph, { brand, margin: '20px 0 0' }, `It's in your Stripe account and their spot is held. Reach out to book the next step.`),
+    h(CTA, { brand, href: reach.href, margin: '24px 0 10px' }, `${reach.action} ${first}`),
+    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, h(InlineLink, { brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])),
+    specList(brand, 'What they designed', lead.summary),
+    h(Paragraph, { brand, size: 16, margin: '16px 0 0' }, balance),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, 'Paid by card through Stripe Checkout on your account. Refunds and payouts are in your Stripe dashboard.'),
+  );
   const text = [
-    `Your design is with ${brand.name}`,
-    `Thanks, ${firstName(lead.name)}. ${brand.name} will reach out on ${reach.label} to confirm the details and the final price.`,
+    `${lead.name} paid a ${usd(amount)} deposit.`,
+    "It's in your Stripe account and their spot is held. Reach out to book the next step.",
     '',
+    `${reach.action} ${first}: ${reach.label} (${reach.href})`,
+    lead.email ? `Email: ${lead.email}` : '',
+    '',
+    'What they designed:',
     ...lead.summary.map((line) => `- ${line}`),
     '',
-    `${config.pricing.display === 'hidden' ? 'Price' : 'Estimate'}: ${total}`,
-    lead.deposit !== null ? `Deposit to hold your spot: ${usd(lead.deposit)}` : '',
+    balance,
+    `\nLead ${lead.id}`,
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
+  return { subject, html: await html(element), text };
+}
+
+/**
+ * The customer's confirmation, in the shop's brand. They just hit send: the
+ * inbox row confirms it arrived, the first screen keeps their design, and the
+ * steps answer "what now, and what will it cost?".
+ */
+export async function customerEmail({ lead, config, origin, images, depositHref = null }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages; depositHref?: string | null }): Promise<RenderedEmail> {
+  const shop = config.brand;
+  const brand = shopBrand(shop, origin);
+  const price = displayTotal(config.pricing, lead.total, usd).text;
+  const hidden = config.pricing.display === 'hidden';
+  const reach = contactLink(lead.contact);
+  const ig = shop.instagram ? `https://instagram.com/${encodeURIComponent(shop.instagram.replace(/^@/, ''))}` : null;
+  const deposit = lead.deposit !== null && lead.deposit > 0 ? usd(lead.deposit) : null;
+  // With a pay link, the deposit is the one action; otherwise it's messaging the shop.
+  const pay = deposit && depositHref ? { href: depositHref, label: `Pay ${deposit} deposit` } : null;
+  const contactStep = `${shop.name} contacts you at ${reach.label} to go over your design${hidden ? ' and give you a price' : ' and confirm the final price'}.`;
+  const steps = pay
+    ? [`Hold your spot with a ${deposit} deposit.`, contactStep]
+    : [contactStep, ...(deposit ? [`A ${deposit} deposit holds your spot. ${shop.name} will tell you how to pay.`] : [])];
+  const questions = [
+    'Questions? Reply to this email',
+    ...(shop.phone ? [`, call ${displayContact(shop.phone)}`] : []),
+    ...(pay && ig ? [', or ', h(InlineLink, { key: 'ig', brand, href: ig }, 'message them on Instagram')] : []),
+    '.',
+  ];
+  const element = h(
+    EmailFrame,
+    {
+      brand,
+      title: `${shop.name} has your design`,
+      preheader: `Next: they'll reach out on ${reach.label}.`,
+      footer: { reason: `You're getting this because you sent a design to ${shop.name} with the VVS Lab builder. This is a one-time confirmation.` },
+    },
+    h(Headline, { brand, text: `${shop.name.replace(/\*/g, '')} has your *design*` }),
+    h(Paragraph, { brand, margin: '18px 0 0' }, `Thanks, ${firstName(lead.name)}. `, hidden ? 'They’ll price it for you.' : h(Fragment, null, 'Your estimate is ', h('strong', null, price), '.')),
+    designPhoto(brand, images, images.photo ? AI_DISCLOSURE : 'Your 3D design'),
+    h(SectionLabel, { brand }, 'What happens next'),
+    h(Steps, { brand, steps }),
+    pay ? h(CTA, { brand, href: pay.href, margin: '18px 0 0' }, pay.label) : ig && h(CTA, { brand, href: ig, margin: '18px 0 0' }, `Message ${shop.name}`),
+    specList(brand, 'Your design', lead.summary),
+    h(Paragraph, { brand, muted: true, size: 14, margin: '24px 0 0' }, ...questions),
+    h(SignOff, { brand }),
+  );
+  const text = [
+    `${shop.name} has your design. Thanks, ${firstName(lead.name)}.`,
+    hidden ? 'They’ll price it for you.' : `Your estimate is ${price}.`,
+    '',
+    'What happens next:',
+    ...steps.map((step, index) => `${index + 1}. ${step}`),
+    pay ? `\n${pay.label}: ${pay.href}` : '',
+    '',
+    'Your design:',
+    ...lead.summary.map((line) => `- ${line}`),
     images.photo ? `\n${AI_DISCLOSURE}` : '',
     '\nQuestions? Reply to this email.',
   ]
     .filter((line) => line !== '')
     .join('\n');
+  return { subject: `${shop.name} has your grillz design`, html: await html(element), text };
+}
+
+/** Self-serve signup: the one-time link that signs the new owner in. */
+export async function welcomeEmail({ shop, slug, link, origin, trialDays }: { shop: string; slug: string; link: string; origin: string; trialDays: number }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
+  const element = h(
+    EmailFrame,
+    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready to set up`, footer: { reason: "You're getting this because you signed up for VVS Lab." } },
+    h(Headline, { brand, align: 'center', size: 54, text: 'Your builder is *ready*' }),
+    h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-wink.png`, width: 216, alt: 'Karat, the VVS Lab mascot, winking' }),
+    h(Paragraph, { brand, margin: '18px 0 16px' }, 'Hey there,'),
+    h(Paragraph, { brand }, `${shop} now has its own 3D grillz builder at `, h('strong', null, `${host(origin)}/b/${slug}`), '. Customers design their set, see your prices and send it straight to you, with a studio photo.'),
+    h(Paragraph, { brand }, `Add your logo and prices, then switch it on. It takes about 10 minutes, and your free trial runs ${trialDays} days.`),
+    h(CTA, { brand, href: link }, 'Set up my builder'),
+    h(
+      Paragraph,
+      { brand, muted: true, size: 13, margin: '0' },
+      'The button works once and expires in 24 hours. After that, sign in any time at ',
+      h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
+      ". Didn't sign up? Ignore this email.",
+    ),
+    h(SignOff, { brand }),
+  );
   return {
-    subject: `Your grillz design was sent to ${brand.name}`,
-    html: shell(brand, origin, `${brand.name} has your design`, body, `You're getting this because you sent a design to ${esc(brand.name)} with the VVS Lab builder. This is a one-time confirmation.`),
-    text,
+    subject: 'Set up your VVS Lab builder',
+    html: await html(element),
+    text: `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. Set it up and switch it on here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`,
+  };
+}
+
+/** A team invite: join a shop on VVS Lab. */
+export async function inviteEmail({ shop, inviter, role, link, origin }: { shop: string; inviter: string; role: 'owner' | 'staff'; link: string; origin: string }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
+  const element = h(
+    EmailFrame,
+    { brand, title: `Join ${shop}`, preheader: `${inviter} invited you to ${shop} on VVS Lab`, footer: { reason: `You're getting this because ${inviter} invited this address to ${shop}.` } },
+    h(Headline, { brand, text: `Join *${shop.replace(/\*/g, '')}*` }),
+    h(
+      Paragraph,
+      { brand, margin: '18px 0 0' },
+      `${inviter} invited you to join this shop on VVS Lab as ${role === 'owner' ? 'an owner' : 'staff'}. You'll see its design requests${role === 'owner' ? ' and can change its prices and options' : ''}.`,
+    ),
+    h(CTA, { brand, href: link }, 'Accept and sign in'),
+    h(
+      Paragraph,
+      { brand, muted: true, size: 13, margin: '0' },
+      'The button works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ',
+      h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
+      '. Not expecting this? Ignore it and nothing happens.',
+    ),
+    h(SignOff, { brand }),
+  );
+  return {
+    subject: 'You’re invited to join a shop on VVS Lab',
+    html: await html(element),
+    text: `${inviter} invited you to join "${shop}" on VVS Lab.\n\nAccept and sign in: ${link}\n\nThe link works once and expires in 24 hours. The invite stays open for 7 days: sign in any time at ${dashboardUrl(origin)}. If you weren't expecting this, ignore it.`,
   };
 }

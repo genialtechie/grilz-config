@@ -1,9 +1,11 @@
+import { createHmac } from 'node:crypto';
 import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DESIGNS } from '../../src/lib/__tests__/designs';
 import { handleLead, leadToken, type LeadEnv } from '../leads';
 import { notifyLead } from '../notify';
 import { handleRender } from '../render';
+import { handleStripeWebhook } from '../billing';
 
 // End-to-end lead pipeline against a real (local) Supabase: lead → render →
 // photo → emails, with FLUX and Resend mocked at the network edge.
@@ -21,6 +23,7 @@ const env: LeadEnv & Record<string, string> = {
   RESEND_BASE_URL: 'https://resend.test',
   PLATFORM_LEADS_EMAIL: 'platform@example.com',
   RENDER_DAILY_GENERATIONS: '100000',
+  STRIPE_CONNECT_WEBHOOK_SECRET: 'whsec_pipeline_test',
 };
 
 type Sent = { to: string[]; subject: string; html: string; reply_to?: string[]; headers?: Record<string, string>; attachments?: { content_id: string }[] };
@@ -102,6 +105,32 @@ describe.skipIf(!url || !key)('lead pipeline (integration)', () => {
     await rest(`leads?tenant_id=eq.${fixture.id}`, { method: 'DELETE' });
   });
 
+  it('records a paid deposit once and tells the shop once, even when Stripe sends two events', async () => {
+    const lead = await handleLead(leadBody({ photo: false }), nextIp(), env, defer);
+    const { leadId } = lead.body as { leadId: string };
+    await settleDeferred();
+    const [fixture] = await rest('tenants?slug=eq.fixture&select=id,stripe_account_id');
+    const account = 'acct_pipeline_test';
+    await rest(`tenants?id=eq.${fixture.id}`, { method: 'PATCH', body: JSON.stringify({ stripe_account_id: account }) });
+    try {
+      sent = [];
+      const session = { id: 'cs_test_1', payment_status: 'paid', amount_total: 25_000, metadata: { purpose: 'deposit', lead_id: leadId } };
+      for (const type of ['checkout.session.completed', 'checkout.session.async_payment_succeeded']) {
+        const body = JSON.stringify({ id: `evt_${type}_${leadId}`, type, account, data: { object: session } });
+        const t = Math.floor(Date.now() / 1000);
+        const signature = `t=${t},v1=${createHmac('sha256', env.STRIPE_CONNECT_WEBHOOK_SECRET).update(`${t}.${body}`).digest('hex')}`;
+        expect((await handleStripeWebhook(body, signature, true, env)).status).toBe(200);
+      }
+      const row = await leadRow(leadId);
+      expect(row.deposit_paid_at).toBeTruthy();
+      const deposits = sent.filter((mail) => mail.subject.endsWith('paid a $250 deposit'));
+      expect(deposits).toHaveLength(1);
+      expect(deposits[0].to).toEqual(['platform@example.com']);
+    } finally {
+      await rest(`tenants?id=eq.${fixture.id}`, { method: 'PATCH', body: JSON.stringify({ stripe_account_id: fixture.stripe_account_id }) });
+    }
+  });
+
   it('stores the lead with the server price, then emails the shop once with the photo', async () => {
     const lead = await handleLead(leadBody({ total: 1 }), nextIp(), env, defer);
     expect(lead.status).toBe(200);
@@ -129,7 +158,7 @@ describe.skipIf(!url || !key)('lead pipeline (integration)', () => {
     expect(shop.attachments?.map((item) => item.content_id)).toEqual(['photo']);
     expect(shop.reply_to).toEqual(['ava@example.com']);
     const customer = sent.find((email) => email.to.includes('ava@example.com'))!;
-    expect(customer.subject).toBe('Your grillz design was sent to Fixture Jewelers');
+    expect(customer.subject).toBe('Fixture Jewelers has your grillz design');
 
     // The fallback timer firing later sends nothing more.
     expect(await notifyLead(leadId, 'timeout', env)).toBe('already');
