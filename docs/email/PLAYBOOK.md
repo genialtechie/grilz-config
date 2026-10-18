@@ -124,19 +124,44 @@ of this:
      that read on both.
 - Check every email in both modes before shipping (`email-preview.ts`).
 
-## 6. Illustration
+## 6. Illustration and the mascot
 
 - One house style per brand, written down: shapes, outline weight, palette,
-  ornaments. (VVS Lab: flat shapes, warm gold gradients, 5–7px ink outlines,
-  4-point sparkles, a cream sticker edge, a speech bubble.)
+  ornaments. (VVS Lab: flat shapes, warm gold gradients, 5px ink outlines,
+  4-point sparkles, a cream sticker edge on dark backgrounds.)
 - **Draw in SVG, ship PNG.** Gmail, Outlook and Yahoo don't display SVG.
-  `scripts/email-art.ts` draws with code (exact, consistent, regenerable) and
-  renders 2× PNGs with `sharp`. Keep each under ~100 KB; set `alt=""` on
-  decorative art.
+  Draw with code (exact, consistent, regenerable) and render 2× PNGs with
+  `sharp`. Keep each under ~100 KB; set `alt=""` on decorative art.
 - One illustration per email, about the email's one idea.
-- Hand-coded SVG does bold flat art well. For loose hand-drawn characters
-  (Wispr's motorbike rider), commission an illustrator or generate with an
-  image model in a locked style, then approve the set.
+- A **mascot** beats one-off illustrations: one character, many expressions,
+  recognisable at a glance (Duolingo's Duo, Mailchimp's Freddie). Build it the
+  way character designers do, one approved round at a time:
+  1. **Brief before drawing.** Its jobs (welcome, celebrate wins, nudge,
+     soften bad news, empty states), the audience, three traits **plus one
+     contradiction** (VVS: flashy outside, meticulous craftsman inside), a
+     goal and a fear (the fear feeds win-back: "losing my shine").
+  2. **Silhouettes only.** 8–12 solid-black shapes from primitives; circles
+     read friendly, squares sturdy, triangles edgy. Show each large **and at
+     40px**: most fail the shrink test. Pick on shape alone.
+  3. **Brand fit decides between survivors.** Look at the brand's own
+     imagery and voice (VVS: the hero is a gold grill with fangs; the voice
+     is confident with an edge), not at what's cute.
+  4. **The face.** 4–6 faces on the chosen body, at 64px too. The product's
+     signature details go in the face and must be drawn as the real thing:
+     separate teeth with tips, long tapered fangs, pavé stones. A strip with
+     triangles doesn't read as teeth. Keep features in contrast (gold teeth
+     against a dark mouth) and small (a big open mouth reads "monster").
+  5. **Resting face + expressions** from one set of parts: resting (avatar,
+     footer), win, nudge, working, sad/win-back, sign-off. Then the signature
+     accessory (VVS: an eyebrow piercing with iced-out stones).
+  6. **Turnaround** (front, ¾, side on shared guides), exports (transparent
+     2× PNG per expression with a light sticker edge so it survives dark
+     mode, app icons), then put it in the emails: sign-off in every footer,
+     the win face on win emails, the welcome face on the welcome.
+  7. **Name it** with a word from the trade that sounds like a name (Karat:
+     gold karats, diamond carats).
+  The VVS Lab record of every round is in `docs/brand/mascot/`; the model is
+  `scripts/mascot-model.ts`.
 
 ## 7. Copy
 
@@ -241,16 +266,42 @@ image, title, two lines, "Learn more"). Credit the users who asked for it
 12. Right segment and topic, suppressions applied, send time sensible.
 13. A second person approves; volume within the warm-up plan.
 
-## 12. Making a new brand
+## 12. The revamp, step by step (do this for a new brand)
 
-1. Write a `Brand` in `server/email/brand.ts` (colours light and dark, fonts,
-   logo, footer mark, legal line, links, social). Check contrast for
-   `highlight` (3:1) and `link` (4.5:1) against the card in both modes.
-2. Define the illustration style in a sentence and draw the first piece in
-   `scripts/email-art.ts`.
-3. Write the plan (section 2) for each email, then build the welcome email
-   first and review it next to the reference email.
-4. Run the QA checklist, then the trial sequence.
+The order we used for VVS Lab, each step reviewed before the next:
+
+1. **Reference first.** Collect the emails you want to be next to (screenshots
+   of real ones, light and dark). Write down what they do (section 1), not
+   just how they look.
+2. **Brand object.** A `Brand` in `server/email/brand.ts`: the product's real
+   accent (from its CSS, not a guess), fonts, logo, legal line, links,
+   socials. Contrast: `highlight` 3:1, `link` 4.5:1, button text 4.5:1, in
+   both modes.
+3. **Kit.** One surface, logo, content column, the footer (section 3). On
+   Vercel write server email code as `.ts` with `createElement` and confirm
+   a production build bundles it.
+4. **Plan every email from the smallest form out** (section 2): moment, inbox
+   row, first screen, details, reference. Cut eyebrows, repeated facts and
+   state you don't know. Look for gaps the plan exposes (VVS: a deposit with
+   no way to pay it; no email when a deposit is paid) and close them.
+5. **Build, then preview** phone/desktop × light/dark (`email-preview.ts`)
+   with production URLs in the copy. Compare side by side with the reference.
+6. **Mascot** (section 6), then put it in the emails.
+7. **Marketing groundwork** (section 10): separate sending subdomain
+   verified in the email provider, opt-out list per topic, send log with a
+   dedupe key, one-click unsubscribe headers and page, complaint and bounce
+   webhook.
+8. **Sequences** (section 8): trial, announcements, win-back, each planned
+   with section 2 and sent through the marketing sender.
+9. **QA** (section 11) on real inboxes, then warm up the domain.
+
+Lessons from the VVS Lab review rounds:
+- Show the work as images, every round; feedback on a picture is fast.
+- Accent colour comes from the product, not the logo metal.
+- A preview fixture's colours get read as the brand: make fixtures use the
+  brand's own values.
+- Hierarchy is decided by what the reader does next, never by the data you
+  happen to have.
 
 ## Sources
 
@@ -260,5 +311,8 @@ code, Duolingo win-back, Airbnb host onboarding, Loom year in review, Figma
 team welcome, Headspace verify), caniemail.com, Litmus dark-mode guide, Google
 "Email sender guidelines" (support.google.com/a/answer/81126), Yahoo sender
 best practices, FTC CAN-SPAM compliance guide, Resend docs (Segments, Topics,
-Broadcasts, Automations, unsubscribe headers, subdomains, warm-up). Researched
+Broadcasts, Automations, unsubscribe headers, subdomains, warm-up). Mascots:
+Duolingo "Reshaping Duo" and "Building character" (blog.duolingo.com),
+Collins' Freddie redesign for Mailchimp, character-design guides on shape
+language, silhouette and shrink tests, model and expression sheets. Researched
 Oct 2026; re-check client support tables before relying on a single cell.
