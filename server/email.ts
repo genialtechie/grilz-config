@@ -1,7 +1,16 @@
-// Transactional email through Resend. Without RESEND_API_KEY nothing is sent and
-// callers record the lead as "email skipped", so leads are never lost.
+// Email through Resend. Without RESEND_API_KEY nothing is sent and callers
+// record the lead as "email skipped", so leads are never lost. Marketing mail
+// goes out from its own subdomain (EMAIL_MARKETING_FROM_DOMAIN), so a
+// complaint about a newsletter can't hurt the reputation lead mail relies on.
 
-export type EmailEnv = { RESEND_API_KEY?: string; EMAIL_FROM_DOMAIN?: string; /** Tests point this at a local mock. */ RESEND_BASE_URL?: string };
+export type EmailEnv = {
+  RESEND_API_KEY?: string;
+  EMAIL_FROM_DOMAIN?: string;
+  /** Marketing sender domain; marketing mail isn't sent without it. */
+  EMAIL_MARKETING_FROM_DOMAIN?: string;
+  /** Tests point this at a local mock. */
+  RESEND_BASE_URL?: string;
+};
 
 export type Attachment = { filename: string; content: Uint8Array; contentId: string; contentType: string };
 
@@ -9,6 +18,8 @@ export type Email = {
   fromName: string;
   /** Sender mailbox on the email domain: leads@ (default) for lead mail, hello@ for account mail. */
   fromLocal?: 'leads' | 'hello';
+  /** marketing: sent from the marketing subdomain. */
+  stream?: 'transactional' | 'marketing';
   to: string[];
   subject: string;
   html: string;
@@ -20,7 +31,8 @@ export type Email = {
 
 export type SendResult = { ok: true; id: string } | { ok: false; reason: 'not_configured' | 'rejected' | 'unreachable'; detail?: string };
 
-export const fromDomain = (env: EmailEnv) => env.EMAIL_FROM_DOMAIN || 'vvslab.magpollo.com';
+export const fromDomain = (env: EmailEnv, stream: Email['stream'] = 'transactional') =>
+  stream === 'marketing' ? env.EMAIL_MARKETING_FROM_DOMAIN ?? '' : env.EMAIL_FROM_DOMAIN || 'vvslab.magpollo.com';
 
 /** Display names can't carry quotes or angle brackets into the From header. */
 const safeName = (name: string) => name.replace(/["<>\r\n]/g, '').slice(0, 60);
@@ -34,14 +46,14 @@ export async function sendEmail(email: Email, env: EmailEnv): Promise<SendResult
 }
 
 async function sendOnce(email: Email, env: EmailEnv): Promise<SendResult> {
-  if (!env.RESEND_API_KEY) return { ok: false, reason: 'not_configured' };
+  if (!env.RESEND_API_KEY || !fromDomain(env, email.stream)) return { ok: false, reason: 'not_configured' };
   if (email.to.length === 0) return { ok: false, reason: 'rejected', detail: 'no recipients' };
   try {
     const response = await fetch(`${env.RESEND_BASE_URL || 'https://api.resend.com'}/emails`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `${safeName(email.fromName)} <${email.fromLocal ?? 'leads'}@${fromDomain(env)}>`,
+        from: `${safeName(email.fromName)} <${email.fromLocal ?? 'leads'}@${fromDomain(env, email.stream)}>`,
         to: email.to,
         subject: email.subject.replace(/[\r\n]+/g, ' ').slice(0, 200),
         html: email.html,

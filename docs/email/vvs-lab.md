@@ -121,3 +121,31 @@ went live, got a design request, added a card).
 
 Win-back (after the day-14 gate, or a cancelled plan): +7 days "your builder
 is paused, your designs are saved", +30 days "what's new", then stop.
+
+## Marketing setup
+
+- **Sender:** `Karat from VVS Lab <hello@news.vvslab.magpollo.com>`. The
+  subdomain is its own Resend domain (DKIM and SPF verified; DNS records in
+  Vercel), so marketing complaints can't touch `vvslab.magpollo.com`, which
+  carries lead and account mail. DMARC comes from `magpollo.com` (`p=none`).
+- **Topics:** `tips` (trial sequence, onboarding) and `news` (announcements,
+  win-back). An opt-out can be one topic or `all`.
+- **Every marketing send** goes through `sendMarketingEmail`
+  (`server/marketing.ts`): it checks the opt-out list, claims the send in
+  `email_sends` by `dedupe_key` (a step never goes twice), adds
+  `List-Unsubscribe` + `List-Unsubscribe-Post`, and passes the unsubscribe
+  link to the template for the footer.
+- **Unsubscribe page** (`/api/unsubscribe`): a GET only shows a confirm page
+  (mail scanners prefetch links); one click from the mail client or the
+  page's button opts out; "all" and resubscribe are on the page.
+- **Complaints and hard bounces** arrive on `/api/resend-webhook` and opt the
+  address out of all marketing. Account and lead mail still go.
+
+Still to do after this merges (needs the deploy):
+1. Apply migration `20261020000001_marketing_email.sql` to production.
+2. In Resend → Webhooks, add `https://vvslab.magpollo.com/api/resend-webhook`
+   for `email.bounced` and `email.complained`; put its signing secret in
+   Vercel as `RESEND_WEBHOOK_SECRET`.
+3. Send a test to Gmail and check "Show original": SPF, DKIM and DMARC pass,
+   and the unsubscribe headers are present.
+4. Warm up: start with small batches (the trial sequence is naturally slow).

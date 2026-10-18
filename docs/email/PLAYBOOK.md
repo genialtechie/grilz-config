@@ -212,6 +212,10 @@ image, title, two lines, "Learn more"). Credit the users who asked for it
 - **CAN-SPAM:** truthful From and subject, a physical address, a working
   opt-out honoured within 10 business days that needs nothing more than one
   click or page.
+- **How the kit does it:** `server/marketing.ts` (opt-out check, send log
+  with a dedupe key, one-click headers, unsubscribe page, complaint/bounce
+  webhook). Reuse it rather than Resend Broadcasts when sends are triggered
+  by product events.
 - **Resend:** Contacts are global and grouped into **Segments** (formerly
   Audiences); **Topics** are per-category opt-ins; **Broadcasts** send to a
   Segment with `{{{RESEND_UNSUBSCRIBE_URL}}}` and test sends; **Automations**

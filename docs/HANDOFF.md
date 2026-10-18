@@ -71,7 +71,9 @@ Routing lives in [`vercel.json`](../vercel.json) (rewrites, headers, cron) and
 | `GET /api/tenant/<slug>` | `api/tenant.ts` | Published config (public view). `?preview=<version>` + bearer token returns a draft to members/admins |
 | `POST /api/leads` | `api/leads.ts` | Customer sends a design. `maxDuration` 60 s |
 | `POST /api/render` | `api/render.ts` | AI studio photo. `maxDuration` 120 s |
-| `POST /api/deposit` | `api/deposit.ts` | Stripe Checkout on the shop's own account |
+| `POST /api/deposit` | `api/deposit.ts` | Stripe Checkout on the shop's own account. `GET ?lead=&t=` is the 30-day pay link in the customer email (redirects to Checkout) |
+| `GET/POST /api/unsubscribe` | `api/unsubscribe.ts` | Marketing unsubscribe: GET shows the confirm page, POST acts (page buttons, or one-click `List-Unsubscribe-Post`) |
+| `POST /api/resend-webhook` | `api/resend-webhook.ts` | Resend events (Svix-signed); complaints and hard bounces become opt-outs |
 | `GET/POST /api/signup` | `api/signup.ts` | Slug availability / create a shop |
 | `POST /api/dashboard/<action>` | `api/dashboard.ts` | Signed-in member actions (see below) |
 | `POST /api/stripe/webhook[?connect=1]` | `api/stripe/webhook.ts` | Platform events / connected-account events |
@@ -267,6 +269,8 @@ grants. Migrations in `supabase/migrations/` are the source of truth.
 | `tenant_domains` | Custom domain per shop (server-written only) | `status` (pending/active), `verification` |
 | `signup_attempts` | Signup rate-limit log (hashed IP) | |
 | `stripe_events` | Processed webhook event ids (dedupe) | |
+| `email_unsubscribes` | Marketing opt-outs per address and topic (`all`, `tips`, `news`) | `source` (link/one_click/complaint/bounce/admin) |
+| `email_sends` | Every marketing send, once | `dedupe_key` (unique), `kind`, `topic`, `status` (sending/sent/skipped/failed), `resend_id` |
 
 **Storage buckets**: `tenant-assets` (public; logos; png/jpeg/webp, 2 MB; owners
 write under `<tenant id>/`) and `lead-media` (private; 5 MB; members read
@@ -378,6 +382,8 @@ ships to the browser.
 | `PLATFORM_LEADS_EMAIL` | yes | Demo/test leads, allowance warnings | Those emails have no recipient |
 | `PUBLIC_ORIGIN` | recommended | Links in emails and Stripe return URLs | Defaults to `https://vvslab.magpollo.com` |
 | `EMAIL_FROM_DOMAIN` | optional | Sender domain (`leads@…`) | Defaults to `vvslab.magpollo.com` |
+| `EMAIL_MARKETING_FROM_DOMAIN` | for marketing | Marketing sender (`hello@news.vvslab.magpollo.com`) | Marketing mail isn't sent (`not_configured`) |
+| `RESEND_WEBHOOK_SECRET` | for marketing | Verifies `/api/resend-webhook` (Resend → Webhooks → signing secret) | Webhook answers 400: complaints and bounces aren't suppressed |
 | `TURNSTILE_SECRET_KEY` | prod | Bot check on leads and signup | Check is skipped |
 | `CRON_SECRET` | yes | Authenticates Vercel Cron | Cron returns 401: retention and billing enforcement stop |
 | `STRIPE_SECRET_KEY` | yes | All Stripe calls | Billing and deposits 503 |
@@ -416,7 +422,7 @@ in `server/stripe.ts` (v1 `2025-03-31.basil`, v2 for Connect accounts).
 | Supabase (Postgres 17, Auth, Storage) | Everything stateful | Shop pages for real tenants show "couldn't load" (demo still works); leads, dashboard, signup down |
 | Vercel | Hosting, functions, cron, edge cache, domains API | Full outage |
 | Black Forest Labs | FLUX.2 pro render + `flux-pro-1.0-fill` edits | Render answers "paused"; leads still go through with the 3D capture |
-| Resend | Lead, confirmation, invite, signup emails | Leads saved; shop not emailed (`email_failed` events). One retry on 429/5xx |
+| Resend | Lead, confirmation, invite, signup emails (`vvslab.magpollo.com`); marketing (`news.vvslab.magpollo.com`, a separate domain so complaints can't hurt lead mail) | Leads saved; shop not emailed (`email_failed` events). One retry on 429/5xx |
 | Stripe | Subscriptions, Connect deposits | Checkout/portal/deposit 502; webhooks retried by Stripe |
 | Cloudflare Turnstile | Bot check | Fails open if unreachable |
 | PostHog | Funnel analytics, dashboard stats | Stats shows lead numbers only |
