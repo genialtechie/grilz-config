@@ -158,13 +158,13 @@ export async function setLeadStatus(leadId: string, status: string) {
 // validate the config and keep plan-controlled fields.
 
 export type MemberRole = 'owner' | 'staff';
-export type MyShop = TenantRow & { role: MemberRole | 'admin' };
+export type MyShop = TenantRow & { role: MemberRole | 'admin'; plan?: string; trial_ends_at?: string | null };
 
 export async function myShops(): Promise<MyShop[]> {
   const db = supabase();
   const { data: user } = await db.auth.getUser();
   if (!user.user) return [];
-  const rows = must(await db.from('members').select('role,tenants(id,slug,name,kind,status,published_version,created_at)').eq('user_id', user.user.id)) as unknown as { role: MemberRole; tenants: TenantRow | null }[];
+  const rows = must(await db.from('members').select('role,tenants(id,slug,name,kind,status,published_version,created_at,plan,trial_ends_at)').eq('user_id', user.user.id)) as unknown as { role: MemberRole; tenants: (TenantRow & { plan: string; trial_ends_at: string | null }) | null }[];
   return rows.filter((row) => row.tenants).map((row) => ({ ...(row.tenants as TenantRow), role: row.role })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -240,3 +240,21 @@ export const getDomain = (tenantId: string) => api<{ domain: DomainInfo | null }
 export const connectDomain = (tenantId: string, domain: string) => api<DomainInfo>('domain_add', { tenantId, domain });
 export const checkDomain = (tenantId: string) => api<DomainInfo>('domain_check', { tenantId });
 export const disconnectDomain = (tenantId: string) => api<{ removed: boolean }>('domain_remove', { tenantId });
+
+export const deleteLeadData = (leadId: string) => api<{ deleted: boolean }>('lead_delete', { leadId });
+
+/** Everything the shop has with us, as one JSON file: config history, leads with their history, team. */
+export async function exportShopData(tenant: { id: string; slug: string; name: string }) {
+  const db = supabase();
+  const [configs, leads, events, team] = await Promise.all([
+    db.from('tenant_configs').select('version,status,config,created_at,published_at').eq('tenant_id', tenant.id).order('version'),
+    db.from('leads').select('id,created_at,status,name,contact,email,note,spec,price,total,deposit,config_version,source').eq('tenant_id', tenant.id).order('created_at'),
+    db.from('lead_events').select('lead_id,type,created_at,data').eq('tenant_id', tenant.id).order('created_at'),
+    db.rpc('shop_team', { target: tenant.id }),
+  ]);
+  for (const result of [configs, leads, events, team]) if (result.error) throw new Error(result.error.message);
+  return { exportedAt: new Date().toISOString(), shop: { slug: tenant.slug, name: tenant.name }, configs: configs.data, leads: leads.data, leadEvents: events.data, team: team.data };
+}
+
+export const goLive = (tenantId: string) => api<{ status: string }>('go_live', { tenantId });
+export const pauseShop = (tenantId: string) => api<{ status: string }>('pause', { tenantId });

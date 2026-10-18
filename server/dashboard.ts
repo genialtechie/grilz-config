@@ -2,6 +2,7 @@ import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.j
 import { createDb, DbError, hasDb, type Db } from './db.js';
 import { addDomain, checkDomain, domainState, removeDomain, type DomainEnv } from './domains.js';
 import { sendEmail, type EmailEnv } from './email.js';
+import { deleteLead } from './retention.js';
 import type { ApiResult } from './tenantApi.js';
 import type { TenantEnv } from './tenants.js';
 
@@ -204,6 +205,35 @@ async function stats(db: Db, userId: string, payload: Record<string, unknown>, e
   }
 }
 
+/** Owners switch their own page on (once it has a published version) or pause it. */
+async function setLive(db: Db, userId: string, action: string, payload: Record<string, unknown>): Promise<ApiResult> {
+  const tenantId = String(payload.tenantId ?? '');
+  if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+  const role = await roleFor(db, userId, tenantId);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can switch the page on or off.' });
+  const [tenant] = await db.select<{ status: string; published_version: number | null }>('tenants', { id: `eq.${tenantId}`, select: 'status,published_version' });
+  if (!tenant || tenant.status === 'offboarded') return reply(409, { error: 'closed', message: 'This shop is closed. Message VVS Lab.' });
+  if (action === 'go_live' && tenant.published_version === null) return reply(409, { error: 'unpublished', message: 'Publish your page first.' });
+  const status = action === 'go_live' ? 'live' : 'paused';
+  await db.update('tenants', { id: `eq.${tenantId}`, status: 'in.(draft,live,paused)' }, { status });
+  return reply(200, { status });
+}
+
+/** A customer asked the shop to delete their data: the lead, its history and its files. Owners only. */
+async function removeLead(db: Db, userId: string, payload: Record<string, unknown>): Promise<ApiResult> {
+  const leadId = String(payload.leadId ?? '');
+  if (!UUID.test(leadId)) return reply(400, { error: 'invalid' });
+  const [lead] = await db.select<{ tenant_id: string }>('leads', { id: `eq.${leadId}`, select: 'tenant_id' });
+  if (!lead) return reply(404, { error: 'not_found' });
+  const role = await roleFor(db, userId, lead.tenant_id);
+  if (!role) return reply(404, { error: 'not_found' });
+  if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can delete a customer’s data.' });
+  await deleteLead(db, leadId);
+  console.log('lead deleted on request', lead.tenant_id);
+  return reply(200, { deleted: true });
+}
+
 // domain: read · domain_check: re-check DNS (any member) · domain_add / domain_remove: owners.
 async function domain(db: Db, userId: string, action: string, payload: Record<string, unknown>, env: DashboardEnv): Promise<ApiResult> {
   const tenantId = String(payload.tenantId ?? '');
@@ -232,6 +262,8 @@ export async function handleDashboard(action: string, payload: unknown, token: s
     if (action === 'invite') return await invite(db, user, body, env);
     if (action === 'stats') return await stats(db, user.id, body, env);
     if (action.startsWith('domain')) return await domain(db, user.id, action, body, env);
+    if (action === 'lead_delete') return await removeLead(db, user.id, body);
+    if (action === 'go_live' || action === 'pause') return await setLive(db, user.id, action, body);
     return reply(404, { error: 'not_found' });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

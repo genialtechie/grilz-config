@@ -43,6 +43,18 @@
       "destination": "/index.html"
     },
     {
+      "source": "/signup",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/index.html"
     },
@@ -124,6 +136,12 @@
           "value": "*"
         }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/retention",
+      "schedule": "17 4 * * *"
     }
   ]
 }

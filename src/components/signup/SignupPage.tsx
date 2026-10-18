@@ -1,0 +1,146 @@
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Turnstile } from '../Turnstile';
+import '../../admin/admin.css';
+import './signup.css';
+
+// /signup: a jeweler starts a free trial on their own. We create the shop and
+// email a sign-in link; they finish setup in /dashboard and switch it on.
+
+const slugify = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/g, '');
+
+export default function SignupPage() {
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [email, setEmail] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [terms, setTerms] = useState(false);
+  const [website, setWebsite] = useState('');
+  const [turnstile, setTurnstile] = useState<string | null>(null);
+  const [available, setAvailable] = useState<{ ok: boolean; message?: string } | null>(null);
+  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [error, setError] = useState<{ field?: string; message: string } | null>(null);
+  const opened = useRef(Date.now());
+  const host = typeof window === 'undefined' ? 'vvslab.magpollo.com' : window.location.host;
+
+  useEffect(() => {
+    document.title = 'Start your free trial · VVS Lab';
+  }, []);
+
+  useEffect(() => {
+    if (!slugTouched) setSlug(slugify(name));
+  }, [name, slugTouched]);
+
+  useEffect(() => {
+    setAvailable(null);
+    if (slug.length < 3) return;
+    const timer = window.setTimeout(() => {
+      fetch(`/api/signup?slug=${encodeURIComponent(slug)}`)
+        .then((response) => response.json())
+        .then((body: { available?: boolean; message?: string }) => setAvailable({ ok: Boolean(body.available), message: body.message }))
+        .catch(() => setAvailable(null));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [slug]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setState('sending');
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, email, instagram, terms, turnstile, website, elapsedMs: Date.now() - opened.current }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { message?: string; field?: string };
+      if (!response.ok) {
+        setError({ field: body.field, message: body.message ?? 'Something went wrong. Try again.' });
+        setState('idle');
+        return;
+      }
+      setState('sent');
+    } catch {
+      setError({ message: 'Couldn’t reach VVS Lab. Check your connection and try again.' });
+      setState('idle');
+    }
+  };
+
+  if (state === 'sent') {
+    return (
+      <main className="admin-auth signup">
+        <div className="admin-card admin-auth__card">
+          <h1>Check your email</h1>
+          <p>We sent a link to <strong>{email}</strong>. Open it on this device to set up {name || 'your shop'}: add your logo and prices, then switch your builder on.</p>
+          <p className="admin-muted">Nothing there in a minute? Check spam, or message <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>.</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="admin-auth signup">
+      <form className="admin-card admin-auth__card signup__card" onSubmit={submit} noValidate>
+        <a className="signup__brand" href="/">VVS Lab</a>
+        <h1>Your own 3D grillz builder</h1>
+        <p className="admin-muted">Customers design their set, see your price and send you the order with a studio photo. Free for 7 days, then $199 a month.</p>
+
+        <label className="admin-field">
+          <span>Shop name</span>
+          <input value={name} maxLength={60} required onChange={(event) => setName(event.target.value)} autoComplete="organization" />
+          {error?.field === 'name' && <small className="admin-error">{error.message}</small>}
+        </label>
+
+        <label className="admin-field">
+          <span>Your link</span>
+          <div className="admin-prefix signup__slug"><em>{host}/b/</em>
+            <input value={slug} maxLength={40} required onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)); }} aria-describedby="slug-status" />
+          </div>
+          <small id="slug-status" className={available && !available.ok ? 'admin-error' : 'admin-muted'}>
+            {error?.field === 'slug' ? error.message : available ? (available.ok ? <><Check size={12} /> Available</> : available.message) : 'This is what you’ll put in your Instagram bio.'}
+          </small>
+        </label>
+
+        <label className="admin-field">
+          <span>Email</span>
+          <input type="email" value={email} required onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+          <small className="admin-muted">{error?.field === 'email' ? <span className="admin-error">{error.message}</span> : 'Design requests arrive here. You can add more later.'}</small>
+        </label>
+
+        <label className="admin-field">
+          <span>Instagram (optional)</span>
+          <div className="admin-prefix"><em>@</em><input value={instagram} maxLength={31} onChange={(event) => setInstagram(event.target.value.replace(/^@/, ''))} /></div>
+          {error?.field === 'instagram' && <small className="admin-error">{error.message}</small>}
+        </label>
+
+        <div className="signup__trap" aria-hidden="true">
+          <label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} /></label>
+        </div>
+
+        <label className="admin-check signup__terms">
+          <input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} />
+          <span>I agree to the <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy</a> policy.</span>
+        </label>
+        {error?.field === 'terms' && <small className="admin-error">{error.message}</small>}
+
+        <Turnstile onToken={setTurnstile} />
+        {error && !error.field && <p className="admin-error" role="alert">{error.message}</p>}
+
+        <button className="admin-button admin-button--primary signup__submit" type="submit" disabled={state === 'sending' || (available !== null && !available.ok)}>
+          {state === 'sending' ? <Loader2 className="spin" size={16} /> : <ArrowRight size={16} />} {state === 'sending' ? 'Creating your shop…' : 'Start free trial'}
+        </button>
+        <p className="admin-muted dash-small">No card needed. Already have a shop? <a href="/dashboard">Sign in</a></p>
+      </form>
+    </main>
+  );
+}

@@ -13,12 +13,20 @@ export async function GET(request: Request): Promise<Response> {
   let html = await page.text();
   const byDomain = url.searchParams.get('domain') === '1';
   const slug = byDomain ? await slugForHost(host, process.env) : (url.searchParams.get('slug') ?? '').toLowerCase();
+  // A /b/<slug> that doesn't exist answers 404 (the app still shows its
+  // "this builder doesn't exist" card), so dead links don't look like pages.
+  let status = 200;
   if (slug) {
     const lookup = await getPublishedTenant(slug, process.env);
     if (lookup.ok) html = byDomain ? customDomainHead(html, lookup.tenant, origin) : shopHead(html, lookup.tenant, origin);
-  }
+    else if (!byDomain && lookup.reason !== 'unavailable') status = 404;
+  } else if (!byDomain) status = 404;
+  if (status === 404) html = html.replace('</head>', '    <meta name="robots" content="noindex" />\n  </head>');
   return new Response(html, {
-    status: 200,
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': byDomain ? 'public, s-maxage=60, stale-while-revalidate=300' : 'public, s-maxage=300, stale-while-revalidate=600' },
+    status,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': status === 404 ? 'public, s-maxage=30' : byDomain ? 'public, s-maxage=60, stale-while-revalidate=300' : 'public, s-maxage=300, stale-while-revalidate=600',
+    },
   });
 }

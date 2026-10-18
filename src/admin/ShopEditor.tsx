@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
+import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
@@ -247,7 +247,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
     run('status', async () => {
       await setStatus(tenant.id, next);
       await reload();
-      return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
+      return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : next === 'offboarded' ? `${config.brand.name} is offboarded. Leads are deleted in 90 days.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
     });
 
   const onLogo = async (file: File | undefined) => {
@@ -312,6 +312,11 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
             <button className="admin-button" type="button" onClick={() => onStatus('paused')} disabled={!!busy}><Pause size={15} /> Pause</button>
           ) : (
             <button className="admin-button" type="button" onClick={() => onStatus('live')} disabled={!!busy || !published}><Play size={15} /> Go live</button>
+          )}
+          {tenant.status !== 'offboarded' && (
+            <button className="admin-button" type="button" disabled={!!busy} onClick={() => {
+              if (window.confirm(`Offboard ${config.brand.name}? The page closes, the team keeps read access to export leads for 90 days, then leads are deleted. The link stays reserved.`)) void onStatus('offboarded');
+            }}><Archive size={15} /> Offboard</button>
           )}
         </div>
         )}

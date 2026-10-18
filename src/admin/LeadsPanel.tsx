@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Download, MessageSquare, Search } from 'lucide-react';
+import { Download, MessageSquare, Search, Trash2 } from 'lucide-react';
 import { displayContact } from '../lib/contact';
-import { addLeadNote, leadNotes, listLeads, setLeadStatus, type LeadEvent } from './data';
+import { addLeadNote, deleteLeadData, leadNotes, listLeads, setLeadStatus, type LeadEvent } from './data';
 import { LEAD_STATUSES, leadsCsv, STATUS_LABEL } from './leadsCsv';
 const DELIVERY: Record<string, string> = { email_sent: 'Emailed', email_failed: 'Email failed', email_skipped: 'Not emailed' };
 const RENDER: Record<string, string> = { ready: 'Photo', rendering: 'Rendering', paused: 'No photo (paused)', failed: 'No photo (failed)', none: '3D only' };
@@ -34,7 +34,7 @@ function NoteForm({ onSave }: { onSave: (text: string) => Promise<void> }) {
 }
 
 /** A shop's leads: search, filter by status, notes, and CSV export. */
-export function LeadsPanel({ tenantId, shopName = 'shop' }: { tenantId: string; shopName?: string }) {
+export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { tenantId: string; shopName?: string; canDelete?: boolean }) {
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [notes, setNotes] = useState<LeadEvent[]>([]);
   const [error, setError] = useState('');
@@ -75,6 +75,16 @@ export function LeadsPanel({ tenantId, shopName = 'shop' }: { tenantId: string; 
   const saveNote = async (lead: Lead, text: string) => {
     await addLeadNote(lead, tenantId, text);
     setNotes((current) => [...current, { lead_id: lead.id, type: 'note', created_at: new Date().toISOString(), data: { text } }]);
+  };
+
+  const removeLead = async (lead: Lead) => {
+    if (!window.confirm(`Delete ${lead.name}'s design request, photo and notes for good? Do this when a customer asks you to delete their data.`)) return;
+    try {
+      await deleteLeadData(lead.id);
+      setLeads((current) => current?.filter((item) => item.id !== lead.id) ?? null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
   };
 
   const exportCsv = () => {
@@ -141,6 +151,11 @@ export function LeadsPanel({ tenantId, shopName = 'shop' }: { tenantId: string; 
                       </p>
                     ))}
                     <NoteForm onSave={(text) => saveNote(lead, text)} />
+                    {canDelete && (
+                      <button className="admin-link-button admin-lead__delete" type="button" onClick={() => void removeLead(lead)}>
+                        <Trash2 size={13} /> Delete this customer&apos;s data
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

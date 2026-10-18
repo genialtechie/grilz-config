@@ -71,6 +71,12 @@ export function createDb(env: TenantEnv) {
         body: Buffer.from(body),
       }),
 
+    /** Deletes storage objects (missing ones are ignored). */
+    removeObjects: (bucket: string, paths: string[]) =>
+      paths.length
+        ? request<unknown>(`/storage/v1/object/${bucket}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: paths }) })
+        : Promise.resolve(null),
+
     download: async (bucket: string, path: string): Promise<Uint8Array> => {
       const response = await fetch(`${base}/storage/v1/object/${bucket}/${path}`, { headers: headers() });
       if (!response.ok) throw new DbError(response.status, `download ${bucket} → ${response.status}`);

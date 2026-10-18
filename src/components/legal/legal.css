@@ -1,0 +1,7 @@
+.legal { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; font-family: Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1f1b16; line-height: 1.6; font-size: 16px; }
+.legal__home { display: inline-block; margin-bottom: 24px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; color: #1f1b16; text-decoration: none; }
+.legal h1 { font-size: 32px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.legal h2 { font-size: 19px; margin: 32px 0 8px; }
+.legal__meta { color: #7a7168; font-size: 14px; }
+.legal ul { padding-left: 20px; }
+.legal a { color: inherit; }

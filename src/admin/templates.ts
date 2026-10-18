@@ -1,5 +1,5 @@
-import type { TenantConfig } from '../lib/tenant/schema';
-import { VVSLAB_CONFIG } from '../lib/tenant/vvslab';
+import type { TenantConfig } from '../lib/tenant/schema.js';
+import { VVSLAB_CONFIG } from '../lib/tenant/vvslab.js';
 
 // Starting points for a new shop. Prices are placeholders the onboarding call
 // replaces; every shop starts with no deposit until Stripe (Stage 5) or a link.

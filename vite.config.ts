@@ -42,6 +42,26 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(body))
     })
+    server.middlewares.use('/api/signup', async (req, res) => {
+      const { handleSignup, slugAvailable } = await server.ssrLoadModule('/server/signup.ts')
+      let result
+      if (req.method === 'GET') {
+        result = await slugAvailable(new URLSearchParams((req.url ?? '').split('?')[1] ?? '').get('slug') ?? '', env)
+      } else {
+        const chunks: Buffer[] = []
+        for await (const chunk of req) chunks.push(chunk as Buffer)
+        let payload: unknown = null
+        try {
+          payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        } catch {
+          // handled by handleSignup as invalid input
+        }
+        result = await handleSignup(payload, req.socket.remoteAddress ?? 'local', env)
+      }
+      res.statusCode = result.status
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(result.body))
+    })
     server.middlewares.use('/api/leads', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405

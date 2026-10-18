@@ -91,6 +91,9 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
       </main>
     );
   }
+  if (loaded.status === 'offboarded') {
+    return <StatePage title="This builder is closed" text={`${loaded.config.brand.name} no longer takes designs here. Contact the shop directly.`} />;
+  }
   if (loaded.status !== 'live') {
     const { brand } = loaded.config;
     return (
