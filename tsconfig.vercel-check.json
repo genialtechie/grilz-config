@@ -2,5 +2,5 @@
   // Mirrors how Vercel type-checks api/*.ts (node ESM). Run: npx tsc -p tsconfig.vercel-check.json
   "extends": "./tsconfig.json",
   "include": ["api/*.ts"],
-  "compilerOptions": { "noEmit": true, "esModuleInterop": true, "target": "es2022", "module": "nodenext", "moduleResolution": "nodenext", "types": ["node"] }
+  "compilerOptions": { "noEmit": true, "esModuleInterop": true, "target": "es2022", "module": "nodenext", "moduleResolution": "nodenext", "types": ["node"], "jsx": "react" }
 }

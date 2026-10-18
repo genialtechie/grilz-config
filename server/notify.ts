@@ -104,8 +104,8 @@ export async function notifyLead(leadId: string, reason: NotifyReason, env: Noti
     const photo = await media(db, row.photo_path, 'photo');
     if (!photo) return 'failed';
     const lead = toEmailLead(row);
-    const original = shopEmail({ lead, config: tenant.config, origin, images: { photo: false, preview: true }, photoPending: true, test }).subject;
-    const email = shopPhotoEmail({ lead, config: tenant.config, origin, subject: original });
+    const original = (await shopEmail({ lead, config: tenant.config, origin, images: { photo: false, preview: true }, photoPending: true, test })).subject;
+    const email = await shopPhotoEmail({ lead, config: tenant.config, origin, subject: original });
     const sent = await sendEmail(
       {
         fromName: senderName(tenant),
@@ -135,7 +135,7 @@ export async function notifyLead(leadId: string, reason: NotifyReason, env: Noti
   if (photo) await db.update('leads', { id: `eq.${row.id}` }, { photo_notified_at: new Date().toISOString() }).catch(() => {});
 
   const { to, test } = recipientsFor(tenant, env);
-  const shop = shopEmail({ lead, config: tenant.config, origin, images, photoPending, test });
+  const shop = await shopEmail({ lead, config: tenant.config, origin, images, photoPending, test });
   let result: 'sent' | 'skipped' | 'failed' = 'skipped';
   if (to.length === 0) {
     await event(db, row, 'email_skipped', { reason: 'no_recipients' });
@@ -160,7 +160,7 @@ export async function notifyLead(leadId: string, reason: NotifyReason, env: Noti
   // The customer's confirmation goes once. It only ever carries our own studio
   // photo, never the uploaded capture, so the form can't mail arbitrary images.
   if (lead.email) {
-    const confirmation = customerEmail({ lead, config: tenant.config, origin, images: { photo: Boolean(photo), preview: false } });
+    const confirmation = await customerEmail({ lead, config: tenant.config, origin, images: { photo: Boolean(photo), preview: false } });
     const replyTo = tenant.kind === 'shop' && tenant.config.leads.email.length ? tenant.config.leads.email : to;
     const sent = await sendEmail({ fromName: tenant.config.brand.name, to: [lead.email], ...confirmation, replyTo, attachments: photo ? [photo] : [] }, env);
     if (sent.ok || sent.reason !== 'not_configured') await event(db, row, sent.ok ? 'confirmation_sent' : 'confirmation_failed', sent.ok ? { id: sent.id } : { reason: sent.reason });

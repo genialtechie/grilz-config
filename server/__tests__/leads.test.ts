@@ -93,8 +93,8 @@ const lead = (patch: Partial<LeadForEmail> = {}): LeadForEmail => {
 
 describe('lead emails', () => {
   const origin = 'https://vvslab.magpollo.com';
-  it('escapes everything the customer typed', () => {
-    const shop = shopEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: true, preview: false }, photoPending: false, test: false });
+  it('escapes everything the customer typed', async () => {
+    const shop = await shopEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: true, preview: false }, photoPending: false, test: false });
     expect(shop.html).not.toContain('<img src=x');
     expect(shop.html).not.toContain('<b>Test</b>');
     expect(shop.html).toContain('Ava &lt;b&gt;Test&lt;/b&gt;');
@@ -106,17 +106,17 @@ describe('lead emails', () => {
     expect(contactLink('@ava.test').href).toBe('https://instagram.com/ava.test');
   });
 
-  it('shows the customer the price the way the shop displays it', () => {
+  it('shows the customer the price the way the shop displays it', async () => {
     const hidden = structuredClone(VVSLAB_CONFIG);
     hidden.pricing.display = 'hidden';
-    const email = customerEmail({ lead: lead(), config: hidden, origin, images: { photo: true, preview: false } });
+    const email = await customerEmail({ lead: lead(), config: hidden, origin, images: { photo: true, preview: false } });
     expect(email.html).toContain('Price on request');
     expect(email.html).not.toContain(`$${lead().total.toLocaleString('en-US')}<`);
     expect(email.html).toContain('handmade and may vary');
   });
 
-  it('tells the shop when the photo will follow', () => {
-    const shop = shopEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: true }, photoPending: true, test: true });
+  it('tells the shop when the photo will follow', async () => {
+    const shop = await shopEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: true }, photoPending: true, test: true });
     expect(shop.subject.startsWith('[Test shop] ')).toBe(true);
     expect(shop.html).toContain('cid:preview');
     expect(shop.text).toContain('will follow');

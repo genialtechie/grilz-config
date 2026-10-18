@@ -135,7 +135,7 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   await db.insert('member_invites', { tenant_id: tenantId, email, role: 'owner', invited_by: access.userId });
   await log('created');
 
-  const welcome = welcomeEmail({ shop: name, slug, link: access.link, origin, trialDays: TRIAL_DAYS });
+  const welcome = await welcomeEmail({ shop: name, slug, link: access.link, origin, trialDays: TRIAL_DAYS });
   await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...welcome, headers: { 'X-Entity-Ref-ID': `signup-${tenantId}` } }, env);
   return done;
 }

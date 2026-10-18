@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@posthog/react": "1.10.3",
+    "@react-email/components": "1.0.12",
+    "@react-email/render": "2.1.0",
     "@react-three/drei": "^9.120.8",
     "@react-three/fiber": "^8.17.12",
     "@supabase/supabase-js": "2.117.2",

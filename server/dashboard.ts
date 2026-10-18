@@ -139,7 +139,7 @@ async function invite(db: Db, user: { id: string; email?: string }, payload: Rec
   if (already) return done;
 
   await db.insert('member_invites', { tenant_id: tenantId, email, role: memberRole, invited_by: user.id });
-  const invitation = inviteEmail({ shop: strip(tenant.name), inviter: strip(user.email ?? 'The shop owner'), role: memberRole, link: link.url, origin });
+  const invitation = await inviteEmail({ shop: strip(tenant.name), inviter: strip(user.email ?? 'The shop owner'), role: memberRole, link: link.url, origin });
   await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...invitation, headers: { 'X-Entity-Ref-ID': `invite-${tenantId}-${link.userId}` } }, env);
   return done;
 }

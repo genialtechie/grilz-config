@@ -34,10 +34,10 @@ const photo = `${origin}/assets/vvs/photo-mixed.webp`;
 const withPhoto = (html: string) => html.replace(/cid:(photo|preview)/g, photo);
 
 const emails: Record<string, string> = {
-  'design-request': withPhoto(shopEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, photoPending: false, test: false }).html),
-  'customer-confirmation': withPhoto(customerEmail({ lead, config: shop, origin, images: { photo: true, preview: false } }).html),
-  welcome: welcomeEmail({ shop: 'Gold Mouth Jewelers', slug: 'gold-mouth', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin, trialDays: 14 }).html,
-  invite: inviteEmail({ shop: 'Gold Mouth Jewelers', inviter: 'dre@goldmouth.com', role: 'staff', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin }).html,
+  'design-request': withPhoto((await shopEmail({ lead, config: shop, origin, images: { photo: true, preview: false }, photoPending: false, test: false })).html),
+  'customer-confirmation': withPhoto((await customerEmail({ lead, config: shop, origin, images: { photo: true, preview: false } })).html),
+  welcome: (await welcomeEmail({ shop: 'Gold Mouth Jewelers', slug: 'gold-mouth', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin, trialDays: 14 })).html,
+  invite: (await inviteEmail({ shop: 'Gold Mouth Jewelers', inviter: 'dre@goldmouth.com', role: 'staff', link: `${origin}/dashboard/welcome?token_hash=x&type=invite`, origin })).html,
 };
 
 async function main() {
