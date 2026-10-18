@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 790" width="1020" height="790">
+<rect width="1020" height="790" fill="#fbf7f0"/>
+<text x="30" y="46" font-family="Inter" font-size="24" font-weight="700" fill="#1b1714">VVS Lab mascot · round 2: the fang (small copy = 40px)</text>
+<g transform="translate(0 70)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L148 104Q146 136 122 158L100 184L78 158Q54 136 52 104Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L148 104Q146 136 122 158L100 184L78 158Q54 136 52 104Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">A. Crown fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Square crown, clean point</text>
+</g>
+<g transform="translate(340 70)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M42 56Q42 24 76 24L124 24Q158 24 158 56L156 112Q154 140 128 154L100 172L72 154Q46 140 44 112Z"/><ellipse cx="50" cy="176" rx="17" ry="11"/><ellipse cx="150" cy="176" rx="17" ry="11"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M42 56Q42 24 76 24L124 24Q158 24 158 56L156 112Q154 140 128 154L100 172L72 154Q46 140 44 112Z"/><ellipse cx="50" cy="176" rx="17" ry="11"/><ellipse cx="150" cy="176" rx="17" ry="11"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">B. Short fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Wider, short tip: friendliest</text>
+</g>
+<g transform="translate(680 70)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M58 46Q58 18 86 18L114 18Q142 18 142 46L140 96Q138 128 120 150L100 190L80 150Q62 128 60 96Z"/><ellipse cx="58" cy="170" rx="17" ry="11"/><ellipse cx="142" cy="170" rx="17" ry="11"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M58 46Q58 18 86 18L114 18Q142 18 142 46L140 96Q138 128 120 150L100 190L80 150Q62 128 60 96Z"/><ellipse cx="58" cy="170" rx="17" ry="11"/><ellipse cx="142" cy="170" rx="17" ry="11"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">C. Long fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Narrow, long tip: most edge</text>
+</g>
+<g transform="translate(0 430)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M48 58Q48 24 78 26Q100 38 122 26Q152 24 152 58L150 106Q148 138 124 158L100 184L76 158Q52 138 50 106Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M48 58Q48 24 78 26Q100 38 122 26Q152 24 152 58L150 106Q148 138 124 158L100 184L76 158Q52 138 50 106Z"/><ellipse cx="56" cy="172" rx="17" ry="11"/><ellipse cx="144" cy="172" rx="17" ry="11"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">D. Cusp fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Classic notch on top: reads "tooth"</text>
+</g>
+<g transform="translate(340 430)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L150 106Q150 140 136 162Q126 180 104 188Q112 172 104 160Q76 140 56 120Q50 108 50 96Z"/><ellipse cx="54" cy="174" rx="17" ry="11"/><ellipse cx="146" cy="174" rx="17" ry="11"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M50 52Q50 22 82 22L118 22Q150 22 150 52L150 106Q150 140 136 162Q126 180 104 188Q112 172 104 160Q76 140 56 120Q50 108 50 96Z"/><ellipse cx="54" cy="174" rx="17" ry="11"/><ellipse cx="146" cy="174" rx="17" ry="11"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">E. Hook fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Tip curves: a real canine, in motion</text>
+</g>
+<g transform="translate(680 430)">
+<rect x="10" y="10" width="320" height="340" rx="18" fill="#ffffff" stroke="#e7ddcd" stroke-width="2"/>
+<g transform="translate(60 24) scale(1.1)" fill="#1b1714"><path d="M46 60Q46 26 78 28Q100 40 122 28Q154 26 154 60Q154 98 142 120L130 186Q126 196 118 188L106 142Q100 132 94 142L84 172Q80 182 72 176L60 120Q46 98 46 60Z"/></g>
+<g transform="translate(268 32) scale(0.2)" fill="#1b1714"><path d="M46 60Q46 26 78 28Q100 40 122 28Q154 26 154 60Q154 98 142 120L130 186Q126 196 118 188L106 142Q100 132 94 142L84 172Q80 182 72 176L60 120Q46 98 46 60Z"/></g>
+<text x="30" y="300" font-family="Inter" font-size="20" font-weight="700" fill="#1b1714">F. Root fang</text>
+<text x="30" y="326" font-family="Inter" font-size="15" fill="#6f655a">Classic tooth; one root is the fang</text>
+</g>
+</svg>

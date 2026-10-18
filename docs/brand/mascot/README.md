@@ -50,7 +50,27 @@ Recommendation: **9 Classic** as the body (ownable, instantly a tooth), with
 of your shop". Round 2 would try 4–6 versions of that hybrid with
 proportions, the root legs and the stance, still in black.
 
-Next rounds: 2 refine the chosen silhouette · 3 eyes and face (where the
+## Round 2: the fang
+
+You picked Classic, Fang and Smile; on brand fit (the hero and link-preview
+images are gold fangs, the voice is confident with an edge) the fang leads,
+built on Classic's crown so it still reads as a tooth.
+
+![Round 2 silhouettes](round-2-fang.png)
+
+![Round 2 sketch](round-2-sketch.png)
+
+Source: `scripts/mascot-round2.ts`. What it shows:
+- **A–E read as shields or guitar picks at 40px.** A point on its own doesn't
+  say "tooth"; the crown notch (D) helps but not enough.
+- **F (Root fang) is the only one that still reads as a tooth at 40px.** The
+  roots become legs, so it stands and walks without extra feet, and the
+  longer root gives it a stance.
+- In F the fang lives in the legs, which is subtle. Recommendation: carry the
+  fang in the **face**: the grin wears gold fang caps like the hero image, so
+  the smile (your third pick) and the fang both stay.
+
+Next rounds: 3 eyes and face (where the
 personality lives) · 4 colour (gold body, ink outline, one iced stone) ·
 5 model sheet (front, ¾, side) and expression sheet (happy, celebrating,
 nudging, sleepy/dull for win-back, thinking).
