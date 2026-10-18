@@ -158,8 +158,7 @@ for Oct 19.
   subdomain is its own Resend domain (DKIM and SPF verified; DNS records in
   Vercel), so marketing complaints can't touch `vvslab.magpollo.com`, which
   carries lead and account mail. DMARC comes from `magpollo.com` (`p=none`).
-- **Topics:** `tips` (trial sequence, onboarding) and `news` (announcements,
-  win-back). An opt-out can be one topic or `all`.
+- **Topics:** `tips` (trial sequence, win-back) and `news` (announcements). An opt-out can be one topic or `all`.
 - **Every marketing send** goes through `sendMarketingEmail`
   (`server/marketing.ts`): it checks the opt-out list, claims the send in
   `email_sends` by `dedupe_key` (a step never goes twice), adds

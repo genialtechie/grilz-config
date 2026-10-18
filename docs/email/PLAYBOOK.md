@@ -2,7 +2,9 @@
 
 How we make email that holds its own next to the best (Wispr Flow, Linear, Arc,
 Stripe, Cash App, Duolingo). Brand-agnostic: it's written to become a reusable
-skill. VVS Lab specifics live in [`vvs-lab.md`](vvs-lab.md).
+skill, and is packaged as one in [`skills/email-revamp/`](../../skills/email-revamp/SKILL.md)
+(update both when the method changes). VVS Lab specifics live in
+[`vvs-lab.md`](vvs-lab.md).
 
 The kit that implements it is in `server/email/` (React Email):
 `brand.ts` (one object per brand), `components.ts` (the building blocks), and
