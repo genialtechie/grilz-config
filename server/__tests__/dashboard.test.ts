@@ -5,6 +5,8 @@ import { csvCell } from '../../src/admin/leadsCsv';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 
 const cfg = () => structuredClone(VVSLAB_CONFIG);
+const purge = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('@vercel/functions', () => ({ dangerouslyDeleteByTag: purge }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('plan-controlled fields', () => {
@@ -112,5 +114,31 @@ describe('invites need sign-up switched off', () => {
     }));
     const result = await handleDashboard('invite', { tenantId: '11111111-1111-1111-1111-111111111111', email: 'new@test.com', role: 'staff' }, 'tok', env);
     expect(result.status).toBe(503);
+  });
+});
+
+describe('switching a builder on or off', () => {
+  it('drops the cached page so the link works (or stops) straight away', async () => {
+    const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'service' };
+    const writes: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'u1', email: 'owner@test' });
+      if (url.includes('/rest/v1/platform_admins')) return new Response(null, { status: 200, headers: { 'content-range': '*/0' } });
+      if (url.includes('/rest/v1/members')) return Response.json([{ role: 'owner' }]);
+      if (url.includes('/rest/v1/tenants') && init?.method === 'PATCH') {
+        writes.push(String(init.body));
+        return Response.json([]);
+      }
+      if (url.includes('/rest/v1/tenants')) return Response.json([{ slug: 'ice-box', status: 'draft', published_version: 1, plan: 'trial', trial_ends_at: new Date(Date.now() + 864e5).toISOString(), billing_status: 'none' }]);
+      return new Response('unexpected', { status: 500 });
+    }));
+    for (const action of ['go_live', 'pause']) {
+      purge.mockClear();
+      const result = await handleDashboard(action, { tenantId: '11111111-1111-1111-1111-111111111111' }, 'tok', env);
+      expect(result.status).toBe(200);
+      expect(purge).toHaveBeenCalledWith('tenant:ice-box');
+    }
+    expect(writes).toEqual(['{"status":"live"}', '{"status":"paused"}']);
   });
 });

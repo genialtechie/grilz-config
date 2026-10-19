@@ -20,7 +20,7 @@ function CopyBox({ label, value, multiline = false }: { label: string; value: st
     <div className="dash-copy">
       <span className="admin-muted dash-small">{label}</span>
       <div className="dash-copy__row">
-        {multiline ? <textarea readOnly value={value} rows={2} onFocus={(event) => event.target.select()} /> : <input readOnly value={value} onFocus={(event) => event.target.select()} />}
+        {multiline ? <textarea readOnly value={value} rows={2} aria-label={label} onFocus={(event) => event.target.select()} /> : <span className="dash-copy__text">{value}</span>}
         <button className="admin-button admin-button--small" type="button" onClick={() => void copy()}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}</button>
       </div>
     </div>
