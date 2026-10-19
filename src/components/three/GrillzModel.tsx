@@ -3,6 +3,7 @@ import { ThreeEvent } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
+import { dentalStone, polishedMetal, settingMetal } from './materials';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
@@ -29,10 +30,10 @@ const findToothMesh = (object: THREE.Object3D): THREE.Mesh | null => {
   return null;
 };
 
-const disposeObject = (object: THREE.Object3D) => {
+// Stones share one cached geometry (DiamondStones), so only their material is disposed.
+const disposeStones = (object: THREE.Object3D) => {
   object.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
-    child.geometry?.dispose();
     const childMaterials = Array.isArray(child.material) ? child.material : [child.material];
     childMaterials.forEach((material) => material.dispose());
   });
@@ -46,23 +47,16 @@ function GrillzModel({
 }: GrillzModelProps) {
   const { scene } = useGLTF('/assets/teeth_final.glb');
 
-  const { clonedScene, originalMaterials } = useMemo(() => {
+  const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
-    const originals = new Map<number, THREE.Material>();
 
     clone.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       child.castShadow = true;
       child.receiveShadow = true;
-
-      if (child.material instanceof THREE.Material) {
-        child.material = child.material.clone();
-        const index = getToothIndexFromName(child.name);
-        if (index !== null) originals.set(index, child.material);
-      }
     });
 
-    return { clonedScene: clone, originalMaterials: originals };
+    return clone;
   }, [scene]);
 
   // Selected teeth glow in the shop's accent (the demo keeps its original red).
@@ -78,12 +72,9 @@ function GrillzModel({
       metalness: 0.25,
       roughness: 0.34,
     });
-    const mould = new THREE.MeshStandardMaterial({
-      color: '#e8e1d7',
-      metalness: 0.05,
-      roughness: 0.72,
-    });
-    const finishCache = new Map<string, THREE.MeshStandardMaterial>();
+    // The mould and the bare teeth are one dental-stone cast, as on a jeweler's bench.
+    const mould = dentalStone();
+    const finishCache = new Map<string, THREE.MeshPhysicalMaterial>();
 
     return { selected, mould, finishCache };
   }, [selectColor, selectGlow]);
@@ -91,16 +82,11 @@ function GrillzModel({
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
 
   const getFinishMaterial = useCallback((customization: ToothCustomization) => {
-    const key = `${customization.material}:${customization.color}`;
+    const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
+    const key = `${metal}:${customization.hasDiamonds ? 'set' : 'polished'}`;
     const existing = materials.finishCache.get(key);
     if (existing) return existing;
-
-    const material = new THREE.MeshStandardMaterial({
-      color: customization.color,
-      metalness: customization.material === 'gold' ? 0.88 : 0.94,
-      roughness: customization.material === 'gold' ? 0.2 : 0.16,
-      envMapIntensity: 1.35,
-    });
+    const material = customization.hasDiamonds ? settingMetal(metal) : polishedMetal(metal);
     materials.finishCache.set(key, material);
     return material;
   }, [materials]);
@@ -120,7 +106,7 @@ function GrillzModel({
       const existingStones = child.getObjectByName('diamond_stones');
       if (existingStones) {
         child.remove(existingStones);
-        disposeObject(existingStones);
+        disposeStones(existingStones);
       }
 
       const customization = customizations[index];
@@ -131,18 +117,15 @@ function GrillzModel({
         return;
       }
 
-      child.material =
-        customization.material === 'default'
-          ? originalMaterials.get(index) ?? materials.mould
-          : getFinishMaterial(customization);
+      child.material = customization.material === 'default' ? materials.mould : getFinishMaterial(customization);
 
-      if (customization.hasDiamonds) {
-        const stones = createDiamondStones(child, '#ffffff');
+      if (customization.hasDiamonds && customization.material !== 'default') {
+        const stones = createDiamondStones(child, customization.diamondType);
         stones.name = 'diamond_stones';
         child.add(stones);
       }
     });
-  }, [clonedScene, customizations, getFinishMaterial, isSelectionMode, materials, originalMaterials, selectedToothSet]);
+  }, [clonedScene, customizations, getFinishMaterial, isSelectionMode, materials, selectedToothSet]);
 
   useEffect(() => {
     return () => {

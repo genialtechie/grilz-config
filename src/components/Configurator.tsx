@@ -220,6 +220,7 @@ function Configurator() {
         return {
           material: isGold(design.metal) ? 'gold' : 'silver',
           color: metal.swatch,
+          metal: metal.id,
           hasDiamonds: design.type === 'iced',
           diamondType: design.stone === 'moissanite' ? 'moissanite' : 'lab',
         };
