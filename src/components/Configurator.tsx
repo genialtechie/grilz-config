@@ -40,7 +40,6 @@ import {
   summarizeDesign,
   wearerToothName,
   type InscriptionStyleId,
-  type MoldId,
   type RenderSpec,
   type SetOptions,
   type ToothDesign,
@@ -68,7 +67,7 @@ const STEP_INTROS: Record<StepId, { title: string; text: string }> = {
   metal: { title: 'Pick your metal', text: 'Every metal and karat updates the model and the price.' },
   style: { title: 'Choose the look', text: 'Plain, iced out or a photo, then the finish.' },
   stones: { title: 'Set the stones', text: 'Choose how the stones are set and what they are.' },
-  extras: { title: 'Fangs and fit', text: 'Add fangs and choose how the grillz sit.' },
+  extras: { title: 'Fangs and fit', text: 'Add fangs, choose how the grillz sit and how the shop gets your fit.' },
   vision: { title: 'Make it yours', text: 'Describe your idea or upload a reference. Both shape your AI photo.' },
   photo: { title: 'See it for real', text: 'Your price and a studio photo of your design.' },
 };
@@ -130,7 +129,6 @@ function Configurator() {
   const [inscriptionPicking, setInscriptionPicking] = useState(false);
   const [inspiration, setInspiration] = useState<string | null>(null);
   const [inspirationError, setInspirationError] = useState<string | null>(null);
-  const [mold, setMold] = useState<MoldId>('kit');
   const [depositReached, setDepositReached] = useState(false);
   const threeState = useRef<RootState | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
@@ -432,13 +430,12 @@ function Configurator() {
     setInscriptionStyle('cut');
     setInscriptionTooth(null);
     setInscriptionPicking(false);
-    setMold('kit');
     setStep('teeth');
     setPanelOpen(true);
   };
 
   const reserveDeposit = () => {
-    posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit, mold });
+    posthog.capture('sample_deposit_clicked', { ...designProperties(), deposit, mold: setOptions.mold });
     const { mode, link } = tenant.config.deposit;
     if (!tenant.demo && mode === 'link' && link) window.open(link, '_blank', 'noopener');
     if (!tenant.demo && mode === 'stripe' && receipt) {
@@ -821,6 +818,31 @@ function Configurator() {
                       ))}
                     </div>
                   </fieldset>
+                  {catalog.molds.length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>How we get your fit</legend>
+                      <div className="choice-list">
+                        {catalog.molds.map((option) => {
+                          const Icon = MOLD_ICONS[option.id];
+                          const fee = tenant.config.pricing.molds?.[option.id] ?? 0;
+                          return (
+                            <button
+                              key={option.id}
+                              className={setOptions.mold === option.id ? 'choice-row choice-row--selected' : 'choice-row'}
+                              type="button"
+                              role="radio"
+                              aria-checked={setOptions.mold === option.id}
+                              onClick={() => updateSet({ mold: option.id })}
+                            >
+                              <Icon size={17} />
+                              <span><strong>{option.label}</strong><small>{[option.detail, fee ? hints.extra(fee) : null].filter(Boolean).join(' · ')}</small></span>
+                              <span className="radio-indicator">{setOptions.mold === option.id && <span />}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
                   {(tenant.config.catalog.addOns ?? []).length > 0 && (
                     <fieldset className="control-group">
                       <legend>Add-ons <em className="legend-optional">Optional</em></legend>
@@ -974,26 +996,6 @@ function Configurator() {
 
                   {lead && !depositReached && (
                     <>
-                      <fieldset className="control-group">
-                        <legend>How we get your fit</legend>
-                        <div className="choice-list">
-                          {catalog.molds.map((option) => {
-                            const Icon = MOLD_ICONS[option.id];
-                            return (
-                            <button
-                              key={option.id}
-                              className={mold === option.id ? 'choice-row choice-row--selected' : 'choice-row'}
-                              type="button"
-                              onClick={() => setMold(option.id)}
-                            >
-                              <Icon size={17} />
-                              <span><strong>{option.label}</strong><small>{option.detail}</small></span>
-                              <span className="radio-indicator">{mold === option.id && <span />}</span>
-                            </button>
-                            );
-                          })}
-                        </div>
-                      </fieldset>
                       {deposit !== null && (tenant.demo || tenant.config.deposit.mode === 'link' || (tenant.config.deposit.mode === 'stripe' && receipt)) && (
                         <button className="primary-button" type="button" onClick={reserveDeposit}>
                           <CreditCard size={17} />

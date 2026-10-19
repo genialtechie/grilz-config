@@ -126,6 +126,8 @@ export const PricingSchema = z.object({
         .optional(),
     })
     .optional(),
+  /** A fee per way of getting the fit (e.g. a mail-in kit), once per order. */
+  molds: priceMap(MoldIdSchema).optional(),
   /** Set-size pricing: the per-tooth prices drop by percentOff once a set has minTeeth teeth. */
   volume: z
     .array(z.object({ minTeeth: z.number().int().min(2).max(32), percentOff: z.number().min(1).max(90) }))

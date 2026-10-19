@@ -45,4 +45,4 @@ export const defaultTooth = (catalog: TenantCatalog): ToothDesign => ({
   stone: pick(DEFAULT_TOOTH.stone, catalog.stones),
 });
 
-export const defaultSet = (catalog: TenantCatalog): SetOptions => ({ ...DEFAULT_SET, cut: pick(DEFAULT_SET.cut, catalog.cuts) });
+export const defaultSet = (catalog: TenantCatalog): SetOptions => ({ ...DEFAULT_SET, cut: pick(DEFAULT_SET.cut, catalog.cuts), mold: pick('kit', catalog.molds) });

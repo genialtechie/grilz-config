@@ -559,6 +559,9 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               {catalog.fangs && <Money label="Fangs" value={pricing.extras.fangs} onChange={(value) => update((next) => { next.pricing.extras.fangs = value; })} />}
               {catalog.cuts.includes('permanent') && <Money label="Permanent look" value={pricing.extras.permanent} onChange={(value) => update((next) => { next.pricing.extras.permanent = value; })} />}
               {catalog.types.includes('photo') && <Money label="Photo artwork" value={pricing.extras.photo} onChange={(value) => update((next) => { next.pricing.extras.photo = value; })} />}
+              {pick(MOLDS, catalog.molds).map((mold) => (
+                <Money key={mold.id} label={`${mold.label} (fit)`} value={pricing.molds?.[mold.id] ?? 0} onChange={(value) => update((next) => { next.pricing.molds = { ...next.pricing.molds, [mold.id]: value }; })} />
+              ))}
               {catalog.inscription.enabled && pick(INSCRIPTION_STYLES, catalog.inscription.styles).map((style) => (
                 <Money key={style.id} label={`Inscription · ${style.label}`} value={pricing.inscription[style.id]} onChange={(value) => update((next) => { next.pricing.inscription[style.id] = value; })} />
               ))}

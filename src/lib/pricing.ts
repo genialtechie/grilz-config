@@ -1,4 +1,4 @@
-import { icedOpenFace, isGold, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { icedOpenFace, isGold, label, MOLDS, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 import { quoteKey } from './metalMarket.js';
 
@@ -47,6 +47,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set
   if (set.fangs) add('Fangs', pricing.extras.fangs);
   if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);
   if (set.inscription) add(`Inscription "${set.inscription.text}"`, pricing.inscription[set.inscription.style] ?? 0);
+  if (set.mold) add(label(MOLDS, set.mold), pricing.molds?.[set.mold] ?? 0);
   (set.addOns ?? []).forEach((id) => {
     const addOn = addOns.find((item) => item.id === id);
     if (addOn) add(addOn.per === 'tooth' ? `${addOn.label} · ${teeth.length} teeth` : addOn.label, addOn.per === 'tooth' ? addOn.price * teeth.length : addOn.price);
