@@ -1,3 +1,4 @@
+import type { Promo } from './promo';
 import type { RenderSpec } from './renderSpec';
 
 // Browser side of POST /api/leads.
@@ -14,6 +15,8 @@ export type LeadSubmission = {
   /** Whether a studio photo will be requested for this lead. */
   photo: boolean;
   turnstile?: string;
+  /** A promo code the builder checked; the server checks it again and counts the use. */
+  promo?: string;
   /** Honeypot: always empty for people. */
   website?: string;
   elapsedMs: number;
@@ -58,5 +61,17 @@ export async function submitLead(submission: LeadSubmission): Promise<LeadOutcom
     return { ok: true, receipt: { leadId: body.leadId, token: body.token ?? '' } };
   } catch {
     return { ok: false, error: 'Could not send your design. Check your connection and try again.', code: 'network' };
+  }
+}
+
+/** Checks a promo code with the shop: its terms, or why it doesn't apply (in the customer's words). */
+export async function checkPromo(tenant: string, code: string): Promise<{ ok: true; promo: Promo } | { ok: false; error: string }> {
+  try {
+    const response = await fetch('/api/promo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, code }) });
+    const body = (await response.json().catch(() => ({}))) as { ok?: boolean; promo?: Promo; error?: string };
+    if (body.ok && body.promo) return { ok: true, promo: body.promo };
+    return { ok: false, error: body.error ?? "Couldn't check that code. Try again." };
+  } catch {
+    return { ok: false, error: "Couldn't check that code. Check your connection and try again." };
   }
 }

@@ -7,6 +7,8 @@ import { createDb, DbError, hasDb } from './db.js';
 import { latestSpot } from './metalPrices.js';
 import { checkLeadToken, signLeadToken } from './leadTokens.js';
 import { notifyLead, type NotifyEnv } from './notify.js';
+import { findPromo, type PromoRow } from './promos.js';
+import { PROMO_REASONS, type Promo } from '../src/lib/promo.js';
 import { hashIp, isEmail, LIMITS, looksAutomated, normaliseContact, verifyTurnstile, type SpamEnv } from './spam.js';
 import { configForSession, getPublishedTenant, tenantIdFor } from './tenants.js';
 
@@ -101,15 +103,41 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
   if (session.config.pricing.market) session.config = { ...session.config, pricing: withMarketQuote(session.config.pricing, await latestSpot(env)) };
   const spec = parseRenderSpec(body.spec, session.config.catalog);
   if (!spec || spec.teeth.length === 0) return fail(400, 'Your design has an option this shop no longer offers. Refresh and try again.', 'design');
-  const price = priceBreakdown(session.config.pricing, spec.teeth, spec, session.config.catalog.addOns);
-  const deposit = depositFor(session.config.deposit, price.total);
-
   const tenantId = await tenantIdFor(tenant, env);
   if (!tenantId) return fail(503, 'Something went wrong. Please try again.', 'unavailable');
   const db = createDb(env);
   const ipHash = hashIp(ip, secretFor(env));
 
+  // A promo code is checked again here (the builder's check is only a preview) and priced in.
+  let promo: Promo | null = null;
+  let promoRow: PromoRow | undefined;
+  if (typeof body.promo === 'string' && body.promo.trim()) {
+    try {
+      const found = await findPromo(db, tenantId, body.promo);
+      if (!found.status.ok) return fail(400, `${PROMO_REASONS[found.status.reason]} Remove it and send your design again.`, 'promo');
+      promo = found.status.promo;
+      promoRow = found.row;
+    } catch (error) {
+      console.error('lead promo lookup failed', tenant.slug, error instanceof Error ? error.message : error);
+      return fail(503, 'Something went wrong. Please try again.', 'unavailable');
+    }
+  }
+  const price = priceBreakdown(session.config.pricing, spec.teeth, spec, session.config.catalog.addOns, promo);
+  const deposit = depositFor(session.config.deposit, price.total);
+
+  // The use is counted just before the lead is stored, and given back if it isn't.
+  let redeemed = false;
+  const release = async () => {
+    if (!redeemed || !promoRow) return;
+    redeemed = false;
+    await db.rpc('release_promo', { promo: promoRow.id }).catch((error) => console.error('promo release failed', error instanceof Error ? error.message : error));
+  };
+
   try {
+    if (promoRow && price.promo?.amount) {
+      redeemed = await db.rpc<boolean>('redeem_promo', { promo: promoRow.id });
+      if (!redeemed) return fail(409, `${PROMO_REASONS.used_up} Remove it and send your design again.`, 'promo');
+    }
     const leadId = randomUUID();
     const preview = await readPreview(body.preview);
 
@@ -139,6 +167,7 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
       },
     });
     if (created !== 'ok') {
+      await release();
       if (created === 'shop') console.error('lead daily cap reached', tenant.slug);
       const message =
         created === 'shop'
@@ -170,6 +199,7 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
 
     return { status: 200, body: { ok: true, leadId, token: leadToken(leadId, tenantId, env), total: price.total, deposit } };
   } catch (error) {
+    await release();
     console.error('lead failed', tenant.slug, error instanceof DbError ? error.message : error);
     return fail(503, 'Something went wrong. Please try again.', 'unavailable');
   }

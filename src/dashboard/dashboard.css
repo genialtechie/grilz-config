@@ -48,6 +48,17 @@
 .dash-team li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--a-line); }
 .dash-team li:last-child { border-bottom: 0; }
 .dash-team strong { word-break: break-all; }
+.dash-promos { margin: 0 0 14px; padding: 0; list-style: none; }
+.dash-promos li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--a-line); }
+.dash-promos li > div:first-child { flex: 1 1 220px; min-width: 0; }
+.dash-promos__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 2px; }
+.dash-promos__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: 0.04em; }
+.dash-promos__actions { display: flex; align-items: center; gap: 4px; }
+.dash-promos__discount { display: flex; gap: 6px; min-width: 0; }
+.admin-field .dash-promos__discount input { flex: 1 1 0; width: 0; min-width: 0; }
+.admin-field .dash-promos__discount select { flex: 0 0 auto; width: auto; }
+.dash-promos__form .admin-field em { color: var(--a-muted); font-style: normal; font-weight: 400; }
+.dash-promos__form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .dash-invite { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
 
 @media (max-width: 1080px) {

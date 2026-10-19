@@ -1,13 +1,23 @@
 import { fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 import { quoteKey } from './metalMarket.js';
+import type { Promo } from './promo.js';
 
 // The price engine: pure functions of a design and a tenant's pricing. The same
 // code runs in the builder and on the server, which recomputes every total.
 
 export type PriceLine = { label: string; amount: number };
 /** `market`: the metal prices (USD per troy ounce) a market-linked quote used, kept with the lead. */
-export type PriceBreakdown = { lines: PriceLine[]; total: number; market?: { asOf: string; gold: number; silver: number; platinum: number } };
+/**
+ * `promo`: the code the customer used and what it took off; `amount` is 0 and
+ * `minOrder` is set when the order is under the code's minimum.
+ */
+export type PriceBreakdown = {
+  lines: PriceLine[];
+  total: number;
+  market?: { asOf: string; gold: number; silver: number; platinum: number };
+  promo?: { code: string; amount: number; minOrder?: number };
+};
 
 /** One tooth's metal: today's market quote when the shop links to the market, else its fixed price. */
 export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: KaratId) => {
@@ -26,8 +36,12 @@ export const positionFactor = (pricing: TenantPricing, index: number) => {
   return position === 'front' ? 1 : (pricing.positions?.[position] ?? 100) / 100;
 };
 
-/** `addOns`: the shop's add-ons (from its catalog), to price the ones in `set.addOns`. */
-export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set: SetOptions, addOns: readonly AddOn[] = []): PriceBreakdown => {
+/**
+ * `addOns`: the shop's add-ons (from its catalog), to price the ones in `set.addOns`.
+ * `promo`: a code the customer entered (already checked), taken off the order
+ * before the shop's minimum applies.
+ */
+export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set: SetOptions, addOns: readonly AddOn[] = [], promo: Promo | null = null): PriceBreakdown => {
   const lines: PriceLine[] = [{ label: 'Service fee', amount: pricing.base }];
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
@@ -67,13 +81,21 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     const addOn = addOns.find((item) => item.id === id);
     if (addOn) add(addOn.per === 'tooth' ? `${addOn.label} · ${teeth.length} teeth` : addOn.label, addOn.per === 'tooth' ? addOn.price * teeth.length : addOn.price);
   });
+  const beforePromo = lines.reduce((total, line) => total + line.amount, 0);
+  let promoResult: PriceBreakdown['promo'];
+  if (promo && beforePromo < promo.minOrder) promoResult = { code: promo.code, amount: 0, minOrder: promo.minOrder };
+  else if (promo) {
+    const amount = Math.min(beforePromo, promo.kind === 'percent' ? Math.round((beforePromo * promo.value) / 100) : promo.value);
+    add(`Promo ${promo.code}`, -amount);
+    promoResult = { code: promo.code, amount };
+  }
   const subtotal = lines.reduce((total, line) => total + line.amount, 0);
   if (pricing.minimumOrder > subtotal) lines.push({ label: 'Minimum order adjustment', amount: pricing.minimumOrder - subtotal });
   const quote = pricing.market?.enabled ? pricing.market.quote : undefined;
   const market = quote && teeth.some((tooth) => quote.perTooth[quoteKey(tooth.metal, tooth.karat)] !== undefined)
     ? { asOf: quote.asOf, gold: quote.gold, silver: quote.silver, platinum: quote.platinum }
     : undefined;
-  return { lines, total: Math.max(subtotal, pricing.minimumOrder), ...(market ? { market } : {}) };
+  return { lines, total: Math.max(subtotal, pricing.minimumOrder), ...(market ? { market } : {}), ...(promoResult ? { promo: promoResult } : {}) };
 };
 
 /** The deposit for an estimate, or null when the shop takes no deposit. */

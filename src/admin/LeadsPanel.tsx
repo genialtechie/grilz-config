@@ -154,6 +154,7 @@ export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { 
                 <div className="admin-lead__meta">
                   <strong>{usd(lead.total)}</strong>
                   {lead.deposit !== null && <span>deposit {usd(lead.deposit)}</span>}
+                  {lead.promo?.amount ? <span>code {lead.promo.code} −{usd(lead.promo.amount)}</span> : null}
                   <span>{RENDER[lead.render_status] ?? lead.render_status}</span>
                   <span className={lead.delivery === 'email_failed' ? 'admin-error' : ''}>{lead.delivery ? DELIVERY[lead.delivery] ?? lead.delivery : lead.notified_at ? 'Delivered' : 'Waiting for photo'}</span>
                   {lead.source.utm_source && <span>from {lead.source.utm_source}</span>}

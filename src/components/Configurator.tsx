@@ -26,6 +26,8 @@ import Scene from './three/Scene';
 import { LeadCapture, RenderOverlay, type Lead, type LeadExtras } from './AiRender';
 import { submitLead, type LeadReceipt } from '../lib/leads';
 import { OptionCard } from './builder/OptionCard';
+import { PromoField } from './builder/PromoField';
+import type { Promo } from '../lib/promo';
 import { capturePreview, captureToothMask } from '../lib/capturePreview';
 import { downscaleImage } from '../lib/downscaleImage';
 import { useAiRender } from '../lib/hooks/useAiRender';
@@ -91,7 +93,8 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
-const formatPrice = (value: number) => currencyFormatter.format(value);
+// Discounts read "−$300": a true minus sign, not a hyphen.
+const formatPrice = (value: number) => currencyFormatter.format(value).replace(/^-/, '\u2212');
 
 function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['brand'] }) {
   return (
@@ -130,6 +133,7 @@ function Configurator() {
   const [inspiration, setInspiration] = useState<string | null>(null);
   const [inspirationError, setInspirationError] = useState<string | null>(null);
   const [depositReached, setDepositReached] = useState(false);
+  const [promo, setPromo] = useState<Promo | null>(null);
   const threeState = useRef<RootState | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
@@ -220,7 +224,7 @@ function Configurator() {
   const canHaveFangs = selectedTeeth.some((index) => FANG_TEETH.includes(index));
   const fangsOn = setOptions.fangs && canHaveFangs;
   const effectiveSet: SetOptions = { ...setOptions, fangs: fangsOn, inscription };
-  const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns);
+  const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns, promo);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
   const brand = tenant.config.brand;
   const priceHidden = tenant.config.pricing.display === 'hidden';
@@ -317,6 +321,7 @@ function Configurator() {
     inscription_style: inscription?.style ?? 'none',
     has_inspiration: Boolean(inspiration),
     estimated_total: totalCost,
+    promo_code: Boolean(pricing.promo?.amount),
   });
 
   type Capture = { spec: RenderSpec; preview: string; masks: { kind: string; indices: number[]; mask: string }[] };
@@ -378,10 +383,13 @@ function Configurator() {
       preview: capture.preview,
       photo,
       turnstile: extras.turnstile ?? undefined,
+      promo: promo?.code,
       website: extras.website,
       elapsedMs: Date.now() - openedAt.current,
     });
     if (!outcome.ok) {
+      // The code stopped applying since it was checked: drop it so the price shown is the one they'd get.
+      if (outcome.code === 'promo') setPromo(null);
       posthog.capture('sample_lead_failed', { ...designProperties(), reason: outcome.code });
       return outcome.error;
     }
@@ -997,6 +1005,16 @@ function Configurator() {
                         <div key={line.label}><dt>{line.label}</dt><dd>{formatPrice(line.amount)}</dd></div>
                       ))}
                     </dl>
+                  )}
+                  {tenant.promos && (
+                    <PromoField
+                      shop={tenant.slug}
+                      applied={promo}
+                      minOrder={pricing.promo && !pricing.promo.amount ? pricing.promo.minOrder : undefined}
+                      locked={Boolean(lead)}
+                      formatPrice={formatPrice}
+                      onChange={setPromo}
+                    />
                   )}
                   <div className="total-row">
                     <span>{priceHidden ? 'Price' : 'Estimated total'}</span>

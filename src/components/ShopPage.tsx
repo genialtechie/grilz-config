@@ -114,7 +114,7 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
         <button type="button" onClick={() => setDepositPaid(false)} aria-label="Dismiss">×</button>
       </div>
     )}
-    <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo} version={loaded.version} preview={loaded.preview}>
+    <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo} version={loaded.version} preview={loaded.preview} promos={loaded.promos}>
       {loaded.preview && (
         <div className="preview-banner" role="status">
           Draft preview · v{loaded.version} · customers can&apos;t see this yet

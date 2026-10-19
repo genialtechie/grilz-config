@@ -35,6 +35,8 @@ export type LeadRow = {
   photo_path: string | null;
   spec: { summary?: string[] };
   source: Record<string, string>;
+  /** The promo code the customer used, and what it took off. */
+  promo: { code: string; amount: number } | null;
 };
 
 const must = <T,>(result: { data: T | null; error: { message: string } | null }): T => {
@@ -131,7 +133,7 @@ export async function listLeads(tenantId: string) {
   const leads = must(
     await db
       .from('leads')
-      .select('id,created_at,name,contact,email,note,status,total,deposit,render_status,notified_at,preview_path,photo_path,spec,source')
+      .select('id,created_at,name,contact,email,note,status,total,deposit,render_status,notified_at,preview_path,photo_path,spec,source,promo:price->promo')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(200),
@@ -273,4 +275,31 @@ export async function latestMetalPrices(): Promise<Spot | null> {
   const rows = must(await supabase().from('metal_prices').select('gold,silver,platinum,source,fetched_at').order('fetched_at', { ascending: false }).limit(1)) as { gold: number; silver: number; platinum: number; source: string; fetched_at: string }[];
   const row = rows[0];
   return row ? { gold: Number(row.gold), silver: Number(row.silver), platinum: Number(row.platinum), source: row.source, asOf: row.fetched_at } : null;
+}
+
+// ---------- Promo codes ----------
+// Read by the shop's team, managed by owners (row-level security). Use counts are the server's.
+
+export type PromoCodeRow = { id: string; code: string; kind: 'percent' | 'amount'; value: number; min_order: number; expires_at: string | null; max_uses: number | null; uses: number; active: boolean; created_at: string };
+export type NewPromoCode = Pick<PromoCodeRow, 'code' | 'kind' | 'value' | 'min_order' | 'expires_at' | 'max_uses'>;
+
+const PROMO_COLUMNS = 'id,code,kind,value,min_order,expires_at,max_uses,uses,active,created_at';
+
+export async function listPromoCodes(tenantId: string) {
+  const rows = must(await supabase().from('promo_codes').select(PROMO_COLUMNS).eq('tenant_id', tenantId).order('created_at', { ascending: false })) as PromoCodeRow[];
+  return rows.map((row) => ({ ...row, value: Number(row.value), min_order: Number(row.min_order) }));
+}
+
+export async function createPromoCode(tenantId: string, input: NewPromoCode) {
+  const { error } = await supabase().from('promo_codes').insert({ tenant_id: tenantId, ...input });
+  if (error?.code === '23505') throw new Error(`You already have a code called ${input.code}.`);
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePromoCode(id: string, patch: Partial<Pick<PromoCodeRow, 'active' | 'expires_at' | 'max_uses'>>) {
+  must(await supabase().from('promo_codes').update(patch).eq('id', id).select('id'));
+}
+
+export async function deletePromoCode(id: string) {
+  must(await supabase().from('promo_codes').delete().eq('id', id).select('id'));
 }

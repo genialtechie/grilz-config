@@ -1037,6 +1037,95 @@
   margin: 0;
 }
 
+/* Promo code on the Review step. */
+.promo-toggle {
+  justify-self: start;
+  margin: 12px 0 2px;
+}
+
+.promo {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 2px;
+}
+
+.promo-row {
+  display: flex;
+  gap: 8px;
+}
+
+.promo-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 11px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.promo-row input::placeholder {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.promo-row input:focus {
+  border-color: var(--ink);
+  outline: 2px solid rgba(37, 31, 23, 0.12);
+  outline-offset: 1px;
+}
+
+.promo-row .secondary-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.promo-applied {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  font-size: 11px;
+}
+
+.promo-applied span {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.promo-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.promo-note--error {
+  color: #a3352b;
+}
+
+/* iPhones zoom the page into any field under 16px when it's tapped: keep typing fields at 16px on phones. */
+@media (max-width: 640px) {
+  .lead-form input,
+  .lead-form textarea,
+  .promo-row input {
+    font-size: 16px;
+  }
+}
+
 /* Honeypot: off-screen rather than display:none, which some bots skip. */
 .lead-form__trap {
   position: absolute;

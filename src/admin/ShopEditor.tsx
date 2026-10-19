@@ -472,7 +472,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
             <Issue issues={issues} path="catalog" />
           </Section>
 
-          <Section title="Prices" hint="Per tooth unless noted. The builder and every lead use exactly these numbers.">
+          <Section title="Prices" hint={mode === 'shop' ? 'Per tooth unless noted. The builder and every lead use exactly these numbers. Promo codes for your customers are on the Share tab.' : 'Per tooth unless noted. The builder and every lead use exactly these numbers.'}>
             <div className="admin-radios">
               {PRICE_DISPLAYS.map((mode) => (
                 <label key={mode} className="admin-check"><input type="radio" name="display" checked={pricing.display === mode} onChange={() => update((next) => { next.pricing.display = mode; })} /> {DISPLAY_LABEL[mode]}</label>

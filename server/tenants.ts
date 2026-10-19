@@ -22,6 +22,8 @@ export type PublishedTenant = {
   kind: 'demo' | 'shop' | 'fixture';
   version: number;
   config: TenantConfig;
+  /** The shop has an active promo code: the builder shows the code field (never the codes). */
+  promos?: boolean;
 };
 
 export type TenantLookup =
@@ -105,6 +107,7 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
             version: published.version,
             // A shop on market pricing gets today's per-tooth quote (or its fixed prices without one).
             config: parsed.config.pricing.market ? { ...parsed.config, pricing: withMarketQuote(parsed.config.pricing, await latestSpot(env)) } : parsed.config,
+            promos: await hasActivePromo(row.id, env),
           },
         };
       }
@@ -118,6 +121,19 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
   if (value.ok && value.tenant.status === 'live') cache.set(slug, { at: Date.now(), value });
   else cache.delete(slug);
   return value;
+}
+
+/** Whether a shop has a code customers can use now. A failed check hides the field rather than the builder. */
+async function hasActivePromo(tenantId: string, env: TenantEnv) {
+  try {
+    const query = new URLSearchParams({ tenant_id: `eq.${tenantId}`, active: 'is.true', or: `(expires_at.is.null,expires_at.gt.${new Date().toISOString()})`, select: 'id', limit: '1' });
+    const response = await fetch(`${env.SUPABASE_URL!.replace(/\/$/, '')}/rest/v1/promo_codes?${query}`, {
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, Accept: 'application/json' },
+    });
+    return response.ok && ((await response.json()) as unknown[]).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /** The CDN cache tag on a shop's /api/tenant response. */
@@ -139,6 +155,7 @@ export const publicTenant = (tenant: PublishedTenant) => ({
   kind: tenant.kind,
   status: tenant.status,
   version: tenant.version,
+  promos: Boolean(tenant.promos),
   config: { ...tenant.config, leads: { email: [], sms: [] } },
 });
 
