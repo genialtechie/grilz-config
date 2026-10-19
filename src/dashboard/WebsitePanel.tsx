@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Check, Copy, Globe, RefreshCw, Trash2 } from 'lucide-react';
 import { checkDomain, connectDomain, disconnectDomain, getDomain, type DomainInfo, type MyShop } from '../admin/data';
+import { breakable } from '../admin/breakable';
 
 // Everywhere the shop can put its builder: the link for the IG bio, the embed
 // code for its website (with steps for each site builder), and its own domain.
@@ -20,7 +21,7 @@ function CopyBox({ label, value, multiline = false }: { label: string; value: st
     <div className="dash-copy">
       <span className="admin-muted dash-small">{label}</span>
       <div className="dash-copy__row">
-        {multiline ? <textarea readOnly value={value} rows={2} aria-label={label} onFocus={(event) => event.target.select()} /> : <span className="dash-copy__text">{value}</span>}
+        {multiline ? <textarea readOnly value={value} rows={2} aria-label={label} onFocus={(event) => event.target.select()} /> : <span className="dash-copy__text">{breakable(value)}</span>}
         <button className="admin-button admin-button--small" type="button" onClick={() => void copy()}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}</button>
       </div>
     </div>
