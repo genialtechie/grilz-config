@@ -24,6 +24,7 @@ export const KARATS = [
   { id: '10k', label: '10K', detail: 'Most durable' },
   { id: '14k', label: '14K', detail: 'Richer colour' },
   { id: '18k', label: '18K', detail: 'Premium' },
+  { id: '22k', label: '22K', detail: 'Deepest yellow, softest' },
 ] as const;
 
 export const STYLES = [

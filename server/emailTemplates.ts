@@ -87,7 +87,8 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
   const subject = `${test ? '[Test shop] ' : ''}New design from ${lead.name} · ${total}`;
   const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' The customer saw it as a "from" price.' : ' The customer saw "price on request".';
   const contacts = [h(InlineLink, { key: 'reach', brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])];
-  const breakdown = lead.price.lines.map((line) => `${line.label} ${usd(line.amount)}`).join(' + ');
+  // "Service fee $60 + Metal $900 − Set discount $45": a discount is subtracted, not added as a negative.
+  const breakdown = lead.price.lines.map((line, i) => `${i ? (line.amount < 0 ? ' − ' : ' + ') : ''}${line.label} ${usd(Math.abs(line.amount))}`).join('');
   const element = h(
     EmailFrame,
     {

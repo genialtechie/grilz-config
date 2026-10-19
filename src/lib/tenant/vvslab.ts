@@ -23,7 +23,7 @@ export const VVSLAB_CONFIG: TenantConfig = {
     display: 'exact',
     base: 200,
     metalPerTooth: { yellow: 150, white: 150, rose: 150, silver: 85, platinum: 320 },
-    karatMultiplier: { '10k': 1, '14k': 1.4, '18k': 1.85 },
+    karatMultiplier: { '10k': 1, '14k': 1.4, '18k': 1.85, '22k': 2.3 },
     stylePerTooth: { solid: 0, 'open-face': 40, 'diamond-cut': 35, 'diamond-dust': 30, engraving: 45, opals: 90 },
     stonePerTooth: { moissanite: 75, lab: 160, natural: 320 },
     settingPerTooth: { honeycomb: 0, mosaic: 25, prong: 0 },

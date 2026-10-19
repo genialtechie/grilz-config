@@ -80,6 +80,18 @@ export const PricingSchema = z.object({
   inscription: priceMap(InscriptionStyleIdSchema),
   /** Totals below this are raised to it; 0 = no minimum. */
   minimumOrder: money,
+  /**
+   * Iced open face holds fewer stones than a full face: charge this share (%)
+   * of the stone and setting price, plus a labour price per tooth (absent =
+   * the open-face finish price). Absent = 100%, which is how it worked first.
+   */
+  icedOpenFace: z.object({ stoneShare: z.number().min(0).max(100), perTooth: money.optional() }).optional(),
+  /** Set-size pricing: the per-tooth prices drop by percentOff once a set has minTeeth teeth. */
+  volume: z
+    .array(z.object({ minTeeth: z.number().int().min(2).max(32), percentOff: z.number().min(1).max(90) }))
+    .max(4)
+    .refine((tiers) => new Set(tiers.map((tier) => tier.minTeeth)).size === tiers.length, 'Each set size can have one discount.')
+    .optional(),
 });
 
 export const DepositSchema = z.object({
