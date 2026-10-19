@@ -45,7 +45,7 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS } from '../lib/renderSpec';
+import { FANG_OPTIONS, FANG_TEETH } from '../lib/renderSpec';
 import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -221,11 +221,13 @@ function Configurator() {
           material: isGold(design.metal) ? 'gold' : 'silver',
           color: metal.swatch,
           metal: metal.id,
+          style: design.type === 'plain' ? design.style : undefined,
+          fang: setOptions.fangs && FANG_TEETH.includes(index),
           hasDiamonds: design.type === 'iced',
           diamondType: design.stone === 'moissanite' ? 'moissanite' : 'lab',
         };
       }),
-    [base, overrides, selectedSet, step],
+    [base, overrides, selectedSet, setOptions.fangs, step],
   );
 
   const handleToothClick = (index: number) => {
@@ -732,7 +734,7 @@ function Configurator() {
                     {shown.type === 'iced' ? (
                       <small className="field-hint">Iced teeth are covered in stones, so the finish applies to any plain teeth in your set.</small>
                     ) : (
-                      shown.style !== 'solid' && <small className="field-hint">Finish details show in your AI photo.</small>
+                      shown.style !== 'solid' && <small className="field-hint">Turn the 3D view to see the finish catch the light.</small>
                     )}
                   </fieldset>
                 </>
