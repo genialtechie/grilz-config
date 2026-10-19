@@ -28,7 +28,8 @@ describe('tenant zero matches the pre-tenant builder', () => {
   it('option card hints', () => {
     const hints = priceHints(pricing);
     expect({
-      metal: METALS.flatMap((m) => KARATS.map((k) => hints.metal(m.id, k.id))),
+      // The karats tenant zero sells (the platform list has grown since: 22K).
+      metal: METALS.flatMap((m) => KARATS.filter((k) => VVSLAB_CONFIG.catalog.karats.includes(k.id)).map((k) => hints.metal(m.id, k.id))),
       style: STYLES.map((s) => hints.style(s.id)),
       stone: STONES.map((s) => hints.stone(s.id)),
       setting: SETTINGS.map((s) => hints.setting(s.id)),

@@ -10,16 +10,32 @@ export type PriceBreakdown = { lines: PriceLine[]; total: number };
 export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: KaratId) =>
   Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
 
+/** The set-size discount (percent) for this many teeth: the biggest tier the set reaches. */
+export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
+  (pricing.volume ?? []).filter((tier) => teeth >= tier.minTeeth).reduce((best, tier) => Math.max(best, tier.percentOff), 0);
+
 export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set: SetOptions): PriceBreakdown => {
   const lines: PriceLine[] = [{ label: 'Service fee', amount: pricing.base }];
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
   const add = (label: string, amount: number) => amount && lines.push({ label, amount });
-  add(`Metal · ${teeth.length} teeth`, sum((tooth) => metalPerTooth(pricing, tooth.metal, tooth.karat)));
-  // Iced teeth take no finish, except open face (the shop's open-face price on top of the stones).
-  add('Style & finish', sum((tooth) => (tooth.type === 'iced' && !icedOpenFace(tooth) ? 0 : pricing.stylePerTooth[tooth.style] ?? 0)));
-  add('Stones', sum((tooth) => (tooth.type === 'iced' ? pricing.stonePerTooth[tooth.stone] ?? 0 : 0)));
-  add('Mosaic setting', sum((tooth) => (tooth.type === 'iced' ? pricing.settingPerTooth[tooth.setting] ?? 0 : 0)));
+  // Iced open face: a share of the stones (fewer fit) and its own labour price.
+  const openFaceShare = (tooth: ToothDesign) => (icedOpenFace(tooth) ? (pricing.icedOpenFace?.stoneShare ?? 100) / 100 : 1);
+  const finish = (tooth: ToothDesign) => {
+    if (icedOpenFace(tooth)) return pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0;
+    return tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0;
+  };
+  const metal = sum((tooth) => metalPerTooth(pricing, tooth.metal, tooth.karat));
+  const finishes = sum(finish);
+  const stones = Math.round(sum((tooth) => (tooth.type === 'iced' ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0)));
+  const settings = Math.round(sum((tooth) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0)));
+  add(`Metal · ${teeth.length} teeth`, metal);
+  add('Style & finish', finishes);
+  add('Stones', stones);
+  add('Mosaic setting', settings);
+  // The set-size discount comes off everything charged per tooth.
+  const percent = volumeDiscount(pricing, teeth.length);
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((metal + finishes + stones + settings) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   if (set.fangs) add('Fangs', pricing.extras.fangs);
   if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);

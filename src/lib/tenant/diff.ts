@@ -81,6 +81,10 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = (p1.karatMultiplier as Record<string, number>)[id];
     if (before !== undefined && before !== after) add('Prices', `${label(KARATS, id)} multiplier: ${times(before)} → ${times(after)}`);
   }
+  const openFace = (pricing: typeof p0) => `${pricing.icedOpenFace?.stoneShare ?? 100}% of stones + ${usd(pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0)}`;
+  if (openFace(p0) !== openFace(p1)) add('Prices', `Iced open face: ${openFace(p0)} → ${openFace(p1)}`);
+  const tiers = (pricing: typeof p0) => (pricing.volume ?? []).map((tier) => `${tier.percentOff}% off from ${tier.minTeeth} teeth`).join(', ') || 'none';
+  if (tiers(p0) !== tiers(p1)) add('Prices', `Set-size discounts: ${tiers(p0)} → ${tiers(p1)}`);
   (['fangs', 'permanent', 'photo'] as const).forEach((key) => {
     if (p0.extras[key] !== p1.extras[key]) add('Prices', `${{ fangs: 'Fangs', permanent: 'Permanent look', photo: 'Photo artwork' }[key]}: ${usd(p0.extras[key])} → ${usd(p1.extras[key])}`);
   });

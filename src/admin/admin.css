@@ -119,3 +119,4 @@
   .admin-lead select { grid-column: 1 / -1; width: 100%; }
 }
 .admin-notice a { color: inherit; font-weight: 700; margin-left: 6px; }
+.admin-tier { grid-template-columns: 1fr 1fr auto; align-items: end; }

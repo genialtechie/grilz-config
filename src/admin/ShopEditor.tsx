@@ -513,7 +513,31 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <Money key={setting.id} label={`${setting.label} setting`} value={pricing.settingPerTooth[setting.id]} onChange={(value) => update((next) => { next.pricing.settingPerTooth[setting.id] = value; })} />
                   ))}
                 </div>
+                {catalog.styles.includes('open-face') && (
+                  <>
+                    <h3>Iced open face</h3>
+                    <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour.</p>
+                    <div className="admin-grid admin-grid--prices">
+                      <Money label="Share of stone price" step={5} suffix="%" value={pricing.icedOpenFace?.stoneShare ?? 100} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: Math.min(100, value) }; })} />
+                      <Money label="Open-face labour" value={pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face']} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
+                    </div>
+                  </>
+                )}
               </>
+            )}
+            <h3>Set-size discounts</h3>
+            <p className="admin-muted admin-section__hint">Take a percentage off the per-tooth prices once a set reaches a size, e.g. 5% off from 8 teeth. The biggest one the set reaches applies.</p>
+            {(pricing.volume ?? []).map((tier, index) => (
+              <div key={index} className="admin-grid admin-grid--prices admin-tier">
+                <Money label="From (teeth)" step={1} suffix="teeth" value={tier.minTeeth} onChange={(value) => update((next) => { next.pricing.volume![index].minTeeth = Math.round(value); })} />
+                <Money label="Discount" step={1} suffix="% off" value={tier.percentOff} onChange={(value) => update((next) => { next.pricing.volume![index].percentOff = value; })} />
+                <button className="admin-icon-button" type="button" aria-label="Remove this discount" onClick={() => update((next) => { next.pricing.volume = next.pricing.volume!.filter((_, i) => i !== index); })}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            {(pricing.volume?.length ?? 0) < 4 && (
+              <button className="admin-button admin-button--small" type="button" onClick={() => update((next) => { const tiers = next.pricing.volume ?? []; const last = tiers.at(-1); next.pricing.volume = [...tiers, { minTeeth: last ? Math.min(32, last.minTeeth + 4) : 8, percentOff: last ? Math.min(90, last.percentOff + 5) : 5 }]; })}>
+                Add a set-size discount
+              </button>
             )}
             <h3>Extras (per order)</h3>
             <div className="admin-grid admin-grid--prices">
