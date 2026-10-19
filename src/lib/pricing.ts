@@ -1,4 +1,4 @@
-import { isGold, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { icedOpenFace, isGold, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 // The price engine: pure functions of a design and a tenant's pricing. The same
@@ -16,7 +16,8 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
   const add = (label: string, amount: number) => amount && lines.push({ label, amount });
   add(`Metal · ${teeth.length} teeth`, sum((tooth) => metalPerTooth(pricing, tooth.metal, tooth.karat)));
-  add('Style & finish', sum((tooth) => (tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0)));
+  // Iced teeth take no finish, except open face (the shop's open-face price on top of the stones).
+  add('Style & finish', sum((tooth) => (tooth.type === 'iced' && !icedOpenFace(tooth) ? 0 : pricing.stylePerTooth[tooth.style] ?? 0)));
   add('Stones', sum((tooth) => (tooth.type === 'iced' ? pricing.stonePerTooth[tooth.stone] ?? 0 : 0)));
   add('Mosaic setting', sum((tooth) => (tooth.type === 'iced' ? pricing.settingPerTooth[tooth.setting] ?? 0 : 0)));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);

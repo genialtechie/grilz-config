@@ -4,12 +4,13 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
 import { dentalStone, polishedMetal, settingMetal } from './materials';
-import { fangGeometry, finishFor } from './styles';
+import { fangGeometry, finishFor, ICED_RING } from './styles';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
 
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
+const PERMANENT_GROW = 1.08;
 
 const getToothIndexFromName = (name: string): number | null => {
   const match = name.match(toothNameRegex);
@@ -60,6 +61,8 @@ function GrillzModel({
       child.receiveShadow = true;
       // The tooth as modelled; a fang swaps in a drawn-out copy and swaps back.
       child.userData.baseGeometry = child.geometry;
+      if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+      child.userData.centre = child.geometry.boundingBox!.getCenter(new THREE.Vector3());
     });
 
     return clone;
@@ -123,6 +126,11 @@ function GrillzModel({
       const capped = customization.material !== 'default';
       const base = child.userData.baseGeometry as THREE.BufferGeometry;
       child.geometry = capped && customization.fang ? fangGeometry(base) : base;
+      // Permanent look: fuller caps, grown about the tooth's own centre until
+      // neighbours meet and the metal reaches the gum. Deep cut keeps the teeth apart.
+      const grow = capped && customization.cut === 'permanent' ? PERMANENT_GROW : 1;
+      child.scale.setScalar(grow);
+      child.position.copy(child.userData.centre as THREE.Vector3).multiplyScalar(1 - grow);
 
       if (isSelectionMode && isSelected) {
         child.material = materials.selected;
@@ -131,12 +139,16 @@ function GrillzModel({
 
       child.material = customization.material === 'default' ? materials.mould : getFinishMaterial(customization);
 
+      const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
       if (capped && customization.hasDiamonds) {
-        const stones = createDiamondStones(child, customization.diamondType);
+        // Iced open face: one ring of stones round the frame, the tooth showing in the middle.
+        const openFace = customization.style === 'open-face';
+        const stones = createDiamondStones(child, customization.diamondType, openFace ? ICED_RING : 0);
         stones.name = 'diamond_stones';
         child.add(stones);
+        const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
+        if (finish) child.add(finish);
       } else if (capped && customization.style) {
-        const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
         const finish = finishFor(child, customization.style, metal);
         if (finish) child.add(finish);
       }

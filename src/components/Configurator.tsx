@@ -45,7 +45,7 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS, FANG_TEETH } from '../lib/renderSpec';
+import { FANG_OPTIONS, FANG_TEETH, icedOpenFace } from '../lib/renderSpec';
 import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -221,13 +221,14 @@ function Configurator() {
           material: isGold(design.metal) ? 'gold' : 'silver',
           color: metal.swatch,
           metal: metal.id,
-          style: design.type === 'plain' ? design.style : undefined,
+          style: design.type === 'plain' || icedOpenFace(design) ? design.style : undefined,
           fang: setOptions.fangs && FANG_TEETH.includes(index),
+          cut: setOptions.cut,
           hasDiamonds: design.type === 'iced',
           diamondType: design.stone === 'moissanite' ? 'moissanite' : 'lab',
         };
       }),
-    [base, overrides, selectedSet, setOptions.fangs, step],
+    [base, overrides, selectedSet, setOptions.fangs, setOptions.cut, step],
   );
 
   const handleToothClick = (index: number) => {
@@ -726,13 +727,14 @@ function Configurator() {
                           hint={hints.style(style.id)}
                           image={style.image}
                           selected={shown.style === style.id}
-                          disabled={pickingNothing}
+                          // Iced teeth take open face (stones round the frame) or none.
+                          disabled={pickingNothing || (shown.type === 'iced' && style.id !== 'solid' && style.id !== 'open-face')}
                           onSelect={() => applyDesign({ style: style.id })}
                         />
                       ))}
                     </div>
                     {shown.type === 'iced' ? (
-                      <small className="field-hint">Iced teeth are covered in stones, so the finish applies to any plain teeth in your set.</small>
+                      <small className="field-hint">On iced teeth, open face sets the stones round the frame and leaves the middle open. Other finishes apply to plain teeth.</small>
                     ) : (
                       shown.style !== 'solid' && <small className="field-hint">Turn the 3D view to see the finish catch the light.</small>
                     )}

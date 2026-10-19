@@ -120,11 +120,17 @@ export const DEFAULT_SET: SetOptions = { fangs: false, cut: 'deep', vision: '', 
 
 export const isGold = (metal: MetalId) => metal === 'yellow' || metal === 'white' || metal === 'rose';
 
+/**
+ * An iced tooth takes no finish except open face: stones on the rim, the
+ * natural tooth showing through the middle.
+ */
+export const icedOpenFace = (tooth: Pick<ToothDesign, 'type' | 'style'>) => tooth.type === 'iced' && tooth.style === 'open-face';
+
 export const label = <T extends readonly { id: string; label: string }[]>(list: T, id: string) =>
   list.find((item) => item.id === id)?.label ?? id;
 
 const designKey = (tooth: ToothDesign) =>
-  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : ''].join('|');
+  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedOpenFace(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : ''].join('|');
 
 /** Groups teeth that share a design, largest group first. */
 export const groupTeeth = <T extends ToothDesign & { index: number }>(teeth: T[]) => {
@@ -137,7 +143,7 @@ export const describeTooth = (tooth: ToothDesign) => {
   const metal = `${label(METALS, tooth.metal)}${isGold(tooth.metal) ? ` ${label(KARATS, tooth.karat)}` : ''}`;
   const surface =
     tooth.type === 'iced'
-      ? `Iced · ${label(SETTINGS, tooth.setting)} · ${label(STONES, tooth.stone)}`
+      ? `Iced${icedOpenFace(tooth) ? ' open face' : ''} · ${label(SETTINGS, tooth.setting)} · ${label(STONES, tooth.stone)}`
       : tooth.type === 'photo'
         ? 'Photo'
         : label(STYLES, tooth.style);
@@ -187,7 +193,9 @@ const sells = (tooth: RenderTooth, enabled: EnabledOptions) =>
   enabled.metals.includes(tooth.metal) &&
   (!isGold(tooth.metal) || enabled.karats.includes(tooth.karat)) &&
   enabled.types.includes(tooth.type) &&
-  (tooth.type === 'iced' ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) : enabled.styles.includes(tooth.style));
+  (tooth.type === 'iced'
+    ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) && (!icedOpenFace(tooth) || enabled.styles.includes(tooth.style))
+    : enabled.styles.includes(tooth.style));
 
 export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): RenderSpec | null => {
   if (!value || typeof value !== 'object') return null;
@@ -243,8 +251,11 @@ const pick = <T extends readonly { id: string }[]>(list: T, id: string): T[numbe
 
 const describeDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${pick(METALS, tooth.metal).render}`;
+  if (icedOpenFace(tooth)) {
+    return `${metal}, iced open face: each tooth is a metal outline frame paved edge to edge with sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}, and the natural white tooth shows through the open middle of the frame`;
+  }
   if (tooth.type === 'iced') {
-    // Stones cover the whole face of an iced tooth, so the finish (open-face, engraving…) does not apply.
+    // Stones cover the whole face of an iced tooth, so other finishes (engraving…) do not apply.
     return `${metal}, fully iced out: the entire front face is covered edge to edge in sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}; solid, no openings or cut-outs`;
   }
   if (tooth.type === 'photo') {
@@ -258,6 +269,9 @@ const rowText = (count: number, row: 'upper' | 'lower') =>
 
 const shortDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${label(METALS, tooth.metal).toLowerCase()}`;
+  if (icedOpenFace(tooth)) {
+    return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}`;
+  }
   if (tooth.type === 'iced') {
     return `ICED OUT, the whole face covered in sparkling ${pick(STONES, tooth.stone).render} (${label(SETTINGS, tooth.setting).toLowerCase()} setting) in ${metal}, no openings`;
   }

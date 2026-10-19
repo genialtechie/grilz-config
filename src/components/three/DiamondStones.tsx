@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { stoneMaterial } from './materials';
-import { ARCH_CENTRE } from './styles';
+import { frontOf, onFront, SECTORS } from './styles';
 
 // Pavé: round stones packed edge to edge over the front of a tooth, the way a
 // jeweler sets an iced cap (about nine across a front tooth). Positions are
@@ -65,18 +65,16 @@ const seeded = (text: string) => {
   };
 };
 
-export const createDiamondStones = (tooth: THREE.Mesh, kind: 'lab' | 'moissanite' = 'lab') => {
+/**
+ * `ring`: instead of covering the face, set one row of stones round it this
+ * far out from the middle (0 to 1), for an iced open face.
+ */
+export const createDiamondStones = (tooth: THREE.Mesh, kind: 'lab' | 'moissanite' = 'lab', ring = 0) => {
   const random = seeded(tooth.name);
   const geometry = tooth.geometry;
-  if (!geometry.boundingBox) geometry.computeBoundingBox();
-  const box = geometry.boundingBox!;
-  const centre = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-
-  // The tooth's front: straight out from the arch centre, level.
-  const facial = new THREE.Vector3(centre.x - ARCH_CENTRE.x, 0, centre.z - ARCH_CENTRE.z).normalize();
-  const up = new THREE.Vector3(0, 1, 0);
-  const across = new THREE.Vector3().crossVectors(up, facial).normalize();
+  const front = frontOf(geometry);
+  const { centre, facial, up, across } = front;
+  const size = geometry.boundingBox!.getSize(new THREE.Vector3());
 
   // A honeycomb grid in front of the tooth, each point shot back onto its surface.
   const probe = new THREE.Mesh(geometry);
@@ -84,7 +82,20 @@ export const createDiamondStones = (tooth: THREE.Mesh, kind: 'lab' | 'moissanite
   const reach = Math.max(size.x, size.y, size.z);
   const rowStep = SPACING * Math.sqrt(3) / 2;
   const kept: { p: THREE.Vector3; n: THREE.Vector3 }[] = [];
-  for (let row = 0, v = -reach / 2; v <= reach / 2; row += 1, v += rowStep) {
+  if (ring > 0) {
+    // One row round the face, spaced evenly along it.
+    const line = Array.from({ length: SECTORS * 4 }, (_, i) => onFront(front, i / 4, ring, 0));
+    const gap = SPACING * 1.08;
+    let since = gap;
+    line.forEach((point, i) => {
+      since += i ? point.distanceTo(line[i - 1]) : 0;
+      if (since < gap) return;
+      since = 0;
+      const n = point.clone().sub(centre).normalize().lerp(facial, 0.7).normalize();
+      kept.push({ p: point, n });
+    });
+  }
+  for (let row = 0, v = -reach / 2; ring === 0 && v <= reach / 2; row += 1, v += rowStep) {
     for (let u = -reach / 2 + (row % 2 ? SPACING / 2 : 0); u <= reach / 2; u += SPACING) {
       const origin = centre.clone().addScaledVector(across, u).addScaledVector(up, v).addScaledVector(facial, reach);
       ray.set(origin, facial.clone().negate());

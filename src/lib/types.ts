@@ -1,4 +1,4 @@
-import type { MetalId, StyleId } from './renderSpec';
+import type { CutId, MetalId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -12,6 +12,8 @@ export type ToothCustomization = {
   style?: StyleId;
   /** This tooth is a fang cap (an upper canine with fangs on). */
   fang?: boolean;
+  /** Deep cut (separate teeth, the default) or permanent look (fuller caps that meet). */
+  cut?: CutId;
   variant?: string;
   hasDiamonds: boolean;
   diamondType?: DiamondType;
