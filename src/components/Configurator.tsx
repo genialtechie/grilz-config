@@ -134,6 +134,8 @@ function Configurator() {
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
   const [moreBelow, setMoreBelow] = useState(false);
+  const stepPills = useRef<HTMLElement | null>(null);
+  const [pillEdges, setPillEdges] = useState({ start: false, end: false });
   const [scrolledStep, setScrolledStep] = useState<string | null>(null);
   const render = useAiRender(tenant.slug);
   const [lead, setLead] = useState<Lead | null>(null);
@@ -182,6 +184,28 @@ function Configurator() {
     if (el.firstElementChild) observer.observe(el.firstElementChild);
     return () => {
       el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, [step, panelOpen]);
+
+  // The step pills scroll sideways (six don't fit the panel): bring the current
+  // one to the middle, and fade whichever edge has more pills behind it.
+  useEffect(() => {
+    const row = stepPills.current;
+    const active = row?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!row) return;
+    // Scroll the row itself, never the page (or the website around an embed).
+    if (active) {
+      const offset = active.getBoundingClientRect().left - row.getBoundingClientRect().left;
+      row.scrollTo({ left: row.scrollLeft + offset - (row.clientWidth - active.offsetWidth) / 2, behavior: 'smooth' });
+    }
+    const update = () => setPillEdges({ start: row.scrollLeft > 4, end: row.scrollWidth - row.scrollLeft - row.clientWidth > 4 });
+    update();
+    row.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    return () => {
+      row.removeEventListener('scroll', update);
       observer.disconnect();
     };
   }, [step, panelOpen]);
@@ -587,7 +611,7 @@ function Configurator() {
         </section>
 
         <aside className={`builder-panel${panelOpen ? '' : ' builder-panel--closed'}`} aria-label="Product configuration controls">
-          <nav className="step-pills" aria-label="Builder steps">
+          <nav ref={stepPills} className={`step-pills${pillEdges.start ? ' step-pills--fade-start' : ''}${pillEdges.end ? ' step-pills--fade-end' : ''}`} aria-label="Builder steps">
             {steps.map((id, index) => (
               <button
                 key={id}
