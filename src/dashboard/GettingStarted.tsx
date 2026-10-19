@@ -4,6 +4,7 @@ import { Check, CheckCircle2, Circle, Copy, CreditCard, Download, ExternalLink, 
 import { billingPortal, exportShopData, getTenant, goLive, startPlan, type MyShop } from '../admin/data';
 import { parseTenantConfig } from '../lib/tenant/schema';
 import { onFreeTrial, pickPrompt, trialDaysLeft, trialExpired, type Seen } from '../lib/trial';
+import { breakable } from '../admin/breakable';
 
 // First-run checklist for a shop that isn't live yet, the trial banner, the
 // card reminders during the free trial and the gate when it ends.
@@ -287,7 +288,7 @@ function YoureLive({ shop, onClose }: { shop: MyShop; onClose: () => void }) {
       <h2 className="dash-serif">You’re <em>live</em></h2>
       <p>Customers can design their set, see your price and send you the request here:</p>
       <div className="dash-live__link">
-        <span>{url.replace(/^https?:\/\//, '')}</span>
+        <span>{breakable(`${window.location.host}/b/`)}<b className="dash-live__slug">{shop.slug}</b></span>
         <button type="button" onClick={() => void copy()}>{copied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy</>}</button>
       </div>
       <p className="admin-muted">Put it in your Instagram bio (Edit profile → Links) and send it to customers who DM you for prices.</p>

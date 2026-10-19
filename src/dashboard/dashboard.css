@@ -67,7 +67,9 @@
 /* Share: link, embed code, domain */
 .dash-copy { display: grid; gap: 4px; margin-bottom: 12px; }
 .dash-copy__row { display: flex; gap: 8px; align-items: flex-start; }
-.dash-copy__row input, .dash-copy__row textarea { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; resize: none; }
+.dash-copy__row textarea, .dash-copy__text { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; resize: none; overflow-wrap: anywhere; }
+/* The whole link, wrapping on a phone so the shop's name at the end shows; one tap selects it. */
+.dash-copy__text { align-self: center; user-select: all; }
 .dash-guide-tabs { margin-top: 8px; flex-wrap: wrap; }
 .dash-steps { margin: 8px 0 12px; padding-left: 20px; line-height: 1.7; }
 .dash-dns { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 13px; }
@@ -112,14 +114,23 @@
 .dash-serif em { color: #ce4257; }
 .dash-start { border-color: var(--a-line); background: #fffdf9; }
 
-.dash-live { position: relative; margin-bottom: 20px; display: grid; justify-items: center; gap: 10px; text-align: center; background: #fbf7f0; border-color: #e4dacb; padding: 28px 20px; }
+.dash-live { position: relative; margin-bottom: 20px; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 10px; text-align: center; background: #fbf7f0; border-color: #e4dacb; padding: 28px 20px; }
 .dash-live img { width: 112px; height: 112px; }
 .admin .dash-live .dash-serif { font-size: 44px; }
-.dash-live p { margin: 0; max-width: 420px; line-height: 1.5; }
+.dash-live p { margin: 0; max-width: 420px; line-height: 1.5; text-wrap: balance; }
 .dash-live__x { position: absolute; top: 10px; right: 10px; }
 .dash-live__link { display: flex; align-items: center; gap: 8px; width: min(100%, 420px); padding: 6px 6px 6px 14px; border: 1px solid #e4dacb; border-radius: 12px; background: #fff; box-sizing: border-box; }
-.dash-live__link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; text-align: left; }
-.dash-live__link button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: #1b1714; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+/* The whole link, wrapping on a phone: the shop's own name is at the end. */
+.dash-live__link span { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; text-align: left; }
+/* The shop's own name moves to the next line whole rather than breaking at a hyphen. */
+.dash-live__slug { display: inline-block; max-width: 100%; font-weight: inherit; }
+.dash-live__link button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: #1b1714; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+@media (max-width: 440px) {
+  /* Link above, Copy below: the whole link gets the card's width. */
+  .dash-live__link { flex-direction: column; align-items: stretch; padding: 12px; }
+  .dash-live__link span { text-align: center; }
+  .dash-live__link button { justify-content: center; }
+}
 .dash-live__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
 .dash-live__primary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 20px; border-radius: 999px; background: #ce4257; color: #fff; font-weight: 600; text-decoration: none; }
 .dash-live__actions .admin-button { min-height: 44px; border-radius: 999px; }

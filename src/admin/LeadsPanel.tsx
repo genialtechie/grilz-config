@@ -3,6 +3,7 @@ import { Download, Instagram, Mail, MessageCircle, MessageSquare, Search, Trash2
 import { displayContact } from '../lib/contact';
 import { addLeadNote, deleteLeadData, leadNotes, listLeads, setLeadStatus, type LeadEvent } from './data';
 import { LEAD_STATUSES, leadsCsv, STATUS_LABEL } from './leadsCsv';
+import { breakable } from './breakable';
 const DELIVERY: Record<string, string> = { email_sent: 'Emailed', email_failed: 'Email failed', email_skipped: 'Not emailed' };
 const RENDER: Record<string, string> = { ready: 'Photo', rendering: 'Rendering', paused: 'No photo (paused)', failed: 'No photo (failed)', none: '3D only' };
 
@@ -146,7 +147,7 @@ export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { 
                   <strong>{lead.name}</strong>
                   <span className="admin-muted">{when(lead.created_at)}</span>
                 </div>
-                <div>{displayContact(lead.contact)}{lead.email ? ` · ${lead.email}` : ''}</div>
+                <div>{breakable(displayContact(lead.contact))}{lead.email && <> · {breakable(lead.email)}</>}</div>
                 <div className="admin-muted">{(lead.spec.summary ?? []).join(' · ')}</div>
                 {lead.note && <div className="admin-lead__note">“{lead.note}”</div>}
                 <ContactActions lead={lead} />

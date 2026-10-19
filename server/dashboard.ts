@@ -9,7 +9,7 @@ import { billingCheckout, billingPortal, connectOnboard, connectStatus, type Bil
 import { offboardTenant } from './offboard.js';
 import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
-import type { TenantEnv } from './tenants.js';
+import { forgetTenant, type TenantEnv } from './tenants.js';
 
 // POST /api/dashboard/<action> with the signed-in user's access token.
 // The two things a member can't do through row-level security alone:
@@ -93,6 +93,8 @@ async function publish(db: Db, userId: string, payload: Record<string, unknown>)
   const locked = role === 'admin' ? { config: parsed.config, reset: [] as string[] } : lockPlanFields(parsed.config, live, Boolean(tenant?.stripe_charges_enabled));
   if ('error' in locked && locked.error) return reply(422, { error: 'deposit', message: locked.error });
   const version = await db.rpc<number>('publish_config_service', { config_id: row.id, final_config: locked.config, actor: userId });
+  // New prices show on the builder now, not when the cached config runs out.
+  if (tenant?.slug) await forgetTenant(tenant.slug);
   return reply(200, { version, reset: locked.reset, live: tenant?.status === 'live', slug: tenant?.slug });
 }
 
@@ -198,12 +200,14 @@ async function setLive(db: Db, userId: string, action: string, payload: Record<s
   const role = await roleFor(db, userId, tenantId);
   if (!role) return reply(404, { error: 'not_found' });
   if (role === 'staff') return reply(403, { error: 'owner_only', message: 'Only the shop owner can switch the page on or off.' });
-  const [tenant] = await db.select<{ status: string; published_version: number | null } & TrialFields>('tenants', { id: `eq.${tenantId}`, select: 'status,published_version,plan,trial_ends_at,billing_status' });
+  const [tenant] = await db.select<{ slug: string; status: string; published_version: number | null } & TrialFields>('tenants', { id: `eq.${tenantId}`, select: 'slug,status,published_version,plan,trial_ends_at,billing_status' });
   if (!tenant || tenant.status === 'offboarded') return reply(409, { error: 'closed', message: 'This shop is closed. Message VVS Lab.' });
   if (action === 'go_live' && trialExpired(tenant)) return reply(402, { error: 'trial_over', message: 'Your free trial has ended. Start your plan to switch your builder back on.' });
   if (action === 'go_live' && tenant.published_version === null) return reply(409, { error: 'unpublished', message: 'Publish your page first.' });
   const status = action === 'go_live' ? 'live' : 'paused';
   await db.update('tenants', { id: `eq.${tenantId}`, status: 'in.(draft,live,paused)' }, { status });
+  // The link works (or stops) the moment the owner presses the button, not after a cached "not found" runs out.
+  await forgetTenant(tenant.slug);
   return reply(200, { status });
 }
 

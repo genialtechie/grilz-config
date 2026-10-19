@@ -305,8 +305,9 @@ export default function LandingPage() {
           </a>
           <a href="mailto:salesteam@magpollo.com" onClick={() => posthog.capture('contact_clicked', { placement: 'footer', channel: 'email' })}>
             salesteam@magpollo.com
-          </a>{' '}
-          · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+          </a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </span>
       </footer>
     </div>

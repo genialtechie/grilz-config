@@ -584,11 +584,11 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 <label className="admin-field">
                   <span>Charged</span>
                   <select value={addOn.per} onChange={(event) => update((next) => { next.catalog.addOns![index].per = event.target.value as 'order' | 'tooth'; })}>
-                    <option value="order">Once per order</option>
+                    <option value="order">Per order</option>
                     <option value="tooth">Per tooth</option>
                   </select>
                 </label>
-                <button className="admin-icon-button" type="button" aria-label={`Remove ${addOn.label || 'this add-on'}`} onClick={() => update((next) => { next.catalog.addOns = next.catalog.addOns!.filter((_, i) => i !== index); })}><Trash2 size={14} /></button>
+                <button className="admin-icon-button" type="button" aria-label={`Remove ${addOn.label || 'this add-on'}`} onClick={() => update((next) => { next.catalog.addOns = next.catalog.addOns!.filter((_, i) => i !== index); })}><Trash2 size={14} /><span className="admin-addon__remove">Remove</span></button>
               </div>
             ))}
             {(catalog.addOns?.length ?? 0) < MAX_ADD_ONS && (

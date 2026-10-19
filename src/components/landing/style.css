@@ -213,7 +213,7 @@
   border-top: 1px solid var(--line);
   font-size: 14px; color: var(--muted); letter-spacing: 0.04em;
 }
-.vvs-footer-links { display: flex; gap: 24px; }
+.vvs-footer-links { display: flex; flex-wrap: wrap; gap: 10px 24px; }
 .vvs-footer a:hover { color: var(--gold2); }
 
 /* tablet */

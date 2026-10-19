@@ -57,6 +57,11 @@
 .admin-prefix { display: flex; align-items: center; border: 1px solid var(--a-line); border-radius: 8px; background: #fff; overflow: hidden; }
 .admin-prefix em { padding: 0 8px; color: var(--a-muted); font-style: normal; white-space: nowrap; }
 .admin-prefix input { border: 0 !important; outline: none !important; min-width: 0; }
+.admin-prefix em + input { padding-left: 0; }
+.admin-prefix input:has(+ em) { padding-right: 0; }
+/* No spinner arrows on prices: they take a narrow field's room and nobody steps a price by 5. */
+.admin input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.admin input[type='number']::-webkit-inner-spin-button, .admin input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .admin-radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--a-line); border-radius: 8px; cursor: pointer; }
 .admin-radio span { display: grid; gap: 2px; }
 .admin-radio small { color: var(--a-muted); }
@@ -100,7 +105,7 @@
 .admin-leads { display: grid; gap: 10px; }
 .admin-lead { display: grid; grid-template-columns: 96px 1fr auto; gap: 14px; padding: 12px; align-items: start; }
 .admin-lead img, .admin-lead__noimg { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; background: #f1ede7; }
-.admin-lead__body { display: grid; gap: 4px; min-width: 0; }
+.admin-lead__body { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .admin-lead__top { display: flex; justify-content: space-between; gap: 8px; }
 .admin-lead__note { font-style: italic; }
 .admin-lead__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--a-muted); }
@@ -119,9 +124,14 @@
   .admin-lead select { grid-column: 1 / -1; width: 100%; }
 }
 .admin-notice a { color: inherit; font-weight: 700; margin-left: 6px; }
-.admin-tier { grid-template-columns: 1fr 1fr auto; align-items: end; }
+.admin-tier { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
 .admin-addon { display: grid; grid-template-columns: 1.4fr 1.4fr 0.8fr 0.9fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
-@media (max-width: 720px) { .admin-addon { grid-template-columns: 1fr 1fr; } }
+.admin-addon__remove { display: none; }
+@media (max-width: 720px) {
+  .admin-addon { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding-bottom: 12px; border-bottom: 1px solid var(--a-line); }
+  .admin-addon .admin-icon-button { grid-column: 1 / -1; justify-self: start; width: auto; gap: 6px; padding: 0 8px; grid-auto-flow: column; }
+  .admin-addon__remove { display: inline; }
+}
 .admin-market { display: grid; gap: 10px; margin-bottom: 14px; }
 .admin-market__today ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; }
 .admin-market__today li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--a-line); }
