@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
+import { withMarketQuote } from '../src/lib/metalMarket.js';
 import { depositFor, priceBreakdown } from '../src/lib/pricing.js';
 import { parseRenderSpec, summarizeDesign } from '../src/lib/renderSpec.js';
 import { createDb, DbError, hasDb } from './db.js';
+import { latestSpot } from './metalPrices.js';
 import { checkLeadToken, signLeadToken } from './leadTokens.js';
 import { notifyLead, type NotifyEnv } from './notify.js';
 import { hashIp, isEmail, LIMITS, looksAutomated, normaliseContact, verifyTurnstile, type SpamEnv } from './spam.js';
@@ -95,6 +97,8 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
   const note = text(body.note, 300);
 
   const session = await configForSession(tenant, body.configVersion, env);
+  // Market-linked metal is priced at today's stored price, whatever the browser had.
+  if (session.config.pricing.market) session.config = { ...session.config, pricing: withMarketQuote(session.config.pricing, await latestSpot(env)) };
   const spec = parseRenderSpec(body.spec, session.config.catalog);
   if (!spec || spec.teeth.length === 0) return fail(400, 'Your design has an option this shop no longer offers. Refresh and try again.', 'design');
   const price = priceBreakdown(session.config.pricing, spec.teeth, spec, session.config.catalog.addOns);

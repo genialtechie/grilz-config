@@ -1,3 +1,4 @@
+import type { Spot } from '../lib/metalMarket';
 import { parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
 import { supabase } from './supabase';
 
@@ -266,3 +267,10 @@ export const billingPortal = (tenantId: string) => api<{ url: string }>('billing
 export const connectStripe = (tenantId: string) => api<{ url: string }>('connect_onboard', { tenantId });
 export type ConnectStatus = { connected: boolean; chargesEnabled: boolean; detailsSubmitted?: boolean; due?: number };
 export const stripeStatus = (tenantId: string) => api<ConnectStatus>('connect_status', { tenantId });
+
+/** The latest stored metal prices (public market data, written by the daily crons), or null. */
+export async function latestMetalPrices(): Promise<Spot | null> {
+  const rows = must(await supabase().from('metal_prices').select('gold,silver,platinum,source,fetched_at').order('fetched_at', { ascending: false }).limit(1)) as { gold: number; silver: number; platinum: number; source: string; fetched_at: string }[];
+  const row = rows[0];
+  return row ? { gold: Number(row.gold), silver: Number(row.silver), platinum: Number(row.platinum), source: row.source, asOf: row.fetched_at } : null;
+}

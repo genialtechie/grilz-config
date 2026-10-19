@@ -1,9 +1,11 @@
 import { runAnnouncements } from '../../server/announcements.js';
+import { refreshMetalPrices } from '../../server/metalPrices.js';
 import { runTrialSequence } from '../../server/trialSequence.js';
 import { runWinback } from '../../server/winback.js';
 
 // Vercel Cron (vercel.json "crons"), daily at 14:07 UTC (10am US Eastern):
 // the trial sequence, win-back, then any announcement whose window is open.
+// It also refreshes metal prices mid-session (the retention cron does too, overnight).
 // Vercel sends Authorization: Bearer <CRON_SECRET>; anything else is refused.
 // ?dry=1 reports what would go out without sending.
 export async function GET(request: Request): Promise<Response> {
@@ -14,7 +16,9 @@ export async function GET(request: Request): Promise<Response> {
   const trial = await runTrialSequence(process.env, { dryRun }).catch(fail);
   const winback = await runWinback(process.env, { dryRun }).catch(fail);
   const announcements = await runAnnouncements(process.env, { dryRun }).catch(fail);
-  const report = { trial, winback, announcements, dryRun };
+  // Not part of the marketing report's pass/fail: a missed refresh keeps the last price.
+  const metals = dryRun ? { skipped: true } : await refreshMetalPrices(process.env).catch((error: Error) => ({ error: error.message }));
+  const report = { trial, winback, announcements, metals, dryRun };
   console.log('marketing', JSON.stringify(report));
   const failed = [trial, winback, announcements].some((part) => 'error' in part);
   return Response.json(report, { status: failed ? 500 : 200, headers: { 'Cache-Control': 'no-store' } });

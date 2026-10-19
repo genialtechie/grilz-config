@@ -1,5 +1,6 @@
 import { createDb, hasDb } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
+import { latestSpot, STALE_MS } from './metalPrices.js';
 import type { TenantEnv } from './tenants.js';
 
 // Daily spend and error alerts, run by the cron after retention and billing.
@@ -38,10 +39,11 @@ export async function dailyAlerts(env: AlertEnv, now = Date.now()) {
   if (!hasDb(env)) return { ok: false, error: 'database not configured' };
   const db = createDb(env);
   const since = new Date(now - 864e5).toISOString();
-  const [usage, failedEmails, credits] = await Promise.all([
+  const [usage, failedEmails, credits, spot] = await Promise.all([
     db.select<{ generations: number; outcome: string }>('render_usage', { created_at: `gte.${since}`, select: 'generations,outcome' }),
     db.count('lead_events', { type: 'eq.email_failed', created_at: `gte.${since}` }),
     bflCredits(env.FLUX_API_KEY),
+    latestSpot(env),
   ]);
   const generations = usage.reduce((sum, row) => sum + (row.generations || 0), 0);
   const paused = usage.filter((row) => row.outcome === 'paused').length;
@@ -56,6 +58,8 @@ export async function dailyAlerts(env: AlertEnv, now = Date.now()) {
   if (generations >= dailyCap * 0.8) add('AI photo budget nearly used', `AI photos used ${generations} of the ${dailyCap}-generation daily budget in the last 24 hours (about $${(generations * DOLLARS_PER_GENERATION).toFixed(2)}).`);
   if (paused) add('Studio photos refused', `${paused} studio photo${paused === 1 ? ' was' : 's were'} refused (budget, allowance or credits). Customers saw the 3D preview instead.`);
   if (failed >= 3) add('Studio photos failing', `${failed} studio photos failed at Black Forest Labs in the last 24 hours.`);
+  // Only matters once a shop prices metal from the market; the last good price keeps quoting meanwhile.
+  if (spot && now - Date.parse(spot.asOf) > STALE_MS) add('Metal prices stale', `Metal prices haven't updated since ${spot.asOf.slice(0, 10)} (Yahoo Finance and gold-api.com both failing). Market-linked quotes are using that price.`);
   if (failedEmails) add('Emails failing', `${failedEmails} email${failedEmails === 1 ? '' : 's'} to shops or customers failed to send. Leads are saved; check Resend logs.`);
 
   const summary = { ok: true, generations, paused, failed, failedEmails, credits, alerted: reasons.length > 0 };

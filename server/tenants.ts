@@ -1,7 +1,9 @@
 import { dangerouslyDeleteByTag } from '@vercel/functions';
+import { withMarketQuote } from '../src/lib/metalMarket.js';
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab.js';
 import { trialExpired } from '../src/lib/trial.js';
+import { latestSpot } from './metalPrices.js';
 
 // Loads a tenant's published config from Supabase (PostgREST, service role).
 // Shared by /api/tenant, /api/render and the link-preview page. Tenant zero
@@ -101,7 +103,8 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
             status: row.status === 'live' && trialExpired(row) ? 'paused' : (row.status as TenantStatus),
             kind: row.kind as PublishedTenant['kind'],
             version: published.version,
-            config: parsed.config,
+            // A shop on market pricing gets today's per-tooth quote (or its fixed prices without one).
+            config: parsed.config.pricing.market ? { ...parsed.config, pricing: withMarketQuote(parsed.config.pricing, await latestSpot(env)) } : parsed.config,
           },
         };
       }

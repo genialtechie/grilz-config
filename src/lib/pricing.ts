@@ -1,14 +1,20 @@
 import { icedOpenFace, isGold, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
+import { quoteKey } from './metalMarket.js';
 
 // The price engine: pure functions of a design and a tenant's pricing. The same
 // code runs in the builder and on the server, which recomputes every total.
 
 export type PriceLine = { label: string; amount: number };
-export type PriceBreakdown = { lines: PriceLine[]; total: number };
+/** `market`: the metal prices (USD per troy ounce) a market-linked quote used, kept with the lead. */
+export type PriceBreakdown = { lines: PriceLine[]; total: number; market?: { asOf: string; gold: number; silver: number; platinum: number } };
 
-export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: KaratId) =>
-  Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
+/** One tooth's metal: today's market quote when the shop links to the market, else its fixed price. */
+export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: KaratId) => {
+  const quoted = pricing.market?.enabled ? pricing.market.quote?.perTooth[quoteKey(metal, karat)] : undefined;
+  if (quoted !== undefined) return quoted;
+  return Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
+};
 
 /** The set-size discount (percent) for this many teeth: the biggest tier the set reaches. */
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
@@ -47,7 +53,11 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set
   });
   const subtotal = lines.reduce((total, line) => total + line.amount, 0);
   if (pricing.minimumOrder > subtotal) lines.push({ label: 'Minimum order adjustment', amount: pricing.minimumOrder - subtotal });
-  return { lines, total: Math.max(subtotal, pricing.minimumOrder) };
+  const quote = pricing.market?.enabled ? pricing.market.quote : undefined;
+  const market = quote && teeth.some((tooth) => quote.perTooth[quoteKey(tooth.metal, tooth.karat)] !== undefined)
+    ? { asOf: quote.asOf, gold: quote.gold, silver: quote.silver, platinum: quote.platinum }
+    : undefined;
+  return { lines, total: Math.max(subtotal, pricing.minimumOrder), ...(market ? { market } : {}) };
 };
 
 /** The deposit for an estimate, or null when the shop takes no deposit. */

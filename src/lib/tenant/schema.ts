@@ -102,6 +102,30 @@ export const PricingSchema = z.object({
    * the open-face finish price). Absent = 100%, which is how it worked first.
    */
   icedOpenFace: z.object({ stoneShare: z.number().min(0).max(100), perTooth: money.optional() }).optional(),
+  /**
+   * Metal linked to the live market price (see lib/metalMarket): grams of
+   * metal per tooth and labour per tooth for each metal, plus a markup on the
+   * metal. The fixed metalPerTooth prices stay as the fallback when no market
+   * price is available. `quote` is filled in by the server from the day's
+   * prices; a quote saved in a config is ignored.
+   */
+  market: z
+    .object({
+      enabled: z.boolean(),
+      gramsPerTooth: z.record(MetalIdSchema, z.number().min(0).max(50)),
+      labourPerTooth: priceMap(MetalIdSchema),
+      markupPercent: z.number().min(0).max(500),
+      quote: z
+        .object({
+          asOf: z.string().max(40),
+          gold: z.number().positive(),
+          silver: z.number().positive(),
+          platinum: z.number().positive(),
+          perTooth: z.record(z.string().max(20), money),
+        })
+        .optional(),
+    })
+    .optional(),
   /** Set-size pricing: the per-tooth prices drop by percentOff once a set has minTeeth teeth. */
   volume: z
     .array(z.object({ minTeeth: z.number().int().min(2).max(32), percentOff: z.number().min(1).max(90) }))

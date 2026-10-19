@@ -9,6 +9,8 @@ import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
 import { WebsitePanel } from '../dashboard/WebsitePanel';
+import { MARKET_DEFAULTS } from '../lib/metalMarket';
+import { MarketPricing } from './MarketPricing';
 import { StripeConnect } from '../dashboard/StripeConnect';
 import { SAMPLE_PRICING } from './templates';
 
@@ -481,6 +483,19 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               <Money label="Minimum order" value={pricing.minimumOrder} onChange={(value) => update((next) => { next.pricing.minimumOrder = value; })} />
             </div>
             <h3>Metal</h3>
+            <div className="admin-radios">
+              <label className="admin-check"><input type="radio" name="metal-pricing" checked={!pricing.market?.enabled} onChange={() => update((next) => { if (next.pricing.market) next.pricing.market.enabled = false; })} /> Fixed price per tooth</label>
+              <label className="admin-check"><input type="radio" name="metal-pricing" checked={Boolean(pricing.market?.enabled)} onChange={() => update((next) => { next.pricing.market = { ...MARKET_DEFAULTS, ...next.pricing.market, enabled: true }; })} /> Linked to the live metal price</label>
+            </div>
+            {pricing.market?.enabled && (
+              <MarketPricing
+                pricing={pricing}
+                metals={catalog.metals}
+                karats={catalog.karats}
+                update={(change) => update((next) => { change(next.pricing.market!); })}
+              />
+            )}
+            {pricing.market?.enabled && <h3>Fallback fixed prices</h3>}
             <div className="admin-grid admin-grid--prices">
               {pick(METALS, catalog.metals).map((metal) => (
                 <Money key={metal.id} label={metal.label} value={pricing.metalPerTooth[metal.id]} onChange={(value) => update((next) => { next.pricing.metalPerTooth[metal.id] = value; })} />
