@@ -1,4 +1,4 @@
-import { icedOpenFace, isGold, label, MOLDS, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 import { quoteKey } from './metalMarket.js';
 
@@ -20,8 +20,14 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
   (pricing.volume ?? []).filter((tier) => teeth >= tier.minTeeth).reduce((best, tier) => Math.max(best, tier.percentOff), 0);
 
+/** A tooth's share of the front-tooth price, by where it sits (1 = the same as the front). */
+export const positionFactor = (pricing: TenantPricing, index: number) => {
+  const position = toothPosition(index);
+  return position === 'front' ? 1 : (pricing.positions?.[position] ?? 100) / 100;
+};
+
 /** `addOns`: the shop's add-ons (from its catalog), to price the ones in `set.addOns`. */
-export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set: SetOptions, addOns: readonly AddOn[] = []): PriceBreakdown => {
+export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set: SetOptions, addOns: readonly AddOn[] = []): PriceBreakdown => {
   const lines: PriceLine[] = [{ label: 'Service fee', amount: pricing.base }];
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
@@ -32,19 +38,28 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set
     if (icedOpenFace(tooth)) return pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0;
     return tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0;
   };
-  const metal = sum((tooth) => metalPerTooth(pricing, tooth.metal, tooth.karat));
+  const metalOf = (tooth: ToothDesign) => metalPerTooth(pricing, tooth.metal, tooth.karat);
+  const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
+  const settingOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0);
+  const metal = sum(metalOf);
   const finishes = sum(finish);
-  const stones = Math.round(sum((tooth) => (tooth.type === 'iced' ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0)));
-  const settings = Math.round(sum((tooth) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0)));
+  const stones = Math.round(sum(stonesOf));
+  const settings = Math.round(sum(settingOf));
   add(`Metal · ${teeth.length} teeth`, metal);
   add('Style & finish', finishes);
   add('Stones', stones);
   add('Mosaic setting', settings);
+  // Back teeth at the shop's own share of the front price: the difference, on its own line.
+  const back = teeth.filter((tooth) => positionFactor(pricing, tooth.index) !== 1);
+  const backAdjustment = Math.round(back.reduce((total, tooth) => total + (metalOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth)) * (positionFactor(pricing, tooth.index) - 1), 0));
+  add(`Back teeth · ${back.length} ${back.length === 1 ? 'tooth' : 'teeth'}`, backAdjustment);
   // The set-size discount comes off everything charged per tooth.
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((metal + finishes + stones + settings) * percent) / 100));
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((metal + finishes + stones + settings + backAdjustment) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
-  if (set.fangs) add('Fangs', pricing.extras.fangs);
+  // Fangs are built on the upper canines: none in the set, no fangs to charge for.
+  const fangs = fangCount(teeth, set.fangs);
+  if (fangs) add(pricing.fangsPer === 'fang' ? `Fangs · ${fangs}` : 'Fangs', pricing.extras.fangs * (pricing.fangsPer === 'fang' ? fangs : 1));
   if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);
   if (set.inscription) add(`Inscription "${set.inscription.text}"`, pricing.inscription[set.inscription.style] ?? 0);
   if (set.mold) add(label(MOLDS, set.mold), pricing.molds?.[set.mold] ?? 0);
@@ -82,7 +97,8 @@ export const priceHints = (pricing: TenantPricing) => {
     setting: (setting: SettingId) => hint(pricing.settingPerTooth[setting] ? `+${usd(pricing.settingPerTooth[setting]!)} / tooth` : 'Included'),
     type: (type: GrillzType) => hint(type === 'photo' ? `+${usd(pricing.extras.photo)} artwork` : type === 'iced' ? 'Stones priced next' : 'Included'),
     inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)}`),
-    /** A flat or per-tooth extra (fangs, permanent look, a shop's add-on). */
+    fangs: () => hint(pricing.extras.fangs ? `+${usd(pricing.extras.fangs)}${pricing.fangsPer === 'fang' ? ' / fang' : ''}` : 'Included'),
+    /** A flat or per-tooth extra (permanent look, a shop's add-on). */
     extra: (amount: number, perTooth = false) => hint(amount ? `+${usd(amount)}${perTooth ? ' / tooth' : ''}` : 'Included'),
   };
 };

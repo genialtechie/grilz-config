@@ -554,9 +554,25 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 Add a set-size discount
               </button>
             )}
-            <h3>Extras (per order)</h3>
+            <h3>Back teeth</h3>
+            <p className="admin-muted admin-section__hint">Premolars and molars are bigger than front teeth. Price them as a share of a front tooth's price: 100% is the same, 125% is a quarter more. Covers metal, finish, stones and setting.</p>
+            <div className="admin-grid admin-grid--prices">
+              {(['premolar', 'molar'] as const).map((position) => (
+                <Money key={position} label={position === 'premolar' ? 'Premolars' : 'Molars'} step={5} suffix="%" value={pricing.positions?.[position] ?? 100} onChange={(value) => update((next) => { next.pricing.positions = { premolar: 100, molar: 100, ...next.pricing.positions, [position]: value }; })} />
+              ))}
+            </div>
+            <h3>Extras</h3>
             <div className="admin-grid admin-grid--prices">
               {catalog.fangs && <Money label="Fangs" value={pricing.extras.fangs} onChange={(value) => update((next) => { next.pricing.extras.fangs = value; })} />}
+              {catalog.fangs && (
+                <label className="admin-field">
+                  <span>Fangs charged</span>
+                  <select value={pricing.fangsPer ?? 'set'} onChange={(event) => update((next) => { next.pricing.fangsPer = event.target.value as 'set' | 'fang'; })}>
+                    <option value="set">Per set</option>
+                    <option value="fang">Per fang</option>
+                  </select>
+                </label>
+              )}
               {catalog.cuts.includes('permanent') && <Money label="Permanent look" value={pricing.extras.permanent} onChange={(value) => update((next) => { next.pricing.extras.permanent = value; })} />}
               {catalog.types.includes('photo') && <Money label="Photo artwork" value={pricing.extras.photo} onChange={(value) => update((next) => { next.pricing.extras.photo = value; })} />}
               {pick(MOLDS, catalog.molds).map((mold) => (
