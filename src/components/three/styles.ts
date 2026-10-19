@@ -10,7 +10,7 @@ import { dentalStone, polishedMetal } from './materials';
 
 /** Centre of the arch, behind the front teeth: the front of a tooth faces away from it. */
 export const ARCH_CENTRE = new THREE.Vector3(0.005, 0, -0.03);
-const SECTORS = 48;
+export const SECTORS = 48;
 const LIFT = 0.00012; // how far a finish sits off the cap, so it never z-fights
 
 type Front = {
@@ -65,7 +65,7 @@ export function frontOf(geometry: THREE.BufferGeometry): Front {
 }
 
 /** A point on the tooth's front, `fraction` of the way from the centre to the edge, lifted off the surface. */
-function onFront(front: Front, sector: number, fraction: number, lift = LIFT) {
+export function onFront(front: Front, sector: number, fraction: number, lift = LIFT) {
   const angle = (sector / SECTORS) * Math.PI * 2;
   const radius = front.outline[sector % SECTORS] * fraction;
   const hit = hitFront(front, Math.cos(angle) * radius, Math.sin(angle) * radius) ?? hitFront(front, 0, 0);
@@ -267,15 +267,19 @@ const stone = () => material('stone', dentalStone);
 
 // ---------- Finishes ----------
 
+/** Iced open face: the window's edge, and where the ring of stones runs (fractions of the face). */
+export const ICED_WINDOW = 0.6;
+export const ICED_RING = 0.8;
+
 const finishes = new Map<string, THREE.Group>();
 
 /**
  * The finish on a tooth's front for a plain (not iced) cap, or null for a
  * plain solid polish. Built once per tooth, style and metal, then reused.
  */
-export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId): THREE.Group | null {
+export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, iced = false): THREE.Group | null {
   if (style === 'solid') return null;
-  const key = `${tooth.geometry.uuid}:${style}:${metal}`;
+  const key = `${tooth.geometry.uuid}:${style}:${metal}:${iced}`;
   const cached = finishes.get(key);
   if (cached) return cached.clone();
   const front = frontOf(tooth.geometry);
@@ -283,7 +287,11 @@ export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId): TH
   const rimThickness = Math.max(...front.outline) * 0.07;
   const add = (geometry: THREE.BufferGeometry, m: THREE.Material) => group.add(new THREE.Mesh(geometry, m));
 
-  if (style === 'open-face') {
+  if (style === 'open-face' && iced) {
+    // Iced open face: a smaller window with a thin inner rim, leaving a band for a ring of stones.
+    add(panel(front, ICED_WINDOW - 0.02, 6), stone());
+    add(rim(front, ICED_WINDOW, rimThickness * 0.6), metalRim(metal));
+  } else if (style === 'open-face') {
     // The metal stops short of the middle: a polished rim, the tooth showing inside.
     add(panel(front, 0.74, 6), stone());
     add(rim(front, 0.76, rimThickness), metalRim(metal));

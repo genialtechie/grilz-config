@@ -14,6 +14,7 @@ export default function LabPage() {
   const count = Number(params.get('count') ?? 6);
   const style = (params.get('style') ?? 'solid') as StyleId;
   const fangs = params.get('fangs') === '1';
+  const cut = params.get('cut') === 'permanent' ? 'permanent' : 'deep';
   const customizations = useMemo<ToothCustomization[]>(() => {
     const start = Math.floor((16 - count) / 2);
     const covered = new Set<number>();
@@ -24,10 +25,10 @@ export default function LabPage() {
     const metal = METALS.find((item) => item.id === metalId) ?? METALS[0];
     return Array.from({ length: 32 }, (_, index) =>
       covered.has(index)
-        ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), hasDiamonds: iced, diamondType: 'lab' }
+        ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), cut, hasDiamonds: iced, diamondType: 'lab' }
         : { material: 'default', color: '#f5f5f2', hasDiamonds: false },
     );
-  }, [metalId, iced, count, style, fangs]);
+  }, [metalId, iced, count, style, fangs, cut]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#f4f1ec' }}>
