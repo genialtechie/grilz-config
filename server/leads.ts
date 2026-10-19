@@ -97,7 +97,7 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
   const session = await configForSession(tenant, body.configVersion, env);
   const spec = parseRenderSpec(body.spec, session.config.catalog);
   if (!spec || spec.teeth.length === 0) return fail(400, 'Your design has an option this shop no longer offers. Refresh and try again.', 'design');
-  const price = priceBreakdown(session.config.pricing, spec.teeth, spec);
+  const price = priceBreakdown(session.config.pricing, spec.teeth, spec, session.config.catalog.addOns);
   const deposit = depositFor(session.config.deposit, price.total);
 
   const tenantId = await tenantIdFor(tenant, env);
@@ -123,7 +123,7 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
         contact: contact.value,
         email: email || null,
         note: note || null,
-        spec: { ...spec, summary: summarizeDesign(spec) },
+        spec: { ...spec, summary: summarizeDesign(spec, session.config.catalog.addOns) },
         price,
         total: price.total,
         deposit,

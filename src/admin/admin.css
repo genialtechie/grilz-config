@@ -120,3 +120,5 @@
 }
 .admin-notice a { color: inherit; font-weight: 700; margin-left: 6px; }
 .admin-tier { grid-template-columns: 1fr 1fr auto; align-items: end; }
+.admin-addon { display: grid; grid-template-columns: 1.4fr 1.4fr 0.8fr 0.9fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+@media (max-width: 720px) { .admin-addon { grid-template-columns: 1fr 1fr; } }

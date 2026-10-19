@@ -195,7 +195,7 @@ function Configurator() {
       ? { text: inscriptionText.trim(), tooth: inscriptionTooth, style: inscriptionStyle }
       : null;
   const effectiveSet: SetOptions = { ...setOptions, inscription };
-  const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet);
+  const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
   const brand = tenant.config.brand;
   const priceHidden = tenant.config.pricing.display === 'hidden';
@@ -274,7 +274,7 @@ function Configurator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setOptions, teethDesigns, inscription?.text, inscription?.tooth, inscription?.style],
   );
-  const designLines = renderSpec ? summarizeDesign(renderSpec) : [];
+  const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns) : [];
 
   const designProperties = () => ({
     selected_teeth: selectedTeeth.length,
@@ -796,7 +796,7 @@ function Configurator() {
                           key={option.id}
                           label={option.label}
                           detail={option.detail}
-                          hint={option.id === 'yes' ? '+$150' : 'Included'}
+                          hint={option.id === 'yes' ? hints.extra(tenant.config.pricing.extras.fangs) : hints.extra(0)}
                           image={option.image}
                           selected={setOptions.fangs === (option.id === 'yes')}
                           onSelect={() => updateSet({ fangs: option.id === 'yes' })}
@@ -813,7 +813,7 @@ function Configurator() {
                           key={cut.id}
                           label={cut.label}
                           detail={cut.detail}
-                          hint={cut.id === 'permanent' ? '+$100' : 'Included'}
+                          hint={cut.id === 'permanent' ? hints.extra(tenant.config.pricing.extras.permanent) : hints.extra(0)}
                           image={cut.image}
                           selected={setOptions.cut === cut.id}
                           onSelect={() => updateSet({ cut: cut.id })}
@@ -821,6 +821,31 @@ function Configurator() {
                       ))}
                     </div>
                   </fieldset>
+                  {(tenant.config.catalog.addOns ?? []).length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>Add-ons <em className="legend-optional">Optional</em></legend>
+                      <div className="choice-list">
+                        {(tenant.config.catalog.addOns ?? []).map((addOn) => {
+                          const on = (setOptions.addOns ?? []).includes(addOn.id);
+                          const hint = hints.extra(addOn.price, addOn.per === 'tooth');
+                          return (
+                            <button
+                              key={addOn.id}
+                              className={on ? 'choice-row choice-row--selected' : 'choice-row'}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={on}
+                              onClick={() => updateSet({ addOns: on ? (setOptions.addOns ?? []).filter((id) => id !== addOn.id) : [...(setOptions.addOns ?? []), addOn.id] })}
+                            >
+                              <Plus size={17} />
+                              <span><strong>{addOn.label}</strong>{(addOn.detail || hint) && <small>{[addOn.detail, hint].filter(Boolean).join(' · ')}</small>}</span>
+                              <span className="check-indicator">{on && <Check size={13} />}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
                 </>
               )}
 

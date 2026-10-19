@@ -96,9 +96,16 @@ const INSCRIPTION_PATTERN = /^[A-Za-z0-9&$#!.' -]{1,6}$/;
 
 export type Inscription = { text: string; tooth: number; style: InscriptionStyleId };
 
+/** A shop's own extra (rush order, carrier case…): defined in its config, not the platform catalog. */
+export type AddOn = { id: string; label: string; detail?: string; price: number; per: 'order' | 'tooth' };
+export const ADD_ON_ID = /^[a-z0-9-]{1,40}$/;
+export const MAX_ADD_ONS = 8;
+
 export type SetOptions = {
   fangs: boolean;
   cut: CutId;
+  /** Ids of the shop's add-ons the customer picked. */
+  addOns?: string[];
   vision: string;
   inscription: Inscription | null;
 };
@@ -152,7 +159,7 @@ export const describeTooth = (tooth: ToothDesign) => {
   return `${metal} · ${surface}${extraStyle}`;
 };
 
-export const summarizeDesign = (spec: RenderSpec): string[] => {
+export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = []): string[] => {
   const upper = spec.teeth.filter((tooth) => tooth.index < 16).length;
   const lines = [`${upper} top + ${spec.teeth.length - upper} bottom`];
   const groups = groupTeeth(spec.teeth);
@@ -160,6 +167,7 @@ export const summarizeDesign = (spec: RenderSpec): string[] => {
   if (spec.fangs) lines.push('Fangs');
   if (spec.inscription) lines.push(`"${spec.inscription.text}" on ${wearerToothName(spec.inscription.tooth)}`);
   lines.push(label(CUTS, spec.cut));
+  (spec.addOns ?? []).forEach((id) => lines.push(addOns.find((addOn) => addOn.id === id)?.label ?? id));
   return lines;
 };
 
@@ -179,6 +187,7 @@ export type EnabledOptions = {
   fangs: boolean;
   inscription: { enabled: boolean; styles: readonly string[] };
   vision: boolean;
+  addOns?: readonly Pick<AddOn, 'id'>[];
 };
 
 const parseTooth = (value: unknown): RenderTooth | null => {
@@ -215,7 +224,12 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     if (!(teeth as RenderTooth[]).some((tooth) => tooth.index === raw.tooth)) return null;
     inscription = { text: raw.text.trim(), tooth: raw.tooth as number, style: raw.style };
   }
+  const addOns = spec.addOns ?? [];
+  if (!Array.isArray(addOns) || addOns.length > MAX_ADD_ONS || !addOns.every((id) => typeof id === 'string' && ADD_ON_ID.test(id))) return null;
+  if (new Set(addOns).size !== addOns.length) return null;
   if (enabled) {
+    const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
+    if (!addOns.every((id) => offered.has(id))) return null;
     if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
     if (!enabled.cuts.includes(spec.cut) || (spec.fangs && !enabled.fangs)) return null;
     if (inscription && !(enabled.inscription.enabled && enabled.inscription.styles.includes(inscription.style))) return null;
@@ -228,6 +242,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     inscription,
     // Keep the customer's note to plain printable text.
     vision: spec.vision.replace(/[^\p{L}\p{N}\p{P}\p{Zs}$+=<>^`|~]/gu, ' ').trim(),
+    ...(addOns.length ? { addOns: addOns as string[] } : {}),
   };
 };
 

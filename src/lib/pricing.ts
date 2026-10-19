@@ -1,4 +1,4 @@
-import { icedOpenFace, isGold, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { icedOpenFace, isGold, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 // The price engine: pure functions of a design and a tenant's pricing. The same
@@ -14,7 +14,8 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
   (pricing.volume ?? []).filter((tier) => teeth >= tier.minTeeth).reduce((best, tier) => Math.max(best, tier.percentOff), 0);
 
-export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set: SetOptions): PriceBreakdown => {
+/** `addOns`: the shop's add-ons (from its catalog), to price the ones in `set.addOns`. */
+export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set: SetOptions, addOns: readonly AddOn[] = []): PriceBreakdown => {
   const lines: PriceLine[] = [{ label: 'Service fee', amount: pricing.base }];
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
@@ -40,6 +41,10 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: ToothDesign[], set
   if (set.fangs) add('Fangs', pricing.extras.fangs);
   if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);
   if (set.inscription) add(`Inscription "${set.inscription.text}"`, pricing.inscription[set.inscription.style] ?? 0);
+  (set.addOns ?? []).forEach((id) => {
+    const addOn = addOns.find((item) => item.id === id);
+    if (addOn) add(addOn.per === 'tooth' ? `${addOn.label} · ${teeth.length} teeth` : addOn.label, addOn.per === 'tooth' ? addOn.price * teeth.length : addOn.price);
+  });
   const subtotal = lines.reduce((total, line) => total + line.amount, 0);
   if (pricing.minimumOrder > subtotal) lines.push({ label: 'Minimum order adjustment', amount: pricing.minimumOrder - subtotal });
   return { lines, total: Math.max(subtotal, pricing.minimumOrder) };
@@ -66,6 +71,8 @@ export const priceHints = (pricing: TenantPricing) => {
     setting: (setting: SettingId) => hint(pricing.settingPerTooth[setting] ? `+${usd(pricing.settingPerTooth[setting]!)} / tooth` : 'Included'),
     type: (type: GrillzType) => hint(type === 'photo' ? `+${usd(pricing.extras.photo)} artwork` : type === 'iced' ? 'Stones priced next' : 'Included'),
     inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)}`),
+    /** A flat or per-tooth extra (fangs, permanent look, a shop's add-on). */
+    extra: (amount: number, perTooth = false) => hint(amount ? `+${usd(amount)}${perTooth ? ' / tooth' : ''}` : 'Included'),
   };
 };
 
