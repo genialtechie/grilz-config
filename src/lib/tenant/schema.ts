@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
+  ADD_ON_ID,
   CUTS,
+  MAX_ADD_ONS,
   GRILLZ_TYPES,
   INSCRIPTION_STYLES,
   KARATS,
@@ -64,6 +66,20 @@ export const CatalogSchema = z.object({
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */
   vision: z.boolean(),
+  /** The shop's own extras (rush order, carrier case…), offered on the Extras step. */
+  addOns: z
+    .array(
+      z.object({
+        id: z.string().regex(ADD_ON_ID),
+        label: z.string().trim().min(2, 'Name each add-on.').max(40),
+        detail: z.string().trim().max(80).optional(),
+        price: money,
+        per: z.enum(['order', 'tooth']),
+      }),
+    )
+    .max(MAX_ADD_ONS)
+    .refine((list) => new Set(list.map((addOn) => addOn.id)).size === list.length, 'Each add-on can be listed once.')
+    .optional(),
 });
 
 export const PricingSchema = z.object({

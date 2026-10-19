@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
 import { contrast, usableAccent } from '../lib/tenant/theme';
@@ -549,6 +549,40 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               ))}
             </div>
             <Issue issues={issues} path="pricing" />
+          </Section>
+
+          <Section title="Add-ons" hint="Your own extras, offered on the builder's Extras step: rush order, carrier case, cleaning kit… Customers tick the ones they want and the price is added to the estimate.">
+            {(catalog.addOns ?? []).map((addOn, index) => (
+              <div key={addOn.id} className="admin-addon">
+                <label className="admin-field">
+                  <span>Name</span>
+                  <input value={addOn.label} maxLength={40} placeholder="Rush order (2 weeks)" onChange={(event) => update((next) => { next.catalog.addOns![index].label = event.target.value; })} />
+                </label>
+                <label className="admin-field">
+                  <span>Detail (optional)</span>
+                  <input value={addOn.detail ?? ''} maxLength={80} placeholder="Jump the queue" onChange={(event) => update((next) => { const value = event.target.value; if (value) next.catalog.addOns![index].detail = value; else delete next.catalog.addOns![index].detail; })} />
+                </label>
+                <Money label="Price" value={addOn.price} onChange={(value) => update((next) => { next.catalog.addOns![index].price = value; })} />
+                <label className="admin-field">
+                  <span>Charged</span>
+                  <select value={addOn.per} onChange={(event) => update((next) => { next.catalog.addOns![index].per = event.target.value as 'order' | 'tooth'; })}>
+                    <option value="order">Once per order</option>
+                    <option value="tooth">Per tooth</option>
+                  </select>
+                </label>
+                <button className="admin-icon-button" type="button" aria-label={`Remove ${addOn.label || 'this add-on'}`} onClick={() => update((next) => { next.catalog.addOns = next.catalog.addOns!.filter((_, i) => i !== index); })}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            {(catalog.addOns?.length ?? 0) < MAX_ADD_ONS && (
+              <button
+                className="admin-button admin-button--small"
+                type="button"
+                onClick={() => update((next) => { next.catalog.addOns = [...(next.catalog.addOns ?? []), { id: `addon-${Date.now().toString(36)}`, label: '', price: 0, per: 'order' }]; })}
+              >
+                Add an add-on
+              </button>
+            )}
+            <Issue issues={issues} path="catalog.addOns" />
           </Section>
 
           <Section title="Deposit" hint="Optional. Customers see it after they send their design. Card deposits go straight to your own Stripe account.">

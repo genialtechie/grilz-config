@@ -637,6 +637,23 @@
   background: var(--accent);
 }
 
+/* Add-ons are a multi-pick: a square check instead of the round radio. */
+.check-indicator {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #b8bbc1;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.choice-row--selected .check-indicator {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .inline-note {
   margin: -6px 0 14px;
   padding: 9px 10px;

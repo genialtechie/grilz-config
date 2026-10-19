@@ -64,6 +64,16 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   if (live.catalog.vision !== draft.catalog.vision) add('What you sell', draft.catalog.vision ? 'Ideas & inspiration upload turned on' : 'Ideas & inspiration upload turned off');
   if (live.catalog.inscription.enabled !== draft.catalog.inscription.enabled) add('What you sell', draft.catalog.inscription.enabled ? 'Inscriptions turned on' : 'Inscriptions turned off');
 
+  const a0 = live.catalog.addOns ?? [];
+  const a1 = draft.catalog.addOns ?? [];
+  const priced = (addOn: (typeof a1)[number]) => `${usd(addOn.price)}${addOn.per === 'tooth' ? ' / tooth' : ''}`;
+  a1.forEach((addOn) => {
+    const before = a0.find((item) => item.id === addOn.id);
+    if (!before) add('Add-ons', `Added ${addOn.label} (${priced(addOn)})`);
+    else if (before.label !== addOn.label || priced(before) !== priced(addOn) || (before.detail ?? '') !== (addOn.detail ?? '')) add('Add-ons', `${before.label} (${priced(before)}) → ${addOn.label} (${priced(addOn)})`);
+  });
+  a0.filter((addOn) => !a1.some((item) => item.id === addOn.id)).forEach((addOn) => add('Add-ons', `Removed ${addOn.label}`));
+
   const p0 = live.pricing;
   const p1 = draft.pricing;
   if (p0.display !== p1.display) add('Prices', `Show ${DISPLAY[p0.display]} → ${DISPLAY[p1.display]}`);
