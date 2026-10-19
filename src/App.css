@@ -1350,6 +1350,19 @@
   display: none;
 }
 
+/* More pills off the edge: fade it, so the row reads as scrollable rather than cut off. */
+.step-pills--fade-end {
+  mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent);
+}
+
+.step-pills--fade-start {
+  mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent);
+}
+
+.step-pills--fade-start.step-pills--fade-end {
+  mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent);
+}
+
 .step-pill {
   display: inline-flex;
   flex: 0 0 auto;
