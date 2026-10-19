@@ -122,3 +122,6 @@
 .admin-tier { grid-template-columns: 1fr 1fr auto; align-items: end; }
 .admin-addon { display: grid; grid-template-columns: 1.4fr 1.4fr 0.8fr 0.9fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
 @media (max-width: 720px) { .admin-addon { grid-template-columns: 1fr 1fr; } }
+.admin-market { display: grid; gap: 10px; margin-bottom: 14px; }
+.admin-market__today ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; }
+.admin-market__today li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--a-line); }

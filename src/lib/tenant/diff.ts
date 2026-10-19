@@ -91,6 +91,13 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = (p1.karatMultiplier as Record<string, number>)[id];
     if (before !== undefined && before !== after) add('Prices', `${label(KARATS, id)} multiplier: ${times(before)} → ${times(after)}`);
   }
+  const metalMode = (pricing: typeof p0) => (pricing.market?.enabled ? 'linked to the live metal price' : 'fixed per tooth');
+  if (metalMode(p0) !== metalMode(p1)) add('Prices', `Metal priced ${metalMode(p0)} → ${metalMode(p1)}`);
+  const marketText = (pricing: typeof p0) =>
+    pricing.market?.enabled
+      ? [`markup ${pricing.market.markupPercent}%`, ...METALS.filter((metal) => pricing.market!.gramsPerTooth[metal.id] !== undefined).map((metal) => `${metal.label} ${pricing.market!.gramsPerTooth[metal.id]}g + ${usd(pricing.market!.labourPerTooth[metal.id] ?? 0)}`)].join(', ')
+      : '';
+  if (p0.market?.enabled && p1.market?.enabled && marketText(p0) !== marketText(p1)) add('Prices', `Market pricing: ${marketText(p0)} → ${marketText(p1)}`);
   const openFace = (pricing: typeof p0) => `${pricing.icedOpenFace?.stoneShare ?? 100}% of stones + ${usd(pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0)}`;
   if (openFace(p0) !== openFace(p1)) add('Prices', `Iced open face: ${openFace(p0)} → ${openFace(p1)}`);
   const tiers = (pricing: typeof p0) => (pricing.volume ?? []).map((tier) => `${tier.percentOff}% off from ${tier.minTeeth} teeth`).join(', ') || 'none';
