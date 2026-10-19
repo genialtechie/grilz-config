@@ -4,6 +4,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
 import { dentalStone, polishedMetal, settingMetal } from './materials';
+import { fangGeometry, finishFor } from './styles';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
@@ -54,6 +55,8 @@ function GrillzModel({
       if (!(child instanceof THREE.Mesh)) return;
       child.castShadow = true;
       child.receiveShadow = true;
+      // The tooth as modelled; a fang swaps in a drawn-out copy and swaps back.
+      child.userData.baseGeometry = child.geometry;
     });
 
     return clone;
@@ -108,9 +111,15 @@ function GrillzModel({
         child.remove(existingStones);
         disposeStones(existingStones);
       }
+      // Finishes are cached and shared between teeth, so they are only detached.
+      const existingFinish = child.getObjectByName('tooth_finish');
+      if (existingFinish) child.remove(existingFinish);
 
       const customization = customizations[index];
       const isSelected = selectedToothSet.has(index);
+      const capped = customization.material !== 'default';
+      const base = child.userData.baseGeometry as THREE.BufferGeometry;
+      child.geometry = capped && customization.fang ? fangGeometry(base) : base;
 
       if (isSelectionMode && isSelected) {
         child.material = materials.selected;
@@ -119,10 +128,14 @@ function GrillzModel({
 
       child.material = customization.material === 'default' ? materials.mould : getFinishMaterial(customization);
 
-      if (customization.hasDiamonds && customization.material !== 'default') {
+      if (capped && customization.hasDiamonds) {
         const stones = createDiamondStones(child, customization.diamondType);
         stones.name = 'diamond_stones';
         child.add(stones);
+      } else if (capped && customization.style) {
+        const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
+        const finish = finishFor(child, customization.style, metal);
+        if (finish) child.add(finish);
       }
     });
   }, [clonedScene, customizations, getFinishMaterial, isSelectionMode, materials, selectedToothSet]);

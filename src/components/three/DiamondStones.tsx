@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { stoneMaterial } from './materials';
+import { ARCH_CENTRE } from './styles';
 
 // Pavé: round stones packed edge to edge over the front of a tooth, the way a
 // jeweler sets an iced cap (about nine across a front tooth). Positions are
 // in the tooth's own space (the model's teeth carry no extra transform).
 
-/** Centre of the arch, behind the front teeth: the front of a tooth faces away from it. */
-const ARCH_CENTRE = new THREE.Vector3(0.005, 0, -0.03);
 const STONE_RADIUS = 0.00108;
 const SPACING = STONE_RADIUS * 2.04;
 const Y = new THREE.Vector3(0, 1, 0);
