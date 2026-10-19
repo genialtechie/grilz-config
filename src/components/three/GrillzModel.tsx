@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { ThreeEvent } from '@react-three/fiber';
+import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
@@ -45,8 +45,11 @@ function GrillzModel({
   selectedTeeth,
   isSelectionMode,
   toggleToothSelection,
-}: GrillzModelProps) {
+  onFocusTooth,
+}: GrillzModelProps & { onFocusTooth?: (point: THREE.Vector3) => void }) {
   const { scene } = useGLTF('/assets/teeth_final.glb');
+  // The canvas draws on demand: changes made here ask for a frame.
+  const invalidate = useThree((state) => state.invalidate);
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
@@ -138,7 +141,8 @@ function GrillzModel({
         if (finish) child.add(finish);
       }
     });
-  }, [clonedScene, customizations, getFinishMaterial, isSelectionMode, materials, selectedToothSet]);
+    invalidate();
+  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, selectedToothSet]);
 
   useEffect(() => {
     return () => {
@@ -149,7 +153,12 @@ function GrillzModel({
   }, [materials]);
 
   const handleToothClick = (event: ThreeEvent<MouseEvent>) => {
-    if (!isSelectionMode) return;
+    if (!isSelectionMode) {
+      // Outside selection, a tap on the set glides in for a closer look.
+      event.stopPropagation();
+      onFocusTooth?.(event.point.clone());
+      return;
+    }
     const tooth = findToothMesh(event.object);
     if (!tooth) return;
     event.stopPropagation();

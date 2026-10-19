@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { RootState } from '@react-three/fiber';
+import { captureSide, withCaptureFraming } from './framing';
 
 const OUTPUT_SIZE = 1024;
 const CAPTURE_PIXELS = 800; // crop resolution before upscaling; keeps the GPU work light on phones
@@ -21,17 +22,18 @@ const toothIndexOf = (object: THREE.Object3D): number | null => {
   return null;
 };
 
-// Renders the current view at higher resolution and draws the centred square
-// crop onto a 1024 canvas. The preview and every mask share this exact crop,
+// Renders the current view (the customer's angle, standard framing) at higher
+// resolution and draws the centred square crop onto a 1024 canvas. The preview and every mask share this exact crop,
 // so the masks line up with the image the AI starts from.
 function renderCrop(state: RootState, background: string): HTMLCanvasElement {
   const { gl, scene, camera, size } = state;
   const previousRatio = gl.getPixelRatio();
-  const side = Math.min(size.height * 0.62, size.width * 0.95);
+  const side = captureSide(size.width, size.height);
   const ratio = Math.min(CAPTURE_PIXELS / side, MAX_BUFFER / Math.max(size.width, size.height));
 
   gl.setPixelRatio(ratio);
-  gl.render(scene, camera);
+  // Always the standard framing, however far the viewer is zoomed in.
+  withCaptureFraming(camera, () => gl.render(scene, camera));
 
   const output = document.createElement('canvas');
   output.width = OUTPUT_SIZE;
