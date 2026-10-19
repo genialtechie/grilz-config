@@ -24,6 +24,8 @@ const row = (slug: string, config: unknown, extra: Record<string, unknown> = {})
 });
 
 const mockFetch = (impl: () => Promise<Response>) => vi.stubGlobal('fetch', vi.fn(impl));
+/** Shop lookups only (each also asks whether the shop has a promo code). */
+const lookups = (fetch: ReturnType<typeof vi.fn>) => fetch.mock.calls.filter(([url]) => String(url).includes('/rest/v1/tenants?')).length;
 afterEach(() => vi.unstubAllGlobals());
 
 describe('tenant lookup', () => {
@@ -77,7 +79,7 @@ describe('tenant lookup', () => {
     vi.stubGlobal('fetch', live);
     expect(await getPublishedTenant('lookup-paused', env)).toMatchObject({ ok: true, tenant: { status: 'live' } });
     await getPublishedTenant('lookup-paused', env);
-    expect(live).toHaveBeenCalledTimes(1); // live is cached
+    expect(lookups(live)).toBe(1); // live is cached
   });
 
   it('forgets a shop in memory and purges its edge cache tag', async () => {
@@ -87,7 +89,21 @@ describe('tenant lookup', () => {
     await forgetTenant('lookup-forget');
     expect(purge).toHaveBeenCalledWith(tenantCacheTag('lookup-forget'));
     await getPublishedTenant('lookup-forget', env);
-    expect(first).toHaveBeenCalledTimes(2);
+    expect(lookups(first)).toBe(2);
+  });
+
+  it('says whether the shop has a promo code customers can use, never which', async () => {
+    const withCode = (answer: () => Response) => vi.fn(async (url: string | URL | Request) => (String(url).includes('/rest/v1/promo_codes?') ? answer() : Response.json([row('lookup-promo', shopConfig())])));
+    vi.stubGlobal('fetch', withCode(() => Response.json([{ id: 'p1' }])));
+    const lookup = await getPublishedTenant('lookup-promo', env);
+    expect(lookup.ok && lookup.tenant.promos).toBe(true);
+    expect(lookup.ok && JSON.stringify(publicTenant(lookup.tenant))).not.toContain('p1');
+    await forgetTenant('lookup-promo');
+    // A failed check hides the code field; the builder still loads.
+    vi.stubGlobal('fetch', withCode(() => new Response('nope', { status: 500 })));
+    const failed = await getPublishedTenant('lookup-promo', env);
+    expect(failed.ok && failed.tenant.promos).toBe(false);
+    await forgetTenant('lookup-promo');
   });
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Check, Copy, Globe, RefreshCw, Trash2 } from 'lucide-react';
 import { checkDomain, connectDomain, disconnectDomain, getDomain, type DomainInfo, type MyShop } from '../admin/data';
 import { breakable } from '../admin/breakable';
+import { PromoCodes } from './PromoCodes';
 
 // Everywhere the shop can put its builder: the link for the IG bio, the embed
 // code for its website (with steps for each site builder), and its own domain.
@@ -170,6 +171,8 @@ export function WebsitePanel({ shop, embedded = false }: { shop: MyShop; embedde
         <p className="admin-muted admin-section__hint">For your Instagram bio, stories, DMs and texts.</p>
         <CopyBox label="Your builder link" value={link} />
       </section>
+
+      <PromoCodes shop={shop} />
 
       <section className="admin-card admin-section">
         <h2>Your website</h2>

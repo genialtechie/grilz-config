@@ -22,6 +22,10 @@
       "destination": "/api/shop-page?domain=1"
     },
     {
+      "source": "/api/promo",
+      "destination": "/api/leads?route=promo"
+    },
+    {
       "source": "/api/tenant/:slug",
       "destination": "/api/tenant?slug=:slug"
     },

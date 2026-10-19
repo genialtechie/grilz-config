@@ -11,6 +11,8 @@ export type Tenant = {
   version: number;
   /** An admin previewing an unpublished draft: leads and renders are disabled. */
   preview: boolean;
+  /** The shop has an active promo code: show the code field on the Review step. */
+  promos: boolean;
   config: TenantConfig;
   catalog: ReturnType<typeof shopCatalog>;
   hints: ReturnType<typeof priceHints>;
@@ -18,11 +20,12 @@ export type Tenant = {
   defaultSet: ReturnType<typeof defaultSet>;
 };
 
-export const buildTenant = (slug: string, config: TenantConfig, demo = false, version = 0, preview = false): Tenant => ({
+export const buildTenant = (slug: string, config: TenantConfig, demo = false, version = 0, preview = false, promos = false): Tenant => ({
   slug,
   demo,
   version,
   preview,
+  promos,
   config,
   catalog: shopCatalog(config.catalog),
   hints: priceHints(config.pricing),
