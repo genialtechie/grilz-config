@@ -106,6 +106,8 @@ export type SetOptions = {
   cut: CutId;
   /** Ids of the shop's add-ons the customer picked. */
   addOns?: string[];
+  /** How the shop gets the customer's fit (mail-in kit, own mold or scan, in store). */
+  mold?: MoldId;
   vision: string;
   inscription: Inscription | null;
 };
@@ -168,6 +170,7 @@ export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, '
   if (spec.inscription) lines.push(`"${spec.inscription.text}" on ${wearerToothName(spec.inscription.tooth)}`);
   lines.push(label(CUTS, spec.cut));
   (spec.addOns ?? []).forEach((id) => lines.push(addOns.find((addOn) => addOn.id === id)?.label ?? id));
+  if (spec.mold) lines.push(`Fit: ${label(MOLDS, spec.mold)}`);
   return lines;
 };
 
@@ -188,6 +191,7 @@ export type EnabledOptions = {
   inscription: { enabled: boolean; styles: readonly string[] };
   vision: boolean;
   addOns?: readonly Pick<AddOn, 'id'>[];
+  molds?: readonly string[];
 };
 
 const parseTooth = (value: unknown): RenderTooth | null => {
@@ -227,7 +231,9 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
   const addOns = spec.addOns ?? [];
   if (!Array.isArray(addOns) || addOns.length > MAX_ADD_ONS || !addOns.every((id) => typeof id === 'string' && ADD_ON_ID.test(id))) return null;
   if (new Set(addOns).size !== addOns.length) return null;
+  if (spec.mold !== undefined && !oneOf(MOLDS, spec.mold)) return null;
   if (enabled) {
+    if (spec.mold !== undefined && enabled.molds && !enabled.molds.includes(spec.mold as string)) return null;
     const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
     if (!addOns.every((id) => offered.has(id))) return null;
     if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
@@ -243,6 +249,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     // Keep the customer's note to plain printable text.
     vision: spec.vision.replace(/[^\p{L}\p{N}\p{P}\p{Zs}$+=<>^`|~]/gu, ' ').trim(),
     ...(addOns.length ? { addOns: addOns as string[] } : {}),
+    ...(spec.mold !== undefined ? { mold: spec.mold as MoldId } : {}),
   };
 };
 
