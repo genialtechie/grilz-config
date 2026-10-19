@@ -573,7 +573,7 @@ function Configurator() {
 
           <div className="viewer-instructions" aria-hidden="true">
             {isSelectionMode ? <MousePointer2 size={16} /> : <Move3d size={16} />}
-            <span>{isSelectionMode ? 'Tap a tooth to select it' : 'Drag to rotate · Scroll to zoom'}</span>
+            <span>{isSelectionMode ? 'Tap a tooth to select it' : 'Drag to turn · Tap a tooth to look closer'}</span>
           </div>
 
           <button
