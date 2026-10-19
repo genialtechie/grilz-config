@@ -8,6 +8,7 @@ const ShopPage = lazy(() => import('./components/ShopPage'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const DashboardApp = lazy(() => import('./dashboard/DashboardApp'));
 const SignupPage = lazy(() => import('./components/signup/SignupPage'));
+const LabPage = import.meta.env.DEV ? lazy(() => import('./lab/LabPage')) : null;
 const PrivacyPage = lazy(() => import('./components/legal/LegalPage').then((module) => ({ default: module.PrivacyPage })));
 const TermsPage = lazy(() => import('./components/legal/LegalPage').then((module) => ({ default: module.TermsPage })));
 
@@ -55,6 +56,7 @@ function App() {
           </Suspense>
         }
       />
+      {LabPage && <Route path="/lab" element={<Suspense fallback={null}><LabPage /></Suspense>} />}
       <Route path="/signup" element={<Suspense fallback={null}><SignupPage /></Suspense>} />
       <Route path="/privacy" element={<Suspense fallback={null}><PrivacyPage /></Suspense>} />
       <Route path="/terms" element={<Suspense fallback={null}><TermsPage /></Suspense>} />
