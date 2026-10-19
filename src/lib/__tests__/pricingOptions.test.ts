@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { metalPerTooth, priceBreakdown, volumeDiscount } from '../pricing';
-import { DEFAULT_SET, type ToothDesign } from '../renderSpec';
+import { DEFAULT_SET, type RenderTooth } from '../renderSpec';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
 import { describeChanges } from '../tenant/diff';
 
 const base = VVSLAB_CONFIG.pricing;
-const plain: ToothDesign = { metal: 'yellow', karat: '10k', type: 'plain', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
-const iced: ToothDesign = { ...plain, type: 'iced' };
-const set = (tooth: ToothDesign, count: number) => Array.from({ length: count }, () => tooth);
-const total = (pricing: TenantPricing, teeth: ToothDesign[]) => priceBreakdown(pricing, teeth, DEFAULT_SET).total;
+const plain: RenderTooth = { index: 7, metal: 'yellow', karat: '10k', type: 'plain', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
+const iced: RenderTooth = { ...plain, type: 'iced' };
+const set = (tooth: RenderTooth, count: number) => Array.from({ length: count }, () => tooth);
+const total = (pricing: TenantPricing, teeth: RenderTooth[]) => priceBreakdown(pricing, teeth, DEFAULT_SET).total;
 
 describe('pricing options', () => {
   it("leaves a shop's totals unchanged until it sets the new options", () => {

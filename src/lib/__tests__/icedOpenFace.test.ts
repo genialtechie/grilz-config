@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { priceBreakdown } from '../pricing';
-import { buildRenderPrompt, describeTooth, DEFAULT_SET, type RenderTooth, type ToothDesign } from '../renderSpec';
+import { buildRenderPrompt, describeTooth, DEFAULT_SET, type RenderTooth } from '../renderSpec';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
 
-const iced: ToothDesign = { metal: 'yellow', karat: '10k', type: 'iced', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
-const line = (teeth: ToothDesign[], label: string) => priceBreakdown(VVSLAB_CONFIG.pricing, teeth, DEFAULT_SET).lines.find((item) => item.label === label)?.amount ?? 0;
+const iced: RenderTooth = { index: 7, metal: 'yellow', karat: '10k', type: 'iced', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
+const line = (teeth: RenderTooth[], label: string) => priceBreakdown(VVSLAB_CONFIG.pricing, teeth, DEFAULT_SET).lines.find((item) => item.label === label)?.amount ?? 0;
 
 describe('iced open face', () => {
   it("adds the shop's open-face price on top of the stones; other finishes still don't apply to iced teeth", () => {

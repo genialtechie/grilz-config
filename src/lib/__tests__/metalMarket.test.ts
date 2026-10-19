@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { GRAMS_PER_TROY_OUNCE, MARKET_DEFAULTS, marketPerTooth, purity, withMarketQuote, type Spot } from '../metalMarket';
 import { metalPerTooth, priceBreakdown } from '../pricing';
-import { DEFAULT_SET, type ToothDesign } from '../renderSpec';
+import { DEFAULT_SET, type RenderTooth } from '../renderSpec';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
 
 const spot: Spot = { gold: 4000, silver: 50, platinum: 1600, asOf: '2026-10-19T14:07:00.000Z', source: 'yahoo' };
 const pricing: TenantPricing = { ...VVSLAB_CONFIG.pricing, minimumOrder: 0, market: { ...MARKET_DEFAULTS } };
-const tooth: ToothDesign = { metal: 'yellow', karat: '14k', type: 'plain', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
+const tooth: RenderTooth = { index: 7, metal: 'yellow', karat: '14k', type: 'plain', style: 'solid', setting: 'honeycomb', stone: 'moissanite' };
 
 describe('market-linked metal', () => {
   it('prices a tooth from grams, purity, markup and labour', () => {

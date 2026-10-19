@@ -105,6 +105,12 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   });
   const openFace = (pricing: typeof p0) => `${pricing.icedOpenFace?.stoneShare ?? 100}% of stones + ${usd(pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0)}`;
   if (openFace(p0) !== openFace(p1)) add('Prices', `Iced open face: ${openFace(p0)} → ${openFace(p1)}`);
+  if ((p0.fangsPer ?? 'set') !== (p1.fangsPer ?? 'set')) add('Prices', `Fangs charged ${p1.fangsPer === 'fang' ? 'per fang' : 'per set'}`);
+  (['premolar', 'molar'] as const).forEach((position) => {
+    const before = p0.positions?.[position] ?? 100;
+    const after = p1.positions?.[position] ?? 100;
+    if (before !== after) add('Prices', `${position === 'premolar' ? 'Premolars' : 'Molars'}: ${before}% → ${after}% of a front tooth`);
+  });
   const tiers = (pricing: typeof p0) => (pricing.volume ?? []).map((tier) => `${tier.percentOff}% off from ${tier.minTeeth} teeth`).join(', ') || 'none';
   if (tiers(p0) !== tiers(p1)) add('Prices', `Set-size discounts: ${tiers(p0)} → ${tiers(p1)}`);
   (['fangs', 'permanent', 'photo'] as const).forEach((key) => {

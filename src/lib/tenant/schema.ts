@@ -93,6 +93,8 @@ export const PricingSchema = z.object({
   stonePerTooth: priceMap(StoneIdSchema),
   settingPerTooth: priceMap(SettingIdSchema),
   extras: z.object({ fangs: money, permanent: money, photo: money }),
+  /** The fangs price is for the set (default) or for each fang (one per upper canine in the set). */
+  fangsPer: z.enum(['set', 'fang']).optional(),
   inscription: priceMap(InscriptionStyleIdSchema),
   /** Totals below this are raised to it; 0 = no minimum. */
   minimumOrder: money,
@@ -128,6 +130,12 @@ export const PricingSchema = z.object({
     .optional(),
   /** A fee per way of getting the fit (e.g. a mail-in kit), once per order. */
   molds: priceMap(MoldIdSchema).optional(),
+  /**
+   * Back teeth priced apart from the front six (incisors and canines): each
+   * premolar and molar costs this percent of a front tooth's per-tooth price
+   * (metal, finish, stones, setting). Absent = 100%, the same as the front.
+   */
+  positions: z.object({ premolar: z.number().min(25).max(400), molar: z.number().min(25).max(400) }).optional(),
   /** Set-size pricing: the per-tooth prices drop by percentOff once a set has minTeeth teeth. */
   volume: z
     .array(z.object({ minTeeth: z.number().int().min(2).max(32), percentOff: z.number().min(1).max(90) }))

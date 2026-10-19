@@ -216,7 +216,10 @@ function Configurator() {
     inscriptionText.trim() && inscriptionTooth !== null && selectedSet.has(inscriptionTooth)
       ? { text: inscriptionText.trim(), tooth: inscriptionTooth, style: inscriptionStyle }
       : null;
-  const effectiveSet: SetOptions = { ...setOptions, inscription };
+  // Fangs are built on the upper canines: without one in the set there's nothing to put a fang on.
+  const canHaveFangs = selectedTeeth.some((index) => FANG_TEETH.includes(index));
+  const fangsOn = setOptions.fangs && canHaveFangs;
+  const effectiveSet: SetOptions = { ...setOptions, fangs: fangsOn, inscription };
   const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
   const brand = tenant.config.brand;
@@ -292,9 +295,9 @@ function Configurator() {
   const updateSet = (patch: Partial<SetOptions>) => setSetOptions((previous) => ({ ...previous, ...patch }));
 
   const renderSpec = useMemo<RenderSpec | null>(
-    () => (teethDesigns.length ? { ...setOptions, inscription, teeth: teethDesigns } : null),
+    () => (teethDesigns.length ? { ...setOptions, fangs: fangsOn, inscription, teeth: teethDesigns } : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setOptions, teethDesigns, inscription?.text, inscription?.tooth, inscription?.style],
+    [setOptions, fangsOn, teethDesigns, inscription?.text, inscription?.tooth, inscription?.style],
   );
   const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns) : [];
 
@@ -308,7 +311,7 @@ function Configurator() {
     grillz_type: base.type,
     style: base.style,
     any_iced: anyIced,
-    fangs: setOptions.fangs,
+    fangs: fangsOn,
     cut: setOptions.cut,
     has_vision: setOptions.vision.trim().length > 0,
     inscription_style: inscription?.style ?? 'none',
@@ -816,10 +819,11 @@ function Configurator() {
                         <OptionCard
                           key={option.id}
                           label={option.label}
-                          detail={option.detail}
-                          hint={option.id === 'yes' ? hints.extra(tenant.config.pricing.extras.fangs) : hints.extra(0)}
+                          detail={option.id === 'yes' && !canHaveFangs ? 'Add your upper canines first' : option.detail}
+                          hint={option.id === 'yes' ? hints.fangs() : hints.extra(0)}
                           image={option.image}
-                          selected={setOptions.fangs === (option.id === 'yes')}
+                          disabled={option.id === 'yes' && !canHaveFangs}
+                          selected={fangsOn === (option.id === 'yes')}
                           onSelect={() => updateSet({ fangs: option.id === 'yes' })}
                         />
                       ))}

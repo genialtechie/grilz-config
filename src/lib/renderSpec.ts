@@ -243,7 +243,8 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
   }
   return {
     teeth: (teeth as RenderTooth[]).sort((a, b) => a.index - b.index),
-    fangs: spec.fangs,
+    // Fangs are built on the upper canines: a set without one has none to charge for.
+    fangs: fangCount(teeth as RenderTooth[], spec.fangs) > 0,
     cut: spec.cut,
     inscription,
     // Keep the customer's note to plain printable text.
@@ -368,7 +369,20 @@ export const buildRenderPrompt = (spec: RenderSpec, hasInspiration: boolean): st
 // - "bare": a row with no grillz, kept as plain white teeth
 
 export const MAX_SECTION_EDITS = 10;
+/** The upper canines: the only teeth a fang cap is built on. */
 export const FANG_TEETH = [5, 10];
+
+/** How many fangs a set gets: one per upper canine in it, when fangs are on. */
+export const fangCount = (teeth: readonly { index: number }[], fangs: boolean) =>
+  fangs ? teeth.filter((tooth) => FANG_TEETH.includes(tooth.index)).length : 0;
+
+/** Where a tooth sits: front (incisors and canines), premolar or molar. Shops can price them apart. */
+export type ToothPosition = 'front' | 'premolar' | 'molar';
+export const toothPosition = (index: number): ToothPosition => {
+  const position = index % 16;
+  const fromCentre = position < 8 ? 7 - position : position - 8;
+  return fromCentre <= 2 ? 'front' : fromCentre <= 4 ? 'premolar' : 'molar';
+};
 
 export type MaskKind = 'bare' | 'tooth' | 'fangs' | 'inscription';
 export type MaskPlan = { kind: MaskKind; indices: number[] };
@@ -402,7 +416,7 @@ export const planMasks = (spec: Pick<RenderSpec, 'teeth' | 'fangs' | 'inscriptio
     special.add(spec.inscription.tooth);
   }
   if (spec.fangs) {
-    FANG_TEETH.filter((index) => !special.has(index)).forEach((index) => {
+    FANG_TEETH.filter((index) => !special.has(index) && spec.teeth.some((tooth) => tooth.index === index)).forEach((index) => {
       plans.push({ kind: 'fangs', indices: [index] });
       special.add(index);
     });
