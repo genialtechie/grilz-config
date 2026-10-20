@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { handleDashboard } from '../dashboard';
 import { handleSignup, TRIAL_DAYS, TRIAL_GENERATIONS } from '../signup';
+import { forgetTenant, getPublishedTenant } from '../tenants';
 
-// Self-serve signup against a real (local) Supabase: shop created as a draft on
-// a trial, owner joins by accepting the emailed invite, then switches it live.
+// Self-serve signup against a real (local) Supabase: the shop is live from the
+// start on the starting prices and a trial (MAG-90), the owner joins by
+// accepting the emailed invite, and can pause it and switch it back on.
 
 const url = process.env.INTEGRATION_SUPABASE_URL;
 const key = process.env.INTEGRATION_SERVICE_KEY;
@@ -41,16 +43,20 @@ describe.skipIf(!url || !key || !anon)('self-serve signup (integration)', () => 
     await rest(`tenants?slug=eq.${slug}`, { method: 'DELETE' });
   });
 
-  it('creates a draft trial shop, emails the owner, and they go live after accepting', async () => {
+  it('creates a live trial shop on the starting prices, emails the owner, who joins by accepting', async () => {
     const result = await handleSignup({ name: 'Signup Test Gold', email, slug, instagram: 'signup.test', terms: true, elapsedMs: 20_000 }, ip(10), env);
     expect(result).toMatchObject({ status: 200, body: { ok: true } });
     const [tenant] = await rest(`tenants?slug=eq.${slug}&select=id,status,plan,created_via,trial_ends_at,published_version`);
-    expect(tenant).toMatchObject({ status: 'draft', plan: 'trial', created_via: 'signup', published_version: 1 });
+    expect(tenant).toMatchObject({ status: 'live', plan: 'trial', created_via: 'signup', published_version: 1 });
     const days = (new Date(tenant.trial_ends_at).getTime() - Date.now()) / 864e5;
     expect(days).toBeGreaterThan(TRIAL_DAYS - 0.1);
     expect(days).toBeLessThan(TRIAL_DAYS + 0.1);
     const [config] = await rest(`tenant_configs?tenant_id=eq.${tenant.id}&status=eq.published&select=config`);
     expect(config.config.ai.monthlyGenerations).toBe(TRIAL_GENERATIONS);
+    // Customers can use the builder straight away, on the starting prices.
+    expect(config.config.pricing.source).toBe('default');
+    const builder = await getPublishedTenant(slug, env);
+    expect(builder.ok && builder.tenant.status).toBe('live');
     expect(config.config.leads.email).toEqual([email]);
     expect(config.config.brand.instagram).toBe('signup.test');
     const welcome = sent.find((mail) => mail.to.includes(email)) as { html: string; from?: string } | undefined;
@@ -68,6 +74,8 @@ describe.skipIf(!url || !key || !anon)('self-serve signup (integration)', () => 
     const accepted = await realFetch(`${url}/rest/v1/rpc/accept_member_invites`, { method: 'POST', headers: { apikey: anon!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json());
     expect(accepted).toBe(1);
 
+    await forgetTenant(slug);
+    expect(await handleDashboard('pause', { tenantId: tenant.id }, token, env)).toMatchObject({ status: 200, body: { status: 'paused' } });
     const live = await handleDashboard('go_live', { tenantId: tenant.id }, token, env);
     expect(live).toMatchObject({ status: 200, body: { status: 'live' } });
     const [after] = await rest(`tenants?id=eq.${tenant.id}&select=status`);

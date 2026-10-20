@@ -92,8 +92,9 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
     // As the jeweler: they own the shop.
     const mine = await rest(`members?select=role,tenants(slug)`, {}, session.access_token);
     expect(mine).toEqual([{ role: 'owner', tenants: { slug: slugs[0] } }]);
-    const [tenant] = await rest(`tenants?id=eq.${tenantIds[0]}&select=plan,trial_ends_at,published_version`);
+    const [tenant] = await rest(`tenants?id=eq.${tenantIds[0]}&select=plan,status,trial_ends_at,published_version`);
     expect(tenant.plan).toBe('trial');
+    expect(tenant.status).toBe('live'); // live from the moment it's claimed (MAG-90)
     const days = (Date.parse(tenant.trial_ends_at) - Date.now()) / 864e5;
     expect(days).toBeGreaterThan(TRIAL_DAYS - 0.1);
     expect(days).toBeLessThan(TRIAL_DAYS + 0.1);

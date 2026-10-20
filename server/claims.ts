@@ -15,8 +15,8 @@ import { forgetTenant } from './tenants.js';
 // Claim links (MAG-89). VVS Lab builds a jeweler's shop ahead of time (a
 // draft with no owner). At the counter the jeweler scans a QR code for
 // /claim/<token>, enters their email, and the shop is theirs: owner, 14-day
-// trial (card optional), published with their email as the lead inbox, the
-// welcome email sent, and signed in on that phone.
+// trial (card optional), published with their email as the lead inbox and
+// switched live (MAG-90), the welcome email sent, and signed in on that phone.
 //
 // Only a hash of the token is stored; a link is single use, lasts 7 days and
 // can be revoked. A new account is signed in on the spot. An email that
@@ -92,14 +92,15 @@ const closed = (state: Exclude<ClaimState, 'open'>) => reply(CLOSED[state][0], {
 
 /**
  * Makes the shop theirs once the link is spent: the newest config is published
- * with their email as the lead inbox (if it has none), so the builder works the
- * moment they switch it on.
+ * with their email as the lead inbox (if it has none) and the shop goes live.
  */
 async function handOver(db: Db, tenant: TenantRow, userId: string, email: string) {
   // Already on the team (as staff)? Then they're promoted.
   await db.insert('members', { tenant_id: tenant.id, user_id: userId, role: 'owner' }).catch(() => db.update('members', { tenant_id: `eq.${tenant.id}`, user_id: `eq.${userId}` }, { role: 'owner' }));
   // The trial starts now, card optional, as for self-serve signup. A shop already on a paid plan keeps it.
   await db.update('tenants', { id: `eq.${tenant.id}`, billing_status: 'in.(none,canceled)' }, { plan: 'trial', trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString() });
+  // Like a self-serve signup, a claimed shop is live from the start (MAG-90).
+  await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.draft' }, { status: 'live' });
   const latest = await latestConfig(db, tenant.id);
   if (!latest) {
     console.error('claim: no valid config to publish', tenant.slug);

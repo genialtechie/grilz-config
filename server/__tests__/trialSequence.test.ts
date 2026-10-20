@@ -38,7 +38,9 @@ describe('trial sequence: which step is due', () => {
   });
 
   it('skips a step the shop has already done', () => {
-    expect(at(1.2, { live: true })).toBeNull();
+    expect(at(1.2, { live: true, pricesSet: true })).toBeNull();
+    // Live from the start (MAG-90) but still on the starting prices: day 1 asks for theirs.
+    expect(at(1.2, { live: true })).toBe('day-1');
     expect(at(3.2, { leads: 2 })).toBeNull();
     expect(at(7.2, { stripeReady: true })).toBeNull();
     expect(at(11.2, { hasCard: true })).toBeNull();
@@ -64,6 +66,13 @@ describe('trial emails', () => {
     expect(day3.subject).toBe('Your builder is still switched off');
     const live = await trialEmail('day-3', shop({ live: true }), origin, unsubscribe);
     expect(live.html).toContain('vvslab.magpollo.com/b/gold-mouth');
+  });
+
+  it('asks a live shop on the starting prices for its own on day 1', async () => {
+    const day1 = await trialEmail('day-1', shop({ live: true }), origin, unsubscribe);
+    expect(day1.subject).toBe('Your builder is live. Are those your prices?');
+    expect(day1.html).toContain('Set my prices');
+    expect(day1.html).toContain('vvslab.magpollo.com/b/gold-mouth');
   });
 
   it('use the shop’s own numbers on day 12, and every email has the unsubscribe link', async () => {

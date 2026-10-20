@@ -4,7 +4,7 @@ import { Turnstile } from '../Turnstile';
 import { AuthPage } from '../auth/AuthPage';
 
 // /signup: a jeweler starts a free trial on their own. We create the shop and
-// email a sign-in link; they finish setup in /dashboard and switch it on.
+// email a sign-in link; the builder is live and they set their prices in /dashboard.
 
 const slugify = (name: string) =>
   name
@@ -79,7 +79,7 @@ export default function SignupPage() {
     return (
       <AuthPage
         title={<>Check your <em>email</em></>}
-        lead={<>We sent a link to <strong>{email}</strong>. Open it on this phone to set up {name || 'your shop'}: add your logo and prices, then switch your builder on.</>}
+        lead={<>We sent a link to <strong>{email}</strong>. Open it on this phone: {name || 'your shop'} is live, and you set your prices with three quick questions.</>}
         foot={<p>Nothing there in a minute? Check spam, or email <a href="mailto:salesteam@magpollo.com">salesteam@magpollo.com</a>.</p>}
       />
     );

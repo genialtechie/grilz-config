@@ -9,9 +9,10 @@ import type { ApiResult } from './tenantApi.js';
 import { isValidSlug, type TenantEnv } from './tenants.js';
 
 // POST /api/signup: a jeweler creates their shop without us.
-// Creates the shop (draft, 14-day trial with the card optional, small AI allowance, their email as the
-// lead inbox), records an owner invite and emails a sign-in link. They finish
-// setup in /dashboard and switch the shop live themselves.
+// Creates the shop live with the starting prices (14-day trial with the card
+// optional, small AI allowance, their email as the lead inbox), records an
+// owner invite and emails a sign-in link. In /dashboard they set their own
+// prices with three questions (MAG-90).
 //
 // Abuse controls: Turnstile, honeypot and timing, per-IP / per-email / global
 // daily limits, reserved slugs, and accounts created only here (public sign-up
@@ -119,7 +120,8 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
       slug,
       name,
       kind: 'shop',
-      status: 'draft',
+      // Live from the start (MAG-90): customers can use the link while they set their prices.
+      status: 'live',
       plan: 'trial',
       created_via: 'signup',
       trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString(),
@@ -129,8 +131,8 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
     return reply(409, { error: 'taken', field: 'slug', message: 'That link is taken. Try another.' });
   }
   const draft = await db.insert<{ id: string }>('tenant_configs', { tenant_id: tenantId, version: 1, config, status: 'draft', created_by: access.userId });
-  // v1 is published straight away (the shop stays a draft until they go live), so
-  // the trial allowance is the live value their later edits are held to.
+  // v1 is published straight away (the shop is live), so the trial allowance is
+  // the live value their later edits are held to.
   await db.rpc('publish_config_service', { config_id: draft.id, final_config: config, actor: access.userId });
   await db.insert('member_invites', { tenant_id: tenantId, email, role: 'owner', invited_by: access.userId });
   await log('created');

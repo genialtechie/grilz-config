@@ -67,7 +67,8 @@ describe.skipIf(!url || !key)('trial sequence (integration)', () => {
     await at(1.2);
     await at(1.5); // the same day again: nothing new
     expect(mine()).toHaveLength(1);
-    expect(mine()[0]).toMatchObject({ from: 'Karat from VVS Lab <hello@news.vvslab.test>', subject: 'Your builder is 10 minutes from live', reply_to: ['team@vvslab.test'] });
+    // New shops start live on the starting prices (MAG-90): day 1 asks for their prices.
+    expect(mine()[0]).toMatchObject({ from: 'Karat from VVS Lab <hello@news.vvslab.test>', subject: 'Your builder is live. Are those your prices?', reply_to: ['team@vvslab.test'] });
     expect(mine()[0].headers?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 

@@ -84,6 +84,13 @@ export const CatalogSchema = z.object({
 
 export const PricingSchema = z.object({
   currency: z.literal('USD'),
+  /**
+   * How the prices were set: the starting prices a new shop gets ('default'),
+   * the three quick questions ('quick'), or the full editor ('custom'). Shops
+   * from before quick pricing have none and are treated as 'custom', so the
+   * quick questions never rewrite their prices.
+   */
+  source: z.enum(['default', 'quick', 'custom']).optional(),
   display: z.enum(PRICE_DISPLAYS),
   base: money,
   metalPerTooth: priceMap(MetalIdSchema),

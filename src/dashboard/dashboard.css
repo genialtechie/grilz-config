@@ -4,6 +4,8 @@
 .admin h1.dash-h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 32px; letter-spacing: -0.01em; }
 .dash-header__shop { display: flex; flex-direction: column; min-width: 0; }
 .dash-header__shop .admin-header__brand { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* "Your page" stays on one line; the shop name gives way first. */
+.dash .admin-header .admin-button { white-space: nowrap; flex-shrink: 0; }
 
 .dash-nav { display: flex; gap: 4px; padding: 8px 24px 0; background: var(--a-card); border-bottom: 1px solid var(--a-line); position: sticky; top: 61px; z-index: 4; }
 .dash-nav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 2px solid transparent; color: var(--a-muted); text-decoration: none; font-weight: 600; }
@@ -153,3 +155,33 @@
 .dash-start-bar__go { min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #ce4257; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 .dash-start-bar__go:disabled { opacity: 0.6; }
 .dash-stats-empty { display: grid; gap: 8px; justify-items: start; } .dash-stats-empty p { margin: 0; line-height: 1.5; color: var(--a-muted); max-width: 520px; }
+
+/* Quick pricing (MAG-90) */
+.dash-quick { margin-bottom: 16px; }
+.admin .dash-quick .dash-serif { font-size: 30px; margin-bottom: 6px; }
+.dash-quick__form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: 460px; }
+/* A fieldset is as wide as its widest field unless told otherwise; number fields are wide. */
+.dash-quick__form fieldset { display: grid; gap: 8px; min-inline-size: 0; }
+.dash-quick__form .admin-prefix input, .dash-quick__edit .admin-prefix input { width: 100%; min-width: 0; }
+.dash-quick__form legend { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.dash-quick__fee { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-quick__choice { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--a-line); border-radius: 999px; background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+/* The radio itself is hidden (the pill shows the choice); 1px so the form's full-width input rule can't stretch it off screen. */
+.dash-quick__choice { position: relative; }
+.dash-quick__form .dash-quick__choice input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; opacity: 0; pointer-events: none; }
+.dash-quick__choice.is-active { border-color: #1b1714; background: #1b1714; color: #fff; }
+.dash-quick__choice:focus-within { outline: 2px solid #ce4257; outline-offset: 2px; }
+.dash-quick__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dash-quick__fee-line { margin: 4px 0 14px; }
+.dash-quick__lines { margin: 0 0 8px; padding: 0; list-style: none; max-width: 520px; }
+.dash-quick__lines li { border-bottom: 1px solid var(--a-line); }
+.dash-quick__line { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 48px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+button.dash-quick__line { cursor: pointer; }
+.dash-quick__line span { flex: 1; min-width: 0; }
+.dash-quick__line svg { flex: 0 0 auto; color: var(--a-muted); }
+.dash-quick__edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; }
+.dash-quick__edit > span { flex: 1 1 100%; font-weight: 600; font-size: 13px; }
+.dash-quick__edit .admin-prefix { flex: 1 1 140px; }
+.dash-advanced { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; padding: 6px 0; border: 0; background: none; color: var(--a-text); font: inherit; font-weight: 600; cursor: pointer; }
+.dash-advanced svg { transition: transform 160ms ease; }
+.dash-advanced[aria-expanded='true'] svg { transform: rotate(180deg); }

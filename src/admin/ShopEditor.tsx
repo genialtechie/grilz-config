@@ -176,6 +176,9 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       if (!current) return current;
       const next = structuredClone(current);
       change(next);
+      // A price set here, by hand, makes the shop's prices its own: the quick questions stop offering to redo them (MAG-90).
+      const source = next.pricing.source;
+      if ((source === 'default' || source === 'quick') && JSON.stringify({ ...next.pricing, source: null }) !== JSON.stringify({ ...current.pricing, source: null })) next.pricing.source = 'custom';
       return next;
     });
     setDirty(true);
