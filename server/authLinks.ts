@@ -16,11 +16,15 @@ type LinkFields = {
   email_confirmed_at?: string | null;
   invited_at?: string | null;
   last_sign_in_at?: string | null;
+  app_metadata?: Record<string, unknown>;
 };
 type LinkResponse = LinkFields & { properties?: LinkFields; user?: LinkFields };
 
-/** `existing`: the account was there before (the link signs into it, so only email it to them). */
-export type SignInLink = { ok: true; url: string; userId: string; existing: boolean } | { ok: false; reason: 'auth' | 'untrusted' };
+/**
+ * `existing`: the account was there before (the link signs into it, so only email it to them).
+ * `unconfirmed`: it was signed in at signup and its email isn't confirmed yet (MAG-91).
+ */
+export type SignInLink = { ok: true; url: string; userId: string; existing: boolean; unconfirmed: boolean } | { ok: false; reason: 'auth' | 'untrusted' };
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 
@@ -53,5 +57,5 @@ export async function signInLink(db: Db, email: string, origin: string, shop?: s
   // A brand-new invited account, or an account its owner has actually used.
   const trusted = existing ? Boolean(user.last_sign_in_at && user.email_confirmed_at) : Boolean(user.invited_at && !user.email_confirmed_at) || Boolean(user.last_sign_in_at);
   if (!trusted) return { ok: false, reason: 'untrusted' };
-  return { ok: true, url: welcomeUrl(origin, tokenHash, existing ? 'magiclink' : type, shop), userId: user.id, existing };
+  return { ok: true, url: welcomeUrl(origin, tokenHash, existing ? 'magiclink' : type, shop), userId: user.id, existing, unconfirmed: existing && user.app_metadata?.email_unconfirmed === true };
 }

@@ -18,7 +18,7 @@ describe('emailed sign-in links', () => {
   it('point at our welcome page with the hashed token, never at Supabase', async () => {
     const { db } = fakeDb([{ ok: true, data: { id: 'u1', action_link: 'https://x.supabase.co/auth/v1/verify?token=t#', hashed_token: HASH, verification_type: 'invite', invited_at: '2026-10-18T00:00:00Z', email_confirmed_at: null } }]);
     const link = await signInLink(db, 'new@shop.test', 'https://vvslab.magpollo.com/', 'gold-mouth');
-    expect(link).toEqual({ ok: true, userId: 'u1', existing: false, url: `https://vvslab.magpollo.com/dashboard/welcome?token_hash=${HASH}&type=invite&shop=gold-mouth` });
+    expect(link).toEqual({ ok: true, userId: 'u1', existing: false, unconfirmed: false, url: `https://vvslab.magpollo.com/dashboard/welcome?token_hash=${HASH}&type=invite&shop=gold-mouth` });
   });
 
   it('uses a magic link for an account its owner has used', async () => {
@@ -31,6 +31,16 @@ describe('emailed sign-in links', () => {
     expect(link.ok && new URL(link.url).searchParams.get('type')).toBe('magiclink');
     // So a claim never signs a phone into an account that was already there.
     expect(link.ok && link.existing).toBe(true);
+    expect(link.ok && link.unconfirmed).toBe(false);
+  });
+
+  it('flags an account signed in at signup whose email is still unconfirmed (MAG-91)', async () => {
+    const { db } = fakeDb([
+      { ok: false, status: 422, message: 'already registered' },
+      { ok: true, data: { user: { id: 'u4', last_sign_in_at: '2026-10-20T00:00:00Z', email_confirmed_at: '2026-10-20T00:00:00Z', app_metadata: { email_unconfirmed: true } }, properties: { hashed_token: HASH, verification_type: 'magiclink' } } },
+    ]);
+    const link = await signInLink(db, 'squat@shop.test', 'https://vvslab.magpollo.com', 'gold-mouth');
+    expect(link).toMatchObject({ ok: true, existing: true, unconfirmed: true });
   });
 
   it("refuses an account that exists but its owner never used", async () => {

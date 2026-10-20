@@ -22,10 +22,11 @@ describe('signup', () => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);
     const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'k' };
-    const base = { name: 'Gold Mouth', email: 'owner@goldmouth.com', slug: 'gold-mouth', terms: true, elapsedMs: 10_000 };
+    // Three fields (MAG-91); the link is optional and the terms line has no checkbox.
+    const base = { name: 'Gold Mouth', email: 'owner@goldmouth.com', instagram: 'goldmouth', elapsedMs: 10_000 };
     expect((await handleSignup({ ...base, email: 'nope' }, '1.2.3.4', env)).status).toBe(400);
     expect((await handleSignup({ ...base, slug: 'admin' }, '1.2.3.4', env)).status).toBe(400);
-    expect((await handleSignup({ ...base, terms: false }, '1.2.3.4', env)).status).toBe(400);
+    expect((await handleSignup({ ...base, name: ' ' }, '1.2.3.4', env)).status).toBe(400);
     expect((await handleSignup({ ...base, instagram: 'bad handle!' }, '1.2.3.4', env)).status).toBe(400);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -37,7 +38,7 @@ describe('signup', () => {
       return Response.json([{}]);
     }));
     const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'k' };
-    const result = await handleSignup({ name: 'Gold Mouth', email: 'owner@goldmouth.com', slug: 'gold-mouth', terms: true, website: 'spam.com', elapsedMs: 10_000 }, '1.2.3.4', env);
+    const result = await handleSignup({ name: 'Gold Mouth', email: 'owner@goldmouth.com', instagram: 'goldmouth', website: 'spam.com', elapsedMs: 10_000 }, '1.2.3.4', env);
     expect(result).toMatchObject({ status: 200, body: { ok: true } });
     expect(calls.every((call) => call.includes('/signup_attempts'))).toBe(true);
   });

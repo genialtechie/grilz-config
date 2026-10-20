@@ -111,3 +111,4 @@
 .auth-link { padding: 0; border: 0; background: none; color: var(--au-link); font: inherit; text-decoration: underline; cursor: pointer; }
 .auth .auth-button { color: #fff; }
 .auth__mark + .auth__title { margin-top: 20px; }
+.auth-field input.auth-code { font-size: 22px; letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }

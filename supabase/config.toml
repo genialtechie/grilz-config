@@ -244,6 +244,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# The sign-in email carries the link and its 6-digit code (MAG-91). Production
+# gets the same template and otp_length = 6 through the Management API at merge.
+[auth.email.template.magic_link]
+subject = "Your VVS Lab sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

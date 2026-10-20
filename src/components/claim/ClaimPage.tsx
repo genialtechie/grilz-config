@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { Loader2 } from 'lucide-react';
 import { AuthPage } from '../auth/AuthPage';
 import { Turnstile } from '../Turnstile';
+import { openShop } from '../../admin/supabase';
 import { claimToken } from '../../lib/emailSignIn';
 import { contrast, usableAccent } from '../../lib/tenant/theme';
 import '../auth/auth.css';
@@ -70,12 +71,9 @@ export default function ClaimPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ claim: token.current, email, turnstile, website, elapsedMs: Date.now() - opened.current }),
       });
-      const body = (await response.json().catch(() => ({}))) as { ok?: boolean; signIn?: string; slug?: string; message?: string; error?: string };
-      if (body.ok && body.signIn) {
-        // Signs them in on this phone (the welcome page verifies the token) and opens their dashboard.
-        window.location.assign(body.signIn);
-        return;
-      }
+      const body = (await response.json().catch(() => ({}))) as { ok?: boolean; session?: { access_token: string; refresh_token: string }; slug?: string; message?: string; error?: string };
+      // Signed in on this phone: straight to their dashboard.
+      if (body.ok && body.session && body.slug && (await openShop(body.session, body.slug))) return;
       if (body.ok) {
         setDone(body.message ?? `Check ${email} for a sign-in link.`);
       } else if (body.error === 'claimed' || body.error === 'expired' || body.error === 'revoked' || body.error === 'invalid') {

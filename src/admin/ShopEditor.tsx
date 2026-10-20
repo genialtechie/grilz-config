@@ -48,9 +48,14 @@ const startingConfig = (configs: ConfigRow[]): TenantConfig | null => {
   return parsed.ok ? parsed.config : (row.config as TenantConfig);
 };
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({ id, title, hint, children }: { id?: string; title: string; hint?: string; children: ReactNode }) {
+  const ref = useRef<HTMLElement | null>(null);
+  // A link to #<id> (the deposit offer, MAG-91) opens the editor at this section.
+  useEffect(() => {
+    if (id && window.location.hash === `#${id}`) ref.current?.scrollIntoView({ block: 'start' });
+  }, [id]);
   return (
-    <section className="admin-card admin-section">
+    <section ref={ref} id={id} className="admin-card admin-section">
       <h2>{title}</h2>
       {hint && <p className="admin-muted admin-section__hint">{hint}</p>}
       {children}
@@ -626,7 +631,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
             <Issue issues={issues} path="catalog.addOns" />
           </Section>
 
-          <Section title="Deposit" hint="Optional. Customers see it after they send their design. Card deposits go straight to your own Stripe account.">
+          <Section id="deposit" title="Deposit" hint="Optional. Customers see it after they send their design. Card deposits go straight to your own Stripe account.">
             <div className="admin-radios">
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'none'} onChange={() => update((next) => { next.deposit.mode = 'none'; })} /> No deposit</label>
               <label className="admin-check"><input type="radio" name="deposit" checked={deposit.mode === 'link'} onChange={() => update((next) => { next.deposit.mode = 'link'; })} /> Shop&apos;s payment link</label>
