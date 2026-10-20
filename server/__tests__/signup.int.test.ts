@@ -18,7 +18,7 @@ const dbUrl = process.env.INTEGRATION_DB_URL;
 const sql = (statement: string) => execFileSync('psql', [dbUrl!, '-v', 'ON_ERROR_STOP=1', '-qc', statement]);
 const env = { SUPABASE_URL: url ?? '', SUPABASE_SERVICE_ROLE_KEY: key ?? '', RESEND_API_KEY: 'test', RESEND_BASE_URL: 'https://resend.test', PUBLIC_ORIGIN: 'https://shop.test', LEAD_TOKEN_SECRET: 'salt' };
 const realFetch = globalThis.fetch;
-const sent: { to: string[]; subject: string; html: string }[] = [];
+const sent: { to: string[]; subject: string; html: string; text: string }[] = [];
 const stamp = Date.now();
 // A fresh test address block per run, so reruns on the same day don't hit the per-IP limit.
 const ip = (n: number) => `10.${Math.floor(stamp / 1000) % 250}.${Math.floor(stamp / 250_000) % 250}.${n}`;

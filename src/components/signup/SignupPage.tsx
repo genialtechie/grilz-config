@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Turnstile } from '../Turnstile';
 import { AuthPage } from '../auth/AuthPage';
-import { openShop } from '../../admin/supabase';
+import { openShop } from '../../lib/openShop';
 
 // /signup: a jeweler starts a free trial on their own (MAG-91: three fields).
 // We create the shop, live on the starting prices, with its link from their

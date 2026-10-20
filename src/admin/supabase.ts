@@ -19,17 +19,6 @@ export function supabase(): SupabaseClient {
 export const friendlyAuthError = (message: string) =>
   /only request this after|rate limit|too many requests/i.test(message) ? 'We just sent a link. Check your email, or try again in a minute.' : message;
 
-/**
- * Signs in with the session signup or a claim link hands back (MAG-91) and
- * opens the shop's dashboard. False if the session didn't take.
- */
-export async function openShop(session: { access_token: string; refresh_token: string }, slug: string): Promise<boolean> {
-  const { error } = await supabase().auth.setSession(session);
-  if (error) return false;
-  window.location.assign(`/dashboard/${slug}`);
-  return true;
-}
-
 export async function accessToken(): Promise<string | null> {
   const { data } = await supabase().auth.getSession();
   return data.session?.access_token ?? null;

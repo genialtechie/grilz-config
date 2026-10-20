@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { Loader2 } from 'lucide-react';
 import { AuthPage } from '../auth/AuthPage';
 import { Turnstile } from '../Turnstile';
-import { openShop } from '../../admin/supabase';
+import { openShop } from '../../lib/openShop';
 import { claimToken } from '../../lib/emailSignIn';
 import { contrast, usableAccent } from '../../lib/tenant/theme';
 import '../auth/auth.css';
