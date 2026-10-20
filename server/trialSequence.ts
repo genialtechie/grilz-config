@@ -37,15 +37,16 @@ export function stepFor(shop: TrialShop, row: Pick<ShopRow, 'trial_ends_at'>, no
   if (left === 2 || left === 3) return shop.hasCard ? null : 'day-12';
   if (day === 7 || day === 8) return shop.stripeReady ? null : 'day-7';
   if (day === 3 || day === 4) return shop.leads > 0 ? null : 'day-3';
-  if (day === 1 || day === 2) return shop.live ? null : 'day-1';
+  // New shops start live (MAG-90): day 1 is about making the prices theirs, or switching on an older shop.
+  if (day === 1 || day === 2) return shop.live && shop.pricesSet ? null : 'day-1';
   return null;
 }
 
 async function loadShop(db: Db, row: ShopRow, now: number): Promise<{ shop: TrialShop; owner: string | null }> {
-  const [published] = await db.select<{ version: number; logo: string | null }>('tenant_configs', {
+  const [published] = await db.select<{ version: number; logo: string | null; source: string | null }>('tenant_configs', {
     tenant_id: `eq.${row.id}`,
     status: 'eq.published',
-    select: 'version,logo:config->brand->>logo',
+    select: 'version,logo:config->brand->>logo,source:config->pricing->>source',
   });
   const leads = await db.select<{ total: number | string }>('leads', { tenant_id: `eq.${row.id}`, select: 'total' });
   return {
@@ -56,7 +57,8 @@ async function loadShop(db: Db, row: ShopRow, now: number): Promise<{ shop: Tria
       name: row.name,
       live: row.status === 'live',
       hasLogo: Boolean(published?.logo),
-      pricesSet: (published?.version ?? 0) > 1,
+      // Still on the starting prices, or (shops from before quick pricing) never republished.
+      pricesSet: published?.source ? published.source !== 'default' : (published?.version ?? 0) > 1,
       leads: leads.length,
       estimates: leads.reduce((sum, lead) => sum + Number(lead.total || 0), 0),
       stripeReady: Boolean(row.stripe_charges_enabled),

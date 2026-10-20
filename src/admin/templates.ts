@@ -1,11 +1,14 @@
 import type { TenantConfig } from '../lib/tenant/schema.js';
 import { VVSLAB_CONFIG } from '../lib/tenant/vvslab.js';
 
-// Starting points for a new shop. Prices are placeholders the onboarding call
-// replaces; every shop starts with no deposit until Stripe (Stage 5) or a link.
+// Starting points for a new shop. The prices are the VVS Lab starting prices
+// (pricing.source 'default'), which the shop replaces with its own through the
+// three quick questions (MAG-90) or the full editor; every shop starts with no
+// deposit until Stripe (Stage 5) or a link.
 
 const base = (name: string): TenantConfig => ({
   ...structuredClone(VVSLAB_CONFIG),
+  pricing: { ...structuredClone(VVSLAB_CONFIG.pricing), source: 'default' },
   brand: { name, accent: '#C9A45C', fontPair: 'modern-sans', poweredBy: true },
   deposit: { mode: 'none', rule: { type: 'fixed', amount: 100 } },
   leads: { email: [], sms: [] },

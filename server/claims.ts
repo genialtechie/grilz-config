@@ -15,8 +15,8 @@ import { forgetTenant } from './tenants.js';
 // Claim links (MAG-89). VVS Lab builds a jeweler's shop ahead of time (a
 // draft with no owner). At the counter the jeweler scans a QR code for
 // /claim/<token>, enters their email, and the shop is theirs: owner, 14-day
-// trial (card optional), published with their email as the lead inbox, the
-// welcome email sent, and signed in on that phone.
+// trial (card optional), published with their email as the lead inbox and
+// switched live (MAG-90), the welcome email sent, and signed in on that phone.
 //
 // Only a hash of the token is stored; a link is single use, lasts 7 days and
 // can be revoked. A new account is signed in on the spot. An email that
@@ -92,8 +92,7 @@ const closed = (state: Exclude<ClaimState, 'open'>) => reply(CLOSED[state][0], {
 
 /**
  * Makes the shop theirs once the link is spent: the newest config is published
- * with their email as the lead inbox (if it has none), so the builder works the
- * moment they switch it on.
+ * with their email as the lead inbox (if it has none) and the shop goes live.
  */
 async function handOver(db: Db, tenant: TenantRow, userId: string, email: string) {
   // Already on the team (as staff)? Then they're promoted.
@@ -102,6 +101,7 @@ async function handOver(db: Db, tenant: TenantRow, userId: string, email: string
   await db.update('tenants', { id: `eq.${tenant.id}`, billing_status: 'in.(none,canceled)' }, { plan: 'trial', trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString() });
   const latest = await latestConfig(db, tenant.id);
   if (!latest) {
+    // Nothing valid to publish: it stays a draft for VVS Lab to fix, rather than live with no builder.
     console.error('claim: no valid config to publish', tenant.slug);
     return;
   }
@@ -114,6 +114,8 @@ async function handOver(db: Db, tenant: TenantRow, userId: string, email: string
     const draft = await db.insert<{ id: string }>('tenant_configs', { tenant_id: tenant.id, version: latest.row.version + 1, config, status: 'draft', created_by: userId });
     await db.rpc('publish_config_service', { config_id: draft.id, final_config: config, actor: userId });
   }
+  // Published: like a self-serve signup, a claimed shop is live from the start (MAG-90).
+  await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.draft' }, { status: 'live' });
 }
 
 /** POST /api/signup with { claim }: the jeweler claims the shop with their email. */

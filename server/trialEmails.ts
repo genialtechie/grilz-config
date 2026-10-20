@@ -74,6 +74,28 @@ async function goLive(shop: TrialShop, origin: string, unsubscribe: string, stil
   };
 }
 
+/** Day 1, live on the starting prices (MAG-90): three questions make the prices theirs. */
+async function setPrices(shop: TrialShop, origin: string, unsubscribe: string): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
+  const subject = 'Your builder is live. Are those your prices?';
+  const element = h(
+    EmailFrame,
+    { brand, title: subject, preheader: 'Three quick questions and every price in your builder is yours.', footer: footer(shop, unsubscribe) },
+    h(Headline, { brand, align: 'center', size: 50, text: 'Make the prices *yours*' }),
+    h(Illustration, { src: karat(origin, 'nudge'), width: 168, alt: '' }),
+    h(Paragraph, { brand, margin: '18px 0 16px' }, 'Hey there,'),
+    h(Paragraph, { brand }, `${possessive(shop.name)} builder is live at `, h('strong', null, `${host(origin)}/b/${shop.slug}`), ' with our starting prices. Tell us what you charge for 10K gold and for iced, plus your service fee, and every other price is worked out from those.'),
+    h(Checklist, { brand, items: [{ label: 'Set your prices: three questions', done: shop.pricesSet }, { label: 'Add your logo', done: shop.hasLogo }] }),
+    h(CTA, { brand, href: dashboard(origin, shop) }, 'Set my prices'),
+    h(SignOff, { brand }),
+  );
+  return {
+    subject,
+    html: await html(element),
+    text: `${possessive(shop.name)} builder is live at ${host(origin)}/b/${shop.slug} with our starting prices. Three quick questions and every price is yours: ${dashboard(origin, shop)}\n\nUnsubscribe: ${unsubscribe}`,
+  };
+}
+
 /** Day 3, live: put the link where customers already are. */
 async function share(shop: TrialShop, origin: string, unsubscribe: string): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
@@ -186,7 +208,7 @@ async function lastDay(shop: TrialShop, origin: string, unsubscribe: string): Pr
 export function trialEmail(step: TrialStep, shop: TrialShop, origin: string, unsubscribe: string): Promise<RenderedEmail> {
   switch (step) {
     case 'day-1':
-      return goLive(shop, origin, unsubscribe, false);
+      return shop.live ? setPrices(shop, origin, unsubscribe) : goLive(shop, origin, unsubscribe, false);
     case 'day-3':
       return shop.live ? share(shop, origin, unsubscribe) : goLive(shop, origin, unsubscribe, true);
     case 'day-7':

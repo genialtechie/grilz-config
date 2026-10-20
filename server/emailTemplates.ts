@@ -272,16 +272,16 @@ export async function customerEmail({ lead, config, origin, images, depositHref 
  */
 export async function welcomeEmail({ shop, slug, link, origin, trialDays, claimed = false, oneTime = true }: { shop: string; slug: string; link: string; origin: string; trialDays: number; claimed?: boolean; oneTime?: boolean }): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
-  const next = claimed ? 'Check your prices, then switch it on.' : 'Add your logo and prices, then switch it on. It takes about 10 minutes.';
+  const next = claimed ? 'It’s live now. Check your prices: it takes about 2 minutes.' : 'It’s live now with starting prices. Set your own with three quick questions.';
   const element = h(
     EmailFrame,
-    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready${claimed ? '' : ' to set up'}`, footer: { reason: claimed ? "You're getting this because you claimed your shop on VVS Lab." : "You're getting this because you signed up for VVS Lab." } },
-    h(Headline, { brand, align: 'center', size: 54, text: 'Your builder is *ready*' }),
+    { brand, title: 'Your builder is live', preheader: `${shop}'s grillz builder is live`, footer: { reason: claimed ? "You're getting this because you claimed your shop on VVS Lab." : "You're getting this because you signed up for VVS Lab." } },
+    h(Headline, { brand, align: 'center', size: 54, text: 'Your builder is *live*' }),
     h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-wink.png`, width: 216, alt: 'Karat, the VVS Lab mascot, winking' }),
     h(Paragraph, { brand, margin: '18px 0 16px' }, 'Hey there,'),
     h(Paragraph, { brand }, `${shop} now has its own 3D grillz builder at `, h('strong', null, `${host(origin)}/b/${slug}`), '. Customers design their set, see your prices and send it straight to you, with a studio photo.'),
     h(Paragraph, { brand }, `${next} Your free trial runs ${trialDays} days.`),
-    h(CTA, { brand, href: link }, claimed ? 'Open my dashboard' : 'Set up my builder'),
+    h(CTA, { brand, href: link }, claimed ? 'Open my dashboard' : 'Set my prices'),
     oneTime
       ? h(
           Paragraph,
@@ -297,7 +297,7 @@ export async function welcomeEmail({ shop, slug, link, origin, trialDays, claime
     subject: claimed ? `${shop} is yours on VVS Lab` : 'Set up your VVS Lab builder',
     html: await html(element),
     text: oneTime
-      ? `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${claimed ? 'Open your dashboard' : 'Set it up and switch it on'} here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`
+      ? `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${claimed ? 'Open your dashboard' : 'Set your prices'} here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`
       : `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${next} Your dashboard: ${link}\n\nOn another phone or computer, sign in at ${dashboardUrl(origin)} with this email. Your free trial runs ${trialDays} days.`,
   };
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { BarChart3, ExternalLink, Globe, Inbox, LogOut, Store, Users } from 'lucide-react';
+import { BarChart3, ChevronDown, ExternalLink, Globe, Inbox, LogOut, Store, Users } from 'lucide-react';
 import { acceptInvites, myShops, type MyShop } from '../admin/data';
 import { LeadsPanel } from '../admin/LeadsPanel';
 import { ShopEditor } from '../admin/ShopEditor';
@@ -12,6 +12,8 @@ import { TeamPanel } from './TeamPanel';
 import { WebsitePanel } from './WebsitePanel';
 import { AuthPage } from '../components/auth/AuthPage';
 import { CardPrompt, GettingStarted, TrialBanner, TrialGate } from './GettingStarted';
+import { QuickPricing } from './QuickPricing';
+import { loadShopConfig, quickPricingFits } from './shopConfig';
 import '../admin/admin.css';
 import './dashboard.css';
 
@@ -107,6 +109,35 @@ function Welcome() {
   return <AuthPage title={<>Signing you <em>in</em></>} lead="One moment." />;
 }
 
+/**
+ * The Shop tab. A shop on the starting prices or quick prices gets the quick
+ * pricing card first and the full editor under Advanced (MAG-90); a shop that
+ * set its own prices in the editor gets the editor, as before.
+ */
+function ShopTab({ shop, reload }: { shop: MyShop; reload: () => void }) {
+  const [fits, setFits] = useState<boolean | null>(null);
+  const [advanced, setAdvanced] = useState(() => new URLSearchParams(window.location.search).has('advanced'));
+  const [editorKey, setEditorKey] = useState(0);
+  useEffect(() => {
+    void loadShopConfig(shop.slug).then((result) => setFits(quickPricingFits(result?.config ?? null)));
+  }, [shop.slug, editorKey]);
+  const top = <div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} compact /></div>;
+  if (fits === null) return top;
+  if (!fits) return <>{top}<ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>;
+  return (
+    <>
+      <div className="admin-main dash-start-wrap">
+        <GettingStarted shop={shop} onLive={reload} compact />
+        <QuickPricing shop={shop} onSaved={() => setEditorKey((key) => key + 1)} />
+        <button className="dash-advanced" type="button" aria-expanded={advanced} onClick={() => setAdvanced((open) => !open)}>
+          <ChevronDown size={16} aria-hidden="true" /> Advanced: logo, colours, what you sell and every price
+        </button>
+      </div>
+      {advanced && <ShopEditor key={editorKey} mode="shop" slug={shop.slug} role={shop.role} />}
+    </>
+  );
+}
+
 function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; reload: () => void }) {
   const { slug = '' } = useParams();
   const shop = shops.find((item) => item.slug === slug);
@@ -146,8 +177,8 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
         ))}
       </nav>
       <Routes>
-        <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
-        <Route path="shop" element={<><div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} compact /></div><ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>} />
+        <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><QuickPricing shop={shop} prompt /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
+        <Route path="shop" element={<ShopTab shop={shop} reload={reload} />} />
         <Route path="website" element={<WebsitePanel shop={shop} />} />
         <Route path="stats" element={<StatsPanel shop={shop} />} />
         <Route path="team" element={<TeamPanel shop={shop} />} />
