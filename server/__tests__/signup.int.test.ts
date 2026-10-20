@@ -1,7 +1,11 @@
+import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { handleDashboard } from '../dashboard';
 import { handleSignup, TRIAL_DAYS, TRIAL_GENERATIONS } from '../signup';
 import { forgetTenant, getPublishedTenant } from '../tenants';
+
+// Throwaway accounts in the local test database; generated so no password sits in the repo.
+const PASSWORD = `${randomBytes(12).toString('base64url')}-Aa1`;
 
 // Self-serve signup against a real (local) Supabase: the shop is live from the
 // start on the starting prices and a trial (MAG-90), the owner joins by
@@ -69,8 +73,8 @@ describe.skipIf(!url || !key || !anon)('self-serve signup (integration)', () => 
     expect(await rest(`members?tenant_id=eq.${tenant.id}&select=user_id`)).toHaveLength(0);
     const users = (await admin('users?per_page=1000', undefined, 'GET')) as { users: { id: string; email: string }[] };
     const owner = users.users.find((item) => item.email === email)!;
-    await admin(`users/${owner.id}`, { password: 'Int-test-pass-1!', email_confirm: true }, 'PUT');
-    const token = ((await (await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'Int-test-pass-1!' }) })).json()) as { access_token: string }).access_token;
+    await admin(`users/${owner.id}`, { password: PASSWORD, email_confirm: true }, 'PUT');
+    const token = ((await (await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: PASSWORD }) })).json()) as { access_token: string }).access_token;
     const accepted = await realFetch(`${url}/rest/v1/rpc/accept_member_invites`, { method: 'POST', headers: { apikey: anon!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json());
     expect(accepted).toBe(1);
 

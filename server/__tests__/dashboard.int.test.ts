@@ -1,7 +1,11 @@
+import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { handleDashboard } from '../dashboard';
 import { slugForHost } from '../tenants';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
+
+// Throwaway accounts in the local test database; generated so no password sits in the repo.
+const PASSWORD = `${randomBytes(12).toString('base64url')}-Aa1`;
 
 // Dashboard API against a real (local) Supabase: publishing keeps plan fields,
 // staff can't publish, invites stay pending until the invitee accepts, and
@@ -28,10 +32,10 @@ const rest = async (path: string, init: RequestInit = {}) => {
   return text ? JSON.parse(text) : null;
 };
 const signIn = async (email: string) => {
-  const response = await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'Int-test-pass-1!' }) });
+  const response = await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: PASSWORD }) });
   return ((await response.json()) as { access_token: string }).access_token;
 };
-const user = async (email: string) => ((await admin('users', { email, password: 'Int-test-pass-1!', email_confirm: true })) as { id: string }).id;
+const user = async (email: string) => ((await admin('users', { email, password: PASSWORD, email_confirm: true })) as { id: string }).id;
 const used = async (email: string) => { const id = await user(email); await signIn(email); return id; };
 
 let tenantId = '';
@@ -127,7 +131,7 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     // they accept by signing in with that email
     const users = (await admin('users?per_page=1000', undefined, 'GET')) as { users: { id: string; email: string }[] };
     const invitee = users.users.find((item) => item.email === email)!;
-    await admin(`users/${invitee.id}`, { password: 'Int-test-pass-1!', email_confirm: true }, 'PUT');
+    await admin(`users/${invitee.id}`, { password: PASSWORD, email_confirm: true }, 'PUT');
     const token = await signIn(email);
     const accepted = await realFetch(`${url}/rest/v1/rpc/accept_member_invites`, { method: 'POST', headers: { apikey: anon!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json());
     expect(accepted).toBe(1);

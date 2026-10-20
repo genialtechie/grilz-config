@@ -1,8 +1,12 @@
+import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { claimStatus, handleClaim } from '../claims';
 import { handleDashboard } from '../dashboard';
 import { TRIAL_DAYS } from '../../src/lib/trial';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
+
+// Throwaway accounts in the local test database; generated so no password sits in the repo.
+const PASSWORD = `${randomBytes(12).toString('base64url')}-Aa1`;
 
 // Claim links against a real (local) Supabase: VVS Lab builds a shop with no
 // owner, makes a claim link, and the jeweler claims it with their email and is
@@ -28,7 +32,7 @@ const rest = async (path: string, init: RequestInit = {}, token = key!) => {
 const authAdmin = (path: string, body: unknown, method = 'POST') =>
   realFetch(`${url}/auth/v1/admin/${path}`, { method, headers: { apikey: key!, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }).then((r) => r.json());
 const password = async (email: string) =>
-  ((await (await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: 'Int-test-pass-1!' }) })).json()) as { access_token: string }).access_token;
+  ((await (await realFetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: PASSWORD }) })).json()) as { access_token: string }).access_token;
 
 /** A shop as VVS Lab builds it in Admin → New shop: a draft config, no owner. */
 const buildShop = async (slug: string) => {
@@ -52,7 +56,7 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
       }
       return realFetch(input, init);
     });
-    const admin = (await authAdmin('users', { email: adminEmail, password: 'Int-test-pass-1!', email_confirm: true })) as { id: string };
+    const admin = (await authAdmin('users', { email: adminEmail, password: PASSWORD, email_confirm: true })) as { id: string };
     await rest('platform_admins', { method: 'POST', body: JSON.stringify({ user_id: admin.id }) });
     adminToken = await password(adminEmail);
     for (const slug of slugs) tenantIds.push(await buildShop(slug));
@@ -132,7 +136,7 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
     // Nobody can read links without being an admin; the jeweler can't make one.
     const jewelerToken = await (async () => {
       const users = (await authAdmin('users?per_page=1000', undefined, 'GET')) as { users: { id: string; email: string }[] };
-      await authAdmin(`users/${users.users.find((user) => user.email === jeweler)!.id}`, { password: 'Int-test-pass-1!' }, 'PUT');
+      await authAdmin(`users/${users.users.find((user) => user.email === jeweler)!.id}`, { password: PASSWORD }, 'PUT');
       return password(jeweler);
     })();
     expect(await rest(`claim_links?select=id`, {}, jewelerToken)).toEqual([]);
