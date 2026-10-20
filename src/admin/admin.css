@@ -127,6 +127,15 @@
 .admin-tier { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
 .admin-addon { display: grid; grid-template-columns: 1.4fr 1.4fr 0.8fr 0.9fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
 .admin-addon__remove { display: none; }
+/* Claim link (MAG-89) */
+.claim-card__fresh { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.claim-card__qr { width: 240px; max-width: 100%; height: auto; border: 1px solid var(--a-line); border-radius: 12px; image-rendering: pixelated; }
+.claim-card__side { flex: 1 1 220px; min-width: 0; display: grid; gap: 10px; }
+.claim-card__url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all; }
+.claim-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.claim-card__note { flex-basis: 100%; margin: 0; }
+.claim-card__claimed { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--a-text); overflow-wrap: anywhere; }
+.claim-card__claimed svg { flex: 0 0 auto; color: var(--a-ok); }
 @media (max-width: 720px) {
   .admin-addon { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding-bottom: 12px; border-bottom: 1px solid var(--a-line); }
   .admin-addon .admin-icon-button { grid-column: 1 / -1; justify-self: start; width: auto; gap: 6px; padding: 0 8px; grid-auto-flow: column; }

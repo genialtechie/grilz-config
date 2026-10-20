@@ -8,6 +8,7 @@ import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
+import { ClaimLinkCard } from './ClaimLinkCard';
 import { WebsitePanel } from '../dashboard/WebsitePanel';
 import { MARKET_DEFAULTS } from '../lib/metalMarket';
 import { MarketPricing } from './MarketPricing';
@@ -378,7 +379,10 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       {tab === 'website' && !shop ? (
         <WebsitePanel shop={{ ...tenant, role: 'admin' }} embedded />
       ) : tab === 'team' && !shop ? (
-        <TeamPanel shop={{ ...tenant, role: 'admin' }} embedded />
+        <>
+          {tenant.kind === 'shop' && tenant.status !== 'offboarded' && <ClaimLinkCard tenantId={tenant.id} shopName={config.brand.name} />}
+          <TeamPanel shop={{ ...tenant, role: 'admin' }} embedded />
+        </>
       ) : tab === 'leads' && !shop ? (
         <LeadsPanel tenantId={tenant.id} shopName={config.brand.name} />
       ) : (

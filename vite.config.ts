@@ -44,9 +44,11 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
     })
     server.middlewares.use('/api/signup', async (req, res) => {
       const { handleSignup, slugAvailable } = await server.ssrLoadModule('/server/signup.ts')
+      const { claimStatus, handleClaim } = await server.ssrLoadModule('/server/claims.ts')
       let result
       if (req.method === 'GET') {
-        result = await slugAvailable(new URLSearchParams((req.url ?? '').split('?')[1] ?? '').get('slug') ?? '', env)
+        const params = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
+        result = params.has('claim') ? await claimStatus(params.get('claim') ?? '', env) : await slugAvailable(params.get('slug') ?? '', env)
       } else {
         const chunks: Buffer[] = []
         for await (const chunk of req) chunks.push(chunk as Buffer)
@@ -56,7 +58,8 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
         } catch {
           // handled by handleSignup as invalid input
         }
-        result = await handleSignup(payload, req.socket.remoteAddress ?? 'local', env)
+        const claim = payload && typeof payload === 'object' && 'claim' in payload
+        result = claim ? await handleClaim(payload, req.socket.remoteAddress ?? 'local', env) : await handleSignup(payload, req.socket.remoteAddress ?? 'local', env)
       }
       res.statusCode = result.status
       res.setHeader('Content-Type', 'application/json')

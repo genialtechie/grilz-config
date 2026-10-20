@@ -265,30 +265,40 @@ export async function customerEmail({ lead, config, origin, images, depositHref 
 }
 
 /** Self-serve signup: the one-time link that signs the new owner in. */
-export async function welcomeEmail({ shop, slug, link, origin, trialDays }: { shop: string; slug: string; link: string; origin: string; trialDays: number }): Promise<RenderedEmail> {
+/**
+ * The welcome after signup, or after claiming a shop VVS Lab built for them
+ * (`claimed`). `oneTime`: the button is a one-time sign-in link (24 hours); when
+ * they're already signed in on the phone they claimed from, it's the dashboard.
+ */
+export async function welcomeEmail({ shop, slug, link, origin, trialDays, claimed = false, oneTime = true }: { shop: string; slug: string; link: string; origin: string; trialDays: number; claimed?: boolean; oneTime?: boolean }): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
+  const next = claimed ? 'Check your prices, then switch it on.' : 'Add your logo and prices, then switch it on. It takes about 10 minutes.';
   const element = h(
     EmailFrame,
-    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready to set up`, footer: { reason: "You're getting this because you signed up for VVS Lab." } },
+    { brand, title: 'Your builder is ready', preheader: `${shop}'s grillz builder is ready${claimed ? '' : ' to set up'}`, footer: { reason: claimed ? "You're getting this because you claimed your shop on VVS Lab." : "You're getting this because you signed up for VVS Lab." } },
     h(Headline, { brand, align: 'center', size: 54, text: 'Your builder is *ready*' }),
     h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-wink.png`, width: 216, alt: 'Karat, the VVS Lab mascot, winking' }),
     h(Paragraph, { brand, margin: '18px 0 16px' }, 'Hey there,'),
     h(Paragraph, { brand }, `${shop} now has its own 3D grillz builder at `, h('strong', null, `${host(origin)}/b/${slug}`), '. Customers design their set, see your prices and send it straight to you, with a studio photo.'),
-    h(Paragraph, { brand }, `Add your logo and prices, then switch it on. It takes about 10 minutes, and your free trial runs ${trialDays} days.`),
-    h(CTA, { brand, href: link }, 'Set up my builder'),
-    h(
-      Paragraph,
-      { brand, muted: true, size: 13, margin: '0' },
-      'The button works once and expires in 24 hours. After that, sign in any time at ',
-      h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
-      ". Didn't sign up? Ignore this email.",
-    ),
+    h(Paragraph, { brand }, `${next} Your free trial runs ${trialDays} days.`),
+    h(CTA, { brand, href: link }, claimed ? 'Open my dashboard' : 'Set up my builder'),
+    oneTime
+      ? h(
+          Paragraph,
+          { brand, muted: true, size: 13, margin: '0' },
+          'The button works once and expires in 24 hours. After that, sign in any time at ',
+          h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
+          claimed ? '.' : ". Didn't sign up? Ignore this email.",
+        )
+      : h(Paragraph, { brand, muted: true, size: 13, margin: '0' }, 'On another phone or computer, sign in at ', h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`), ' with this email.'),
     h(SignOff, { brand }),
   );
   return {
-    subject: 'Set up your VVS Lab builder',
+    subject: claimed ? `${shop} is yours on VVS Lab` : 'Set up your VVS Lab builder',
     html: await html(element),
-    text: `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. Set it up and switch it on here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`,
+    text: oneTime
+      ? `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${claimed ? 'Open your dashboard' : 'Set it up and switch it on'} here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`
+      : `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${next} Your dashboard: ${link}\n\nOn another phone or computer, sign in at ${dashboardUrl(origin)} with this email. Your free trial runs ${trialDays} days.`,
   };
 }
 

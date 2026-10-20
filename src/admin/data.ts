@@ -303,3 +303,23 @@ export async function updatePromoCode(id: string, patch: Partial<Pick<PromoCodeR
 export async function deletePromoCode(id: string) {
   must(await supabase().from('promo_codes').delete().eq('id', id).select('id'));
 }
+
+// ---------- Claim links (MAG-89) ----------
+// VVS Lab builds a shop ahead of time; the jeweler claims it at /claim/<token>.
+
+export type ClaimLinkRow = { id: string; created_at: string; expires_at: string; revoked_at: string | null; claimed_at: string | null; claimed_email: string | null };
+
+/** The shop's newest link and whether it has an owner (admins only, by row-level security). */
+export async function claimInfo(tenantId: string) {
+  const db = supabase();
+  const [links, owners] = await Promise.all([
+    db.from('claim_links').select('id,created_at,expires_at,revoked_at,claimed_at,claimed_email').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(1),
+    db.from('members').select('user_id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('role', 'owner'),
+  ]);
+  if (links.error) throw new Error(links.error.message);
+  return { link: (links.data?.[0] as ClaimLinkRow | undefined) ?? null, owned: (owners.count ?? 0) > 0 };
+}
+
+/** A new link (any open one is cancelled). The URL is shown once: only its hash is stored. */
+export const createClaimLink = (tenantId: string) => api<{ id: string; url: string; expiresAt: string }>('claim_create', { tenantId });
+export const revokeClaimLink = (tenantId: string, linkId: string) => api<{ ok: boolean }>('claim_revoke', { tenantId, linkId });

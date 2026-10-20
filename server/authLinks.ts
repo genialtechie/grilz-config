@@ -19,7 +19,8 @@ type LinkFields = {
 };
 type LinkResponse = LinkFields & { properties?: LinkFields; user?: LinkFields };
 
-export type SignInLink = { ok: true; url: string; userId: string } | { ok: false; reason: 'auth' | 'untrusted' };
+/** `existing`: the account was there before (the link signs into it, so only email it to them). */
+export type SignInLink = { ok: true; url: string; userId: string; existing: boolean } | { ok: false; reason: 'auth' | 'untrusted' };
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 
@@ -52,5 +53,5 @@ export async function signInLink(db: Db, email: string, origin: string, shop?: s
   // A brand-new invited account, or an account its owner has actually used.
   const trusted = existing ? Boolean(user.last_sign_in_at && user.email_confirmed_at) : Boolean(user.invited_at && !user.email_confirmed_at) || Boolean(user.last_sign_in_at);
   if (!trusted) return { ok: false, reason: 'untrusted' };
-  return { ok: true, url: welcomeUrl(origin, tokenHash, existing ? 'magiclink' : type, shop), userId: user.id };
+  return { ok: true, url: welcomeUrl(origin, tokenHash, existing ? 'magiclink' : type, shop), userId: user.id, existing };
 }
