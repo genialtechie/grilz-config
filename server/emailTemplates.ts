@@ -47,6 +47,9 @@ const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 const host = (origin: string) => origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
 const dashboardUrl = (origin: string) => `${origin.replace(/\/$/, '')}/dashboard`;
 const html = (element: ReactElement) => render(element);
+/** A 6-digit code, big and spaced, for when the button opens in the wrong browser. */
+const codeBlock = (brand: Brand, code: string) =>
+  h(Paragraph, { brand, margin: '0 0 16px' }, 'Or enter this code: ', h('strong', { style: { fontSize: '22px', letterSpacing: '0.18em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' } }, code));
 
 function designPhoto(brand: Brand, images: EmailImages, caption: string) {
   const cid = images.photo ? 'photo' : images.preview ? 'preview' : null;
@@ -71,6 +74,8 @@ export type ShopEmailInput = {
   images: EmailImages;
   photoPending: boolean;
   test: boolean;
+  /** The shop's first request, with deposits off and Stripe not connected: a link to set deposits up (MAG-91). */
+  depositOffer?: string | null;
 };
 
 /**
@@ -79,7 +84,7 @@ export type ShopEmailInput = {
  * screen shows the design, the customer's words and the one action (reach
  * them, fast); everything below is reference. Each fact appears once.
  */
-export async function shopEmail({ lead, config, origin, images, photoPending, test }: ShopEmailInput): Promise<RenderedEmail> {
+export async function shopEmail({ lead, config, origin, images, photoPending, test, depositOffer = null }: ShopEmailInput): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
   const reach = contactLink(lead.contact);
   const first = firstName(lead.name);
@@ -109,6 +114,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     lead.note && h(Quote, { brand }, lead.note),
     h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, reachCta(reach, first)),
     h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, ...contacts),
+    depositOffer && h(Paragraph, { brand, size: 15, margin: '20px 0 0' }, 'Take a deposit on orders like this? ', h(InlineLink, { brand, href: depositOffer }, 'Set it up in 2 minutes')),
     specList(brand, 'What they designed', lead.summary),
     h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${market}${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
   );
@@ -118,6 +124,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     '',
     `${reachCta(reach, first)}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
+    depositOffer ? `\nTake a deposit on orders like this? Set it up in 2 minutes: ${depositOffer}` : '',
     '',
     'What they designed:',
     ...lead.summary.map((line) => `- ${line}`),
@@ -270,7 +277,7 @@ export async function customerEmail({ lead, config, origin, images, depositHref 
  * (`claimed`). `oneTime`: the button is a one-time sign-in link (24 hours); when
  * they're already signed in on the phone they claimed from, it's the dashboard.
  */
-export async function welcomeEmail({ shop, slug, link, origin, trialDays, claimed = false, oneTime = true }: { shop: string; slug: string; link: string; origin: string; trialDays: number; claimed?: boolean; oneTime?: boolean }): Promise<RenderedEmail> {
+export async function welcomeEmail({ shop, slug, link, origin, trialDays, claimed = false, oneTime = true, code }: { shop: string; slug: string; link: string; origin: string; trialDays: number; claimed?: boolean; oneTime?: boolean; code?: string }): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
   const next = claimed ? 'It’s live now. Check your prices: it takes about 2 minutes.' : 'It’s live now with starting prices. Set your own with three quick questions.';
   const element = h(
@@ -282,11 +289,12 @@ export async function welcomeEmail({ shop, slug, link, origin, trialDays, claime
     h(Paragraph, { brand }, `${shop} now has its own 3D grillz builder at `, h('strong', null, `${host(origin)}/b/${slug}`), '. Customers design their set, see your prices and send it straight to you, with a studio photo.'),
     h(Paragraph, { brand }, `${next} Your free trial runs ${trialDays} days.`),
     h(CTA, { brand, href: link }, claimed ? 'Open my dashboard' : 'Set my prices'),
+    code ? codeBlock(brand, code) : null,
     oneTime
       ? h(
           Paragraph,
           { brand, muted: true, size: 13, margin: '0' },
-          'The button works once and expires in 24 hours. After that, sign in any time at ',
+          `The ${code ? 'button and code work' : 'button works'} once, for an hour. After that, sign in any time at `,
           h(InlineLink, { brand, href: dashboardUrl(origin) }, `${host(origin)}/dashboard`),
           claimed ? '.' : ". Didn't sign up? Ignore this email.",
         )
@@ -297,8 +305,28 @@ export async function welcomeEmail({ shop, slug, link, origin, trialDays, claime
     subject: claimed ? `${shop} is yours on VVS Lab` : 'Set up your VVS Lab builder',
     html: await html(element),
     text: oneTime
-      ? `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${claimed ? 'Open your dashboard' : 'Set your prices'} here: ${link}\n\nThe link works once and expires in 24 hours. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`
+      ? `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${claimed ? 'Open your dashboard' : 'Set your prices'} here: ${link}${code ? `\nOr enter this code: ${code}` : ''}\n\nThe link works once, for an hour. After that, sign in any time at ${dashboardUrl(origin)}. Your free trial runs ${trialDays} days.`
       : `Welcome to VVS Lab.\n\nYour builder link is ${origin}/b/${slug}. ${next} Your dashboard: ${link}\n\nOn another phone or computer, sign in at ${dashboardUrl(origin)} with this email. Your free trial runs ${trialDays} days.`,
+  };
+}
+
+/** Confirm your email (MAG-91): the dashboard's Resend button. The link or the code confirms it. */
+export async function confirmEmail({ link, code, origin }: { link: string; code: string; origin: string }): Promise<RenderedEmail> {
+  const brand = vvsBrand(origin);
+  const element = h(
+    EmailFrame,
+    { brand, title: 'Confirm your email', preheader: `Your code is ${code}. Customer requests come to this address.`, footer: { reason: "You're getting this because you asked to confirm your email on VVS Lab." } },
+    h(Headline, { brand, align: 'center', size: 50, text: 'Confirm your *email*' }),
+    h(Paragraph, { brand, margin: '18px 0 16px' }, 'Customer design requests come to this address. Tap the button, or enter the code on your dashboard.'),
+    h(CTA, { brand, href: link }, 'Confirm my email'),
+    codeBlock(brand, code),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '0' }, "The button and code work once, for an hour. Didn't ask for this? Ignore this email."),
+    h(SignOff, { brand }),
+  );
+  return {
+    subject: `${code} is your VVS Lab code`,
+    html: await html(element),
+    text: `Confirm your email for VVS Lab. Customer design requests come to this address.\n\nConfirm: ${link}\nOr enter this code: ${code}\n\nThe link and code work once, for an hour.`,
   };
 }
 

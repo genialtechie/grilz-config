@@ -139,31 +139,47 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     for (const id of tenantIds) await rest(`tenants?id=eq.${id}`, { method: 'DELETE' });
   });
 
-  it('signup: the welcome email signs the new owner in and opens their shop', async () => {
+  it('signup: three fields, signed in on the phone right away, then the emailed code confirms the email', async () => {
     const slug = `e2e-signup-${stamp}`;
     const email = `owner-${stamp}@e2e.test`;
-    const response = await fetch(`${origin}/api/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'E2E Gold Teeth', email, slug, terms: true, elapsedMs: 20_000 }),
-    });
-    expect(response.status).toBe(200);
+    const context = await browser.newContext({ ...devices['iPhone 13'] });
+    const page = await context.newPage();
+    await page.goto(`${origin}/signup`);
+    await page.getByRole('button', { name: 'Start my free trial' }).waitFor({ timeout: 30_000 });
+    expect(await page.getByRole('checkbox').count()).toBe(0); // the terms are a line, not a box
+    await page.waitForTimeout(4_100); // as long as a person takes to type it
+    await page.getByLabel('Shop name').fill('E2E Gold Teeth');
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel(/Instagram/).fill(`@e2e.signup_${stamp}`);
+    await page.getByRole('button', { name: 'Start my free trial' }).click();
+
+    // Straight into their dashboard (the link from the handle), with the confirm bar up.
+    await page.waitForURL(`${origin}/dashboard/${slug}`, { timeout: 60_000 });
+    await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Gold Teeth');
     const [tenant] = await rest(`tenants?slug=eq.${slug}&select=id`);
     tenantIds.push(tenant.id);
+    expect(await rest(`members?tenant_id=eq.${tenant.id}&select=role`)).toEqual([{ role: 'owner' }]);
+    const bar = page.locator('.dash-verify');
+    await expect.poll(() => bar.textContent(), { timeout: 30_000 }).toContain('Confirm your email so customer requests reach you');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
+    // The welcome email: a link and a 6-digit code. The code, typed into the bar, confirms the email.
     const { mail, link } = await linkFor(email);
     expect(mail.from).toBe('VVS Lab <hello@vvslab.magpollo.com>');
     expect(link.startsWith(`${origin}/dashboard/welcome?token_hash=`)).toBe(true);
     expect(mail.html).not.toContain('/auth/v1/verify');
-
-    const { context, page } = await openFresh(link);
-    await page.waitForURL(`${origin}/dashboard/${slug}`, { timeout: 60_000 });
+    const code = mail.text.match(/enter this code: (\d{6})/)?.[1];
+    expect(code).toMatch(/^\d{6}$/);
+    await bar.getByRole('button', { name: 'Enter code' }).click();
+    await bar.getByLabel('Code from the email').fill(code!);
+    await bar.getByRole('button', { name: 'Confirm' }).click();
+    await expect.poll(() => page.locator('.dash-verify').count(), { timeout: 30_000 }).toBe(0);
+    await page.reload();
     await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Gold Teeth');
-    expect(page.url()).not.toContain('token_hash');
-    expect(await rest(`members?tenant_id=eq.${tenant.id}&select=role`)).toEqual([{ role: 'owner' }]);
+    expect(await page.locator('.dash-verify').count()).toBe(0);
     await context.close();
 
-    // The link works once.
+    // The link and the code work once: the code was used, so the link is spent too.
     const again = await openFresh(link);
     await expect.poll(() => again.page.getByRole('heading', { level: 1 }).textContent(), { timeout: 30_000 }).toBe('That link has expired');
     expect(again.page.url()).toBe(`${origin}/dashboard/welcome`);
@@ -263,6 +279,7 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     await page.getByRole('button', { name: 'Claim my shop' }).click();
     await page.waitForURL(`${origin}/dashboard/${slug}`, { timeout: 60_000 });
     await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Claim Gold');
+    await expect.poll(() => page.locator('.dash-verify').count(), { timeout: 30_000 }).toBe(1); // email confirmed later
 
     // Theirs: owner, trial started, published with their email as the lead inbox, welcomed.
     expect(await rest(`members?tenant_id=eq.${tenant.id}&select=role`)).toEqual([{ role: 'owner' }]);

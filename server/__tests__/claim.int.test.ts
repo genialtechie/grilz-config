@@ -82,16 +82,11 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
 
     const claimed = await handleClaim({ claim: tokenOf(link), email: jeweler, elapsedMs: 10_000 }, ip(1), env);
     expect(claimed.status).toBe(200);
-    const signIn = (claimed.body as { signIn: string }).signIn;
-    expect(signIn).toContain(`https://shop.test/dashboard/welcome?token_hash=`);
-    expect(signIn).toContain(`shop=${slugs[0]}`);
-
-    // The welcome page signs them in with that token (verifyOtp), on this phone.
-    const tokenHash = new URL(signIn).searchParams.get('token_hash');
-    const type = new URL(signIn).searchParams.get('type');
-    const session = (await (await realFetch(`${url}/auth/v1/verify`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ token_hash: tokenHash, type }) })).json()) as { access_token?: string; user?: { email: string } };
+    // Signed in on this phone right away (MAG-91); the email gets confirmed later.
+    const session = (claimed.body as { session?: { access_token: string; refresh_token: string } }).session!;
     expect(session.access_token).toBeTruthy();
-    expect(session.user?.email).toBe(jeweler);
+    expect(session.refresh_token).toBeTruthy();
+    expect(await handleDashboard('email_status', {}, session.access_token, env)).toMatchObject({ body: { confirmed: false } });
 
     // As the jeweler: they own the shop.
     const mine = await rest(`members?select=role,tenants(slug)`, {}, session.access_token);
@@ -106,10 +101,15 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
     const [config] = await rest(`tenant_configs?tenant_id=eq.${tenantIds[0]}&status=eq.published&select=version,config`);
     expect(config.version).toBe(tenant.published_version);
     expect(config.config.leads.email).toEqual([jeweler]);
-    // The welcome email went to them and links to the dashboard (they're already signed in).
-    const welcome = sent.find((mail) => mail.to.includes(jeweler));
+    // The welcome email went to them with a sign-in link to the shop and a 6-digit code, which confirms the email.
+    const welcome = sent.find((mail) => mail.to.includes(jeweler)) as { subject: string; html: string; text: string } | undefined;
     expect(welcome?.subject).toBe('Claim A is yours on VVS Lab');
-    expect(welcome?.html).toContain(`https://shop.test/dashboard/${slugs[0]}`);
+    expect(welcome?.html).toContain(`https://shop.test/dashboard/welcome?token_hash=`);
+    expect(welcome?.html).toContain(`shop=${slugs[0]}`);
+    const code = welcome?.text.match(/enter this code: (\d{6})/)?.[1];
+    const fromEmail = (await (await realFetch(`${url}/auth/v1/verify`, { method: 'POST', headers: { apikey: anon!, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'email', email: jeweler, token: code }) })).json()) as { access_token?: string };
+    expect(fromEmail.access_token).toBeTruthy();
+    expect(await handleDashboard('email_status', {}, fromEmail.access_token!, env)).toMatchObject({ body: { confirmed: true } });
     // Logged for admin: who and when.
     const [log] = await rest(`claim_links?tenant_id=eq.${tenantIds[0]}&select=claimed_at,claimed_email`, {}, adminToken);
     expect(log.claimed_email).toBe(jeweler);

@@ -8,6 +8,7 @@ import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
 import { offboardTenant } from './offboard.js';
 import { createClaimLink, revokeClaimLink } from './claims.js';
+import { checkEmailConfirmed, emailUnconfirmed, resendConfirmation } from './emailConfirm.js';
 import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
 import { forgetTenant, type TenantEnv } from './tenants.js';
@@ -251,6 +252,17 @@ export async function handleDashboard(action: string, payload: unknown, token: s
     const user = await db.userFromToken(token);
     if (!user) return reply(401, { error: 'sign_in' });
     if (action === 'publish') return await publish(db, user.id, body);
+    // Email not confirmed yet (signed up on this device, MAG-91): payouts, team invites and custom domains wait for it.
+    if (emailUnconfirmed(user) && ['invite', 'domain_add', 'connect_onboard'].includes(action) && !(await checkEmailConfirmed(db, user, token))) {
+      return reply(403, { error: 'confirm_email', message: 'Confirm your email first: tap the link or enter the code we sent you.' });
+    }
+    if (action === 'email_status') return reply(200, { confirmed: await checkEmailConfirmed(db, user, token) });
+    if (action === 'email_resend') {
+      const result = (await checkEmailConfirmed(db, user, token)) ? 'confirmed' : await resendConfirmation(db, user, env, typeof body.shop === 'string' ? body.shop : undefined);
+      if (result === 'wait') return reply(429, { error: 'wait', message: 'We just sent one. Give it a minute, then check spam.' });
+      if (result === 'failed') return reply(503, { error: 'unavailable', message: 'Couldn’t send it. Try again in a minute.' });
+      return reply(200, { sent: result === 'sent', confirmed: result === 'confirmed' });
+    }
     if (action === 'invite') return await invite(db, user, body, env);
     if (action === 'stats') return await stats(db, user.id, body, env);
     if (action.startsWith('domain')) return await domain(db, user.id, action, body, env);

@@ -185,3 +185,23 @@ button.dash-quick__line { cursor: pointer; }
 .dash-advanced { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; padding: 6px 0; border: 0; background: none; color: var(--a-text); font: inherit; font-weight: 600; cursor: pointer; }
 .dash-advanced svg { transition: transform 160ms ease; }
 .dash-advanced[aria-expanded='true'] svg { transform: rotate(180deg); }
+
+/* Confirm-email bar and its code field (MAG-91) */
+.dash-verify { align-items: center; }
+.dash-code { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; flex-basis: 100%; }
+.dash-code label { display: flex; align-items: center; gap: 8px; }
+.dash-code input { width: 7.5em; padding: 6px 8px; border: 1px solid #5a5248; border-radius: 6px; background: #f3eee4; color: #1f1b16; font: inherit; font-size: 16px; letter-spacing: 0.2em; text-align: center; }
+.dash-code small { flex-basis: 100%; text-align: center; color: #f0b9a8; }
+
+/* Deposit offer on Leads (MAG-91) */
+.dash-offer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 12px 12px 16px; }
+.dash-offer p { margin: 0; font-size: 15px; }
+.dash-offer a { color: inherit; font-weight: 600; }
+
+/* Add your logo (MAG-91): the monogram until there's a real one */
+.dash-logo { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.dash-logo__mark { display: grid; place-items: center; width: 64px; height: 64px; border: 1.5px solid var(--a-text); border-radius: 50%; overflow: hidden; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
+.dash-logo__mark img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.dash-logo__body h2 { margin: 0 0 4px; }
+.dash-logo__body p { margin: 0 0 12px; }
+.dash-logo__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

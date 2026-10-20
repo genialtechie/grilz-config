@@ -2020,6 +2020,20 @@
   object-position: left center;
 }
 
+.shop-brand__monogram {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
 .shop-brand__wordmark {
   overflow: hidden;
   font-size: 17px;
@@ -2124,6 +2138,12 @@
   .shop-brand__logo {
     height: 30px;
     max-width: 120px;
+  }
+
+  .shop-brand__monogram {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
   }
 
   .shop-brand__ig {

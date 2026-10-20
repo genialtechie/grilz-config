@@ -137,7 +137,8 @@ export async function notifyLead(leadId: string, reason: NotifyReason, env: Noti
   if (photo) await db.update('leads', { id: `eq.${row.id}` }, { photo_notified_at: new Date().toISOString() }).catch(() => {});
 
   const { to, test } = recipientsFor(tenant, env);
-  const shop = await shopEmail({ lead, config: tenant.config, origin, images, photoPending, test });
+  const depositOffer = test ? null : await depositOfferFor(db, row, tenant, origin);
+  const shop = await shopEmail({ lead, config: tenant.config, origin, images, photoPending, test, depositOffer });
   let result: 'sent' | 'skipped' | 'failed' = 'skipped';
   if (to.length === 0) {
     await event(db, row, 'email_skipped', { reason: 'no_recipients' });
@@ -189,6 +190,19 @@ export async function notifyDepositPaid(leadId: string, amount: number, env: Not
 }
 
 /** Where the customer pays the deposit from their email: the shop's own payment link, or our Stripe Checkout link. */
+/**
+ * Deposits start off (MAG-91). A shop's first design request offers them, while
+ * deposits are off and Stripe isn't connected: a link to the deposit settings.
+ */
+export async function depositOfferFor(db: Db, row: LeadRow, tenant: PublishedTenant, origin: string): Promise<string | null> {
+  if (tenant.kind !== 'shop' || tenant.config.deposit.mode !== 'none') return null;
+  const [shop] = await db.select<{ stripe_charges_enabled: boolean | null }>('tenants', { id: `eq.${row.tenant_id}`, select: 'stripe_charges_enabled' }).catch(() => []);
+  if (!shop || shop.stripe_charges_enabled) return null;
+  // This request is already counted (notified_at was just set).
+  const sent = await db.count('leads', { tenant_id: `eq.${row.tenant_id}`, notified_at: 'not.is.null' }).catch(() => 0);
+  return sent === 1 ? `${origin.replace(/\/$/, '')}/dashboard/${tenant.slug}/shop?advanced=1#deposit` : null;
+}
+
 async function depositLink(db: Db, row: LeadRow, tenant: PublishedTenant, origin: string, env: NotifyEnv): Promise<string | null> {
   const deposit = tenant.config.deposit;
   if (row.deposit === null || Number(row.deposit) <= 0 || row.deposit_paid_at) return null;

@@ -11,6 +11,8 @@ export class DbError extends Error {
 }
 
 export type Db = ReturnType<typeof createDb>;
+export type AuthUser = { id: string; email?: string; app_metadata?: Record<string, unknown> };
+export type AuthSession = { access_token: string; refresh_token: string; expires_in?: number; expires_at?: number; user: AuthUser };
 
 export const hasDb = (env: TenantEnv) => Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -115,10 +117,22 @@ export function createDb(env: TenantEnv) {
     },
 
     /** The signed-in user behind a Supabase access token, or null. */
-    userFromToken: async (token: string): Promise<{ id: string; email?: string } | null> => {
+    userFromToken: async (token: string): Promise<AuthUser | null> => {
       const response = await fetch(`${base}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` } });
       if (!response.ok) return null;
-      return (await response.json()) as { id: string; email?: string };
+      return (await response.json()) as AuthUser;
+    },
+
+    /** Spends a one-time sign-in token here, on the server, and returns the session it opens. */
+    authVerify: async (tokenHash: string, type: 'invite' | 'magiclink'): Promise<AuthSession | null> => {
+      const response = await fetch(`${base}/auth/v1/verify`, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify({ token_hash: tokenHash, type }) });
+      return response.ok ? ((await response.json()) as AuthSession) : null;
+    },
+
+    /** Merges server-only flags into a user's app_metadata (users can't change it). */
+    authUpdateAppMetadata: async (userId: string, appMetadata: Record<string, unknown>) => {
+      const response = await fetch(`${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: 'PUT', headers: headers({ 'Content-Type': 'application/json' }), body: JSON.stringify({ app_metadata: appMetadata }) });
+      if (!response.ok) throw new DbError(response.status, `auth update ${response.status}`);
     },
   };
 }

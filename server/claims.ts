@@ -7,6 +7,7 @@ import { signInLink } from './authLinks.js';
 import { createDb, hasDb, type Db } from './db.js';
 import { sendEmail } from './email.js';
 import { welcomeEmail } from './emailTemplates.js';
+import { emailSignIn, endSessions, signInOnDevice } from './emailConfirm.js';
 import type { SignupEnv } from './signup.js';
 import { hashIp, looksAutomated, verifyTurnstile } from './spam.js';
 import type { ApiResult } from './tenantApi.js';
@@ -151,16 +152,21 @@ export async function handleClaim(payload: unknown, ip: string, env: SignupEnv):
   }
   // One request wins the link; a second phone tapping at the same moment gets "already claimed".
   if (!(await db.rpc<boolean>('spend_claim_link', { link: link.id, claimer: signIn.userId, claimer_email: email }))) return closed('claimed');
+  // Signed in at signup and never confirmed: that session may not be this email's owner's, so it ends before the shop is added.
+  if (signIn.unconfirmed) await endSessions(db, signIn.userId);
   await handOver(db, tenant, signIn.userId, email);
   await forgetTenant(tenant.slug);
   await log('claimed');
 
-  // A new account signs in right here; an existing one gets its sign-in link by email.
-  const welcome = await welcomeEmail({ shop: tenant.name, slug: tenant.slug, link: signIn.existing ? signIn.url : `${origin}/dashboard/${tenant.slug}`, origin, trialDays: TRIAL_DAYS, claimed: true, oneTime: signIn.existing });
+  // A new account signs in right here (its email confirmed later, MAG-91); an existing one gets its sign-in by email.
+  const session = signIn.existing ? null : await signInOnDevice(db, signIn.url).catch(() => null);
+  // The email's own link and code (made after that sign-in: one token at a time per account).
+  const emailed = (await emailSignIn(db, email, origin, tenant.slug)) ?? { url: `${origin}/dashboard/${tenant.slug}`, code: undefined };
+  const welcome = await welcomeEmail({ shop: tenant.name, slug: tenant.slug, link: emailed.url, code: emailed.code, origin, trialDays: TRIAL_DAYS, claimed: true, oneTime: Boolean(emailed.code) });
   await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...welcome, headers: { 'X-Entity-Ref-ID': `claim-${tenant.id}` } }, env);
-  return signIn.existing
-    ? reply(200, { ok: true, slug: tenant.slug, message: `${tenant.name} is yours. We added it to your account: check ${email} for a sign-in link.` })
-    : reply(200, { ok: true, slug: tenant.slug, signIn: signIn.url });
+  return session
+    ? reply(200, { ok: true, slug: tenant.slug, session })
+    : reply(200, { ok: true, slug: tenant.slug, message: `${tenant.name} is yours. We added it to your account: check ${email} for a sign-in link.` });
 }
 
 // ---------- Admin ----------

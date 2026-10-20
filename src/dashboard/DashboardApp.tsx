@@ -13,6 +13,10 @@ import { WebsitePanel } from './WebsitePanel';
 import { AuthPage } from '../components/auth/AuthPage';
 import { CardPrompt, GettingStarted, TrialBanner, TrialGate } from './GettingStarted';
 import { QuickPricing } from './QuickPricing';
+import { ConfirmBanner } from './ConfirmEmail';
+import { DepositOffer } from './DepositOffer';
+import { LogoPrompt } from './LogoPrompt';
+import { codeDigits, verifyEmailCode } from './emailCode';
 import { loadShopConfig, quickPricingFits } from './shopConfig';
 import '../admin/admin.css';
 import './dashboard.css';
@@ -26,6 +30,9 @@ function SignIn({ expired }: { expired?: boolean }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [checking, setChecking] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -43,13 +50,32 @@ function SignIn({ expired }: { expired?: boolean }) {
     } else setState('sent');
   };
 
+  const enterCode = async (event: FormEvent) => {
+    event.preventDefault();
+    setCodeError('');
+    setChecking(true);
+    // Signed in: the dashboard takes over from here.
+    const failed = await verifyEmailCode(email, code);
+    setChecking(false);
+    if (failed) setCodeError(failed);
+  };
+
   if (state === 'sent') {
     return (
       <AuthPage
         title={<>Check your <em>email</em></>}
-        lead={<>If <strong>{email}</strong> has a VVS Lab shop, a sign-in link is on its way. Open it on this device.</>}
+        lead={<>If <strong>{email}</strong> has a VVS Lab shop, a sign-in link is on its way. Tap it, or enter the 6-digit code from the email here.</>}
         foot={<p>Nothing there in a minute? Check spam, or <button className="auth-link" type="button" onClick={() => setState('idle')}>try another email</button>.</p>}
-      />
+      >
+        <form className="auth-form" onSubmit={enterCode}>
+          <label className="auth-field">
+            <span>Code</span>
+            <input className="auth-code" value={code} onChange={(event) => setCode(codeDigits(event.target.value))} inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" placeholder="123456" required />
+          </label>
+          {codeError && <p className="auth-error" role="alert">{codeError}</p>}
+          <button className="auth-button" type="submit" disabled={checking || code.length !== 6}>{checking ? 'Checking…' : 'Sign in'}</button>
+        </form>
+      </AuthPage>
     );
   }
 
@@ -121,13 +147,14 @@ function ShopTab({ shop, reload }: { shop: MyShop; reload: () => void }) {
   useEffect(() => {
     void loadShopConfig(shop.slug).then((result) => setFits(quickPricingFits(result?.config ?? null)));
   }, [shop.slug, editorKey]);
-  const top = <div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} compact /></div>;
+  const top = <div className="admin-main dash-start-wrap"><GettingStarted shop={shop} onLive={reload} compact /><LogoPrompt shop={shop} /></div>;
   if (fits === null) return top;
   if (!fits) return <>{top}<ShopEditor mode="shop" slug={shop.slug} role={shop.role} /></>;
   return (
     <>
       <div className="admin-main dash-start-wrap">
         <GettingStarted shop={shop} onLive={reload} compact />
+        <LogoPrompt shop={shop} />
         <QuickPricing shop={shop} onSaved={() => setEditorKey((key) => key + 1)} />
         <button className="dash-advanced" type="button" aria-expanded={advanced} onClick={() => setAdvanced((open) => !open)}>
           <ChevronDown size={16} aria-hidden="true" /> Advanced: logo, colours, what you sell and every price
@@ -166,6 +193,7 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
           <button className="admin-icon-button" type="button" onClick={() => void supabase().auth.signOut()} aria-label="Sign out"><LogOut size={16} /></button>
         </div>
       </header>
+      <ConfirmBanner email={email} shop={shop.slug} />
       <TrialBanner shop={shop} onCard={() => setCardOpen(true)} />
       <CardPrompt key={`${shop.id}-${cardOpen}`} shop={shop} forced={cardOpen} onClose={() => setCardOpen(false)} />
       <TrialGate shop={shop}>
@@ -177,7 +205,7 @@ function ShopShell({ shops, email, reload }: { shops: MyShop[]; email: string; r
         ))}
       </nav>
       <Routes>
-        <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><QuickPricing shop={shop} prompt /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
+        <Route index element={<main className="admin-main"><GettingStarted shop={shop} onLive={reload} /><QuickPricing shop={shop} prompt /><DepositOffer shop={shop} /><h1 className="dash-h1">Design requests</h1><LeadsPanel tenantId={shop.id} shopName={shop.name} canDelete={shop.role !== 'staff'} /></main>} />
         <Route path="shop" element={<ShopTab shop={shop} reload={reload} />} />
         <Route path="website" element={<WebsitePanel shop={shop} />} />
         <Route path="stats" element={<StatsPanel shop={shop} />} />

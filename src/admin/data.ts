@@ -187,6 +187,10 @@ export const publishAsMember = (configId: string) => api<{ version: number; rese
 /** Platform admins: closes the page, ends the plan at period end, removes the custom domain. Safe to run again. */
 export const offboardShop = (tenantId: string) => api<{ ok: boolean; message: string }>('offboard', { tenantId });
 export const inviteMember = (tenantId: string, email: string, role: MemberRole) => api<{ invited: boolean; message: string }>('invite', { tenantId, email, role });
+/** Whether the signed-in email is confirmed (MAG-91: signup signs in before the email is proved). */
+export const emailStatus = () => api<{ confirmed: boolean }>('email_status', {});
+/** Emails a fresh confirm link and code. */
+export const resendConfirmEmail = (shop: string) => api<{ sent: boolean; confirmed: boolean }>('email_resend', { shop });
 
 /** Joins any shops this (confirmed) email was invited to. Returns how many. */
 export async function acceptInvites() {

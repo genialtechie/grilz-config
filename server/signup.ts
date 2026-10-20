@@ -1,6 +1,8 @@
 import { TEMPLATES } from '../src/admin/templates.js';
 import { TRIAL_DAYS } from '../src/lib/trial.js';
+import { randomBytes } from 'node:crypto';
 import { signInLink } from './authLinks.js';
+import { emailSignIn, endSessions, signInOnDevice } from './emailConfirm.js';
 import { createDb, hasDb } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
 import { welcomeEmail } from './emailTemplates.js';
@@ -9,10 +11,13 @@ import type { ApiResult } from './tenantApi.js';
 import { isValidSlug, type TenantEnv } from './tenants.js';
 
 // POST /api/signup: a jeweler creates their shop without us.
-// Creates the shop live with the starting prices (14-day trial with the card
-// optional, small AI allowance, their email as the lead inbox), records an
-// owner invite and emails a sign-in link. In /dashboard they set their own
-// prices with three questions (MAG-90).
+// Three fields (MAG-91): shop name, email, Instagram; the link comes from the
+// handle (or the name). Creates the shop live with the starting prices (14-day
+// trial with the card optional, deposits off, small AI allowance, their email
+// as the lead inbox) and records an owner invite. A new account is signed in
+// right there and lands on its dashboard; the welcome email carries a link and
+// a 6-digit code that confirm the email (see emailConfirm.ts). An email that
+// already has an account gets the sign-in by email instead.
 //
 // Abuse controls: Turnstile, honeypot and timing, per-IP / per-email / global
 // daily limits, reserved slugs, and accounts created only here (public sign-up
@@ -50,6 +55,19 @@ export function checkSlug(slug: string): string | null {
   return null;
 }
 
+/** "@gold.mouth_atl" → "gold-mouth-atl": the link name from an Instagram handle. */
+export const slugFromHandle = (handle: string) => slugFromName(handle.replace(/[._]+/g, ' '));
+
+/** The first free link for this shop: from the handle (or the name), then -2…-9, then a short random ending. */
+export async function pickSlug(name: string, instagram: string, taken: (slug: string) => Promise<boolean>): Promise<string> {
+  const candidates = [instagram && slugFromHandle(instagram), slugFromName(name)].filter((slug): slug is string => Boolean(slug) && !checkSlug(slug));
+  const base = candidates[0] ?? 'shop';
+  for (const slug of [...candidates, ...Array.from({ length: 8 }, (_, i) => `${base.slice(0, 37)}-${i + 2}`)]) {
+    if (!(await taken(slug))) return slug;
+  }
+  return `${base.slice(0, 33)}-${randomBytes(4).toString('hex').slice(0, 6)}`;
+}
+
 /** GET-style availability check for the form: is this link free? */
 export async function slugAvailable(slug: string, env: TenantEnv): Promise<ApiResult> {
   const problem = checkSlug(slug);
@@ -63,14 +81,14 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   const body = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
   const name = typeof body.name === 'string' ? body.name.replace(/\s+/g, ' ').trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  const slug = typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : '';
+  const chosenSlug = typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : '';
   const instagram = typeof body.instagram === 'string' ? body.instagram.trim().replace(/^@/, '') : '';
   if (name.length < 2 || name.length > 60) return reply(400, { error: 'invalid', field: 'name', message: 'Enter your shop’s name (2–60 characters).' });
   if (!EMAIL.test(email) || email.length > 254) return reply(400, { error: 'invalid', field: 'email', message: 'Enter a valid email.' });
-  const slugProblem = checkSlug(slug);
+  // The form no longer asks for a link; one chosen by an older form is still checked.
+  const slugProblem = chosenSlug ? checkSlug(chosenSlug) : null;
   if (slugProblem) return reply(400, { error: 'invalid', field: 'slug', message: slugProblem });
   if (instagram && !IG.test(instagram)) return reply(400, { error: 'invalid', field: 'instagram', message: 'Instagram handle: letters, numbers, dots and underscores.' });
-  if (body.terms !== true) return reply(400, { error: 'invalid', field: 'terms', message: 'Please accept the terms.' });
   if (!(await verifyTurnstile(body.turnstile, ip, env))) return reply(400, { error: 'verify', message: 'Please confirm you are human and try again.' });
   if (!hasDb(env)) return reply(503, { error: 'unavailable', message: 'Signups are down for a moment. Try again shortly.' });
 
@@ -98,7 +116,9 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   ]);
   if (perIp >= SIGNUP_LIMITS.perIpDay || perEmail >= SIGNUP_LIMITS.perEmailDay) return reply(429, { error: 'limit', message: 'Too many signups from here today. Try again tomorrow, or message us.' });
   if (global >= SIGNUP_LIMITS.globalDay) return reply(503, { error: 'busy', message: 'Lots of signups today. Try again tomorrow, or message us.' });
-  if (await db.count('tenants', { slug: `eq.${slug}` })) return reply(409, { error: 'taken', field: 'slug', message: 'That link is taken. Try another.' });
+  const taken = async (candidate: string) => (await db.count('tenants', { slug: `eq.${candidate}` })) > 0;
+  if (chosenSlug && (await taken(chosenSlug))) return reply(409, { error: 'taken', field: 'slug', message: 'That link is taken. Try another.' });
+  const slug = chosenSlug || (await pickSlug(name, instagram, taken));
 
   const origin = (env.PUBLIC_ORIGIN || 'https://vvslab.magpollo.com').replace(/\/$/, '');
   const signIn = await signInLink(db, email, origin, slug);
@@ -109,6 +129,9 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
     console.error('signup skipped: account in an unexpected state');
     return done;
   }
+  // An account signed in at an earlier signup and never confirmed: whoever holds
+  // that session may not be the owner of this email, so it ends before a shop is added.
+  if (signIn.ok && signIn.unconfirmed) await endSessions(db, access.userId);
 
   const config = TEMPLATES[0].build(name);
   config.brand.instagram = instagram || undefined;
@@ -137,7 +160,11 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
   await db.insert('member_invites', { tenant_id: tenantId, email, role: 'owner', invited_by: access.userId });
   await log('created');
 
-  const welcome = await welcomeEmail({ shop: name, slug, link: access.link, origin, trialDays: TRIAL_DAYS });
+  // A new account is signed in on this device; one that was already there signs in by email (never from a form).
+  const session = signIn.ok && !signIn.existing ? await signInOnDevice(db, signIn.url).catch(() => null) : null;
+  // The welcome email's own link and code (made after that sign-in: one token at a time per account).
+  const emailed = (await emailSignIn(db, email, origin, slug)) ?? { url: access.link, code: undefined };
+  const welcome = await welcomeEmail({ shop: name, slug, link: emailed.url, code: emailed.code, origin, trialDays: TRIAL_DAYS });
   await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...welcome, headers: { 'X-Entity-Ref-ID': `signup-${tenantId}` } }, env);
-  return done;
+  return session ? reply(200, { ok: true, slug, session }) : reply(200, { ok: true, slug, message: `Check ${email} for a link to your shop.` });
 }

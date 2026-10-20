@@ -49,6 +49,7 @@ import {
 import { FANG_OPTIONS, FANG_TEETH, icedOpenFace } from '../lib/renderSpec';
 import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
+import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
 import type { ToothCustomization } from '../lib/types';
 
@@ -102,7 +103,11 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
       {brand.logo ? (
         <img className="shop-brand__logo" src={brand.logo} alt={brand.name} fetchPriority="high" decoding="async" />
       ) : (
-        <span className="shop-brand__wordmark">{brand.name}</span>
+        <>
+          {/* No logo yet: a monogram from the name (MAG-91). */}
+          <span className="shop-brand__monogram" aria-hidden="true">{monogram(brand.name)}</span>
+          <span className="shop-brand__wordmark">{brand.name}</span>
+        </>
       )}
       {brand.instagram && (
         <a className="shop-brand__ig" href={`https://instagram.com/${brand.instagram}`} target="_blank" rel="noreferrer">
