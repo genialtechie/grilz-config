@@ -12,8 +12,8 @@ import {
   STYLES,
   type SetOptions,
   type ToothDesign,
-} from '../renderSpec';
-import type { TenantCatalog } from './schema';
+} from '../renderSpec.js';
+import type { TenantCatalog } from './schema.js';
 
 // The platform catalog narrowed to what one shop sells, in the platform's order.
 

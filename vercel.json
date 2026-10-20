@@ -62,6 +62,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/claim/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/index.html"
     },
