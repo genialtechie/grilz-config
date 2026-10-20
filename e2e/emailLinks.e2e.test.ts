@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { chromium, type Browser } from 'playwright';
+import { chromium, devices, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { VVSLAB_CONFIG } from '../src/lib/tenant/vvslab';
 
@@ -165,7 +165,7 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
 
     // The link works once.
     const again = await openFresh(link);
-    await expect.poll(() => again.page.getByRole('alert').textContent(), { timeout: 30_000 }).toContain('expired or was already used');
+    await expect.poll(() => again.page.getByRole('heading', { level: 1 }).textContent(), { timeout: 30_000 }).toBe('That link has expired');
     expect(again.page.url()).toBe(`${origin}/dashboard/welcome`);
     await again.context.close();
   }, 180_000);
@@ -232,6 +232,52 @@ describe.skipIf(!url || !key || !anon)('emailed sign-in links (e2e)', () => {
     await page.waitForURL(`${origin}/dashboard/e2e-c-${stamp}`, { timeout: 60_000 });
     await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Shop C');
     expect(await page.locator('.admin-header__user').textContent()).toContain(existing);
+    await context.close();
+  }, 180_000);
+
+  it('claim link: VVS Lab builds a shop, the jeweler claims it on their phone and is signed in', async () => {
+    // A platform admin, and a shop built ahead of time: a draft config, no owner, no lead inbox.
+    const adminEmail = `admin-${stamp}@e2e.test`;
+    const admin = (await authAdmin('users', { email: adminEmail, password: PASSWORD, email_confirm: true })) as { id: string };
+    await rest('platform_admins', { method: 'POST', body: JSON.stringify({ user_id: admin.id }) });
+    const slug = `e2e-claim-${stamp}`;
+    const [tenant] = await rest('tenants', { method: 'POST', body: JSON.stringify({ slug, name: 'E2E Claim Gold', kind: 'shop', status: 'draft' }) });
+    tenantIds.push(tenant.id);
+    const config = { ...structuredClone(VVSLAB_CONFIG), brand: { ...VVSLAB_CONFIG.brand, name: 'E2E Claim Gold' }, leads: { email: [], sms: [] } };
+    await rest('tenant_configs', { method: 'POST', body: JSON.stringify({ tenant_id: tenant.id, version: 1, config, status: 'draft' }) });
+
+    const made = await fetch(`${origin}/api/dashboard/claim_create`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await passwordToken(adminEmail)}` }, body: JSON.stringify({ tenantId: tenant.id }) });
+    const { url: claimUrl } = (await made.json()) as { url: string };
+    expect(claimUrl.startsWith(`${origin}/claim/`)).toBe(true);
+
+    // The jeweler scans it on their phone and enters their email.
+    const email = `jeweler-${stamp}@e2e.test`;
+    const context = await browser.newContext({ ...devices['iPhone 13'] });
+    const page = await context.newPage();
+    await page.goto(claimUrl);
+    await page.getByRole('button', { name: 'Claim my shop' }).waitFor({ timeout: 30_000 });
+    expect(new URL(page.url()).pathname).toBe('/claim'); // the token never sits in the address bar
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.waitForTimeout(4_100); // as long as a person takes to type it
+    await page.getByLabel('Email').fill(email);
+    await page.getByRole('button', { name: 'Claim my shop' }).click();
+    await page.waitForURL(`${origin}/dashboard/${slug}`, { timeout: 60_000 });
+    await expect.poll(() => page.locator('.admin-header__brand').textContent(), { timeout: 30_000 }).toBe('E2E Claim Gold');
+
+    // Theirs: owner, trial started, published with their email as the lead inbox, welcomed.
+    expect(await rest(`members?tenant_id=eq.${tenant.id}&select=role`)).toEqual([{ role: 'owner' }]);
+    const [after] = await rest(`tenants?id=eq.${tenant.id}&select=plan,trial_ends_at,published_version`);
+    expect(after.plan).toBe('trial');
+    expect(Date.parse(after.trial_ends_at)).toBeGreaterThan(Date.now() + 13 * 864e5);
+    const [published] = await rest(`tenant_configs?tenant_id=eq.${tenant.id}&status=eq.published&select=config`);
+    expect(published.config.leads.email).toEqual([email]);
+    for (let i = 0; i < 50 && !mails.some((mail) => mail.to.includes(email)); i += 1) await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(mails.find((mail) => mail.to.includes(email))?.subject).toBe('E2E Claim Gold is yours on VVS Lab');
+
+    // The link is spent.
+    const again = await context.newPage();
+    await again.goto(claimUrl);
+    await expect.poll(() => again.getByRole('heading', { level: 1 }).textContent(), { timeout: 30_000 }).toBe('Already claimed');
     await context.close();
   }, 180_000);
 });

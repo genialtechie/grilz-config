@@ -1,0 +1,60 @@
+/* The builder preview on the claim page: the shop's name and colour on a card. */
+.claim-preview {
+  --claim-accent: #ce4257;
+  --claim-on-accent: #ffffff;
+  margin: 0 0 22px;
+  border: 1px solid var(--au-line);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+  box-shadow: 0 10px 30px -18px rgba(27, 23, 20, 0.35);
+}
+.claim-preview__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--au-line);
+}
+.claim-preview__bar img { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; }
+.claim-preview__bar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.claim-preview__monogram {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--claim-accent);
+  color: var(--claim-on-accent);
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 20px;
+}
+.claim-preview__set { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: #f1ece4; }
+.claim-preview__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 4px;
+  font-size: 15px;
+}
+.claim-preview__cta {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--claim-accent);
+  color: var(--claim-on-accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+.claim-preview__link {
+  padding: 4px 14px 12px;
+  color: var(--au-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+/* The shop's own name moves to the next line whole rather than breaking at a dash. */
+.claim-preview__link strong { display: inline-block; max-width: 100%; color: var(--au-text); font-weight: 600; }

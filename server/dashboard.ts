@@ -7,6 +7,7 @@ import { inviteEmail } from './emailTemplates.js';
 import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
 import { offboardTenant } from './offboard.js';
+import { createClaimLink, revokeClaimLink } from './claims.js';
 import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
 import { forgetTenant, type TenantEnv } from './tenants.js';
@@ -262,6 +263,14 @@ export async function handleDashboard(action: string, payload: unknown, token: s
       if (!role) return reply(404, { error: 'not_found' });
       if (role !== 'admin') return reply(403, { error: 'admin_only', message: 'Only VVS Lab can offboard a shop.' });
       return await offboardTenant(db, env, tenantId);
+    }
+    if (action === 'claim_create' || action === 'claim_revoke') {
+      const tenantId = String(body.tenantId ?? '');
+      if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+      if ((await roleFor(db, user.id, tenantId)) !== 'admin') return reply(403, { error: 'admin_only', message: 'Only VVS Lab makes claim links.' });
+      if (action === 'claim_create') return await createClaimLink(db, user.id, tenantId, env);
+      const linkId = String(body.linkId ?? '');
+      return UUID.test(linkId) ? await revokeClaimLink(db, tenantId, linkId) : reply(400, { error: 'invalid' });
     }
     if (['billing_checkout', 'billing_portal', 'connect_onboard', 'connect_status'].includes(action)) return await money(db, user, action, body, env);
     return reply(404, { error: 'not_found' });
