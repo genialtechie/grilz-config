@@ -99,10 +99,9 @@ async function handOver(db: Db, tenant: TenantRow, userId: string, email: string
   await db.insert('members', { tenant_id: tenant.id, user_id: userId, role: 'owner' }).catch(() => db.update('members', { tenant_id: `eq.${tenant.id}`, user_id: `eq.${userId}` }, { role: 'owner' }));
   // The trial starts now, card optional, as for self-serve signup. A shop already on a paid plan keeps it.
   await db.update('tenants', { id: `eq.${tenant.id}`, billing_status: 'in.(none,canceled)' }, { plan: 'trial', trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString() });
-  // Like a self-serve signup, a claimed shop is live from the start (MAG-90).
-  await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.draft' }, { status: 'live' });
   const latest = await latestConfig(db, tenant.id);
   if (!latest) {
+    // Nothing valid to publish: it stays a draft for VVS Lab to fix, rather than live with no builder.
     console.error('claim: no valid config to publish', tenant.slug);
     return;
   }
@@ -115,6 +114,8 @@ async function handOver(db: Db, tenant: TenantRow, userId: string, email: string
     const draft = await db.insert<{ id: string }>('tenant_configs', { tenant_id: tenant.id, version: latest.row.version + 1, config, status: 'draft', created_by: userId });
     await db.rpc('publish_config_service', { config_id: draft.id, final_config: config, actor: userId });
   }
+  // Published: like a self-serve signup, a claimed shop is live from the start (MAG-90).
+  await db.update('tenants', { id: `eq.${tenant.id}`, status: 'eq.draft' }, { status: 'live' });
 }
 
 /** POST /api/signup with { claim }: the jeweler claims the shop with their email. */

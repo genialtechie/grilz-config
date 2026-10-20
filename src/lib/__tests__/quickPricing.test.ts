@@ -58,6 +58,12 @@ describe('quick pricing', () => {
     expect(totals(editLine(pricing, 'icedLab', 300))).toMatchObject({ iced: 1050, icedLab: 1800 });
     // The 10K answer re-derives everything that hangs off it, keeping the stone add-on.
     expect(totals(editLine(pricing, 'gold10k', 120))).toMatchObject({ gold10k: 720, gold14k: 1008, iced: 1170 });
+    // …and keeps a 14K or lab price changed on this screen instead of snapping back to the ratio.
+    const edited = editLine(editLine(pricing, 'gold14k', 150), 'icedLab', 300);
+    const after = editLine(edited, 'gold10k', 120);
+    expect(after.karatMultiplier['14k']).toBe(1.5);
+    expect(after.stonePerTooth.lab).toBe(200);
+    expect(totals(after)).toMatchObject({ gold10k: 720, gold14k: 1080, icedLab: 1920 });
   });
 
   it('the starting prices follow the same ratios', () => {

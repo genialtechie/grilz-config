@@ -94,7 +94,11 @@ export function editLine(pricing: TenantPricing, id: CheckLine['id'], perTooth: 
   const value = Math.max(0, Math.round(perTooth));
   const gold = pricing.metalPerTooth.yellow ?? 0;
   const next: TenantPricing = { ...pricing, source: 'quick' };
-  if (id === 'gold10k') return quickPricing(pricing, { ...quickAnswers(pricing), gold: value, iced: value + (pricing.stonePerTooth.moissanite ?? 0) });
+  if (id === 'gold10k') {
+    // The new gold price flows through the ratios, but a 14K/18K or lab price set on this screen stays as set.
+    const derived = quickPricing(pricing, { ...quickAnswers(pricing), gold: value, iced: value + (pricing.stonePerTooth.moissanite ?? 0) });
+    return { ...derived, karatMultiplier: { ...pricing.karatMultiplier }, stonePerTooth: { ...derived.stonePerTooth, lab: pricing.stonePerTooth.lab ?? derived.stonePerTooth.lab, natural: pricing.stonePerTooth.natural ?? derived.stonePerTooth.natural } };
+  }
   if (id === 'gold14k' || id === 'gold18k') {
     const karat = id === 'gold14k' ? '14k' : '18k';
     return { ...next, karatMultiplier: { ...pricing.karatMultiplier, [karat]: gold > 0 ? round2(value / gold) : QUICK_RATIOS.karat[karat] } };
