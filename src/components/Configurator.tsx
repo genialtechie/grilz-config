@@ -66,6 +66,9 @@ const STEP_LABELS: Record<StepId, string> = {
   photo: 'Review & send',
 };
 
+/** For the smallest phones, so all five steps fit in one row. */
+const STEP_SHORT: Record<StepId, string> = { teeth: 'Teeth', metal: 'Metal', look: 'Look', vision: 'Yours', photo: 'Review' };
+
 const STEP_INTROS: Record<StepId, { title: string; text: string }> = {
   teeth: { title: 'Choose your teeth', text: 'Pick a set, or tap teeth on the model.' },
   metal: { title: 'Pick your metal', text: 'Colour and karat. The price updates as you go.' },
@@ -637,6 +640,7 @@ function Configurator() {
               >
                 <span className="step-pill__number">{index < stepIndex ? <Check size={11} strokeWidth={3} /> : index + 1}</span>
                 <span className="step-pill__label">{STEP_LABELS[id]}</span>
+                <span className="step-pill__short" aria-hidden="true">{STEP_SHORT[id]}</span>
               </button>
             ))}
           </nav>
@@ -1087,7 +1091,7 @@ function Configurator() {
               <strong>{priceHidden ? 'On request' : totalText(totalCost)}</strong>
             </div>
             {prevStep && (
-              <button className="icon-button" type="button" onClick={() => goTo(prevStep)} aria-label={`Back to ${STEP_LABELS[prevStep]}`}>
+              <button className="icon-button panel-footer__back" type="button" onClick={() => goTo(prevStep)} aria-label={`Back to ${STEP_LABELS[prevStep]}`}>
                 <ChevronLeft size={18} />
               </button>
             )}

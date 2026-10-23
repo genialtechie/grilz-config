@@ -1898,11 +1898,11 @@
   }
 
   .option-grid .option-card__media {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 3 / 2;
   }
 
   .option-grid--two .option-card__media {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 2.2;
   }
 
   .option-grid .option-card__text {
@@ -2404,12 +2404,65 @@
   padding: 0 14px;
 }
 
-@media (max-width: 360px) {
+@media (max-width: 400px) {
   .panel-footer__prefix {
     display: none;
   }
+}
 
+.panel-footer__next {
+  white-space: nowrap;
+}
+
+/* The smallest phones: the done step pills already go back, so the back arrow makes room for the step name. */
+@media (max-width: 360px) {
   .panel-footer .secondary-button.panel-footer__review {
     padding: 0 10px;
+  }
+
+  .panel-footer:has(.panel-footer__review) .panel-footer__back {
+    display: none;
+  }
+}
+
+.step-pill__short {
+  display: none;
+}
+
+/* Phones: all five steps in one row, no scrolling (MAG-95). Upcoming steps drop their number. */
+@media (max-width: 860px) {
+  .step-pills {
+    gap: 4px;
+    overflow-x: visible;
+    mask-image: none;
+  }
+
+  .step-pill {
+    flex: 1 1 auto;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .step-pill:not(.step-pill--active):not(.step-pill--done) .step-pill__number {
+    display: none;
+  }
+
+  .step-pill__number {
+    width: 17px;
+    height: 17px;
+    font-size: 9.5px;
+  }
+}
+
+@media (max-width: 400px) {
+  .step-pill__label {
+    display: none;
+  }
+
+  .step-pill__short {
+    display: inline;
   }
 }
