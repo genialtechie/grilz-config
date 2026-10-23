@@ -12,6 +12,8 @@ import { mix, usableAccent } from '../../lib/tenant/theme';
 
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
 const PERMANENT_GROW = 1.08;
+/** The outline round a tooth picked to style on its own: a slightly bigger back-face shell. */
+const MARK_GROW = 1.07;
 
 const getToothIndexFromName = (name: string): number | null => {
   const match = name.match(toothNameRegex);
@@ -46,6 +48,7 @@ function GrillzModel({
   customizations,
   selectedTeeth,
   isSelectionMode,
+  selectionLook = 'fill',
   toggleToothSelection,
   inscriptions,
   onFocusTooth,
@@ -85,9 +88,10 @@ function GrillzModel({
     });
     // The mould and the bare teeth are one dental-stone cast, as on a jeweler's bench.
     const mould = dentalStone();
+    const mark = new THREE.MeshBasicMaterial({ color: selectColor, side: THREE.BackSide });
     const finishCache = new Map<string, THREE.MeshPhysicalMaterial>();
 
-    return { selected, mould, finishCache };
+    return { selected, mark, mould, finishCache };
   }, [selectColor, selectGlow]);
 
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
@@ -122,6 +126,8 @@ function GrillzModel({
       // Finishes are cached and shared between teeth, so they are only detached.
       const existingFinish = child.getObjectByName('tooth_finish');
       if (existingFinish) child.remove(existingFinish);
+      const existingMark = child.getObjectByName('tooth_mark');
+      if (existingMark) child.remove(existingMark);
 
       const customization = customizations[index];
       const isSelected = selectedToothSet.has(index);
@@ -134,9 +140,18 @@ function GrillzModel({
       child.scale.setScalar(grow);
       child.position.copy(child.userData.centre as THREE.Vector3).multiplyScalar(1 - grow);
 
-      if (isSelectionMode && isSelected) {
+      if (isSelectionMode && isSelected && selectionLook === 'fill') {
         child.material = materials.selected;
         return;
+      }
+      if (isSelectionMode && isSelected) {
+        // Styling this tooth on its own: it keeps its design, outlined, so each change shows.
+        const mark = new THREE.Mesh(child.geometry, materials.mark);
+        mark.name = 'tooth_mark';
+        mark.scale.setScalar(MARK_GROW);
+        mark.position.copy(child.userData.centre as THREE.Vector3).multiplyScalar(1 - MARK_GROW);
+        mark.raycast = () => {};
+        child.add(mark);
       }
 
       child.material = customization.material === 'default' ? materials.mould : getFinishMaterial(customization);
@@ -156,7 +171,7 @@ function GrillzModel({
       }
     });
     invalidate();
-  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, selectedToothSet]);
+  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, selectedToothSet, selectionLook]);
 
   // Letters, after the teeth are dressed (fang shapes and permanent-look scale change where they land).
   const inscriptionKey = JSON.stringify(inscriptions ?? []);
@@ -194,6 +209,7 @@ function GrillzModel({
   useEffect(() => {
     return () => {
       materials.selected.dispose();
+      materials.mark.dispose();
       materials.mould.dispose();
       materials.finishCache.forEach((material) => material.dispose());
     };

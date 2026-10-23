@@ -132,6 +132,9 @@ function Configurator() {
   const [overrides, setOverrides] = useState<Record<number, ToothDesign>>({});
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
+  // Once a customer has styled a tooth on its own, the tip on the model moves on.
+  const [triedPicking, setTriedPicking] = useState(false);
+  const coarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
   const [setOptions, setSetOptions] = useState<SetOptions>(tenant.defaultSet);
   const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() => [newDraft(catalog.inscriptionStyles[0]?.id)]);
   /** Which inscription is choosing its teeth on the model, if any. */
@@ -238,7 +241,10 @@ function Configurator() {
   // What the 3D model shows: the selection while choosing teeth or picking,
   // otherwise each tooth's own metal and stones.
   const pickingInscription = step === 'vision' && inscriptionPicking !== null;
-  const isSelectionMode = step === 'teeth' || pickMode || pickingInscription;
+  // On Metal and Look a tap on a tooth styles it on its own (MAG-95), so taps select there too.
+  const styleStep = step === 'metal' || step === 'look';
+  const canMix = styleStep && selectedTeeth.length > 1;
+  const isSelectionMode = step === 'teeth' || pickMode || pickingInscription || canMix;
   const highlighted = step === 'teeth'
     ? selectedTeeth
     : pickingInscription
@@ -266,7 +272,13 @@ function Configurator() {
       if (done) setInscriptionPicking(null);
       return;
     }
-    if (!pickMode || !selectedSet.has(index)) return;
+    if (!canMix || !selectedSet.has(index)) return;
+    if (!pickMode) {
+      setPickMode(true);
+      setPickedTeeth([index]);
+      setTriedPicking(true);
+      return;
+    }
     setPickedTeeth((previous) =>
       previous.includes(index) ? previous.filter((item) => item !== index) : [...previous, index],
     );
@@ -511,15 +523,15 @@ function Configurator() {
     }
   };
 
-  // Designing teeth one by one is the exception, so it sits under the options as a
-  // link; while it's on, a note at the top says which teeth the options change.
+  // Styling teeth one by one: tap a tooth on the model (the tip there says so), or this
+  // link at the top of the step. While it's on, a note says which teeth the options change.
   const pickNote = pickMode && (
     <div className="pick-note" role="status">
       <MousePointer2 size={15} />
       <span>
         {activePicked.length
-          ? `Changing ${activePicked.length} picked ${activePicked.length === 1 ? 'tooth' : 'teeth'}. Tap more on the model.`
-          : 'Tap the teeth on the model you want to make different.'}
+          ? `Styling ${activePicked.length} ${activePicked.length === 1 ? 'tooth' : 'teeth'} on ${activePicked.length === 1 ? 'its' : 'their'} own. Tap more on the model.`
+          : 'Tap the teeth on the model you want to style on their own.'}
       </span>
       <button
         type="button"
@@ -532,14 +544,31 @@ function Configurator() {
       </button>
     </div>
   );
-  const mixLink = !pickMode && selectedTeeth.length > 1 && (
+  const mixLink = !pickMode && canMix && (
     <div className="mix-link">
-      <button className="text-button text-button--left" type="button" onClick={() => setPickMode(true)}>
-        <MousePointer2 size={14} /> Make some teeth different
+      <button className="text-button text-button--left" type="button" onClick={() => {
+          setPickMode(true);
+          setTriedPicking(true);
+        }}>
+        <MousePointer2 size={14} /> Style single teeth
       </button>
-      {isMixed && <small>Mixed design: options above change every tooth.</small>}
+      <small>{isMixed ? 'Mixed design: the options below change every tooth.' : 'Or tap a tooth on the model.'}</small>
     </div>
   );
+
+  // The tip on the model: what a tap or drag does right now, and the easy-to-miss things.
+  const zoomTip = coarsePointer ? 'Drag to turn · pinch to zoom' : 'Drag to turn · scroll to zoom';
+  const modelTip = step === 'teeth'
+    ? 'Tap a tooth to add or remove it'
+    : pickingInscription
+      ? 'Tap the teeth for the letters'
+      : pickMode
+        ? 'Tap teeth to add or remove them'
+        : canMix && !triedPicking
+          ? `Tip: tap a tooth to give it its own ${step === 'metal' ? 'metal' : 'look'}`
+          : canMix
+            ? `Tap a tooth to style it on its own · ${coarsePointer ? 'pinch' : 'scroll'} to zoom`
+            : `${zoomTip} · tap a tooth to look closer`;
 
   const intro = STEP_INTROS[step];
 
@@ -583,6 +612,7 @@ function Configurator() {
             customizations={customizations}
             selectedTeeth={highlighted}
             isSelectionMode={isSelectionMode}
+            selectionLook={styleStep ? 'outline' : 'fill'}
             toggleToothSelection={handleToothClick}
             inscriptions={step === 'teeth' ? [] : inscriptions}
             onReady={(state) => {
@@ -612,7 +642,7 @@ function Configurator() {
 
           <div className="viewer-instructions" aria-hidden="true">
             {isSelectionMode ? <MousePointer2 size={16} /> : <Move3d size={16} />}
-            <span>{isSelectionMode ? 'Tap a tooth to select it' : 'Drag to turn · Tap a tooth to look closer'}</span>
+            <span>{modelTip}</span>
           </div>
 
           <button
@@ -700,6 +730,7 @@ function Configurator() {
               {step === 'metal' && (
                 <>
                   {pickNote}
+                  {mixLink}
                   <div className="option-grid">
                     {catalog.metals.map((metal) => (
                       <OptionCard
@@ -733,13 +764,13 @@ function Configurator() {
                       </div>
                     </fieldset>
                   )}
-                  {mixLink}
                 </>
               )}
 
               {step === 'look' && (
                 <>
                   {pickNote}
+                  {mixLink}
                   <fieldset className="control-group">
                     <legend>Type</legend>
                     <div className="option-grid option-grid--three">
@@ -832,7 +863,6 @@ function Configurator() {
                     )}
                     {shown.type === 'iced' && <small className="field-hint">Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.</small>}
                   </fieldset>
-                  {mixLink}
                   {catalog.fangs && (
                     <fieldset className="control-group">
                       <legend>Fangs</legend>
