@@ -1,4 +1,4 @@
-import type { CutId, MetalId, StyleId } from './renderSpec';
+import type { CutId, Inscription, MetalId, OpalId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -10,6 +10,8 @@ export type ToothCustomization = {
   metal?: MetalId;
   /** The finish cut into the front of a plain cap (open face, diamond cut…); solid when absent. */
   style?: StyleId;
+  /** The opal's colour, for the opals style. */
+  opal?: OpalId;
   /** This tooth is a fang cap (an upper canine with fangs on). */
   fang?: boolean;
   /** Deep cut (separate teeth, the default) or permanent look (fuller caps that meet). */
@@ -24,6 +26,8 @@ export interface SceneProps {
   selectedTeeth: number[];
   isSelectionMode: boolean;
   toggleToothSelection: (index: number) => void;
+  /** Letters drawn on the set. */
+  inscriptions?: Inscription[];
 }
 
 export type GrillzModelProps = SceneProps;

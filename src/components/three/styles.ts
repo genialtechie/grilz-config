@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { MetalId, StyleId } from '../../lib/renderSpec';
+import type { MetalId, OpalId, StyleId } from '../../lib/renderSpec';
 import { dentalStone, polishedMetal } from './materials';
 
 // The finishes a jeweler cuts into the front of a cap, built as geometry on
@@ -185,15 +185,22 @@ const engravingBump = () =>
     }
   });
 
-/** Opal: soft patches of colour (play-of-colour) over milky white. */
-const opalColour = () =>
+/** Each opal's body colour and the flashes of colour (play-of-colour) over it. */
+const OPAL_LOOK: Record<OpalId, { body: string; hues: string[] }> = {
+  white: { body: '#eef0f6', hues: ['#7fd6ff', '#9dffcf', '#ffb3e6', '#fff1a6', '#b6a8ff', '#7affe9'] },
+  fire: { body: '#d9431f', hues: ['#ff2a12', '#ffb000', '#ff6a00', '#ffd23f', '#4fd36b', '#b80d1c'] },
+  blue: { body: '#1d47ad', hues: ['#2ee6ff', '#39ff9a', '#7a5cff', '#1fa3ff', '#a8ffef', '#0b2a80'] },
+};
+
+/** Opal: soft patches of colour (play-of-colour) over the stone's body colour. */
+const opalColour = (opal: OpalId) =>
   canvasTexture(
-    'opal',
+    `opal:${opal}`,
     256,
     (context, size) => {
-      context.fillStyle = '#eef0f6';
+      context.fillStyle = OPAL_LOOK[opal].body;
       context.fillRect(0, 0, size, size);
-      const hues = ['#7fd6ff', '#9dffcf', '#ffb3e6', '#fff1a6', '#b6a8ff', '#7affe9'];
+      const hues = OPAL_LOOK[opal].hues;
       for (let i = 0; i < 70; i += 1) {
         const x = Math.random() * size;
         const y = Math.random() * size;
@@ -248,16 +255,16 @@ const metalEngraved = (metal: MetalId) =>
     m.bumpScale = 1.2;
     return m;
   });
-const opal = () =>
-  material('opal', () =>
+const opal = (colour: OpalId) =>
+  material(`opal:${colour}`, () =>
     new THREE.MeshPhysicalMaterial({
       color: '#ffffff',
-      map: opalColour(),
+      map: opalColour(colour),
       roughness: 0.12,
       metalness: 0,
       clearcoat: 1,
       clearcoatRoughness: 0.04,
-      iridescence: 1,
+      iridescence: colour === 'white' ? 1 : 0.5,
       iridescenceIOR: 1.6,
       iridescenceThicknessRange: [180, 620],
       envMapIntensity: 1.3,
@@ -277,9 +284,9 @@ const finishes = new Map<string, THREE.Group>();
  * The finish on a tooth's front for a plain (not iced) cap, or null for a
  * plain solid polish. Built once per tooth, style and metal, then reused.
  */
-export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, iced = false): THREE.Group | null {
+export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, iced = false, opalColourId: OpalId = 'white'): THREE.Group | null {
   if (style === 'solid') return null;
-  const key = `${tooth.geometry.uuid}:${style}:${metal}:${iced}`;
+  const key = `${tooth.geometry.uuid}:${style}:${metal}:${iced}:${style === 'opals' ? opalColourId : ''}`;
   const cached = finishes.get(key);
   if (cached) return cached.clone();
   const front = frontOf(tooth.geometry);
@@ -307,7 +314,7 @@ export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, ice
     add(panel(front, 0.86, 6), metalEngraved(metal));
     add(rim(front, 0.88, rimThickness * 0.7), metalRim(metal));
   } else if (style === 'opals') {
-    add(panel(front, 0.68, 6, () => rimThickness * 0.25), opal());
+    add(panel(front, 0.68, 6, () => rimThickness * 0.25), opal(opalColourId));
     add(rim(front, 0.7, rimThickness), metalRim(metal));
   }
   group.name = 'tooth_finish';

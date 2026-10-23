@@ -75,7 +75,12 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const fangs = fangCount(teeth, set.fangs);
   if (fangs) add(pricing.fangsPer === 'fang' ? `Fangs · ${fangs}` : 'Fangs', pricing.extras.fangs * (pricing.fangsPer === 'fang' ? fangs : 1));
   if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);
-  if (set.inscription) add(`Inscription "${set.inscription.text}"`, pricing.inscription[set.inscription.style] ?? 0);
+  // Letters are priced per tooth they cover (one tooth: the shop's inscription price).
+  set.inscriptions.forEach((inscription) => {
+    const each = pricing.inscription[inscription.style] ?? 0;
+    const span = inscription.teeth.length;
+    add(span > 1 ? `Inscription "${inscription.text}" · ${span} teeth` : `Inscription "${inscription.text}"`, each * span);
+  });
   if (set.mold) add(label(MOLDS, set.mold), pricing.molds?.[set.mold] ?? 0);
   (set.addOns ?? []).forEach((id) => {
     const addOn = addOns.find((item) => item.id === id);
@@ -118,7 +123,7 @@ export const priceHints = (pricing: TenantPricing) => {
     stone: (stone: StoneId) => hint(`+${usd(pricing.stonePerTooth[stone] ?? 0)} / tooth`),
     setting: (setting: SettingId) => hint(pricing.settingPerTooth[setting] ? `+${usd(pricing.settingPerTooth[setting]!)} / tooth` : 'Included'),
     type: (type: GrillzType) => hint(type === 'photo' ? `+${usd(pricing.extras.photo)} artwork` : type === 'iced' ? 'Stones priced next' : 'Included'),
-    inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)}`),
+    inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)} / tooth`),
     fangs: () => hint(pricing.extras.fangs ? `+${usd(pricing.extras.fangs)}${pricing.fangsPer === 'fang' ? ' / fang' : ''}` : 'Included'),
     /** A flat or per-tooth extra (permanent look, a shop's add-on). */
     extra: (amount: number, perTooth = false) => hint(amount ? `+${usd(amount)}${perTooth ? ' / tooth' : ''}` : 'Included'),

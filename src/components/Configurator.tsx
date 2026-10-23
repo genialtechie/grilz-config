@@ -19,7 +19,6 @@ import {
   ScanLine,
   ShoppingBag,
   Store,
-  Type,
   X,
 } from 'lucide-react';
 import Scene from './three/Scene';
@@ -29,24 +28,25 @@ import { OptionCard } from './builder/OptionCard';
 import { PromoField } from './builder/PromoField';
 import type { Promo } from '../lib/promo';
 import { capturePreview, captureToothMask } from '../lib/capturePreview';
+import { capturePhotoStill, type PhotoStill } from '../lib/photoStage';
 import { downscaleImage } from '../lib/downscaleImage';
 import { useAiRender } from '../lib/hooks/useAiRender';
 import { baseToothState, useGrillzCustomization } from '../lib/hooks/useGrillzCustomization';
+import { toothCustomization } from '../lib/toothCustomization';
+import { InscriptionEditor } from './builder/InscriptionEditor';
+import { draftRow, inscriptionsFrom, newDraft, pickTooth, type InscriptionDraft } from '../lib/inscriptionDrafts';
 import {
-  INSCRIPTION_MAX,
-  METALS,
+  OPALS,
   VISION_MAX,
   isGold,
   planMasks,
   groupTeeth,
   summarizeDesign,
-  wearerToothName,
-  type InscriptionStyleId,
   type RenderSpec,
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS, FANG_TEETH, icedOpenFace } from '../lib/renderSpec';
+import { FANG_OPTIONS, FANG_TEETH } from '../lib/renderSpec';
 import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
@@ -131,10 +131,9 @@ function Configurator() {
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
   const [setOptions, setSetOptions] = useState<SetOptions>(tenant.defaultSet);
-  const [inscriptionText, setInscriptionText] = useState('');
-  const [inscriptionStyle, setInscriptionStyle] = useState<InscriptionStyleId>('cut');
-  const [inscriptionTooth, setInscriptionTooth] = useState<number | null>(null);
-  const [inscriptionPicking, setInscriptionPicking] = useState(false);
+  const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() => [newDraft(catalog.inscriptionStyles[0]?.id)]);
+  /** Which inscription is choosing its teeth on the model, if any. */
+  const [inscriptionPicking, setInscriptionPicking] = useState<number | null>(null);
   const [inspiration, setInspiration] = useState<string | null>(null);
   const [inspirationError, setInspirationError] = useState<string | null>(null);
   const [depositReached, setDepositReached] = useState(false);
@@ -220,15 +219,13 @@ function Configurator() {
   }, [step, panelOpen]);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
 
-  // The inscription only counts once it has text and sits on a tooth in the set.
-  const inscription =
-    inscriptionText.trim() && inscriptionTooth !== null && selectedSet.has(inscriptionTooth)
-      ? { text: inscriptionText.trim(), tooth: inscriptionTooth, style: inscriptionStyle }
-      : null;
+  // An inscription only counts once it has text and sits on teeth in the set.
+  const inscriptions = inscriptionsFrom(inscriptionDrafts, selectedSet);
+  const inscriptionsKey = JSON.stringify(inscriptions);
   // Fangs are built on the upper canines: without one in the set there's nothing to put a fang on.
   const canHaveFangs = selectedTeeth.some((index) => FANG_TEETH.includes(index));
   const fangsOn = setOptions.fangs && canHaveFangs;
-  const effectiveSet: SetOptions = { ...setOptions, fangs: fangsOn, inscription };
+  const effectiveSet: SetOptions = { ...setOptions, fangs: fangsOn, inscriptions };
   const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns, promo);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
   const brand = tenant.config.brand;
@@ -238,29 +235,18 @@ function Configurator() {
 
   // What the 3D model shows: the selection while choosing teeth or picking,
   // otherwise each tooth's own metal and stones.
-  const pickingInscription = step === 'vision' && inscriptionPicking;
+  const pickingInscription = step === 'vision' && inscriptionPicking !== null;
   const isSelectionMode = step === 'teeth' || pickMode || pickingInscription;
   const highlighted = step === 'teeth'
     ? selectedTeeth
     : pickingInscription
-      ? (inscriptionTooth !== null ? [inscriptionTooth] : [])
+      ? inscriptionDrafts[inscriptionPicking!]?.teeth ?? []
       : activePicked;
   const customizations = useMemo<ToothCustomization[]>(
     () =>
       Array.from({ length: 32 }, (_, index) => {
         if (step === 'teeth' || !selectedSet.has(index)) return { ...baseToothState };
-        const design = overrides[index] ?? base;
-        const metal = METALS.find((item) => item.id === design.metal)!;
-        return {
-          material: isGold(design.metal) ? 'gold' : 'silver',
-          color: metal.swatch,
-          metal: metal.id,
-          style: design.type === 'plain' || icedOpenFace(design) ? design.style : undefined,
-          fang: setOptions.fangs && FANG_TEETH.includes(index),
-          cut: setOptions.cut,
-          hasDiamonds: design.type === 'iced',
-          diamondType: design.stone === 'moissanite' ? 'moissanite' : 'lab',
-        };
+        return toothCustomization(overrides[index] ?? base, { fangs: setOptions.fangs, cut: setOptions.cut }, index);
       }),
     [base, overrides, selectedSet, setOptions.fangs, setOptions.cut, step],
   );
@@ -271,9 +257,11 @@ function Configurator() {
       return;
     }
     if (pickingInscription) {
-      if (!selectedSet.has(index)) return;
-      setInscriptionTooth(index);
-      setInscriptionPicking(false);
+      const which = inscriptionPicking!;
+      const other = inscriptionDrafts.find((_, i) => i !== which);
+      const { draft, done } = pickTooth(inscriptionDrafts[which], index, selectedSet, other ? draftRow(other) : null);
+      setInscriptionDrafts((previous) => previous.map((item, i) => (i === which ? draft : item)));
+      if (done) setInscriptionPicking(null);
       return;
     }
     if (!pickMode || !selectedSet.has(index)) return;
@@ -304,9 +292,9 @@ function Configurator() {
   const updateSet = (patch: Partial<SetOptions>) => setSetOptions((previous) => ({ ...previous, ...patch }));
 
   const renderSpec = useMemo<RenderSpec | null>(
-    () => (teethDesigns.length ? { ...setOptions, fangs: fangsOn, inscription, teeth: teethDesigns } : null),
+    () => (teethDesigns.length ? { ...setOptions, fangs: fangsOn, inscriptions, teeth: teethDesigns } : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setOptions, fangsOn, teethDesigns, inscription?.text, inscription?.tooth, inscription?.style],
+    [setOptions, fangsOn, teethDesigns, inscriptionsKey],
   );
   const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns) : [];
 
@@ -323,13 +311,15 @@ function Configurator() {
     fangs: fangsOn,
     cut: setOptions.cut,
     has_vision: setOptions.vision.trim().length > 0,
-    inscription_style: inscription?.style ?? 'none',
+    inscription_style: inscriptions[0]?.style ?? 'none',
+    inscriptions: inscriptions.length,
+    inscription_font: inscriptions[0]?.font ?? 'none',
     has_inspiration: Boolean(inspiration),
     estimated_total: totalCost,
     promo_code: Boolean(pricing.promo?.amount),
   });
 
-  type Capture = { spec: RenderSpec; preview: string; masks: { kind: string; indices: number[]; mask: string }[] };
+  type Capture = { spec: RenderSpec; preview: string; masks: { kind: string; indices: number[]; mask: string }[]; photo: PhotoStill | null };
 
   /** The 3D capture (and tooth masks for mixed designs), taken after the next paint. */
   const captureDesign = () =>
@@ -347,7 +337,14 @@ function Configurator() {
             indices: plan.indices,
             mask: captureToothMask(state, plan.indices, plan.kind === 'fangs' ? 90 : 0),
           }));
-          resolve({ spec, preview, masks });
+          // The photo stage's still: the exact piece, posed and lit for the AI photo (MAG-76).
+          let photo: PhotoStill | null = null;
+          try {
+            photo = capturePhotoStill(state, spec.teeth.map((tooth) => tooth.index));
+          } catch {
+            photo = null;
+          }
+          resolve({ spec, preview, masks, photo });
         } catch {
           resolve(null);
         }
@@ -356,7 +353,7 @@ function Configurator() {
 
   const renderCapture = (capture: Capture, receipt: LeadReceipt | null) => {
     posthog.capture('sample_render_started', { ...designProperties(), masked_groups: capture.masks.length });
-    void render.start(capture.preview, capture.spec, inspiration, capture.masks, receipt).then((result) => {
+    void render.start(capture.preview, capture.spec, inspiration, capture.masks, receipt, capture.photo).then((result) => {
       if (result.ok) {
         posthog.capture('sample_render_completed', { ...designProperties(), render_seconds: result.seconds });
       } else if (result.reason !== 'aborted') {
@@ -447,7 +444,7 @@ function Configurator() {
     posthog.capture('sample_step_viewed', { step: target });
     setPickMode(false);
     setPickedTeeth([]);
-    setInscriptionPicking(false);
+    setInscriptionPicking(null);
     setStep(target);
     setPanelOpen(true);
     panelScroll.current?.scrollTo({ top: 0 });
@@ -466,10 +463,8 @@ function Configurator() {
     setPickedTeeth([]);
     setSetOptions(tenant.defaultSet);
     setInspiration(null);
-    setInscriptionText('');
-    setInscriptionStyle('cut');
-    setInscriptionTooth(null);
-    setInscriptionPicking(false);
+    setInscriptionDrafts([newDraft(catalog.inscriptionStyles[0]?.id)]);
+    setInscriptionPicking(null);
     setStep('teeth');
     setPanelOpen(true);
   };
@@ -585,6 +580,7 @@ function Configurator() {
             selectedTeeth={highlighted}
             isSelectionMode={isSelectionMode}
             toggleToothSelection={handleToothClick}
+            inscriptions={step === 'teeth' ? [] : inscriptions}
             onReady={(state) => {
               threeState.current = state;
             }}
@@ -770,6 +766,24 @@ function Configurator() {
                         />
                       ))}
                     </div>
+                    {shown.type === 'plain' && shown.style === 'opals' && (
+                      <div className="opal-row" role="group" aria-label="Opal colour">
+                        <span>Opal</span>
+                        {OPALS.map((opal) => (
+                          <button
+                            key={opal.id}
+                            type="button"
+                            className={(shown.opal ?? 'white') === opal.id ? 'opal-choice is-selected' : 'opal-choice'}
+                            onClick={() => applyDesign({ opal: opal.id })}
+                            aria-pressed={(shown.opal ?? 'white') === opal.id}
+                            disabled={pickingNothing}
+                          >
+                            <i style={{ background: opal.swatch }} />
+                            {opal.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {shown.type === 'iced' ? (
                       <small className="field-hint">On iced teeth, open face sets the stones round the frame and leaves the middle open. Other finishes apply to plain teeth.</small>
                     ) : (
@@ -917,49 +931,15 @@ function Configurator() {
                 {catalog.inscriptionStyles.length > 0 && (
                 <fieldset className="control-group">
                   <legend>Initials or text <em className="legend-optional">Optional</em></legend>
-                  <div className="inscription-row">
-                    <Type size={16} />
-                    <input
-                      className="inscription-input"
-                      value={inscriptionText}
-                      onChange={(event) => setInscriptionText(event.target.value.replace(/[^A-Za-z0-9&$#!.' -]/g, '').slice(0, INSCRIPTION_MAX))}
-                      placeholder="e.g. HB"
-                      maxLength={INSCRIPTION_MAX}
-                      aria-label="Initials or text"
-                    />
-                    <small>{inscriptionText.length}/{INSCRIPTION_MAX}</small>
-                  </div>
-                  {inscriptionText.trim() && (
-                    <>
-                      <div className="segmented-control segmented-control--three inscription-styles">
-                        {catalog.inscriptionStyles.map((style) => (
-                          <button
-                            key={style.id}
-                            className={inscriptionStyle === style.id ? 'segment segment--selected' : 'segment'}
-                            type="button"
-                            onClick={() => setInscriptionStyle(style.id)}
-                            title={style.detail}
-                          >
-                            {style.label}
-                            {hints.inscription(style.id) && <small>{hints.inscription(style.id)}</small>}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        className={`tooth-pick-button${inscriptionPicking ? ' tooth-pick-button--active' : ''}`}
-                        type="button"
-                        onClick={() => setInscriptionPicking((picking) => !picking)}
-                      >
-                        <MousePointer2 size={15} />
-                        {inscriptionPicking
-                          ? 'Tap the tooth on the model…'
-                          : inscription
-                            ? `On your ${wearerToothName(inscription.tooth)} · Change`
-                            : 'Choose the tooth on the model'}
-                      </button>
-                      {!inscription && !inscriptionPicking && <small className="field-hint">Pick a tooth to add this to your design.</small>}
-                    </>
-                  )}
+                  <InscriptionEditor
+                    drafts={inscriptionDrafts}
+                    onChange={setInscriptionDrafts}
+                    picking={inscriptionPicking}
+                    onPicking={setInscriptionPicking}
+                    styles={catalog.inscriptionStyles}
+                    hint={hints.inscription}
+                    rows={[0, 1].filter((row) => selectedTeeth.some((index) => Math.floor(index / 16) === row))}
+                  />
                 </fieldset>
                 )}
                 {catalog.vision && (

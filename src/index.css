@@ -1,3 +1,9 @@
+/* Script lettering for inscriptions (Pinyon Script, SIL OFL). Only downloaded when used. */
+@font-face {
+  font-family: 'VVS Script';
+  font-display: swap;
+  src: url(/fonts/pinyon-script.woff2) format('woff2');
+}
 @font-face {
   font-family: 'Instrument Serif';
   font-style: normal;
