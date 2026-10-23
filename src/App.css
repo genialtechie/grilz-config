@@ -1897,8 +1897,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* overflow: hidden, or the photo's own height wins over the aspect ratio. */
   .option-grid .option-card__media {
     aspect-ratio: 3 / 2;
+    overflow: hidden;
   }
 
   .option-grid--two .option-card__media {
@@ -2476,14 +2478,12 @@
   }
 }
 
-/* Phones: Fangs and Cut are either/or, so they read as two plain buttons, not picture cards (MAG-95). */
-@media (max-width: 860px) {
-  .option-grid--switch .option-card__media {
-    display: none;
-  }
+/* Cut: deep and permanent look the same in a picture, so they are two plain buttons (MAG-95). */
+.option-grid--switch .option-card__media {
+  display: none;
+}
 
-  .option-grid--switch .option-card {
-    justify-content: center;
-    min-height: 52px;
-  }
+.option-grid--switch .option-card {
+  justify-content: center;
+  min-height: 52px;
 }

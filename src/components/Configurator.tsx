@@ -836,7 +836,7 @@ function Configurator() {
                   {catalog.fangs && (
                     <fieldset className="control-group">
                       <legend>Fangs</legend>
-                      <div className="option-grid option-grid--two option-grid--switch">
+                      <div className="option-grid option-grid--two">
                         {FANG_OPTIONS.map((option) => (
                           <OptionCard
                             key={option.id}
