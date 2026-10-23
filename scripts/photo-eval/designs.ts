@@ -15,19 +15,20 @@ export const EVAL_DESIGNS: EvalDesign[] = [
   {
     id: 'pink-script',
     title: 'Bottom 8, yellow gold, a name in script with pink enamel',
-    reference: 'IG: polished yellow gold bottom 8 with "Lainee" in cursive across six teeth, pink enamel fill',
+    reference: 'IG: polished bottom 8 with "Soiree" in cursive across six teeth, pink enamel fill',
     // The name runs across the six front teeth; teeth 21–26 are the lower canines and incisors.
-    spec: { fangs: false, cut: 'deep', vision: '', inscriptions: [{ text: 'Lainee', teeth: [21, 22, 23, 24, 25, 26], style: 'engraved', font: 'script', enamel: 'pink' }], teeth: run(20, 27) },
+    spec: { fangs: false, cut: 'deep', vision: '', inscriptions: [{ text: 'Soiree', teeth: [21, 22, 23, 24, 25, 26], style: 'engraved', font: 'script', enamel: 'pink' }], teeth: run(20, 27) },
   },
   {
     id: 'opal-monogram',
     title: 'Top and bottom 8, white gold, fire opals, script monograms',
-    reference: 'IG: white gold 8/8, fire opals on the canines, "G.U" engraved on a top front tooth and "Jae" on a bottom one',
+    reference: 'IG: white gold 8/8, fire opals on the canines, "Gi" engraved on a top front tooth and "Joe" across the two bottom teeth next to the canine on the viewer\'s right',
     spec: {
       fangs: false, cut: 'deep', vision: '',
       inscriptions: [
-        { text: 'G.U', teeth: [7], style: 'engraved', font: 'script', enamel: null },
-        { text: 'Jae', teeth: [24], style: 'engraved', font: 'script', enamel: null },
+        // Index 0 is the viewer's right: 7 is the right-hand upper central incisor, 21 the lower canine on that side.
+        { text: 'Gi', teeth: [7], style: 'engraved', font: 'script', enamel: null },
+        { text: 'Joe', teeth: [22, 23], style: 'engraved', font: 'script', enamel: null },
       ],
       teeth: [
         ...run(4, 11, { metal: 'white' }, { 5: { style: 'opals', opal: 'fire' }, 10: { style: 'opals', opal: 'fire' } }),

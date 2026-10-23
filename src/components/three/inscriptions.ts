@@ -47,20 +47,21 @@ function drawLetters(inscription: Inscription, metal: MetalId, aspect: number): 
   canvas.height = height;
   const context = canvas.getContext('2d')!;
   const font = FONTS[inscription.font];
-  const text = inscription.font === 'block' ? inscription.text.toUpperCase() : inscription.text;
+  const cursive = inscription.font !== 'block';
+  const text = cursive ? inscription.text : inscription.text.toUpperCase();
   // As large as fits: 92% of the width, and no taller than the decal (script's loops reach past its capitals).
-  let size = height * (inscription.font === 'script' ? 0.92 : 0.6);
-  context.font = `${font.weight} ${size}px "${font.family}", ${inscription.font === 'script' ? 'cursive' : 'sans-serif'}`;
+  let size = height * (cursive ? 0.92 : 0.6);
+  context.font = `${font.weight} ${size}px "${font.family}", ${cursive ? 'cursive' : 'sans-serif'}`;
   const measured = context.measureText(text).width;
   if (measured > width * fill) size *= (width * fill) / measured;
-  context.font = `${font.weight} ${size}px "${font.family}", ${inscription.font === 'script' ? 'cursive' : 'sans-serif'}`;
+  context.font = `${font.weight} ${size}px "${font.family}", ${cursive ? 'cursive' : 'sans-serif'}`;
   // A name across several teeth is drawn wider to fill them, as jewelers lay it out (script stretches well; block a little).
-  const stretch = Math.min(inscription.font === 'script' ? 1.35 : 1.15, Math.max(1, (width * fill) / context.measureText(text).width));
+  const stretch = Math.min(cursive ? 1.35 : 1.15, Math.max(1, (width * fill) / context.measureText(text).width));
   context.setTransform(stretch, 0, 0, 1, 0, 0);
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   const x = width / 2 / stretch;
-  const y = height * (inscription.font === 'script' ? 0.54 : 0.52);
+  const y = height * (cursive ? 0.54 : 0.52);
   const stroke = Math.max(2, size * 0.06);
 
   if (inscription.style === 'engraved') {
@@ -72,11 +73,21 @@ function drawLetters(inscription: Inscription, metal: MetalId, aspect: number): 
     if (enamel) {
       // A fine cut edge round the enamel: script strokes are thin, so the edge must not swamp the colour.
       context.strokeStyle = shade(enamel, 0.55);
-      context.lineWidth = Math.max(1.5, size * 0.014);
+      context.lineWidth = Math.max(1.5, size * (cursive ? 0.03 : 0.014));
       context.strokeText(text, x, y);
+      // Script: a second pass in the enamel colour thickens the fine strokes so the colour shows.
+      if (cursive) {
+        context.strokeStyle = enamel;
+        context.lineWidth = Math.max(1, size * 0.016);
+        context.strokeText(text, x, y);
+      }
       context.fillStyle = enamel;
       context.fillText(text, x, y);
-    } else if (inscription.font === 'script') {
+    } else if (cursive) {
+      // Pinyon's hairlines are too fine to read on a tooth: the cut is drawn a little wider, keeping its shapes.
+      context.strokeStyle = ENGRAVED_LINE;
+      context.lineWidth = Math.max(1.5, size * 0.022);
+      context.strokeText(text, x, y);
       context.fillStyle = ENGRAVED_LINE;
       context.fillText(text, x, y);
     } else {
@@ -163,12 +174,13 @@ export function inscriptionDecals(inscription: Inscription, teeth: THREE.Mesh[],
   const across = corners.map((corner) => corner.dot(right));
   const width = (Math.max(...across) - Math.min(...across)) * 0.94;
   const toothHeight = box.max.y - box.min.y;
-  const height = toothHeight * 0.66;
+  // A monogram on one tooth fills most of its face; a name across teeth keeps to a band.
+  const height = toothHeight * (inscription.teeth.length === 1 ? 0.7 : 0.66);
   const depth = (box.max.z - box.min.z) + 0.6;
-  // Letters sit on the part of the teeth that shows when the bite is closed: lower on the lower row
-  // (the upper teeth overlap its top), higher on the upper row.
+  // Letters sit towards the biting edge, clear of the gum (the lower row's gum is at the bottom,
+  // the upper row's at the top), while staying below where the upper teeth overlap the lower ones.
   const lowerRow = centre.y < 0;
-  const position = centre.clone().setY(lowerRow ? box.min.y + toothHeight * 0.42 : box.min.y + toothHeight * 0.55);
+  const position = centre.clone().setY(lowerRow ? box.min.y + toothHeight * 0.52 : box.min.y + toothHeight * 0.44);
 
   const canvas = drawLetters(inscription, metal, width / height);
   const texture = new THREE.CanvasTexture(canvas);
