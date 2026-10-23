@@ -53,26 +53,25 @@ import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
 import type { ToothCustomization } from '../lib/types';
 
-type StepId = 'teeth' | 'metal' | 'style' | 'stones' | 'extras' | 'vision' | 'photo';
+// Five steps, one question each (MAG-95): which teeth, what metal, what look,
+// anything personal, then review and send. Order details (how the shop gets
+// the fit, add-ons) live with the price at the end, not among design choices.
+type StepId = 'teeth' | 'metal' | 'look' | 'vision' | 'photo';
 
 const STEP_LABELS: Record<StepId, string> = {
   teeth: 'Teeth',
   metal: 'Metal',
-  style: 'Style',
-  stones: 'Stones',
-  extras: 'Extras',
+  look: 'Look',
   vision: 'Make it yours',
-  photo: 'Your photo',
+  photo: 'Review & send',
 };
 
 const STEP_INTROS: Record<StepId, { title: string; text: string }> = {
-  teeth: { title: 'Choose your teeth', text: 'Pick a popular set, adjust top and bottom, or tap teeth on the model.' },
-  metal: { title: 'Pick your metal', text: 'Every metal and karat updates the model and the price.' },
-  style: { title: 'Choose the look', text: 'Plain, iced out or a photo, then the finish.' },
-  stones: { title: 'Set the stones', text: 'Choose how the stones are set and what they are.' },
-  extras: { title: 'Fangs and fit', text: 'Add fangs, choose how the grillz sit and how the shop gets your fit.' },
-  vision: { title: 'Make it yours', text: 'Describe your idea or upload a reference. Both shape your AI photo.' },
-  photo: { title: 'See it for real', text: 'Your price and a studio photo of your design.' },
+  teeth: { title: 'Choose your teeth', text: 'Pick a set, or tap teeth on the model.' },
+  metal: { title: 'Pick your metal', text: 'Colour and karat. The price updates as you go.' },
+  look: { title: 'Choose the look', text: 'Plain or iced, the finish, then fangs and cut.' },
+  vision: { title: 'Make it yours', text: 'Add a name or initials, or describe your idea.' },
+  photo: { title: 'Review & send', text: 'Check your design and price, then send it for a studio photo.' },
 };
 
 const POPULAR = [
@@ -176,7 +175,7 @@ function Configurator() {
   const pickingNothing = pickMode && activePicked.length === 0;
 
   const hasVisionStep = catalog.vision || catalog.inscriptionStyles.length > 0;
-  const steps: StepId[] = ['teeth', 'metal', 'style', ...(anyIced ? (['stones'] as const) : []), 'extras', ...(hasVisionStep ? (['vision'] as const) : []), 'photo'];
+  const steps: StepId[] = ['teeth', 'metal', 'look', ...(hasVisionStep ? (['vision'] as const) : []), 'photo'];
   const stepIndex = Math.max(0, steps.indexOf(step));
   const nextStep = steps.at(stepIndex + 1);
 
@@ -509,31 +508,33 @@ function Configurator() {
     }
   };
 
-  const scopeBar = (
-    <div className="scope-bar">
-      <div className="segmented-control">
-        <button
-          className={!pickMode ? 'segment segment--selected' : 'segment'}
-          type="button"
-          onClick={() => {
-            setPickMode(false);
-            setPickedTeeth([]);
-          }}
-        >
-          All {selectedTeeth.length} teeth
-        </button>
-        <button className={pickMode ? 'segment segment--selected' : 'segment'} type="button" onClick={() => setPickMode(true)}>
-          <MousePointer2 size={14} /> Pick teeth
-        </button>
-      </div>
-      {pickMode && (
-        <small className="scope-note">
-          {activePicked.length
-            ? `Changes apply to ${activePicked.length} picked ${activePicked.length === 1 ? 'tooth' : 'teeth'}.`
-            : 'Tap teeth on the model, then choose an option for just those.'}
-        </small>
-      )}
-      {!pickMode && isMixed && <small className="scope-note">Mixed design: changes here apply to every tooth.</small>}
+  // Designing teeth one by one is the exception, so it sits under the options as a
+  // link; while it's on, a note at the top says which teeth the options change.
+  const pickNote = pickMode && (
+    <div className="pick-note" role="status">
+      <MousePointer2 size={15} />
+      <span>
+        {activePicked.length
+          ? `Changing ${activePicked.length} picked ${activePicked.length === 1 ? 'tooth' : 'teeth'}. Tap more on the model.`
+          : 'Tap the teeth on the model you want to make different.'}
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setPickMode(false);
+          setPickedTeeth([]);
+        }}
+      >
+        Done
+      </button>
+    </div>
+  );
+  const mixLink = !pickMode && selectedTeeth.length > 1 && (
+    <div className="mix-link">
+      <button className="text-button text-button--left" type="button" onClick={() => setPickMode(true)}>
+        <MousePointer2 size={14} /> Make some teeth different
+      </button>
+      {isMixed && <small>Mixed design: options above change every tooth.</small>}
     </div>
   );
 
@@ -593,7 +594,8 @@ function Configurator() {
               preview={render.preview}
               error={render.error}
               startedAt={render.startedAt}
-              expectedSeconds={16 + 16 * Math.ceil((renderSpec ? planMasks(renderSpec).length : 0) / 4)}
+              // One OpenAI edit of the photo still (MAG-76): about 30 seconds.
+              expectedSeconds={32}
               canRetry={render.rendersLeft > 0}
               onRetry={startRender}
               onClose={() => setShowPhoto(false)}
@@ -693,7 +695,7 @@ function Configurator() {
 
               {step === 'metal' && (
                 <>
-                  {scopeBar}
+                  {pickNote}
                   <div className="option-grid">
                     {catalog.metals.map((metal) => (
                       <OptionCard
@@ -727,12 +729,13 @@ function Configurator() {
                       </div>
                     </fieldset>
                   )}
+                  {mixLink}
                 </>
               )}
 
-              {step === 'style' && (
+              {step === 'look' && (
                 <>
-                  {scopeBar}
+                  {pickNote}
                   <fieldset className="control-group">
                     <legend>Type</legend>
                     <div className="option-grid option-grid--three">
@@ -749,6 +752,45 @@ function Configurator() {
                       ))}
                     </div>
                   </fieldset>
+                  {/* Iced: the stones come straight after the choice, in the same step. */}
+                  {(shown.type === 'iced' || (!pickMode && anyIced)) && (
+                    <>
+                      <fieldset className="control-group control-group--revealed">
+                        <legend>Stones</legend>
+                        <div className="option-grid option-grid--three">
+                          {catalog.stones.map((stone) => (
+                            <OptionCard
+                              key={stone.id}
+                              label={stone.label}
+                              detail={stone.detail}
+                              hint={hints.stone(stone.id)}
+                              image={stone.image}
+                              selected={shown.stone === stone.id}
+                              disabled={pickingNothing}
+                              onSelect={() => applyDesign({ stone: stone.id })}
+                            />
+                          ))}
+                        </div>
+                      </fieldset>
+                      <fieldset className="control-group control-group--revealed">
+                        <legend>Setting</legend>
+                        <div className="option-grid option-grid--three">
+                          {catalog.settings.map((setting) => (
+                            <OptionCard
+                              key={setting.id}
+                              label={setting.label}
+                              detail={setting.detail}
+                              hint={hints.setting(setting.id)}
+                              image={setting.image}
+                              selected={shown.setting === setting.id}
+                              disabled={pickingNothing}
+                              onSelect={() => applyDesign({ setting: setting.id })}
+                            />
+                          ))}
+                        </div>
+                      </fieldset>
+                    </>
+                  )}
                   <fieldset className="control-group">
                     <legend>Finish</legend>
                     <div className="option-grid option-grid--three">
@@ -784,81 +826,30 @@ function Configurator() {
                         ))}
                       </div>
                     )}
-                    {shown.type === 'iced' ? (
-                      <small className="field-hint">On iced teeth, open face sets the stones round the frame and leaves the middle open. Other finishes apply to plain teeth.</small>
-                    ) : (
-                      shown.style !== 'solid' && <small className="field-hint">Turn the 3D view to see the finish catch the light.</small>
-                    )}
+                    {shown.type === 'iced' && <small className="field-hint">Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.</small>}
                   </fieldset>
-                </>
-              )}
-
-              {step === 'stones' && (
-                <>
-                  {scopeBar}
-                  <fieldset className="control-group">
-                    <legend>Setting</legend>
-                    <div className="option-grid option-grid--three">
-                      {catalog.settings.map((setting) => (
-                        <OptionCard
-                          key={setting.id}
-                          label={setting.label}
-                          detail={setting.detail}
-                          hint={hints.setting(setting.id)}
-                          image={setting.image}
-                          selected={shown.setting === setting.id}
-                          disabled={pickingNothing}
-                          onSelect={() => applyDesign({ setting: setting.id })}
-                        />
-                      ))}
-                    </div>
-                  </fieldset>
-                  <fieldset className="control-group">
-                    <legend>Stones</legend>
-                    <div className="option-grid option-grid--three">
-                      {catalog.stones.map((stone) => (
-                        <OptionCard
-                          key={stone.id}
-                          label={stone.label}
-                          detail={stone.detail}
-                          hint={hints.stone(stone.id)}
-                          image={stone.image}
-                          selected={shown.stone === stone.id}
-                          disabled={pickingNothing}
-                          onSelect={() => applyDesign({ stone: stone.id })}
-                        />
-                      ))}
-                    </div>
-                  </fieldset>
-                  {pickMode && activePicked.length > 0 && designFor(activePicked[0]).type !== 'iced' && (
-                    <div className="inline-note">These teeth aren&apos;t iced. Set them to Iced out in Style first.</div>
-                  )}
-                </>
-              )}
-
-              {step === 'extras' && (
-                <>
+                  {mixLink}
                   {catalog.fangs && (
-                  <fieldset className="control-group">
-                    <legend>Fangs</legend>
-                    <div className="option-grid option-grid--two">
-                      {FANG_OPTIONS.map((option) => (
-                        <OptionCard
-                          key={option.id}
-                          label={option.label}
-                          detail={option.id === 'yes' && !canHaveFangs ? 'Add your upper canines first' : option.detail}
-                          hint={option.id === 'yes' ? hints.fangs() : hints.extra(0)}
-                          image={option.image}
-                          disabled={option.id === 'yes' && !canHaveFangs}
-                          selected={fangsOn === (option.id === 'yes')}
-                          onSelect={() => updateSet({ fangs: option.id === 'yes' })}
-                        />
-                      ))}
-                    </div>
-                  </fieldset>
+                    <fieldset className="control-group">
+                      <legend>Fangs</legend>
+                      <div className="option-grid option-grid--two">
+                        {FANG_OPTIONS.map((option) => (
+                          <OptionCard
+                            key={option.id}
+                            label={option.label}
+                            detail={option.id === 'yes' && !canHaveFangs ? 'Add your upper canines first' : option.detail}
+                            hint={option.id === 'yes' ? hints.fangs() : hints.extra(0)}
+                            image={option.image}
+                            disabled={option.id === 'yes' && !canHaveFangs}
+                            selected={fangsOn === (option.id === 'yes')}
+                            onSelect={() => updateSet({ fangs: option.id === 'yes' })}
+                          />
+                        ))}
+                      </div>
+                    </fieldset>
                   )}
                   <fieldset className="control-group">
-                    <legend>Fit</legend>
+                    <legend>Cut</legend>
                     <div className="option-grid option-grid--two">
                       {catalog.cuts.map((cut) => (
                         <OptionCard
@@ -873,56 +864,6 @@ function Configurator() {
                       ))}
                     </div>
                   </fieldset>
-                  {catalog.molds.length > 0 && (
-                    <fieldset className="control-group">
-                      <legend>How we get your fit</legend>
-                      <div className="choice-list">
-                        {catalog.molds.map((option) => {
-                          const Icon = MOLD_ICONS[option.id];
-                          const fee = tenant.config.pricing.molds?.[option.id] ?? 0;
-                          return (
-                            <button
-                              key={option.id}
-                              className={setOptions.mold === option.id ? 'choice-row choice-row--selected' : 'choice-row'}
-                              type="button"
-                              role="radio"
-                              aria-checked={setOptions.mold === option.id}
-                              onClick={() => updateSet({ mold: option.id })}
-                            >
-                              <Icon size={17} />
-                              <span><strong>{option.label}</strong><small>{[option.detail, fee ? hints.extra(fee) : null].filter(Boolean).join(' · ')}</small></span>
-                              <span className="radio-indicator">{setOptions.mold === option.id && <span />}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </fieldset>
-                  )}
-                  {(tenant.config.catalog.addOns ?? []).length > 0 && (
-                    <fieldset className="control-group">
-                      <legend>Add-ons <em className="legend-optional">Optional</em></legend>
-                      <div className="choice-list">
-                        {(tenant.config.catalog.addOns ?? []).map((addOn) => {
-                          const on = (setOptions.addOns ?? []).includes(addOn.id);
-                          const hint = hints.extra(addOn.price, addOn.per === 'tooth');
-                          return (
-                            <button
-                              key={addOn.id}
-                              className={on ? 'choice-row choice-row--selected' : 'choice-row'}
-                              type="button"
-                              role="checkbox"
-                              aria-checked={on}
-                              onClick={() => updateSet({ addOns: on ? (setOptions.addOns ?? []).filter((id) => id !== addOn.id) : [...(setOptions.addOns ?? []), addOn.id] })}
-                            >
-                              <Plus size={17} />
-                              <span><strong>{addOn.label}</strong>{(addOn.detail || hint) && <small>{[addOn.detail, hint].filter(Boolean).join(' · ')}</small>}</span>
-                              <span className="check-indicator">{on && <Check size={13} />}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </fieldset>
-                  )}
                 </>
               )}
 
@@ -982,14 +923,74 @@ function Configurator() {
                       <strong>Custom {selectedTeeth.length}-tooth set</strong>
                       <span>{designLines.join(' · ')}</span>
                     </div>
+                    <nav className="review-edit" aria-label="Change your design">
+                      <span>Edit</span>
+                      {steps.filter((id) => id !== 'photo').map((id) => (
+                        <button key={id} type="button" onClick={() => goTo(id)}>{STEP_LABELS[id]}</button>
+                      ))}
+                    </nav>
                   </div>
 
+                  {catalog.molds.length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>How we get your fit</legend>
+                      <div className="choice-list">
+                        {catalog.molds.map((option) => {
+                          const Icon = MOLD_ICONS[option.id];
+                          const fee = tenant.config.pricing.molds?.[option.id] ?? 0;
+                          return (
+                            <button
+                              key={option.id}
+                              className={setOptions.mold === option.id ? 'choice-row choice-row--selected' : 'choice-row'}
+                              type="button"
+                              role="radio"
+                              aria-checked={setOptions.mold === option.id}
+                              onClick={() => updateSet({ mold: option.id })}
+                            >
+                              <Icon size={17} />
+                              <span><strong>{option.label}</strong><small>{[option.detail, fee ? hints.extra(fee) : null].filter(Boolean).join(' · ')}</small></span>
+                              <span className="radio-indicator">{setOptions.mold === option.id && <span />}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
+                  {(tenant.config.catalog.addOns ?? []).length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>Add-ons <em className="legend-optional">Optional</em></legend>
+                      <div className="choice-list">
+                        {(tenant.config.catalog.addOns ?? []).map((addOn) => {
+                          const on = (setOptions.addOns ?? []).includes(addOn.id);
+                          const hint = hints.extra(addOn.price, addOn.per === 'tooth');
+                          return (
+                            <button
+                              key={addOn.id}
+                              className={on ? 'choice-row choice-row--selected' : 'choice-row'}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={on}
+                              onClick={() => updateSet({ addOns: on ? (setOptions.addOns ?? []).filter((id) => id !== addOn.id) : [...(setOptions.addOns ?? []), addOn.id] })}
+                            >
+                              <Plus size={17} />
+                              <span><strong>{addOn.label}</strong>{(addOn.detail || hint) && <small>{[addOn.detail, hint].filter(Boolean).join(' · ')}</small>}</span>
+                              <span className="check-indicator">{on && <Check size={13} />}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
+
                   {!priceHidden && (
-                    <dl className="review-list">
-                      {pricing.lines.map((line) => (
-                        <div key={line.label}><dt>{line.label}</dt><dd>{formatPrice(line.amount)}</dd></div>
-                      ))}
-                    </dl>
+                    <details className="review-breakdown">
+                      <summary>See the price breakdown</summary>
+                      <dl className="review-list">
+                        {pricing.lines.map((line) => (
+                          <div key={line.label}><dt>{line.label}</dt><dd>{formatPrice(line.amount)}</dd></div>
+                        ))}
+                      </dl>
+                    </details>
                   )}
                   {tenant.promos && (
                     <PromoField
@@ -1090,9 +1091,15 @@ function Configurator() {
                 <ChevronLeft size={18} />
               </button>
             )}
+            {/* Happy with the defaults? Straight to the price, photo and send. */}
+            {nextStep && nextStep !== 'photo' && selectedTeeth.length > 0 && (
+              <button className="secondary-button panel-footer__review" type="button" onClick={() => goTo('photo')}>
+                Review
+              </button>
+            )}
             {nextStep && (
               <button className="primary-button panel-footer__next" type="button" onClick={() => goTo(nextStep)} disabled={!selectedTeeth.length}>
-                Next: {STEP_LABELS[nextStep]}
+                <span className="panel-footer__prefix">Next: </span>{STEP_LABELS[nextStep]}
                 <ChevronRight size={17} />
               </button>
             )}

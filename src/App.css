@@ -1880,28 +1880,44 @@
     font-size: 18px;
   }
 
+  /* One line saying what the step is for. */
   .panel-heading--compact p {
-    display: none;
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
   }
 
-  .option-grid,
+  /* Every option in view (MAG-95): a compact grid, never a sideways strip that hides choices. */
+  .option-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
   .option-grid--two {
-    display: flex;
-    gap: 8px;
-    margin-right: -14px;
-    padding-right: 14px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .option-grid::-webkit-scrollbar {
-    display: none;
+  .option-grid .option-card__media {
+    aspect-ratio: 4 / 3;
   }
 
-  .option-grid .option-card {
-    flex: 0 0 112px;
-    scroll-snap-align: start;
+  .option-grid--two .option-card__media {
+    aspect-ratio: 16 / 9;
+  }
+
+  .option-grid .option-card__text {
+    padding: 5px 7px 6px;
+  }
+
+  .option-grid .option-card__text strong {
+    font-size: 11px;
+  }
+
+  .option-grid .option-card__text small {
+    overflow: hidden;
+    font-size: 9.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .panel-footer {
@@ -2277,3 +2293,123 @@
 /* Back from a paid deposit */
 .deposit-toast { position: fixed; z-index: 60; left: 50%; top: 14px; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; max-width: calc(100vw - 24px); padding: 12px 16px; border-radius: 12px; background: #1f7a4d; color: #fff; font-size: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); }
 .deposit-toast button { border: 0; background: none; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
+
+/* Builder steps (MAG-95) */
+.pick-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 9px 10px 9px 12px;
+  color: var(--ink);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.pick-note svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.pick-note span {
+  flex: 1;
+}
+
+.pick-note button {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  font-size: 11.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.mix-link {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 16px;
+}
+
+.mix-link .text-button {
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mix-link small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.review-hero {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-hero > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.review-edit span {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.review-edit button {
+  padding: 4px 0;
+  color: var(--ink);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.review-breakdown {
+  margin-top: 4px;
+}
+
+.review-breakdown summary {
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.panel-footer .secondary-button.panel-footer__review {
+  width: auto;
+  min-height: 44px;
+  flex: none;
+  padding: 0 14px;
+}
+
+@media (max-width: 360px) {
+  .panel-footer__prefix {
+    display: none;
+  }
+
+  .panel-footer .secondary-button.panel-footer__review {
+    padding: 0 10px;
+  }
+}
