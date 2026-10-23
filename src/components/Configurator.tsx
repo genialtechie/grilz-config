@@ -836,7 +836,7 @@ function Configurator() {
                   {catalog.fangs && (
                     <fieldset className="control-group">
                       <legend>Fangs</legend>
-                      <div className="option-grid option-grid--two">
+                      <div className="option-grid option-grid--two option-grid--switch">
                         {FANG_OPTIONS.map((option) => (
                           <OptionCard
                             key={option.id}
@@ -854,7 +854,7 @@ function Configurator() {
                   )}
                   <fieldset className="control-group">
                     <legend>Cut</legend>
-                    <div className="option-grid option-grid--two">
+                    <div className="option-grid option-grid--two option-grid--switch">
                       {catalog.cuts.map((cut) => (
                         <OptionCard
                           key={cut.id}

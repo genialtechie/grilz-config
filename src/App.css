@@ -2475,3 +2475,15 @@
     display: inline;
   }
 }
+
+/* Phones: Fangs and Cut are either/or, so they read as two plain buttons, not picture cards (MAG-95). */
+@media (max-width: 860px) {
+  .option-grid--switch .option-card__media {
+    display: none;
+  }
+
+  .option-grid--switch .option-card {
+    justify-content: center;
+    min-height: 52px;
+  }
+}
