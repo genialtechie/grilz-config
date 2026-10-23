@@ -13,7 +13,7 @@ import { mix, usableAccent } from '../../lib/tenant/theme';
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
 const PERMANENT_GROW = 1.08;
 /** The outline round a tooth picked to style on its own: a slightly bigger back-face shell. */
-const MARK_GROW = 1.07;
+const MARK_GROW = 1.12;
 
 const getToothIndexFromName = (name: string): number | null => {
   const match = name.match(toothNameRegex);
