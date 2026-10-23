@@ -135,8 +135,8 @@ export function LeadCapture({
           <strong>{demo ? 'Get a real photo of this set' : `Send your design to ${shopName}`}</strong>
           <small>
             {demo
-              ? 'Leave your details and we\'ll turn your design into a studio photo in about a minute.'
-              : `${shopName} gets your design and price, and you get a studio photo of your set in about a minute.`}
+              ? 'Leave your details and we\'ll turn your design into a studio photo in about 30 seconds.'
+              : `${shopName} gets your design and price, and you get a studio photo of your set in about 30 seconds.`}
           </small>
         </div>
       </div>
@@ -173,7 +173,7 @@ export function LeadCapture({
       {formError && <div className="inline-note" role="alert">{formError}</div>}
       <button className="primary-button" type="submit" disabled={sending}>
         {sending ? <Loader2 className="spin" size={16} /> : <Send size={16} />}
-        {sending ? 'Sending…' : demo ? 'Send design & get photo' : `Send to ${shopName}`}
+        {sending ? 'Sending…' : demo ? 'Send & get your photo' : `Send to ${shopName}`}
       </button>
       <p className="fine-print">
         {demo

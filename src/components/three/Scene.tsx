@@ -126,6 +126,7 @@ function Scene({
   customizations,
   selectedTeeth,
   isSelectionMode,
+  selectionLook,
   toggleToothSelection,
   inscriptions,
   onReady,
@@ -180,6 +181,7 @@ function Scene({
             customizations={customizations}
             selectedTeeth={selectedTeeth}
             isSelectionMode={isSelectionMode}
+            selectionLook={selectionLook}
             toggleToothSelection={toggleToothSelection}
             inscriptions={inscriptions}
             onFocusTooth={(point) => setFocus((current) => (current && current.distanceTo(point) < 0.3 ? null : point))}

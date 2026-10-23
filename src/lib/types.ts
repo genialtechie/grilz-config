@@ -26,6 +26,8 @@ export interface SceneProps {
   selectedTeeth: number[];
   isSelectionMode: boolean;
   toggleToothSelection: (index: number) => void;
+  /** How selected teeth show: filled in the accent (choosing the set), or their design with an outline (styling single teeth). */
+  selectionLook?: 'fill' | 'outline';
   /** Letters drawn on the set. */
   inscriptions?: Inscription[];
 }
