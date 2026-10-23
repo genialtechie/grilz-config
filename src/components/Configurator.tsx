@@ -1091,7 +1091,7 @@ function Configurator() {
               <strong>{priceHidden ? 'On request' : totalText(totalCost)}</strong>
             </div>
             {prevStep && (
-              <button className="icon-button panel-footer__back" type="button" onClick={() => goTo(prevStep)} aria-label={`Back to ${STEP_LABELS[prevStep]}`}>
+              <button className="icon-button" type="button" onClick={() => goTo(prevStep)} aria-label={`Back to ${STEP_LABELS[prevStep]}`}>
                 <ChevronLeft size={18} />
               </button>
             )}

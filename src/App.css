@@ -2414,13 +2414,22 @@
   white-space: nowrap;
 }
 
-/* The smallest phones: the done step pills already go back, so the back arrow makes room for the step name. */
+/* The smallest phones: back, Review and the next step's name all fit, so the footer tightens instead. */
 @media (max-width: 360px) {
+  .panel-footer {
+    gap: 6px;
+  }
+
   .panel-footer .secondary-button.panel-footer__review {
     padding: 0 10px;
   }
 
-  .panel-footer:has(.panel-footer__review) .panel-footer__back {
+  .panel-footer .primary-button.panel-footer__next {
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+
+  .panel-footer__next svg {
     display: none;
   }
 }
