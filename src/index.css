@@ -1,3 +1,9 @@
+/* Script lettering for inscriptions (Great Vibes, SIL OFL). Only downloaded when used. */
+@font-face {
+  font-family: 'VVS Script';
+  font-display: swap;
+  src: url(/fonts/great-vibes.woff2) format('woff2');
+}
 @font-face {
   font-family: 'Instrument Serif';
   font-style: normal;

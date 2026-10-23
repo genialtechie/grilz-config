@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
 import { dentalStone, polishedMetal, settingMetal } from './materials';
 import { fangGeometry, finishFor, ICED_RING } from './styles';
+import { clearInscriptionDecals, inscriptionDecals, loadInscriptionFont } from './inscriptions';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
@@ -46,6 +47,7 @@ function GrillzModel({
   selectedTeeth,
   isSelectionMode,
   toggleToothSelection,
+  inscriptions,
   onFocusTooth,
 }: GrillzModelProps & { onFocusTooth?: (point: THREE.Vector3) => void }) {
   const { scene } = useGLTF('/assets/teeth_final.glb');
@@ -149,12 +151,45 @@ function GrillzModel({
         const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
         if (finish) child.add(finish);
       } else if (capped && customization.style) {
-        const finish = finishFor(child, customization.style, metal);
+        const finish = finishFor(child, customization.style, metal, false, customization.opal);
         if (finish) child.add(finish);
       }
     });
     invalidate();
   }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, selectedToothSet]);
+
+  // Letters, after the teeth are dressed (fang shapes and permanent-look scale change where they land).
+  const inscriptionKey = JSON.stringify(inscriptions ?? []);
+  useEffect(() => {
+    const list = inscriptions ?? [];
+    const disposed = new Set<THREE.Material>();
+    const teeth = new Map<number, THREE.Mesh>();
+    clonedScene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const index = getToothIndexFromName(child.name);
+      if (index === null) return;
+      teeth.set(index, child);
+      clearInscriptionDecals(child, disposed);
+    });
+    if (!list.length) {
+      invalidate();
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(list.map((inscription) => loadInscriptionFont(inscription.font))).then(() => {
+      if (cancelled) return;
+      list.forEach((inscription) => {
+        const meshes = inscription.teeth.map((index) => teeth.get(index)).filter((mesh): mesh is THREE.Mesh => Boolean(mesh));
+        const metal = customizations[inscription.teeth[0]]?.metal ?? 'yellow';
+        inscriptionDecals(inscription, meshes, metal).forEach(({ tooth, decal }) => tooth.add(decal));
+      });
+      invalidate();
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clonedScene, customizations, inscriptionKey, invalidate]);
 
   useEffect(() => {
     return () => {

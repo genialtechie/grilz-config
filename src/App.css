@@ -1979,6 +1979,14 @@
   margin-top: 10px;
 }
 
+.inscription-styles .segment {
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 4px;
+  line-height: 1.15;
+}
+
 .tooth-pick-button {
   display: flex;
   width: 100%;
@@ -1995,6 +2003,103 @@
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+}
+
+.inscription-draft--more {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.inscription-input--script {
+  font-family: 'VVS Script', cursive;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.inscription-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.inscription-fonts {
+  margin-top: 10px;
+}
+
+.inscription-font-sample--script {
+  font-family: 'VVS Script', cursive;
+  font-size: 19px;
+  font-weight: 400;
+}
+
+.enamel-row,
+.opal-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.enamel-row > span,
+.opal-row > span {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.enamel-swatch {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.enamel-swatch--none {
+  background: linear-gradient(135deg, #fff 46%, var(--muted) 47%, var(--muted) 53%, #fff 54%);
+}
+
+.enamel-swatch.is-selected,
+.opal-choice.is-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.opal-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.opal-choice i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.field-hint--warn {
+  color: #9a3412;
 }
 
 .tooth-pick-button--active {

@@ -2,9 +2,10 @@ import type { Db } from './db.js';
 import { sendEmail, type EmailEnv } from './email.js';
 import type { PublishedTenant } from './tenants.js';
 
-// AI spend control. Each shop has a monthly allowance of FLUX generations from
-// its config (one per main render or section edit); every render is recorded in
-// render_usage, which also backs the global daily budget across all shops.
+// AI spend control. Each shop has a monthly allowance of generations from its
+// config (one per model call: a FLUX main render or section edit, or an OpenAI
+// photo); every render is recorded in render_usage, with what it cost, which
+// also backs the global daily budget across all shops.
 
 export type UsageOutcome = 'ok' | 'paused' | 'failed';
 
@@ -26,9 +27,11 @@ export async function reserveGenerations(
 }
 
 /** Records what a reserved render actually used (a failed main render still costs one; a pause costs none). */
-export async function settleReservation(db: Db, id: number, row: { generations: number; outcome: UsageOutcome; seconds?: number }) {
+export type UsageCost = { costUsd?: number; provider?: 'flux' | 'openai' };
+
+export async function settleReservation(db: Db, id: number, row: { generations: number; outcome: UsageOutcome; seconds?: number } & UsageCost) {
   try {
-    await db.update('render_usage', { id: `eq.${id}` }, { generations: row.generations, outcome: row.outcome, seconds: row.seconds ?? null });
+    await db.update('render_usage', { id: `eq.${id}` }, { generations: row.generations, outcome: row.outcome, seconds: row.seconds ?? null, ...costColumns(row) });
   } catch (error) {
     console.error('usage settle failed', error instanceof Error ? error.message : error);
   }
@@ -36,9 +39,11 @@ export async function settleReservation(db: Db, id: number, row: { generations: 
 
 export const dayGenerations = (db: Db) => db.rpc<number>('day_generations');
 
+const costColumns = (row: UsageCost) => ({ ...(row.costUsd !== undefined ? { cost_usd: row.costUsd } : {}), ...(row.provider ? { provider: row.provider } : {}) });
+
 export async function recordUsage(
   db: Db,
-  row: { tenantId: string; generations: number; outcome: UsageOutcome; seconds?: number; leadId?: string | null },
+  row: { tenantId: string; generations: number; outcome: UsageOutcome; seconds?: number; leadId?: string | null } & UsageCost,
 ) {
   try {
     await db.insert('render_usage', {
@@ -47,6 +52,7 @@ export async function recordUsage(
       outcome: row.outcome,
       seconds: row.seconds ?? null,
       lead_id: row.leadId ?? null,
+      ...costColumns(row),
     });
   } catch (error) {
     console.error('usage record failed', error instanceof Error ? error.message : error);

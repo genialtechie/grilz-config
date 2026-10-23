@@ -1,14 +1,21 @@
 import sharp from 'sharp';
-import { buildFillPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
+import { buildFillPrompt, buildPhotoPrompt, buildRenderPrompt, editModel, parseRenderSpec, planMasks, type RenderSpec } from '../src/lib/renderSpec.js';
+import { editPhoto, ImageError, type ImageQuality } from './openaiImage.js';
+import { checkPhoto, type PhotoCheck } from './photoCheck.js';
 import { createDb, hasDb, type Db } from './db.js';
 import { verifyLeadToken, type Defer, type LeadEnv } from './leads.js';
 import { notifyLead } from './notify.js';
 import { getPublishedTenant, tenantIdFor, type TenantEnv } from './tenants.js';
-import { crossedWarning, dayGenerations, recordUsage, reserveGenerations, settleReservation, warnAllowance, type UsageOutcome } from './usage.js';
+import { crossedWarning, dayGenerations, recordUsage, reserveGenerations, settleReservation, warnAllowance, type UsageCost, type UsageOutcome } from './usage.js';
 
-// Turns a 3D configurator screenshot into a studio product photo with FLUX.2:
-// one main render, then zoomed section edits blended back through 3D masks.
-// Shared by the Vercel function (api/render.ts) and the Vite dev server.
+// Turns the builder's 3D view into a studio product photo. Two providers:
+// - OpenAI (MAG-76, the default when OPENAI_API_KEY is set): the client's
+//   photo-stage still (exact piece, studio light, letters drawn) is made
+//   photographic in one edit, checked against the still (photoCheck.ts) and
+//   retried once if it drifted; if it drifts again the still itself is shown.
+// - FLUX.2: one main render, then zoomed section edits blended back through 3D masks.
+// RENDER_PROVIDER=openai|flux picks one. Shared by the Vercel function
+// (api/render.ts) and the Vite dev server.
 
 const BFL = 'https://api.bfl.ai/v1';
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -41,6 +48,12 @@ const throttled = (ip: string) => {
 
 export type RenderEnv = TenantEnv & LeadEnv & {
   FLUX_API_KEY?: string;
+  OPENAI_API_KEY?: string;
+  RENDER_PROVIDER?: string;
+  /** Overrides the pinned image model (server/openaiImage.ts). */
+  OPENAI_IMAGE_MODEL?: string;
+  /** low | medium | high (default high). */
+  OPENAI_IMAGE_QUALITY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   /** Daily budget in FLUX generations (one per main render or section edit). */
@@ -121,6 +134,25 @@ export type RenderResult = { status: number; body: Record<string, unknown> };
 
 // `code` lets the client tell a temporary hiccup (retry) from paused renders (no retry).
 const fail = (status: number, error: string, code = 'failed'): RenderResult => ({ status, body: { error, code } });
+
+export const renderProvider = (env: Pick<RenderEnv, 'RENDER_PROVIDER' | 'OPENAI_API_KEY'>): 'openai' | 'flux' =>
+  env.RENDER_PROVIDER === 'flux' || env.RENDER_PROVIDER === 'openai' ? env.RENDER_PROVIDER : env.OPENAI_API_KEY ? 'openai' : 'flux';
+
+/** One photo, and one retry if the first drifts from the design. */
+const OPENAI_MAX_CALLS = 2;
+
+const imageQuality = (env: RenderEnv): ImageQuality =>
+  env.OPENAI_IMAGE_QUALITY === 'low' || env.OPENAI_IMAGE_QUALITY === 'medium' ? env.OPENAI_IMAGE_QUALITY : 'high';
+
+/** The photo stage's still (JPEG) and its tooth label map (PNG), from the client. */
+const readStill = (value: unknown): { image: string; labels: string } | null => {
+  if (!value || typeof value !== 'object') return null;
+  const { image, labels } = value as { image?: unknown; labels?: unknown };
+  if (typeof image !== 'string' || !image.startsWith('data:image/jpeg') || typeof labels !== 'string' || !labels.startsWith('data:image/png')) return null;
+  const still = readImage(image);
+  const map = readImage(labels);
+  return still && map ? { image: still, labels: map } : null;
+};
 
 const readImage = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -304,11 +336,8 @@ export async function handleRender(payload: unknown, ip: string, env: RenderEnv,
 }
 
 async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer): Promise<RenderResult> {
-  const apiKey = env.FLUX_API_KEY;
-  if (!apiKey) return fail(503, 'Rendering is not configured.');
   if (!payload || typeof payload !== 'object') return fail(400, 'Invalid request.');
-
-  const { tenant: rawTenant, image, spec: rawSpec, inspiration, masks: rawMasks, leadId: rawLeadId, leadToken } = payload as {
+  const { tenant: rawTenant, image, spec: rawSpec, inspiration, masks: rawMasks, photo: rawPhoto, leadId: rawLeadId, leadToken } = payload as {
     tenant?: unknown;
     leadId?: unknown;
     leadToken?: unknown;
@@ -316,7 +345,12 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
     spec?: unknown;
     inspiration?: unknown;
     masks?: unknown;
+    photo?: unknown;
   };
+  // An older page (no photo-stage still) can only be rendered the FLUX way.
+  const provider = rawPhoto === undefined && env.FLUX_API_KEY ? 'flux' : renderProvider(env);
+  const apiKey = provider === 'openai' ? env.OPENAI_API_KEY : env.FLUX_API_KEY;
+  if (!apiKey) return fail(503, 'Rendering is not configured.');
   // Every render belongs to a shop; designs are validated against what that shop sells.
   const lookup = await getPublishedTenant(typeof rawTenant === 'string' ? rawTenant : 'vvslab', env);
   if (!lookup.ok) return fail(lookup.reason === 'unavailable' ? 503 : 404, lookup.reason === 'unavailable' ? 'The renderer is unavailable. Please try again.' : 'Shop not found.');
@@ -332,11 +366,14 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
     inspirationBase64 = readImage(inspiration);
     if (!inspirationBase64) return fail(400, 'Invalid inspiration image.');
   }
-  const masks = parseMasks(rawMasks, spec);
+  const still = provider === 'openai' ? readStill(rawPhoto) : null;
+  if (provider === 'openai' && !still) return fail(400, 'Invalid preview image.');
+  const masks = provider === 'flux' ? parseMasks(rawMasks, spec) : [];
   if (!masks) return fail(400, 'Invalid tooth masks.');
 
   if (throttled(ip)) return fail(429, 'Too many renders. Try again in a few minutes.', 'throttled');
-  const generations = 1 + masks.length;
+  // Reserved up front: an OpenAI photo may take a retry; a FLUX render is its main render plus edits.
+  const generations = provider === 'openai' ? OPENAI_MAX_CALLS : 1 + masks.length;
   const db = hasDb(env) ? createDb(env) : null;
   const tenantId = db ? await tenantIdFor(tenant, env) : null;
 
@@ -352,10 +389,10 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
   let reservation: number | null = null;
 
   // Every outcome is recorded against the shop, and a lead learns whether its photo is coming.
-  const settle = async (outcome: UsageOutcome, used: number, seconds?: number, photo?: string) => {
+  const settle = async (outcome: UsageOutcome, used: number, seconds?: number, photo?: string, cost: UsageCost = { provider }) => {
     if (!db || !tenantId) return;
-    if (reservation !== null) await settleReservation(db, reservation, { generations: used, outcome, seconds });
-    else await recordUsage(db, { tenantId, generations: used, outcome, seconds, leadId });
+    if (reservation !== null) await settleReservation(db, reservation, { generations: used, outcome, seconds, ...cost });
+    else await recordUsage(db, { tenantId, generations: used, outcome, seconds, leadId, ...cost });
     if (!leadId) return;
     let status: 'ready' | 'paused' | 'failed' = outcome === 'ok' ? 'ready' : outcome;
     const patch: Record<string, unknown> = {};
@@ -378,8 +415,10 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
     return fail(503, PAUSED, 'paused');
   };
 
-  const credits = await bflCredits(apiKey);
-  if (credits !== null && credits < CREDITS_PER_GENERATION * generations) return pause(`low credits (${credits})`);
+  if (provider === 'flux') {
+    const credits = await bflCredits(apiKey);
+    if (credits !== null && credits < CREDITS_PER_GENERATION * generations) return pause(`low credits (${credits})`);
+  }
   if (db && tenantId) {
     // Reserve this render's generations against the shop's month and the global day, atomically.
     try {
@@ -401,6 +440,7 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
 
   const started = Date.now();
   const deadline = started + BUDGET_MS;
+  if (provider === 'openai') return await openaiPhoto({ spec, still: still!, apiKey, env, deadline, started, tenant: tenant.slug, settle, defer });
   let result: string;
   try {
     result = await runJob(
@@ -455,4 +495,68 @@ async function render(payload: unknown, ip: string, env: RenderEnv, defer: Defer
       edits,
     },
   };
+}
+
+type Settle = (outcome: UsageOutcome, used: number, seconds?: number, photo?: string, cost?: UsageCost) => Promise<void>;
+
+/**
+ * The OpenAI photo: one edit of the still, checked against it. A photo that
+ * drifted (wrong metal colour, gold where there was none, the layout moved) is
+ * retried once; if the retry drifts too, the customer gets the still itself
+ * rather than a photo of a different piece.
+ */
+async function openaiPhoto(input: {
+  spec: RenderSpec;
+  still: { image: string; labels: string };
+  apiKey: string;
+  env: RenderEnv;
+  deadline: number;
+  started: number;
+  tenant: string;
+  settle: Settle;
+  defer: Defer;
+}): Promise<RenderResult> {
+  const { spec, still, apiKey, env, deadline, started, settle, defer } = input;
+  const quality = imageQuality(env);
+  const prompt = buildPhotoPrompt(spec);
+  let calls = 0;
+  let cost = 0;
+  let model = '';
+  let photo: string | null = null;
+  const checks: PhotoCheck[] = [];
+  for (let attempt = 0; attempt < OPENAI_MAX_CALLS && !photo; attempt += 1) {
+    // A retry only if there's time for a whole call.
+    if (attempt > 0 && deadline - Date.now() < 45_000) break;
+    let result: Awaited<ReturnType<typeof editPhoto>>;
+    try {
+      result = await editPhoto({ apiKey, image: still.image, prompt, quality, model: env.OPENAI_IMAGE_MODEL, deadline });
+    } catch (error) {
+      if (!(error instanceof ImageError)) throw error;
+      if (error.code === 'paused') {
+        defer(settle('paused', calls, undefined, undefined, { provider: 'openai', costUsd: cost }).catch(() => {}));
+        return fail(503, PAUSED, 'paused');
+      }
+      if (calls === 0) {
+        defer(settle('failed', 1, undefined, undefined, { provider: 'openai', costUsd: cost }).catch(() => {}));
+        return fail(error.status, error.message);
+      }
+      break;
+    }
+    calls += 1;
+    cost += result.usage.costUsd;
+    model = result.model;
+    const check = await checkPhoto(result.image, still.image, still.labels, spec).catch((error) => {
+      console.error('photo check failed', error instanceof Error ? error.message : error);
+      return null;
+    });
+    if (check) checks.push(check);
+    if (!check || check.pass) photo = result.image;
+  }
+  const checked = photo !== null;
+  const image = photo ?? still.image;
+  const seconds = Math.round((Date.now() - started) / 100) / 10;
+  const costUsd = Math.round(cost * 10_000) / 10_000;
+  console.log(JSON.stringify({ event: 'ai_photo', tenant: input.tenant, provider: 'openai', model, quality, calls, costUsd, seconds, checked, checks: checks.map((check) => ({ ...check.scores, reasons: check.reasons })) }));
+  defer(settle('ok', calls, seconds, image, { provider: 'openai', costUsd }).catch((error) => console.error('settle failed', error instanceof Error ? error.message : error)));
+  return { status: 200, body: { image: `data:image/jpeg;base64,${image}`, seconds, edits: 0, checked } };
 }

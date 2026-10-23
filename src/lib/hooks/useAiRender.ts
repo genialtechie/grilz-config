@@ -53,6 +53,8 @@ export const useAiRender = (tenant = 'vvslab') => {
     inspiration?: string | null,
     masks: { indices: number[]; mask: string }[] = [],
     lead: LeadReceipt | null = null,
+    /** The photo stage's still and tooth labels, for the OpenAI photo. */
+    photo: { image: string; labels: string } | null = null,
   ) => {
     const used = readUsage();
     if (used >= MAX_RENDERS_PER_VISITOR) {
@@ -74,14 +76,14 @@ export const useAiRender = (tenant = 'vvslab') => {
     setStatus('rendering');
     setImage(null);
     setError(null);
-    setPreview(preview);
+    setPreview(photo?.image ?? preview);
     setStartedAt(Date.now());
 
     try {
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant, image: preview, spec, inspiration: inspiration ?? undefined, masks, leadId: lead?.leadId, leadToken: lead?.token }),
+        body: JSON.stringify({ tenant, image: preview, spec, inspiration: inspiration ?? undefined, masks, photo: photo ?? undefined, leadId: lead?.leadId, leadToken: lead?.token }),
         signal: abort.signal,
       });
       const body = (await response.json().catch(() => ({}))) as {

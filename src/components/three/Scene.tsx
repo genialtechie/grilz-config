@@ -127,6 +127,7 @@ function Scene({
   selectedTeeth,
   isSelectionMode,
   toggleToothSelection,
+  inscriptions,
   onReady,
 }: Props) {
   const [focus, setFocus] = useState<THREE.Vector3 | null>(null);
@@ -180,6 +181,7 @@ function Scene({
             selectedTeeth={selectedTeeth}
             isSelectionMode={isSelectionMode}
             toggleToothSelection={toggleToothSelection}
+            inscriptions={inscriptions}
             onFocusTooth={(point) => setFocus((current) => (current && current.distanceTo(point) < 0.3 ? null : point))}
           />
           {/* The mould doesn't move, so its shadow is drawn once, after it loads. */}
