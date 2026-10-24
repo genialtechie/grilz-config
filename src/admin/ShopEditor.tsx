@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
-import { FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
+import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
+import { cutPrice, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
@@ -288,6 +289,17 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const accentAdjusted = /^#[0-9a-f]{6}$/i.test(config.brand.accent) && accentShown.toLowerCase() !== config.brand.accent.toLowerCase();
   const { catalog, pricing, deposit } = config;
   const pick = <T extends Option>(list: readonly T[], ids: readonly string[]) => list.filter((item) => ids.includes(item.id));
+  // The first edit to a fit's price writes every fit out, starting from what the shop charges now.
+  const setCut = (next: TenantConfig, id: CutId, patch: Partial<CutPrice>) => {
+    const cuts = { ...next.pricing.cuts };
+    next.catalog.cuts.forEach((cut) => {
+      cuts[cut] ??= cutPrice(next.pricing, cut);
+    });
+    cuts[id] = { ...cutPrice(next.pricing, id), ...cuts[id], ...patch };
+    next.pricing.cuts = cuts;
+    // Kept in step for anything that still reads the old flat price.
+    if (id === 'permanent' && patch.amount !== undefined) next.pricing.extras.permanent = patch.amount;
+  };
 
   return (
     <main className="admin-main">
@@ -585,7 +597,17 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                   </select>
                 </label>
               )}
-              {catalog.cuts.includes('permanent') && <Money label="Permanent look" value={pricing.extras.permanent} onChange={(value) => update((next) => { next.pricing.extras.permanent = value; })} />}
+              {pick(CUTS, catalog.cuts).map((cut) => (
+                <Fragment key={cut.id}>
+                  <Money label={cut.label} value={cutPrice(pricing, cut.id).amount} onChange={(value) => update((next) => setCut(next, cut.id, { amount: value }))} />
+                  <label className="admin-field">
+                    <span>{cut.label} charged</span>
+                    <select value={cutPrice(pricing, cut.id).per} onChange={(event) => update((next) => setCut(next, cut.id, { per: event.target.value as CutPrice['per'] }))}>
+                      {CUT_UNITS.map((unit) => <option key={unit} value={unit}>{{ order: 'Per order', arch: 'Per arch (top, bottom)', tooth: 'Per tooth' }[unit]}</option>)}
+                    </select>
+                  </label>
+                </Fragment>
+              ))}
               {catalog.types.includes('photo') && <Money label="Photo artwork" value={pricing.extras.photo} onChange={(value) => update((next) => { next.pricing.extras.photo = value; })} />}
               {pick(MOLDS, catalog.molds).map((mold) => (
                 <Money key={mold.id} label={`${mold.label} (fit)`} value={pricing.molds?.[mold.id] ?? 0} onChange={(value) => update((next) => { next.pricing.molds = { ...next.pricing.molds, [mold.id]: value }; })} />
