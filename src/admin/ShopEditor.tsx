@@ -3,8 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
-import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type TenantConfig } from '../lib/tenant/schema';
-import { cutPrice, type CutPrice } from '../lib/pricing';
+import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
+import { cutPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
@@ -79,6 +79,66 @@ function Money({ label, value, onChange, step = 5, suffix = '' }: { label: strin
         {suffix && <em>{suffix}</em>}
       </div>
     </label>
+  );
+}
+
+type IcedKey = (typeof ICED_KEYS)[number];
+const pickOptions = <T extends Option>(list: readonly T[], ids: readonly string[]) => list.filter((item) => ids.includes(item.id));
+
+/** The iced columns a shop's catalog has: silver and platinum by name, gold by karat. */
+const icedColumns = (catalog: TenantConfig['catalog']): { key: IcedKey; label: string }[] => [
+  ...(catalog.metals.includes('silver') ? [{ key: 'silver' as const, label: 'Silver' }] : []),
+  ...(catalog.metals.includes('platinum') ? [{ key: 'platinum' as const, label: 'Platinum' }] : []),
+  ...(catalog.metals.some((metal) => metal === 'yellow' || metal === 'white' || metal === 'rose') ? pickOptions(KARATS, catalog.karats).map((karat) => ({ key: karat.id, label: karat.label })) : []),
+];
+
+/** Today's iced price as metal plus stones: the starting table when a shop switches to all-in prices. */
+const startingIcedTable = (pricing: TenantPricing, catalog: TenantConfig['catalog']) =>
+  Object.fromEntries(
+    catalog.stones.map((stone) => [
+      stone,
+      Object.fromEntries(
+        icedColumns(catalog).map(({ key }) => {
+          const metal = key === 'silver' || key === 'platinum' ? metalPerTooth(pricing, key, '10k') : metalPerTooth(pricing, 'yellow', key);
+          return [key, Math.round(metal + (pricing.stonePerTooth[stone] ?? 0))];
+        }),
+      ),
+    ]),
+  );
+
+/** All-in iced prices: a row per stone, a column per metal or gold karat. A blank cell is a combination the shop doesn't offer. */
+function IcedTable({ pricing, catalog, onChange }: { pricing: TenantPricing; catalog: TenantConfig['catalog']; onChange: (table: TenantPricing['icedPerTooth']) => void }) {
+  const columns = icedColumns(catalog);
+  const table = pricing.icedPerTooth ?? {};
+  const setCell = (stone: string, key: IcedKey, text: string) => {
+    const row = { ...table[stone as keyof typeof table] };
+    if (text === '') delete row[key];
+    else row[key] = Math.max(0, Number(text));
+    onChange({ ...table, [stone]: row });
+  };
+  return (
+    <div className="admin-iced-table" style={{ gridTemplateColumns: `minmax(110px, 1.4fr) repeat(${columns.length}, minmax(64px, 1fr))` }}>
+      <span />
+      {columns.map((column) => <strong key={column.key}>{column.label}</strong>)}
+      {pickOptions(STONES, catalog.stones).map((stone) => (
+        <Fragment key={stone.id}>
+          <strong>{stone.label}</strong>
+          {columns.map((column) => (
+            <input
+              key={column.key}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={5}
+              placeholder="—"
+              aria-label={`${stone.label}, ${column.label}, all-in per tooth`}
+              value={table[stone.id]?.[column.key] ?? ''}
+              onChange={(event) => setCell(stone.id, column.key, event.target.value)}
+            />
+          ))}
+        </Fragment>
+      ))}
+    </div>
   );
 }
 
@@ -552,6 +612,13 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <Money key={setting.id} label={`${setting.label} setting`} value={pricing.settingPerTooth[setting.id]} onChange={(value) => update((next) => { next.pricing.settingPerTooth[setting.id] = value; })} />
                   ))}
                 </div>
+                <h3>Iced, all-in per tooth</h3>
+                <p className="admin-muted admin-section__hint">For shops whose iced price changes with the karat: one price per tooth that covers metal and stones. The setting price and open-face share still apply on top. Leave a cell blank if you don't offer that combination; customers won't see it.</p>
+                <label className="admin-check">
+                  <input type="checkbox" checked={Boolean(pricing.icedPerTooth)} onChange={(event) => update((next) => { if (event.target.checked) next.pricing.icedPerTooth = startingIcedTable(next.pricing, next.catalog); else delete next.pricing.icedPerTooth; })} />
+                  <span>Price iced teeth all-in by metal and karat</span>
+                </label>
+                {pricing.icedPerTooth && <IcedTable pricing={pricing} catalog={catalog} onChange={(table) => update((next) => { next.pricing.icedPerTooth = table; })} />}
                 {catalog.styles.includes('open-face') && (
                   <>
                     <h3>Iced open face</h3>

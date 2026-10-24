@@ -46,8 +46,8 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS, FANG_TEETH } from '../lib/renderSpec';
-import { depositFor, displayTotal, priceBreakdown } from '../lib/pricing';
+import { FANG_OPTIONS, FANG_TEETH, label, METALS } from '../lib/renderSpec';
+import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -284,6 +284,20 @@ function Configurator() {
     );
   };
 
+  // Iced from a shop's all-in price table (MAG-97): combinations it doesn't offer are hidden,
+  // and a change that would land on one moves the stone, then the karat, to one it does.
+  const shopPricing = tenant.config.pricing;
+  const icedTable = Boolean(shopPricing.icedPerTooth);
+  const stoneIds = catalog.stones.map((stone) => stone.id);
+  const karatIds = catalog.karats.map((karat) => karat.id);
+  const withPatch = (design: ToothDesign, patch: Partial<ToothDesign>) => {
+    const next = { ...design, ...patch };
+    return nearestOffered(shopPricing, next, stoneIds, karatIds) ?? design;
+  };
+  const icedOffers = (design: Partial<ToothDesign>) => offered(shopPricing, { ...shown, type: 'iced', ...design });
+  const icedStone = shown.type === 'iced' ? shown.stone : undefined;
+  const icedPossible = nearestOffered(shopPricing, { ...shown, type: 'iced' }, stoneIds, karatIds) !== null;
+
   // Applies a design change to every tooth, or only to the picked teeth.
   const applyDesign = (patch: Partial<ToothDesign>) => {
     if (pickMode) {
@@ -291,15 +305,15 @@ function Configurator() {
       setOverrides((previous) => {
         const next = { ...previous };
         activePicked.forEach((index) => {
-          next[index] = { ...(previous[index] ?? base), ...patch };
+          next[index] = withPatch(previous[index] ?? base, patch);
         });
         return next;
       });
       return;
     }
-    setBase((previous) => ({ ...previous, ...patch }));
+    setBase((previous) => withPatch(previous, patch));
     setOverrides((previous) =>
-      Object.fromEntries(Object.entries(previous).map(([index, design]) => [index, { ...design, ...patch }])),
+      Object.fromEntries(Object.entries(previous).map(([index, design]) => [index, withPatch(design, patch)])),
     );
   };
 
@@ -732,11 +746,11 @@ function Configurator() {
                   {pickNote}
                   {mixLink}
                   <div className="option-grid">
-                    {catalog.metals.map((metal) => (
+                    {catalog.metals.filter((metal) => !icedStone || karatIds.some((karat) => icedOffers({ metal: metal.id, karat }))).map((metal) => (
                       <OptionCard
                         key={metal.id}
                         label={metal.label}
-                        hint={hints.metal(metal.id, shown.karat)}
+                        hint={hints.metal(metal.id, isGold(metal.id) ? shown.karat : '10k', icedStone)}
                         image={metal.image}
                         swatch={metal.swatch}
                         selected={shown.metal === metal.id}
@@ -749,7 +763,7 @@ function Configurator() {
                     <fieldset className="control-group control-group--revealed">
                       <legend>Karat</legend>
                       <div className="segmented-control segmented-control--three">
-                        {catalog.karats.map((karat) => (
+                        {catalog.karats.filter((karat) => !icedStone || icedOffers({ karat: karat.id })).map((karat) => (
                           <button
                             key={karat.id}
                             className={shown.karat === karat.id ? 'segment segment--selected' : 'segment'}
@@ -758,7 +772,7 @@ function Configurator() {
                             onClick={() => applyDesign({ karat: karat.id })}
                           >
                             {karat.label}
-                            <small>{hints.metal(shown.metal, karat.id)}</small>
+                            <small>{hints.metal(shown.metal, karat.id, icedStone)}</small>
                           </button>
                         ))}
                       </div>
@@ -778,10 +792,12 @@ function Configurator() {
                         <OptionCard
                           key={type.id}
                           label={type.label}
+                          // Iced isn't offered in every metal: then it says so rather than switching the metal.
+                          detail={type.id === 'iced' && !icedPossible ? `Not offered in ${label(METALS, shown.metal).toLowerCase()}` : undefined}
                           hint={hints.type(type.id)}
                           image={type.image}
                           selected={shown.type === type.id}
-                          disabled={pickingNothing}
+                          disabled={pickingNothing || (type.id === 'iced' && !icedPossible)}
                           onSelect={() => applyDesign({ type: type.id })}
                         />
                       ))}
@@ -793,12 +809,12 @@ function Configurator() {
                       <fieldset className="control-group control-group--revealed">
                         <legend>Stones</legend>
                         <div className="option-grid option-grid--three">
-                          {catalog.stones.map((stone) => (
+                          {catalog.stones.filter((stone) => !icedTable || icedOffers({ stone: stone.id })).map((stone) => (
                             <OptionCard
                               key={stone.id}
                               label={stone.label}
                               detail={stone.detail}
-                              hint={hints.stone(stone.id)}
+                              hint={hints.stone(stone.id, shown.metal, shown.karat)}
                               image={stone.image}
                               selected={shown.stone === stone.id}
                               disabled={pickingNothing}

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { withMarketQuote } from '../src/lib/metalMarket.js';
-import { depositFor, priceBreakdown } from '../src/lib/pricing.js';
+import { depositFor, offered, priceBreakdown } from '../src/lib/pricing.js';
 import { parseRenderSpec, summarizeDesign } from '../src/lib/renderSpec.js';
 import { createDb, DbError, hasDb } from './db.js';
 import { latestSpot } from './metalPrices.js';
@@ -102,7 +102,8 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
   // Market-linked metal is priced at today's stored price, whatever the browser had.
   if (session.config.pricing.market) session.config = { ...session.config, pricing: withMarketQuote(session.config.pricing, await latestSpot(env)) };
   const spec = parseRenderSpec(body.spec, session.config.catalog);
-  if (!spec || spec.teeth.length === 0) return fail(400, 'Your design has an option this shop no longer offers. Refresh and try again.', 'design');
+  // An iced combination outside the shop's all-in price table isn't offered (MAG-97).
+  if (!spec || spec.teeth.length === 0 || !spec.teeth.every((tooth) => offered(session.config.pricing, tooth))) return fail(400, 'Your design has an option this shop no longer offers. Refresh and try again.', 'design');
   const tenantId = await tenantIdFor(tenant, env);
   if (!tenantId) return fail(503, 'Something went wrong. Please try again.', 'unavailable');
   const db = createDb(env);
