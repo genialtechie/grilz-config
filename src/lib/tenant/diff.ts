@@ -1,5 +1,6 @@
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
 import type { TenantConfig } from './schema.js';
+import { cutPrice } from '../pricing.js';
 
 // Plain-language list of what a draft changes compared with the live config,
 // shown before a shop publishes ("Yellow gold: $150 → $165 per tooth").
@@ -113,8 +114,16 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   });
   const tiers = (pricing: typeof p0) => (pricing.volume ?? []).map((tier) => `${tier.percentOff}% off from ${tier.minTeeth} teeth`).join(', ') || 'none';
   if (tiers(p0) !== tiers(p1)) add('Prices', `Set-size discounts: ${tiers(p0)} → ${tiers(p1)}`);
-  (['fangs', 'permanent', 'photo'] as const).forEach((key) => {
-    if (p0.extras[key] !== p1.extras[key]) add('Prices', `${{ fangs: 'Fangs', permanent: 'Permanent look', photo: 'Photo artwork' }[key]}: ${usd(p0.extras[key])} → ${usd(p1.extras[key])}`);
+  (['fangs', 'photo'] as const).forEach((key) => {
+    if (p0.extras[key] !== p1.extras[key]) add('Prices', `${{ fangs: 'Fangs', photo: 'Photo artwork' }[key]}: ${usd(p0.extras[key])} → ${usd(p1.extras[key])}`);
+  });
+  // The fit: amount and how it's counted (permanent look's flat price included, for shops without cut prices).
+  CUTS.forEach((cut) => {
+    const text = (pricing: typeof p0) => {
+      const price = cutPrice(pricing, cut.id);
+      return price.amount ? `${usd(price.amount)} per ${price.per}` : 'free';
+    };
+    if (text(p0) !== text(p1)) add('Prices', `${cut.label}: ${text(p0)} → ${text(p1)}`);
   });
 
   const d0 = depositText(live.deposit);

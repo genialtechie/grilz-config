@@ -1,5 +1,5 @@
-import { fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
-import type { TenantDeposit, TenantPricing } from './tenant/schema.js';
+import { CUTS, fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import type { CUT_UNITS, TenantDeposit, TenantPricing } from './tenant/schema.js';
 import { quoteKey } from './metalMarket.js';
 import type { Promo } from './promo.js';
 
@@ -25,6 +25,15 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
   if (quoted !== undefined) return quoted;
   return Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
 };
+
+export type CutPrice = { amount: number; per: (typeof CUT_UNITS)[number] };
+
+/** What a fit costs and how it's counted. Shops without cut prices keep the first rule: permanent look per order, deep cut free. */
+export const cutPrice = (pricing: TenantPricing, cut: CutId): CutPrice =>
+  pricing.cuts?.[cut] ?? { amount: cut === 'permanent' ? pricing.extras.permanent : 0, per: 'order' };
+
+/** The arches (top, bottom) with at least one tooth in the set. */
+export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.map((tooth) => (tooth.index < 16 ? 'top' : 'bottom'))).size;
 
 /** The set-size discount (percent) for this many teeth: the biggest tier the set reaches. */
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
@@ -74,7 +83,14 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);
   if (fangs) add(pricing.fangsPer === 'fang' ? `Fangs · ${fangs}` : 'Fangs', pricing.extras.fangs * (pricing.fangsPer === 'fang' ? fangs : 1));
-  if (set.cut === 'permanent') add('Permanent look', pricing.extras.permanent);
+  // The fit, once per order, per arch or per tooth.
+  const cut = cutPrice(pricing, set.cut);
+  const cutName = label(CUTS, set.cut);
+  if (cut.per === 'order') add(cutName, cut.amount);
+  else if (cut.per === 'arch') {
+    const arches = archCount(teeth);
+    add(`${cutName} · ${arches} ${arches === 1 ? 'arch' : 'arches'}`, cut.amount * arches);
+  } else add(`${cutName} · ${teeth.length} ${teeth.length === 1 ? 'tooth' : 'teeth'}`, cut.amount * teeth.length);
   // Letters are priced per tooth they cover (one tooth: the shop's inscription price).
   set.inscriptions.forEach((inscription) => {
     const each = pricing.inscription[inscription.style] ?? 0;
@@ -125,6 +141,10 @@ export const priceHints = (pricing: TenantPricing) => {
     type: (type: GrillzType) => hint(type === 'photo' ? `+${usd(pricing.extras.photo)} artwork` : type === 'iced' ? 'Stones priced below' : 'Included'),
     inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)} / tooth`),
     fangs: () => hint(pricing.extras.fangs ? `+${usd(pricing.extras.fangs)}${pricing.fangsPer === 'fang' ? ' / fang' : ''}` : 'Included'),
+    cut: (cut: CutId) => {
+      const { amount, per } = cutPrice(pricing, cut);
+      return hint(amount ? `+${usd(amount)}${per === 'order' ? '' : ` / ${per}`}` : 'Included');
+    },
     /** A flat or per-tooth extra (permanent look, a shop's add-on). */
     extra: (amount: number, perTooth = false) => hint(amount ? `+${usd(amount)}${perTooth ? ' / tooth' : ''}` : 'Included'),
   };

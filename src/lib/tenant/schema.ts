@@ -38,6 +38,7 @@ const priceMap = <K extends z.ZodEnum<[string, ...string[]]>>(key: K) => z.recor
 
 export const FONT_PAIRS = ['serif-classic', 'modern-sans', 'editorial'] as const;
 export const PRICE_DISPLAYS = ['exact', 'from', 'hidden'] as const;
+export const CUT_UNITS = ['order', 'arch', 'tooth'] as const;
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a 6-digit hex colour like #C9A45C.');
 
@@ -100,6 +101,12 @@ export const PricingSchema = z.object({
   stonePerTooth: priceMap(StoneIdSchema),
   settingPerTooth: priceMap(SettingIdSchema),
   extras: z.object({ fangs: money, permanent: money, photo: money }),
+  /**
+   * What each fit costs and how it's counted (MAG-96): once per order, per arch
+   * (top and bottom each count once they have a tooth), or per tooth. Absent =
+   * how it worked first: permanent look at extras.permanent per order, deep cut free.
+   */
+  cuts: z.record(CutIdSchema, z.object({ amount: money, per: z.enum(CUT_UNITS) })).optional(),
   /** The fangs price is for the set (default) or for each fang (one per upper canine in the set). */
   fangsPer: z.enum(['set', 'fang']).optional(),
   inscription: priceMap(InscriptionStyleIdSchema),

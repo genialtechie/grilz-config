@@ -46,8 +46,8 @@ export function quickAnswers(pricing: TenantPricing): QuickAnswers {
 
 /**
  * Every price from the three answers. What the questions don't cover stays as
- * it was: price display, deposits, inscription, photo and permanent-look fees,
- * fit fees, set discounts, back teeth, iced open face and market-linked metal.
+ * it was: price display, deposits, inscription, photo and cut (fit) prices,
+ * mold fees, set discounts, back teeth, iced open face and market-linked metal.
  */
 export function quickPricing(pricing: TenantPricing, answers: QuickAnswers): TenantPricing {
   const gold = Math.max(0, Math.round(answers.gold));
@@ -77,7 +77,8 @@ const tooth = (design: Partial<ToothDesign>): ToothDesign => ({ metal: 'yellow',
 
 /** What a 6-top costs in each option, before any service fee or minimum. */
 export function checkLines(pricing: TenantPricing): CheckLine[] {
-  const teethOnly = { ...pricing, base: 0, minimumOrder: 0 };
+  // The teeth alone: no service fee, minimum or fit price (a per-tooth deep cut would read as metal).
+  const teethOnly = { ...pricing, base: 0, minimumOrder: 0, cuts: undefined };
   const six = (design: Partial<ToothDesign>) => priceBreakdown(teethOnly, SIX_TOP.map((index): RenderTooth => ({ ...tooth(design), index })), DEFAULT_SET).total;
   const lines: Omit<CheckLine, 'perTooth'>[] = [
     { id: 'gold10k', label: '10K gold', total: six({}) },

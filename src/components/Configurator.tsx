@@ -890,7 +890,7 @@ function Configurator() {
                           key={cut.id}
                           label={cut.label}
                           detail={cut.detail}
-                          hint={cut.id === 'permanent' ? hints.extra(tenant.config.pricing.extras.permanent) : hints.extra(0)}
+                          hint={hints.cut(cut.id)}
                           image={cut.image}
                           selected={setOptions.cut === cut.id}
                           onSelect={() => updateSet({ cut: cut.id })}
