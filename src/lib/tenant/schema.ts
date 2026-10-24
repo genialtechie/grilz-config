@@ -39,6 +39,9 @@ const priceMap = <K extends z.ZodEnum<[string, ...string[]]>>(key: K) => z.recor
 export const FONT_PAIRS = ['serif-classic', 'modern-sans', 'editorial'] as const;
 export const PRICE_DISPLAYS = ['exact', 'from', 'hidden'] as const;
 export const CUT_UNITS = ['order', 'arch', 'tooth'] as const;
+/** The columns of the iced price table: gold by karat, the other metals by name. */
+export const ICED_KEYS = ['silver', 'platinum', ...KARATS.map((karat) => karat.id)] as const;
+export const IcedKeySchema = z.enum(ICED_KEYS);
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a 6-digit hex colour like #C9A45C.');
 
@@ -107,6 +110,14 @@ export const PricingSchema = z.object({
    * how it worked first: permanent look at extras.permanent per order, deep cut free.
    */
   cuts: z.record(CutIdSchema, z.object({ amount: money, per: z.enum(CUT_UNITS) })).optional(),
+  /**
+   * Iced teeth priced all-in (MAG-97): by stone, then metal (silver, platinum)
+   * or gold karat, the whole price of one iced tooth, in place of metal plus
+   * stones. The setting price and the iced open-face share still apply on top.
+   * A missing cell is a combination the shop doesn't offer. Absent = metal plus
+   * stones, as before.
+   */
+  icedPerTooth: z.record(StoneIdSchema, z.record(IcedKeySchema, money)).optional(),
   /** The fangs price is for the set (default) or for each fang (one per upper canine in the set). */
   fangsPer: z.enum(['set', 'fang']).optional(),
   inscription: priceMap(InscriptionStyleIdSchema),

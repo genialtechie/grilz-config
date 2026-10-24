@@ -1,5 +1,5 @@
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
-import type { TenantConfig } from './schema.js';
+import { ICED_KEYS, type TenantConfig } from './schema.js';
 import { cutPrice } from '../pricing.js';
 
 // Plain-language list of what a draft changes compared with the live config,
@@ -117,6 +117,18 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   (['fangs', 'photo'] as const).forEach((key) => {
     if (p0.extras[key] !== p1.extras[key]) add('Prices', `${{ fangs: 'Fangs', photo: 'Photo artwork' }[key]}: ${usd(p0.extras[key])} → ${usd(p1.extras[key])}`);
   });
+  // Iced all-in prices: switched on or off, or each cell that changed.
+  if (Boolean(p0.icedPerTooth) !== Boolean(p1.icedPerTooth)) add('Prices', p1.icedPerTooth ? 'Iced teeth priced all-in by metal and karat' : 'Iced teeth priced as metal plus stones');
+  else if (p0.icedPerTooth && p1.icedPerTooth) {
+    STONES.forEach((stone) => {
+      ICED_KEYS.forEach((key) => {
+        const before = p0.icedPerTooth?.[stone.id]?.[key];
+        const after = p1.icedPerTooth?.[stone.id]?.[key];
+        const name = KARATS.find((karat) => karat.id === key)?.label ?? `${key[0].toUpperCase()}${key.slice(1)}`;
+        if (before !== after) add('Prices', `Iced ${stone.label.toLowerCase()}, ${name}: ${before === undefined ? 'not offered' : usd(before)} → ${after === undefined ? 'not offered' : usd(after)}`);
+      });
+    });
+  }
   // The fit: amount and how it's counted (permanent look's flat price included, for shops without cut prices).
   CUTS.forEach((cut) => {
     const text = (pricing: typeof p0) => {

@@ -1,5 +1,7 @@
 import { CUTS, fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
-import type { CUT_UNITS, TenantDeposit, TenantPricing } from './tenant/schema.js';
+import type { CUT_UNITS, ICED_KEYS, TenantDeposit, TenantPricing } from './tenant/schema.js';
+
+type IcedKey = (typeof ICED_KEYS)[number];
 import { quoteKey } from './metalMarket.js';
 import type { Promo } from './promo.js';
 
@@ -32,6 +34,31 @@ export type CutPrice = { amount: number; per: (typeof CUT_UNITS)[number] };
 export const cutPrice = (pricing: TenantPricing, cut: CutId): CutPrice =>
   pricing.cuts?.[cut] ?? { amount: cut === 'permanent' ? pricing.extras.permanent : 0, per: 'order' };
 
+/** The iced price table's column for a metal: gold by karat, the others by name. */
+export const icedKey = (metal: MetalId, karat: KaratId): IcedKey => (isGold(metal) ? karat : (metal as IcedKey));
+
+/** An iced tooth's all-in price from the shop's table; undefined without a table or when the shop doesn't offer it. */
+export const icedAllIn = (pricing: TenantPricing, design: Pick<ToothDesign, 'metal' | 'karat' | 'stone'>) =>
+  pricing.icedPerTooth?.[design.stone]?.[icedKey(design.metal, design.karat)];
+
+/** Does the shop offer this tooth? Everything but iced does; iced needs a cell in the table, when there is one. */
+export const offered = (pricing: TenantPricing, design: Pick<ToothDesign, 'type' | 'metal' | 'karat' | 'stone'>) =>
+  design.type !== 'iced' || !pricing.icedPerTooth || icedAllIn(pricing, design) !== undefined;
+
+/**
+ * The nearest design the shop offers: an iced combination outside the table
+ * keeps its metal and changes the stone, then the karat. Null when the metal
+ * has no iced price at all.
+ */
+export const nearestOffered = (pricing: TenantPricing, design: ToothDesign, stones: readonly StoneId[], karats: readonly KaratId[]): ToothDesign | null => {
+  if (offered(pricing, design)) return design;
+  const tries: ToothDesign[] = [
+    ...stones.map((stone) => ({ ...design, stone })),
+    ...(isGold(design.metal) ? karats.flatMap((karat) => [design.stone, ...stones].map((stone) => ({ ...design, karat, stone }))) : []),
+  ];
+  return tries.find((attempt) => offered(pricing, attempt)) ?? null;
+};
+
 /** The arches (top, bottom) with at least one tooth in the set. */
 export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.map((tooth) => (tooth.index < 16 ? 'top' : 'bottom'))).size;
 
@@ -61,24 +88,38 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     if (icedOpenFace(tooth)) return pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0;
     return tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0;
   };
-  const metalOf = (tooth: ToothDesign) => metalPerTooth(pricing, tooth.metal, tooth.karat);
-  const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
+  // Iced teeth from the shop's all-in table replace metal plus stones.
+  const allIn = (tooth: ToothDesign) => (tooth.type === 'iced' ? icedAllIn(pricing, tooth) : undefined);
+  const metalOf = (tooth: ToothDesign) => (allIn(tooth) === undefined ? metalPerTooth(pricing, tooth.metal, tooth.karat) : 0);
+  const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' && allIn(tooth) === undefined ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
   const settingOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0);
+  // Open face takes its share of the stones: the part of the all-in price above the plain metal.
+  const icedOf = (tooth: ToothDesign) => {
+    const price = allIn(tooth);
+    if (price === undefined) return 0;
+    if (!icedOpenFace(tooth)) return price;
+    const plain = metalPerTooth(pricing, tooth.metal, tooth.karat);
+    return Math.min(price, plain) + Math.max(0, price - plain) * openFaceShare(tooth);
+  };
   const metal = sum(metalOf);
+  const iced = Math.round(sum(icedOf));
   const finishes = sum(finish);
   const stones = Math.round(sum(stonesOf));
   const settings = Math.round(sum(settingOf));
-  add(`Metal · ${teeth.length} teeth`, metal);
+  const allInTeeth = teeth.filter((tooth) => allIn(tooth) !== undefined).length;
+  const metalTeeth = teeth.length - allInTeeth;
+  add(`Metal · ${metalTeeth} teeth`, metal);
+  add(`Iced · ${allInTeeth} ${allInTeeth === 1 ? 'tooth' : 'teeth'}`, iced);
   add('Style & finish', finishes);
   add('Stones', stones);
   add('Mosaic setting', settings);
   // Back teeth at the shop's own share of the front price: the difference, on its own line.
   const back = teeth.filter((tooth) => positionFactor(pricing, tooth.index) !== 1);
-  const backAdjustment = Math.round(back.reduce((total, tooth) => total + (metalOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth)) * (positionFactor(pricing, tooth.index) - 1), 0));
+  const backAdjustment = Math.round(back.reduce((total, tooth) => total + (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth)) * (positionFactor(pricing, tooth.index) - 1), 0));
   add(`Back teeth · ${back.length} ${back.length === 1 ? 'tooth' : 'teeth'}`, backAdjustment);
   // The set-size discount comes off everything charged per tooth.
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((metal + finishes + stones + settings + backAdjustment) * percent) / 100));
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((metal + iced + finishes + stones + settings + backAdjustment) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);
@@ -134,9 +175,18 @@ export const priceHints = (pricing: TenantPricing) => {
   const hidden = pricing.display === 'hidden';
   const hint = (text: string) => (hidden ? undefined : text);
   return {
-    metal: (metal: MetalId, karat: KaratId) => hint(`${usd(metalPerTooth(pricing, metal, karat))} / tooth`),
+    /** With `icedStone`, the all-in iced price for that stone when the shop has a table. */
+    metal: (metal: MetalId, karat: KaratId, icedStone?: StoneId) => {
+      const price = icedStone && pricing.icedPerTooth ? icedAllIn(pricing, { metal, karat, stone: icedStone }) : metalPerTooth(pricing, metal, karat);
+      return price === undefined ? undefined : hint(`${usd(price)} / tooth`);
+    },
     style: (style: StyleId) => hint(pricing.stylePerTooth[style] ? `+${usd(pricing.stylePerTooth[style]!)} / tooth` : 'Included'),
-    stone: (stone: StoneId) => hint(`+${usd(pricing.stonePerTooth[stone] ?? 0)} / tooth`),
+    /** All-in for the chosen metal and karat when the shop prices iced teeth from a table. */
+    stone: (stone: StoneId, metal?: MetalId, karat?: KaratId) => {
+      if (!pricing.icedPerTooth || !metal || !karat) return hint(`+${usd(pricing.stonePerTooth[stone] ?? 0)} / tooth`);
+      const price = icedAllIn(pricing, { metal, karat, stone });
+      return price === undefined ? undefined : hint(`${usd(price)} / tooth`);
+    },
     setting: (setting: SettingId) => hint(pricing.settingPerTooth[setting] ? `+${usd(pricing.settingPerTooth[setting]!)} / tooth` : 'Included'),
     type: (type: GrillzType) => hint(type === 'photo' ? `+${usd(pricing.extras.photo)} artwork` : type === 'iced' ? 'Stones priced below' : 'Included'),
     inscription: (style: InscriptionStyleId) => hint(`+${usd(pricing.inscription[style] ?? 0)} / tooth`),
