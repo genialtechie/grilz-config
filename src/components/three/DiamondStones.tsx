@@ -65,47 +65,91 @@ const seeded = (text: string) => {
   };
 };
 
+type Layout = { p: THREE.Vector3; n: THREE.Vector3 }[];
+/** Where a tooth's stones sit, worked out once per tooth shape and reused (it never changes). */
+const layouts = new Map<string, Layout>();
+const gumProbes = new WeakMap<THREE.Mesh, THREE.Mesh>();
+
+/**
+ * True where the mould's gum hides this point of the tooth's front, or comes
+ * within a stone's depth of it. Teeth are modelled root and all: the root sits
+ * inside the gum, and stones set there poke out through it (and stand clear of
+ * it on the permanent look, which grows the cap).
+ */
+function underGum(point: THREE.Vector3, facial: THREE.Vector3, reach: number, moulds: THREE.Mesh[], ray: THREE.Raycaster) {
+  ray.set(point.clone().addScaledVector(facial, reach), facial.clone().negate());
+  ray.far = reach + STONE_RADIUS * 0.3;
+  const covered = moulds.some((mould) => {
+    let probe = gumProbes.get(mould);
+    if (!probe) {
+      // The mould in the teeth's own space (they share a parent), whatever the scene does to it.
+      probe = new THREE.Mesh(mould.geometry);
+      mould.updateMatrix();
+      probe.matrixWorld.copy(mould.matrix);
+      gumProbes.set(mould, probe);
+    }
+    return ray.intersectObject(probe, false).length > 0;
+  });
+  ray.far = Infinity;
+  return covered;
+}
+
 /**
  * `ring`: instead of covering the face, set one row of stones round it this
  * far out from the middle (0 to 1), for an iced open face.
+ * `moulds`: the gums. Stones stay on the crown that shows below (or above) them.
  */
-export const createDiamondStones = (tooth: THREE.Mesh, kind: 'lab' | 'moissanite' = 'lab', ring = 0) => {
+export const createDiamondStones = (tooth: THREE.Mesh, kind: 'lab' | 'moissanite' = 'lab', ring = 0, moulds: THREE.Mesh[] = []) => {
   const random = seeded(tooth.name);
   const geometry = tooth.geometry;
   const front = frontOf(geometry);
   const { centre, facial, up, across } = front;
   const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+  const layoutKey = `${geometry.uuid}:${ring}`;
+  let kept = layouts.get(layoutKey);
 
-  // A honeycomb grid in front of the tooth, each point shot back onto its surface.
-  const probe = new THREE.Mesh(geometry);
-  const ray = new THREE.Raycaster();
-  const reach = Math.max(size.x, size.y, size.z);
-  const rowStep = SPACING * Math.sqrt(3) / 2;
-  const kept: { p: THREE.Vector3; n: THREE.Vector3 }[] = [];
-  if (ring > 0) {
-    // One row round the face, spaced evenly along it.
-    const line = Array.from({ length: SECTORS * 4 }, (_, i) => onFront(front, i / 4, ring, 0));
-    const gap = SPACING * 1.08;
-    let since = gap;
-    line.forEach((point, i) => {
-      since += i ? point.distanceTo(line[i - 1]) : 0;
-      if (since < gap) return;
-      since = 0;
-      const n = point.clone().sub(centre).normalize().lerp(facial, 0.7).normalize();
-      kept.push({ p: point, n });
-    });
-  }
-  for (let row = 0, v = -reach / 2; ring === 0 && v <= reach / 2; row += 1, v += rowStep) {
-    for (let u = -reach / 2 + (row % 2 ? SPACING / 2 : 0); u <= reach / 2; u += SPACING) {
-      const origin = centre.clone().addScaledVector(across, u).addScaledVector(up, v).addScaledVector(facial, reach);
-      ray.set(origin, facial.clone().negate());
-      const hit = ray.intersectObject(probe, false)[0];
-      if (!hit?.face) continue;
-      const n = hit.face.normal.clone();
-      // Only the face a stone can sit on: not the sides, tip or back.
-      if (n.dot(facial) < 0.35) continue;
-      kept.push({ p: hit.point, n });
+  if (!kept) {
+    kept = [];
+    // A honeycomb grid in front of the tooth, each point shot back onto its surface.
+    const probe = new THREE.Mesh(geometry);
+    const ray = new THREE.Raycaster();
+    const reach = Math.max(size.x, size.y, size.z);
+    const rowStep = SPACING * Math.sqrt(3) / 2;
+    // Towards the gum: up for the top row, down for the bottom.
+    const gumward = tooth.name.startsWith('top') ? 1 : -1;
+    const clearOfGum = (point: THREE.Vector3) =>
+      !underGum(point, facial, reach, moulds, ray) && !underGum(point.clone().addScaledVector(up, gumward * STONE_RADIUS * 1.1), facial, reach, moulds, ray);
+    if (ring > 0) {
+      // One row round the face, spaced evenly along it.
+      const line = Array.from({ length: SECTORS * 4 }, (_, i) => onFront(front, i / 4, ring, 0));
+      const gap = SPACING * 1.08;
+      let since = gap;
+      line.forEach((point, i) => {
+        since += i ? point.distanceTo(line[i - 1]) : 0;
+        if (since < gap) return;
+        since = 0;
+        const n = point.clone().sub(centre).normalize().lerp(facial, 0.7).normalize();
+        kept!.push({ p: point, n });
+      });
     }
+    for (let row = 0, v = -reach / 2; ring === 0 && v <= reach / 2; row += 1, v += rowStep) {
+      for (let u = -reach / 2 + (row % 2 ? SPACING / 2 : 0); u <= reach / 2; u += SPACING) {
+        // The whole stone sits inside the tooth's outline, leaving a rim of metal round it:
+        // stones centred on the edge hang over it and float between the teeth.
+        const sector = Math.round((Math.atan2(v, u) / (Math.PI * 2)) * SECTORS + SECTORS) % SECTORS;
+        if (Math.hypot(u, v) > front.outline[sector] - STONE_RADIUS * 0.85) continue;
+        const origin = centre.clone().addScaledVector(across, u).addScaledVector(up, v).addScaledVector(facial, reach);
+        ray.set(origin, facial.clone().negate());
+        const hit = ray.intersectObject(probe, false)[0];
+        if (!hit?.face) continue;
+        const n = hit.face.normal.clone();
+        // Only the face a stone can sit on: not the sides, tip or back.
+        if (n.dot(facial) < 0.35) continue;
+        if (moulds.length && !clearOfGum(hit.point)) continue;
+        kept.push({ p: hit.point, n });
+      }
+    }
+    layouts.set(layoutKey, kept);
   }
   const mesh = new THREE.InstancedMesh(brilliantGeometry(), stoneMaterial(), Math.max(1, kept.length));
   mesh.count = kept.length;

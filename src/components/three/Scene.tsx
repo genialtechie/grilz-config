@@ -161,17 +161,22 @@ function Scene({
         <ambientLight intensity={0.45} />
         <directionalLight position={[4, 7, 8]} intensity={1.6} />
         <directionalLight position={[-6, 2, 4]} intensity={0.5} />
-        {/* A dark studio with long softboxes: polished metal reflects mostly dark with
-            sharp bright streaks along its edges, the way jewelry is photographed. */}
+        {/* A jeweler's light tent: soft grey walls with big softboxes, and two narrow dark
+            flags. Polished metal mirrors its surroundings, so white metals need mostly
+            light to mirror (in a dark room they render black); the flags and the darker
+            floor keep the contrast that makes it read as metal, not as white plastic. */}
         <Environment resolution={256} frames={1}>
-          <color attach="background" args={['#191613']} />
-          {/* Big softbox in front (behind the camera): the polished faces you look at. */}
-          <Lightformer form="rect" intensity={1.6} position={[0, 1.5, 9]} scale={[10, 4, 1]} />
-          {/* Top light and two tall side strips: the long streaks along each tooth. */}
-          <Lightformer form="rect" intensity={3} position={[0, 7, 2]} rotation-x={Math.PI / 2} scale={[12, 3, 1]} />
-          <Lightformer form="rect" intensity={3.4} position={[-6, 1, 3]} rotation-y={Math.PI / 2.6} scale={[1.2, 10, 1]} />
-          <Lightformer form="rect" intensity={3.4} position={[6, 1, 3]} rotation-y={-Math.PI / 2.6} scale={[1.2, 10, 1]} />
+          <color attach="background" args={['#6a655e']} />
+          {/* The wall behind the camera, floor to ceiling: what the faces you look at mirror. */}
+          <Lightformer form="rect" intensity={0.95} position={[0, 2, 10]} scale={[16, 11, 1]} />
+          {/* Top light and two tall side strips: the bright streaks along each tooth. */}
+          <Lightformer form="rect" intensity={3} position={[0, 7, 2]} rotation-x={Math.PI / 2} scale={[12, 4, 1]} />
+          <Lightformer form="rect" intensity={3.2} position={[-6, 1, 3]} rotation-y={Math.PI / 2.6} scale={[1.4, 10, 1]} />
+          <Lightformer form="rect" intensity={3.2} position={[6, 1, 3]} rotation-y={-Math.PI / 2.6} scale={[1.4, 10, 1]} />
           <Lightformer form="ring" intensity={4} position={[2.5, 3, 7]} scale={1.2} />
+          {/* Dark flags beside the camera: a thin dark band down each tooth, so edges read. */}
+          <Lightformer form="rect" color="#0b0a09" intensity={1} position={[-3.6, 1.5, 8.5]} rotation-y={Math.PI / 9} scale={[0.9, 9, 1]} />
+          <Lightformer form="rect" color="#0b0a09" intensity={1} position={[3.6, 1.5, 8.5]} rotation-y={-Math.PI / 9} scale={[0.9, 9, 1]} />
           <Lightformer form="rect" intensity={1.4} position={[0, -6, 3]} rotation-x={-Math.PI / 2.4} scale={[12, 12, 1]} color="#8a7a6a" />
           {/* Low strip in front: lights the downward-facing lower teeth. */}
           <Lightformer form="rect" intensity={2.2} position={[0, -2.5, 8]} scale={[9, 0.8, 1]} />

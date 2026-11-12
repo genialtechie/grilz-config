@@ -96,6 +96,15 @@ function GrillzModel({
 
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
 
+  // The gums, for keeping stones on the part of each tooth that shows.
+  const moulds = useMemo(() => {
+    const found: THREE.Mesh[] = [];
+    clonedScene.traverse((child) => {
+      if (child instanceof THREE.Mesh && (child.name === 'top_mould' || child.name === 'bottom_mould')) found.push(child);
+    });
+    return found;
+  }, [clonedScene]);
+
   const getFinishMaterial = useCallback((customization: ToothCustomization) => {
     const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
     const key = `${metal}:${customization.hasDiamonds ? 'set' : 'polished'}`;
@@ -160,7 +169,7 @@ function GrillzModel({
       if (capped && customization.hasDiamonds) {
         // Iced open face: one ring of stones round the frame, the tooth showing in the middle.
         const openFace = customization.style === 'open-face';
-        const stones = createDiamondStones(child, customization.diamondType, openFace ? ICED_RING : 0);
+        const stones = createDiamondStones(child, customization.diamondType, openFace ? ICED_RING : 0, moulds);
         stones.name = 'diamond_stones';
         child.add(stones);
         const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
@@ -171,7 +180,7 @@ function GrillzModel({
       }
     });
     invalidate();
-  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, selectedToothSet, selectionLook]);
+  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, moulds, selectedToothSet, selectionLook]);
 
   // Letters, after the teeth are dressed (fang shapes and permanent-look scale change where they land).
   const inscriptionKey = JSON.stringify(inscriptions ?? []);

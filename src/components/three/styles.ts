@@ -327,9 +327,13 @@ export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, ice
 const fangs = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>();
 
 /**
- * An upper canine drawn out into a fang: the lower half stretches down and
- * narrows to a point, the way a fang cap is built over the tooth.
+ * An upper canine built out into a fang cap: the lower half runs about a quarter
+ * longer and tapers to a blunt point, staying a tooth's width most of the way
+ * down (a cap over a real canine, not a needle).
  */
+const FANG_LENGTH = 0.27; // extra length, as a share of the tooth's height
+const FANG_TAPER = 0.64; // how much of its width the tip loses
+const FANG_THIN = 0.35; // how much of its depth (front to back) the tip loses
 export function fangGeometry(geometry: THREE.BufferGeometry) {
   const cached = fangs.get(geometry);
   if (cached) return cached;
@@ -345,14 +349,14 @@ export function fangGeometry(geometry: THREE.BufferGeometry) {
     p.fromBufferAttribute(position, i);
     const t = THREE.MathUtils.clamp((centre.y - p.y) / (centre.y - box.min.y), 0, 1);
     if (t <= 0) continue;
-    const ease = t * t;
-    // Pull toward the tooth's centre line across the face (keep some depth front to back).
+    // The width holds near the gum and closes in towards the tip; the length grows evenly.
+    const taper = Math.pow(t, 1.7);
     const offset = p.clone().sub(centre);
     const sideways = offset.dot(front.across);
     const depth = offset.dot(front.facial);
-    p.addScaledVector(front.across, -sideways * 0.78 * ease);
-    p.addScaledVector(front.facial, -depth * 0.35 * ease);
-    p.y -= height * 0.55 * ease;
+    p.addScaledVector(front.across, -sideways * FANG_TAPER * taper);
+    p.addScaledVector(front.facial, -depth * FANG_THIN * taper);
+    p.y -= height * FANG_LENGTH * Math.pow(t, 1.3);
     position.setXYZ(i, p.x, p.y, p.z);
   }
   position.needsUpdate = true;
