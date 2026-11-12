@@ -48,6 +48,7 @@ import {
 } from '../lib/renderSpec';
 import { FANG_OPTIONS, FANG_TEETH, label, METALS } from '../lib/renderSpec';
 import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
+import { posterFor } from '../lib/poster';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -144,6 +145,8 @@ function Configurator() {
   const [depositReached, setDepositReached] = useState(false);
   const [promo, setPromo] = useState<Promo | null>(null);
   const threeState = useRef<RootState | null>(null);
+  // A still of the design the builder opens on, up until the 3D model is drawn.
+  const [poster] = useState(() => posterFor(tenant.defaultTooth, tenant.defaultSet));
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
   const [moreBelow, setMoreBelow] = useState(false);
@@ -238,8 +241,9 @@ function Configurator() {
   const totalText = (value: number) => displayTotal(tenant.config.pricing, value, formatPrice).text;
   const totalCost = pricing.total;
 
-  // What the 3D model shows: the selection while choosing teeth or picking,
-  // otherwise each tooth's own metal and stones.
+  // What the 3D model shows: every tooth in the set wears its design from the
+  // first frame (the builder opens on a finished set, and choosing teeth adds
+  // and removes finished caps). Picked teeth are marked while styling them.
   const pickingInscription = step === 'vision' && inscriptionPicking !== null;
   // On Metal and Look a tap on a tooth styles it on its own (MAG-95), so taps select there too.
   const styleStep = step === 'metal' || step === 'look';
@@ -253,10 +257,10 @@ function Configurator() {
   const customizations = useMemo<ToothCustomization[]>(
     () =>
       Array.from({ length: 32 }, (_, index) => {
-        if (step === 'teeth' || !selectedSet.has(index)) return { ...baseToothState };
+        if (!selectedSet.has(index)) return { ...baseToothState };
         return toothCustomization(overrides[index] ?? base, { fangs: setOptions.fangs, cut: setOptions.cut }, index);
       }),
-    [base, overrides, selectedSet, setOptions.fangs, setOptions.cut, step],
+    [base, overrides, selectedSet, setOptions.fangs, setOptions.cut],
   );
 
   const handleToothClick = (index: number) => {
@@ -620,15 +624,17 @@ function Configurator() {
         </div>
       </header>
 
-      <div className="builder-workspace">
+      <div className={panelOpen ? 'builder-workspace' : 'builder-workspace builder-workspace--closed'}>
         <section className="visualizer" aria-label="Interactive 3D grillz preview">
           <Scene
             customizations={customizations}
             selectedTeeth={highlighted}
             isSelectionMode={isSelectionMode}
-            selectionLook={styleStep ? 'outline' : 'fill'}
+            // Choosing teeth: a tooth in the set shows as its finished cap, so no marking is needed.
+            selectionLook={step === 'teeth' ? 'none' : styleStep ? 'outline' : 'fill'}
             toggleToothSelection={handleToothClick}
-            inscriptions={step === 'teeth' ? [] : inscriptions}
+            inscriptions={inscriptions}
+            poster={poster}
             onReady={(state) => {
               threeState.current = state;
             }}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { useThree, type ThreeEvent } from '@react-three/fiber';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones } from './DiamondStones';
@@ -52,7 +52,8 @@ function GrillzModel({
   toggleToothSelection,
   inscriptions,
   onFocusTooth,
-}: GrillzModelProps & { onFocusTooth?: (point: THREE.Vector3) => void }) {
+  onDrawn,
+}: Omit<GrillzModelProps, 'poster'> & { onFocusTooth?: (point: THREE.Vector3) => void; onDrawn?: () => void }) {
   const { scene } = useGLTF('/assets/teeth_final.glb');
   // The canvas draws on demand: changes made here ask for a frame.
   const invalidate = useThree((state) => state.invalidate);
@@ -153,7 +154,7 @@ function GrillzModel({
         child.material = materials.selected;
         return;
       }
-      if (isSelectionMode && isSelected) {
+      if (isSelectionMode && isSelected && selectionLook === 'outline') {
         // Styling this tooth on its own: it keeps its design, outlined, so each change shows.
         const mark = new THREE.Mesh(child.geometry, materials.mark);
         mark.name = 'tooth_mark';
@@ -180,7 +181,22 @@ function GrillzModel({
       }
     });
     invalidate();
+    dressed.current = true;
   }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, moulds, selectedToothSet, selectionLook]);
+
+  // Says when the dressed model is on screen: one frame after the first one that draws
+  // it (that frame compiles the shaders, which can take a moment on a phone).
+  const dressed = useRef(false);
+  const announced = useRef(false);
+  useFrame(() => {
+    if (!dressed.current || announced.current) return;
+    announced.current = true;
+    requestAnimationFrame(() => {
+      // Also a mark for load-time measurements.
+      performance.mark('vvs:model-drawn');
+      onDrawn?.();
+    });
+  });
 
   // Letters, after the teeth are dressed (fang shapes and permanent-look scale change where they land).
   const inscriptionKey = JSON.stringify(inscriptions ?? []);

@@ -138,10 +138,44 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
   },
 })
 
+// The builder's code and 3D model are lazy-loaded, so a shop page used to fetch
+// them one after another: app code, then the shop's config, then the builder
+// chunk, then the model. This puts a small script at the top of the page that,
+// on builder routes only (the landing page stays light), starts all of them at
+// once while the app code is still downloading:
+//   - <link rel="modulepreload"> for the builder's chunks (names known at build time);
+//   - a preload for the 3D model (low priority: the code that draws it is needed first);
+//   - the shop's config request, picked up later by loadTenant().
+const builderPreload = (): Plugin => ({
+  name: 'builder-preload',
+  transformIndexHtml: {
+    order: 'post',
+    handler(_html, ctx) {
+      const chunks = Object.values(ctx.bundle ?? {}).filter((item) => item.type === 'chunk')
+      const entry = chunks.find((chunk) => chunk.isEntry)
+      // What the page's own script already loads; everything else the builder needs is fetched early.
+      const loaded = new Set<string>()
+      const collect = (fileName: string, into: Set<string>) => {
+        if (into.has(fileName) || loaded.has(fileName)) return
+        into.add(fileName)
+        chunks.find((chunk) => chunk.fileName === fileName)?.imports.forEach((name) => collect(name, into))
+      }
+      if (entry) collect(entry.fileName, loaded)
+      const wanted = new Set<string>()
+      chunks
+        .filter((chunk) => /\/src\/components\/(Configurator|ShopPage)\.tsx$/.test(chunk.facadeModuleId ?? ''))
+        .forEach((chunk) => collect(chunk.fileName, wanted))
+      const files = [...wanted].map((fileName) => `/${fileName}`)
+      const script = `(function(){try{var d=document,p=location.pathname,m=p.match(/^\\/b\\/([^/]+)/),c=d.querySelector('meta[name="vvs-shop"]'),s=m?decodeURIComponent(m[1]).toLowerCase():(c&&p==='/'?c.content:null);if(!s&&p!=='/configurator')return;var a=function(r,h,f){var l=d.createElement('link');l.rel=r;l.href=h;if(f){l.as='fetch';l.crossOrigin='anonymous';l.fetchPriority='low'}d.head.appendChild(l)};${JSON.stringify(files)}.forEach(function(h){a('modulepreload',h)});a('preload','/assets/teeth_final.glb',1);if(s&&!/[?&]preview=/.test(location.search))window.__vvsTenant={slug:s,response:fetch('/api/tenant/'+encodeURIComponent(s),{headers:{accept:'application/json'}})}}catch(e){}})();`
+      return [{ tag: 'script', children: script, injectTo: 'body-prepend' }]
+    },
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    plugins: [react(), devRenderApi(env)],
+    plugins: [react(), devRenderApi(env), builderPreload()],
   }
 })

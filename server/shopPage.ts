@@ -1,4 +1,6 @@
-import type { PublishedTenant } from './tenants.js';
+import { posterFor } from '../src/lib/poster.js';
+import { defaultSet, defaultTooth } from '../src/lib/tenant/catalog.js';
+import { publicTenant, type PublishedTenant } from './tenants.js';
 
 // Shop pages are client-rendered, so link previews (iMessage, IG, WhatsApp)
 // would all show VVS Lab. This rewrites the head of index.html for /b/<slug>
@@ -6,6 +8,10 @@ import type { PublishedTenant } from './tenants.js';
 
 const escape = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** JSON for an inline <script>: nothing in it can close the tag or start markup. */
+const inlineJson = (value: unknown) =>
+  JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
 const setTag = (html: string, pattern: RegExp, tag: string) => (pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', `    ${tag}\n  </head>`));
 
@@ -29,6 +35,13 @@ export function shopHead(html: string, tenant: PublishedTenant, origin: string, 
   out = setTag(out, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${escape(url)}" />`);
   // The logo is the largest thing in the header; fetch it alongside the JS instead of after it.
   if (logo) out = out.replace('</head>', `    <link rel="preload" as="image" href="${escape(image)}" fetchpriority="high" />\n  </head>`);
+  // The still of the set the builder opens on (src/lib/poster.ts): on screen before the 3D model is.
+  // The app's loading frame reads this tag to show it straight away (BuilderShell).
+  const poster = posterFor(defaultTooth(tenant.config.catalog), defaultSet(tenant.config.catalog));
+  if (poster) out = out.replace('</head>', `    <link rel="preload" as="image" href="${poster}" fetchpriority="high" />\n  </head>`);
+  // The shop's public config, so the builder starts without waiting on /api/tenant.
+  // This page is cached for minutes; the app still asks /api/tenant and takes its answer if it differs.
+  out = out.replace('</head>', () => `    <script id="vvs-tenant" type="application/json">${inlineJson(publicTenant(tenant))}</script>\n  </head>`);
   return out;
 }
 

@@ -1,10 +1,13 @@
 import { lazy, Suspense } from 'react';
+import { loadable } from './lib/loadable';
 import { Route, Routes } from 'react-router-dom';
+import { BuilderShell } from './components/builder/BuilderShell';
 import LandingPage from './components/landing/LandingPage';
 import './App.css';
 
-const Configurator = lazy(() => import('./components/Configurator'));
-const ShopPage = lazy(() => import('./components/ShopPage'));
+// The builder routes swap in the moment their code arrives (see loadable); the rest are plain lazy routes.
+const Configurator = loadable(() => import('./components/Configurator'));
+const ShopPage = loadable<{ slug?: string }>(() => import('./components/ShopPage'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const DashboardApp = lazy(() => import('./dashboard/DashboardApp'));
 const SignupPage = lazy(() => import('./components/signup/SignupPage'));
@@ -33,9 +36,7 @@ function App() {
         path="/"
         element={
           customDomainShop ? (
-            <Suspense fallback={<ConfiguratorLoader />}>
-              <ShopPage slug={customDomainShop} />
-            </Suspense>
+            <ShopPage slug={customDomainShop} fallback={<BuilderShell />} />
           ) : (
             <LandingPage />
           )
@@ -43,19 +44,11 @@ function App() {
       />
       <Route
         path="/configurator"
-        element={
-          <Suspense fallback={<ConfiguratorLoader />}>
-            <Configurator />
-          </Suspense>
-        }
+        element={<Configurator fallback={<BuilderShell />} />}
       />
       <Route
         path="/b/:slug/*"
-        element={
-          <Suspense fallback={<ConfiguratorLoader />}>
-            <ShopPage />
-          </Suspense>
-        }
+        element={<ShopPage fallback={<BuilderShell />} />}
       />
       {LabPage && <Route path="/lab" element={<Suspense fallback={null}><LabPage /></Suspense>} />}
       <Route path="/signup" element={<Suspense fallback={null}><SignupPage /></Suspense>} />
