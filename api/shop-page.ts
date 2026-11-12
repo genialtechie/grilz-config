@@ -10,7 +10,13 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const host = request.headers.get('x-forwarded-host') ?? url.host;
   const origin = `${url.protocol}//${host}`;
-  const page = await fetch(`${origin}/index.html`, { headers: { accept: 'text/html' } });
+  // A preview deployment sits behind Vercel's sign-in, so this function's own request for
+  // index.html has to carry the visitor's session, or it is answered with the sign-in page.
+  // Production is public and sends nothing extra.
+  const headers: Record<string, string> = { accept: 'text/html' };
+  const cookie = request.headers.get('cookie');
+  if (process.env.VERCEL_ENV === 'preview' && cookie) headers.cookie = cookie;
+  const page = await fetch(`${origin}/index.html`, { headers });
   let html = await page.text();
   const byDomain = url.searchParams.get('domain') === '1';
   const slug = byDomain ? await slugForHost(host, process.env) : (url.searchParams.get('slug') ?? '').toLowerCase();
