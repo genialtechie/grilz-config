@@ -23,6 +23,11 @@ export type ToothCustomization = {
   setting?: SettingId;
 };
 
+/** Teeth the camera glides in on, filling `fill` of the canvas; `turn` also turns to face them (MAG-148). */
+export type CloseUp = { teeth: number[]; fill: number; turn?: boolean };
+/** A fixed view the customer asked for; a new object each time, so asking twice glides twice. */
+export type ViewRequest = { side: 'front' | 'left' | 'right' };
+
 export interface SceneProps {
   customizations: ToothCustomization[];
   selectedTeeth: number[];
@@ -34,6 +39,12 @@ export interface SceneProps {
   inscriptions?: Inscription[];
   /** A still of the opening design, shown until the model is drawn (src/lib/poster.ts). */
   poster?: string | null;
+  /** The covered teeth: once the model is drawn the camera frames them rather than the whole model. Absent: it stays on the whole model (the /lab page and its stills). */
+  frameTeeth?: number[];
+  closeUp?: CloseUp | null;
+  view?: ViewRequest | null;
+  /** The customer dragged or pinched the model. */
+  onUserControl?: () => void;
 }
 
 export type GrillzModelProps = SceneProps;

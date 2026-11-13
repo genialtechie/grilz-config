@@ -52,7 +52,7 @@ import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } fro
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
-import type { ToothCustomization } from '../lib/types';
+import type { CloseUp, ToothCustomization, ViewRequest } from '../lib/types';
 
 // Five steps, one question each (MAG-95): which teeth, what metal, what look,
 // anything personal, then review and send. Order details (how the shop gets
@@ -159,6 +159,9 @@ function Configurator() {
   const [poster] = useState(() => startingPoster(start?.snapshot ?? null, openingDesign(tenant)));
   // After "Start over": what it cleared, for a few seconds' Undo.
   const [undoReset, setUndoReset] = useState<ResetSnapshot | null>(null);
+  // The camera: in close on the teeth an option changes, and the fixed views (MAG-148).
+  const [closeUp, setCloseUp] = useState<CloseUp | null>(null);
+  const [view, setView] = useState<ViewRequest | null>(null);
   const [linkState, setLinkState] = useState<{ status: 'copied' | 'manual'; link: string } | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
@@ -279,6 +282,18 @@ function Configurator() {
     [base, overrides, selectedSet, setOptions.fangs, setOptions.cut],
   );
 
+  // What the camera frames at rest: the set, and on the Teeth step a tooth either side of each
+  // row too, so there is always a neighbour in view to tap and add. No teeth: the whole model.
+  const frameTeeth = useMemo(() => {
+    if (step !== 'teeth' || !selectedTeeth.length) return selectedTeeth;
+    const rows = [0, 16].flatMap((offset) => {
+      const row = selectedTeeth.filter((index) => index >= offset && index < offset + 16);
+      if (!row.length) return [];
+      return [Math.max(offset, row[0] - 1), ...row, Math.min(offset + 15, row.at(-1)! + 1)];
+    });
+    return [...new Set(rows)];
+  }, [step, selectedTeeth]);
+
   const handleToothClick = (index: number) => {
     if (step === 'teeth') {
       toggleToothSelection(index);
@@ -318,8 +333,19 @@ function Configurator() {
   const icedStone = shown.type === 'iced' ? shown.stone : undefined;
   const icedPossible = nearestOffered(shopPricing, { ...shown, type: 'iced' }, stoneIds, karatIds) !== null;
 
+  /** The tooth that shows the set's stones best: a front tooth (a picked one while styling single teeth). */
+  const showcaseTooth = () => {
+    const pool = activePicked.length ? activePicked : selectedTeeth;
+    const iced = pool.filter((index) => designFor(index).type === 'iced');
+    const candidates = iced.length ? iced : pool;
+    return [...candidates].sort((a, b) => Math.abs((a % 16) - 7.5) + (a >= 16 ? 0.1 : 0) - (Math.abs((b % 16) - 7.5) + (b >= 16 ? 0.1 : 0)))[0];
+  };
+
   // Applies a design change to every tooth, or only to the picked teeth.
   const applyDesign = (patch: Partial<ToothDesign>) => {
+    // Stones and settings differ stone by stone: go in close to show it. Any other choice: back out.
+    const tooth = showcaseTooth();
+    setCloseUp(tooth !== undefined && (patch.stone || patch.setting) ? { teeth: [tooth], fill: 0.42 } : null);
     if (pickMode) {
       if (!activePicked.length) return;
       setOverrides((previous) => {
@@ -337,7 +363,12 @@ function Configurator() {
     );
   };
 
-  const updateSet = (patch: Partial<SetOptions>) => setSetOptions((previous) => ({ ...previous, ...patch }));
+  const updateSet = (patch: Partial<SetOptions>) => {
+    // Fangs on: turn to a canine to show one. Any other set choice: back out.
+    const canine = FANG_TEETH.find((index) => selectedSet.has(index));
+    setCloseUp(patch.fangs && canine !== undefined ? { teeth: [canine], fill: 0.3, turn: true } : null);
+    setSetOptions((previous) => ({ ...previous, ...patch }));
+  };
 
   const renderSpec = useMemo<RenderSpec | null>(
     () => (teethDesigns.length ? { ...setOptions, fangs: fangsOn, inscriptions, teeth: teethDesigns } : null),
@@ -490,6 +521,7 @@ function Configurator() {
       setDepositReached(false);
     }
     posthog.capture('sample_step_viewed', { step: target });
+    setCloseUp(null);
     setPickMode(false);
     setPickedTeeth([]);
     setInscriptionPicking(null);
@@ -516,6 +548,7 @@ function Configurator() {
     setUndoReset({ design: snapshot(), inspiration, step });
     posthog.capture('sample_start_over', designProperties());
     setLinkState(null);
+    setCloseUp(null);
     render.reset();
     setLead(null);
     setReceipt(null);
@@ -718,8 +751,14 @@ function Configurator() {
             toggleToothSelection={handleToothClick}
             inscriptions={inscriptions}
             poster={poster}
+            frameTeeth={frameTeeth}
+            closeUp={closeUp}
+            view={view}
+            onUserControl={() => setCloseUp(null)}
             onReady={(state) => {
               threeState.current = state;
+              // Dev only: lets the visual checks reach the 3D view.
+              if (import.meta.env.DEV) (window as unknown as { __vvs?: RootState }).__vvs = state;
             }}
           />
 
@@ -737,6 +776,22 @@ function Configurator() {
               onClose={() => setShowPhoto(false)}
             />
           )}
+
+          <div className="viewer-views" role="group" aria-label="Turn the model">
+            {(['left', 'front', 'right'] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => {
+                  setCloseUp(null);
+                  setView({ side });
+                  posthog.capture('sample_view_changed', { view: side, step });
+                }}
+              >
+                {side === 'left' ? 'Left' : side === 'front' ? 'Front' : 'Right'}
+              </button>
+            ))}
+          </div>
 
           <div className="viewer-status">
             <span className="status-dot" />
