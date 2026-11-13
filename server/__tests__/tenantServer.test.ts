@@ -155,6 +155,36 @@ describe('shop link previews', () => {
     expect(out).not.toContain('VVS Lab');
   });
 
+  it('carries the public config for the builder, without lead routes', () => {
+    const withLeads = { ...tenant, config: { ...tenant.config, leads: { email: ['owner@icebox.test'], sms: [] } } };
+    const page = shopHead(html, withLeads, 'https://vvslab.magpollo.com');
+    const inline = page.match(/<script id="vvs-tenant" type="application\/json">(.*)<\/script>/)?.[1];
+    expect(inline).toBeTruthy();
+    const body = JSON.parse(inline!);
+    expect(body).toMatchObject({ slug: 'icebox', kind: 'shop', status: 'live', version: tenant.version });
+    expect(body.config.brand.name).toBe(tenant.config.brand.name);
+    expect(page).not.toContain('owner@icebox.test');
+    expect(page).not.toContain('"id":"x"');
+  });
+
+  it('preloads the still of the set the builder opens on', () => {
+    expect(shopHead(html, { ...TENANT_ZERO }, 'https://o.test')).toContain('<link rel="preload" as="image" href="/assets/posters/set-yellow.webp" fetchpriority="high" />');
+    const silverOnly = { ...TENANT_ZERO, config: { ...TENANT_ZERO.config, catalog: { ...TENANT_ZERO.config.catalog, metals: ['silver' as const] } } };
+    expect(shopHead(html, silverOnly, 'https://o.test')).toContain('href="/assets/posters/set-silver.webp"');
+    // A shop that opens on iced teeth has no still: the model loads as before.
+    const icedOnly = { ...TENANT_ZERO, config: { ...TENANT_ZERO.config, catalog: { ...TENANT_ZERO.config.catalog, types: ['iced' as const] } } };
+    expect(shopHead(html, icedOnly, 'https://o.test')).not.toContain('/assets/posters/');
+  });
+
+  it('keeps shop text inside the inline config from closing its script tag', () => {
+    const evil = { ...tenant, config: { ...tenant.config, brand: { ...tenant.config.brand, name: '</script><script>alert(1)</script> $& $1' } } };
+    const page = shopHead(html, evil, 'https://o.test');
+    expect(page).not.toContain('<script>alert(1)');
+    expect(page.split('</script>').length).toBe(html.split('</script>').length + 1);
+    const inline = page.match(/<script id="vvs-tenant" type="application\/json">(.*)<\/script>/)?.[1];
+    expect(JSON.parse(inline!).config.brand.name).toBe('</script><script>alert(1)</script> $& $1');
+  });
+
   it('escapes brand text so it cannot break out of the tag', () => {
     const evil = { ...tenant, config: { ...tenant.config, brand: { ...tenant.config.brand, name: '"><script>x</script>' } } };
     expect(shopHead(html, evil, 'https://o.test')).not.toContain('<script>x');

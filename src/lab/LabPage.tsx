@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import type { RootState } from '@react-three/fiber';
 import Scene from '../components/three/Scene';
 import type { ToothCustomization } from '../lib/types';
-import { FANG_TEETH, METALS, groupTeeth, type RenderSpec, type StyleId } from '../lib/renderSpec';
+import { FANG_TEETH, METALS, groupTeeth, type RenderSpec, type SettingId, type StyleId } from '../lib/renderSpec';
 import { toothCustomization } from '../lib/toothCustomization';
 import { capturePreview } from '../lib/capturePreview';
 import { capturePhotoStill, type PhotoStill } from '../lib/photoStage';
@@ -11,7 +11,7 @@ import { baseToothState } from '../lib/hooks/useGrillzCustomization';
 // Dev-only render lab (/lab, not routed in production builds): the 3D model with
 // a fixed design from the URL, for side-by-side visual comparisons and the AI
 // photo eval (MAG-76).
-//   /lab?metal=yellow&type=iced&count=6&style=open-face&fangs=1
+//   /lab?metal=yellow&type=iced&count=6&style=open-face&fangs=1&setting=prong&stone=moissanite
 //   /lab?spec=<URL-encoded RenderSpec JSON>
 // window.__lab.capture() returns the exact preview the AI photo starts from.
 
@@ -37,7 +37,7 @@ function fromParams(params: URLSearchParams): ToothCustomization[] {
   const metal = METALS.find((item) => item.id === metalId) ?? METALS[0];
   return Array.from({ length: 32 }, (_, index) =>
     covered.has(index)
-      ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), cut, hasDiamonds: iced, diamondType: 'lab' }
+      ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), cut, hasDiamonds: iced, diamondType: params.get('stone') === 'moissanite' ? 'moissanite' : 'lab', setting: (params.get('setting') ?? 'honeycomb') as SettingId }
       : { ...baseToothState },
   );
 }

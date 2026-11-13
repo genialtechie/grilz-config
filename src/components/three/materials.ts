@@ -3,31 +3,29 @@ import type { MetalId } from '../../lib/renderSpec';
 
 // Physically based metal colours (sRGB base colour at metalness 1). The UI
 // swatches are flat paint colours tuned for small chips; as metal they read
-// olive and flat, so the 3D view uses measured reflectance instead.
-const METAL_BASE: Record<MetalId, string> = {
-  yellow: '#f0c46a',
-  white: '#e4e3df',
-  rose: '#efb59c',
-  silver: '#f2f1ee',
-  platinum: '#d8d7d4',
+// olive and flat, so the 3D view uses reflectance colours instead. The three
+// white metals are nearly the same colour in life; here each leans the way a
+// jeweler describes it, so a customer can see which one is picked: rhodium
+// white gold cool and bright, silver the brightest and a touch warm, platinum
+// a deeper grey with a softer sheen.
+export const METAL_BASE: Record<MetalId, string> = {
+  yellow: '#edb84f',
+  white: '#e3e7ec',
+  rose: '#efae9f',
+  silver: '#f8f5ee',
+  platinum: '#bfc4ca',
 };
 
-/** A mirror-polished metal: mostly dark, with sharp bright reflections of the studio lights. */
+const METAL_ROUGHNESS: Record<MetalId, number> = { yellow: 0.09, white: 0.08, rose: 0.09, silver: 0.06, platinum: 0.14 };
+
+/** A mirror-polished metal: it mirrors the studio's light walls, softboxes and dark flags. */
 export function polishedMetal(metal: MetalId) {
   return new THREE.MeshPhysicalMaterial({
     color: METAL_BASE[metal],
     metalness: 1,
-    roughness: metal === 'silver' || metal === 'platinum' ? 0.07 : 0.09,
+    roughness: METAL_ROUGHNESS[metal],
     envMapIntensity: 1.25,
   });
-}
-
-/** The metal under a pavé setting: the same alloy, a touch rougher so the stones lead. */
-export function settingMetal(metal: MetalId) {
-  const material = polishedMetal(metal);
-  material.roughness = 0.22;
-  material.envMapIntensity = 0.9;
-  return material;
 }
 
 /** Fine plaster grain for the dental-stone mould (a small tiling bump texture, made once). */
@@ -62,21 +60,5 @@ export function dentalStone() {
     bumpMap: plasterGrain(),
     bumpScale: 0.6,
     envMapIntensity: 0.55,
-  });
-}
-
-/**
- * Pavé stones: mirror facets with a little icy body. Each facet reflects a
- * different part of the studio, so a stone is a mosaic of hard white and dark
- * facets that changes as the set turns, which is how diamonds read in photos.
- * No transmission pass, so it stays cheap on phones.
- */
-export function stoneMaterial() {
-  return new THREE.MeshStandardMaterial({
-    color: '#ffffff',
-    metalness: 0.55,
-    roughness: 0.02,
-    envMapIntensity: 3.6,
-    flatShading: true,
   });
 }

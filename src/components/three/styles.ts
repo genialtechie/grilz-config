@@ -36,10 +36,8 @@ function hitFront(front: Front, u: number, v: number) {
   return { point: hit.point, normal: hit.face.normal.clone() };
 }
 
-/** The tooth's front: its facing, and the outline of the face (found once per tooth). */
-export function frontOf(geometry: THREE.BufferGeometry): Front {
-  const cached = fronts.get(geometry);
-  if (cached) return cached;
+/** Which way a tooth faces out of the arch, with its own across and up, its middle and its largest size. */
+export function frameOf(geometry: THREE.BufferGeometry) {
   if (!geometry.boundingBox) geometry.computeBoundingBox();
   const box = geometry.boundingBox!;
   const centre = box.getCenter(new THREE.Vector3());
@@ -47,7 +45,14 @@ export function frontOf(geometry: THREE.BufferGeometry): Front {
   const facial = new THREE.Vector3(centre.x - ARCH_CENTRE.x, 0, centre.z - ARCH_CENTRE.z).normalize();
   const up = new THREE.Vector3(0, 1, 0);
   const across = new THREE.Vector3().crossVectors(up, facial).normalize();
-  const front: Front = { centre, facial, across, up, reach: Math.max(size.x, size.y, size.z), outline: [], probe: new THREE.Mesh(geometry) };
+  return { centre, facial, across, up, reach: Math.max(size.x, size.y, size.z) };
+}
+
+/** The tooth's front: its facing, and the outline of the face (found once per tooth). */
+export function frontOf(geometry: THREE.BufferGeometry): Front {
+  const cached = fronts.get(geometry);
+  if (cached) return cached;
+  const front: Front = { ...frameOf(geometry), outline: [], probe: new THREE.Mesh(geometry) };
   for (let i = 0; i < SECTORS; i += 1) {
     const angle = (i / SECTORS) * Math.PI * 2;
     // Binary search for the edge of the front face along this direction.
@@ -327,9 +332,13 @@ export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, ice
 const fangs = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>();
 
 /**
- * An upper canine drawn out into a fang: the lower half stretches down and
- * narrows to a point, the way a fang cap is built over the tooth.
+ * An upper canine built out into a fang cap: the lower half runs about a quarter
+ * longer and tapers to a blunt point, staying a tooth's width most of the way
+ * down (a cap over a real canine, not a needle).
  */
+const FANG_LENGTH = 0.27; // extra length, as a share of the tooth's height
+const FANG_TAPER = 0.64; // how much of its width the tip loses
+const FANG_THIN = 0.35; // how much of its depth (front to back) the tip loses
 export function fangGeometry(geometry: THREE.BufferGeometry) {
   const cached = fangs.get(geometry);
   if (cached) return cached;
@@ -345,14 +354,14 @@ export function fangGeometry(geometry: THREE.BufferGeometry) {
     p.fromBufferAttribute(position, i);
     const t = THREE.MathUtils.clamp((centre.y - p.y) / (centre.y - box.min.y), 0, 1);
     if (t <= 0) continue;
-    const ease = t * t;
-    // Pull toward the tooth's centre line across the face (keep some depth front to back).
+    // The width holds near the gum and closes in towards the tip; the length grows evenly.
+    const taper = Math.pow(t, 1.7);
     const offset = p.clone().sub(centre);
     const sideways = offset.dot(front.across);
     const depth = offset.dot(front.facial);
-    p.addScaledVector(front.across, -sideways * 0.78 * ease);
-    p.addScaledVector(front.facial, -depth * 0.35 * ease);
-    p.y -= height * 0.55 * ease;
+    p.addScaledVector(front.across, -sideways * FANG_TAPER * taper);
+    p.addScaledVector(front.facial, -depth * FANG_THIN * taper);
+    p.y -= height * FANG_LENGTH * Math.pow(t, 1.3);
     position.setXYZ(i, p.x, p.y, p.z);
   }
   position.needsUpdate = true;

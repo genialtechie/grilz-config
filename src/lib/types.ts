@@ -1,4 +1,4 @@
-import type { CutId, Inscription, MetalId, OpalId, StyleId } from './renderSpec';
+import type { CutId, Inscription, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -19,6 +19,8 @@ export type ToothCustomization = {
   variant?: string;
   hasDiamonds: boolean;
   diamondType?: DiamondType;
+  /** How an iced tooth's stones are set (honeycomb when absent). */
+  setting?: SettingId;
 };
 
 export interface SceneProps {
@@ -27,9 +29,11 @@ export interface SceneProps {
   isSelectionMode: boolean;
   toggleToothSelection: (index: number) => void;
   /** How selected teeth show: filled in the accent (choosing the set), or their design with an outline (styling single teeth). */
-  selectionLook?: 'fill' | 'outline';
+  selectionLook?: 'fill' | 'outline' | 'none';
   /** Letters drawn on the set. */
   inscriptions?: Inscription[];
+  /** A still of the opening design, shown until the model is drawn (src/lib/poster.ts). */
+  poster?: string | null;
 }
 
 export type GrillzModelProps = SceneProps;

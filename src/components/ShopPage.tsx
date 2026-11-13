@@ -1,10 +1,17 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
+import { BuilderShell } from './builder/BuilderShell';
+import { loadable } from '../lib/loadable';
+import { posterFor } from '../lib/poster';
+import { fontPairClass, themeStyle } from '../lib/tenant/theme';
+import { useTenant } from '../lib/tenant/useTenant';
 import { TenantProvider } from '../lib/tenant/context';
-import { loadTenant, type LoadedTenant } from '../lib/tenant/loadTenant';
+import { inlineTenant, loadTenant, type LoadedTenant } from '../lib/tenant/loadTenant';
 
-const Configurator = lazy(() => import('./Configurator'));
+const Configurator = loadable(() => import('./Configurator'));
+// The builder's code starts loading with this page, not after the shop's config arrives.
+void Configurator.preload();
 
 // /b/<slug>: a shop's own builder. Loads the shop's published config, then
 // renders the shared builder inside that shop's brand.
@@ -34,6 +41,19 @@ function Loading() {
   );
 }
 
+/** The builder's frame in the shop's theme, with the still of its opening set, while the builder's code downloads. */
+function ShopShell() {
+  const tenant = useTenant();
+  const brand = tenant.config.brand;
+  return (
+    <BuilderShell
+      poster={posterFor(tenant.defaultTooth, tenant.defaultSet)}
+      className={tenant.demo ? undefined : `configurator-shell shop-shell ${fontPairClass(brand)}`}
+      style={tenant.demo ? undefined : themeStyle(brand)}
+    />
+  );
+}
+
 export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
   const params = useParams();
   const slug = slugProp ?? params.slug ?? '';
@@ -43,12 +63,13 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
   // Back from the shop's Stripe checkout after paying a deposit.
   const [depositPaid, setDepositPaid] = useState(search.get('deposit') === 'paid');
   const posthog = usePostHog();
-  const [loaded, setLoaded] = useState<LoadedTenant | null>(null);
+  // The page arrives with the shop's config in it, so the builder shows at once (drafts are always fetched).
+  const [loaded, setLoaded] = useState<LoadedTenant | null>(() => (previewVersion ? null : inlineTenant(slug.toLowerCase())));
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const abort = new AbortController();
-    setLoaded(null);
+    setLoaded(previewVersion ? null : inlineTenant(slug.toLowerCase()));
     const load = async () => {
       let preview: { version: number; token: string | null } | undefined;
       if (previewVersion) {
@@ -57,7 +78,15 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
         preview = { version: previewVersion, token: await accessToken().catch(() => null) };
       }
       const result = await loadTenant(slug.toLowerCase(), abort.signal, preview);
-      if (!abort.signal.aborted) setLoaded(result);
+      if (abort.signal.aborted) return;
+      // The page's copy can be a few minutes old; this answer is the latest. It replaces
+      // the copy only when it differs (a new price list, a paused shop), and a failed
+      // check keeps the builder that is already on screen.
+      setLoaded((current) => {
+        if (!current) return result;
+        if (result.state === 'unavailable') return current;
+        return JSON.stringify(current) === JSON.stringify(result) ? current : result;
+      });
     };
     void load();
     return () => abort.abort();
@@ -120,9 +149,7 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
           Draft preview · v{loaded.version} · customers can&apos;t see this yet
         </div>
       )}
-      <Suspense fallback={<Loading />}>
-        <Configurator />
-      </Suspense>
+      <Configurator fallback={<ShopShell />} />
     </TenantProvider>
     </>
   );

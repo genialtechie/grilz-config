@@ -32,10 +32,10 @@ const SWING_SECONDS = 7;
 
 /**
  * The camera: fits the set to the canvas, glides in to a tapped tooth and
- * back, and gives a short slow swing when the builder opens so the metal
- * catches the light. The canvas only draws while something moves.
+ * back, and gives a short slow swing once the model is on screen (`started`)
+ * so the metal catches the light. The canvas only draws while something moves.
  */
-function Rig({ focus }: { focus: THREE.Vector3 | null }) {
+function Rig({ focus, started }: { focus: THREE.Vector3 | null; started: boolean }) {
   const controls = useRef<OrbitControlsImpl | null>(null);
   const { camera, size, invalidate } = useThree();
   const rest = fitDistance(camera as THREE.PerspectiveCamera, size.width, size.height, VIEW_FRACTION);
@@ -64,6 +64,11 @@ function Rig({ focus }: { focus: THREE.Vector3 | null }) {
     invalidate();
   }, [focus, rest, invalidate]);
 
+  // The model has just appeared: draw, so the swing begins.
+  useEffect(() => {
+    if (started) invalidate();
+  }, [started, invalidate]);
+
   useFrame((state, delta) => {
     const orbit = controls.current;
     if (!orbit) return;
@@ -71,7 +76,7 @@ function Rig({ focus }: { focus: THREE.Vector3 | null }) {
 
     // The opening swing: the view eases side to side, then settles.
     const now = state.clock.elapsedTime;
-    if (swing.current.until === -1) swing.current = { until: now + SWING_SECONDS, base: orbit.getAzimuthalAngle() };
+    if (swing.current.until === -1 && started) swing.current = { until: now + SWING_SECONDS, base: orbit.getAzimuthalAngle() };
     if (swing.current.until > now) {
       const t = SWING_SECONDS - (swing.current.until - now);
       const fade = Math.min(1, t / 1.5) * Math.min(1, (swing.current.until - now) / 1.5);
@@ -129,9 +134,11 @@ function Scene({
   selectionLook,
   toggleToothSelection,
   inscriptions,
+  poster,
   onReady,
 }: Props) {
   const [focus, setFocus] = useState<THREE.Vector3 | null>(null);
+  const [drawn, setDrawn] = useState(false);
   // Starts sharp; drops to 1x if a phone can't keep up, and back up if it recovers.
   const [dpr, setDpr] = useState(1.75);
   // /configurator?fps shows a frame-rate meter, for checking real phones.
@@ -156,27 +163,33 @@ function Scene({
         <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.75)} />
         {showFps && <Stats />}
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={44} />
-        <Rig focus={focus} />
+        <Rig focus={focus} started={drawn} />
         {/* The stone mould is lit by these; the metal and stones by the studio below. */}
         <ambientLight intensity={0.45} />
         <directionalLight position={[4, 7, 8]} intensity={1.6} />
         <directionalLight position={[-6, 2, 4]} intensity={0.5} />
-        {/* A dark studio with long softboxes: polished metal reflects mostly dark with
-            sharp bright streaks along its edges, the way jewelry is photographed. */}
+        {/* A jeweler's light tent: soft grey walls with big softboxes, and two narrow dark
+            flags. Polished metal mirrors its surroundings, so white metals need mostly
+            light to mirror (in a dark room they render black); the flags and the darker
+            floor keep the contrast that makes it read as metal, not as white plastic. */}
         <Environment resolution={256} frames={1}>
-          <color attach="background" args={['#191613']} />
-          {/* Big softbox in front (behind the camera): the polished faces you look at. */}
-          <Lightformer form="rect" intensity={1.6} position={[0, 1.5, 9]} scale={[10, 4, 1]} />
-          {/* Top light and two tall side strips: the long streaks along each tooth. */}
-          <Lightformer form="rect" intensity={3} position={[0, 7, 2]} rotation-x={Math.PI / 2} scale={[12, 3, 1]} />
-          <Lightformer form="rect" intensity={3.4} position={[-6, 1, 3]} rotation-y={Math.PI / 2.6} scale={[1.2, 10, 1]} />
-          <Lightformer form="rect" intensity={3.4} position={[6, 1, 3]} rotation-y={-Math.PI / 2.6} scale={[1.2, 10, 1]} />
+          <color attach="background" args={['#6a655e']} />
+          {/* The wall behind the camera, floor to ceiling: what the faces you look at mirror. */}
+          <Lightformer form="rect" intensity={0.95} position={[0, 2, 10]} scale={[16, 11, 1]} />
+          {/* Top light and two tall side strips: the bright streaks along each tooth. */}
+          <Lightformer form="rect" intensity={3} position={[0, 7, 2]} rotation-x={Math.PI / 2} scale={[12, 4, 1]} />
+          <Lightformer form="rect" intensity={3.2} position={[-6, 1, 3]} rotation-y={Math.PI / 2.6} scale={[1.4, 10, 1]} />
+          <Lightformer form="rect" intensity={3.2} position={[6, 1, 3]} rotation-y={-Math.PI / 2.6} scale={[1.4, 10, 1]} />
           <Lightformer form="ring" intensity={4} position={[2.5, 3, 7]} scale={1.2} />
+          {/* Dark flags beside the camera: a thin dark band down each tooth, so edges read. */}
+          <Lightformer form="rect" color="#0b0a09" intensity={1} position={[-3.6, 1.5, 8.5]} rotation-y={Math.PI / 9} scale={[0.9, 9, 1]} />
+          <Lightformer form="rect" color="#0b0a09" intensity={1} position={[3.6, 1.5, 8.5]} rotation-y={-Math.PI / 9} scale={[0.9, 9, 1]} />
           <Lightformer form="rect" intensity={1.4} position={[0, -6, 3]} rotation-x={-Math.PI / 2.4} scale={[12, 12, 1]} color="#8a7a6a" />
           {/* Low strip in front: lights the downward-facing lower teeth. */}
           <Lightformer form="rect" intensity={2.2} position={[0, -2.5, 8]} scale={[9, 0.8, 1]} />
         </Environment>
-        <Suspense fallback={<ModelLoader />}>
+        {/* With a poster up, the set is already on screen: no loading note over it. */}
+        <Suspense fallback={poster ? null : <ModelLoader />}>
           <GrillzModel
             customizations={customizations}
             selectedTeeth={selectedTeeth}
@@ -185,11 +198,14 @@ function Scene({
             toggleToothSelection={toggleToothSelection}
             inscriptions={inscriptions}
             onFocusTooth={(point) => setFocus((current) => (current && current.distanceTo(point) < 0.3 ? null : point))}
+            onDrawn={() => setDrawn(true)}
           />
           {/* The mould doesn't move, so its shadow is drawn once, after it loads. */}
           <ContactShadows position={[0, -1.72, 0]} opacity={0.42} scale={9} blur={2.6} far={2.2} resolution={512} frames={1} />
         </Suspense>
       </Canvas>
+      {/* The still the builder opens on; the live model, drawn in the same place, fades in over it. */}
+      {poster && <img className={drawn ? 'viewer-poster viewer-poster--done' : 'viewer-poster'} src={poster} alt="" decoding="sync" aria-hidden="true" />}
     </div>
   );
 }

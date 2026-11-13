@@ -199,7 +199,14 @@ export function capturePhotoStill(state: RootState, coveredTeeth: number[]): Pho
     const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
     const flat = new Map<number, THREE.MeshBasicMaterial>();
     const black = new THREE.MeshBasicMaterial({ color: '#000000', toneMapped: false });
+    const glints: THREE.Object3D[] = [];
     scene.traverse((object) => {
+      // Glints are flashes of light over the stones, not part of a tooth's shape.
+      if (object.name === 'stone_glints' && object.visible) {
+        object.visible = false;
+        glints.push(object);
+        return;
+      }
       if (!(object instanceof THREE.Mesh)) return;
       let index: number | null = null;
       for (let node: THREE.Object3D | null = object; node && index === null; node = node.parent) index = toothIndexOf(node.name);
@@ -220,6 +227,9 @@ export function capturePhotoStill(state: RootState, coveredTeeth: number[]): Pho
     const map = toCanvas(gl, '#000000');
     originals.forEach((material, mesh) => {
       mesh.material = material;
+    });
+    glints.forEach((object) => {
+      object.visible = true;
     });
     flat.forEach((material) => material.dispose());
     black.dispose();

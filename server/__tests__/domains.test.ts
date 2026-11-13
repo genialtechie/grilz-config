@@ -61,6 +61,27 @@ describe('custom domains', () => {
   });
 });
 
+describe('shop page on a preview deployment', () => {
+  const visit = async (environment: string) => {
+    vi.stubEnv('VERCEL_ENV', environment);
+    const sent: (string | null)[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith('/index.html')) sent.push(new Headers(init?.headers).get('cookie'));
+      return new Response('<html><head><title>VVS Lab</title></head><body></body></html>');
+    }));
+    await shopPage(new Request('https://preview-123.vercel.app/api/shop-page?slug=vvslab', { headers: { cookie: '_vercel_jwt=abc' } }));
+    return sent;
+  };
+
+  it('fetches the app page with the visitor\'s session, since previews sit behind sign-in', async () => {
+    expect(await visit('preview')).toEqual(['_vercel_jwt=abc']);
+  });
+
+  it('sends no cookies in production', async () => {
+    expect(await visit('production')).toEqual([null]);
+  });
+});
+
 describe('domain actions', () => {
   const env = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'service', VERCEL_DOMAINS_TOKEN: 't', VERCEL_PROJECT_ID: 'p' };
   const tenantId = '11111111-1111-1111-1111-111111111111';
