@@ -10,6 +10,7 @@ import {
   ChevronUp,
   CreditCard,
   ImagePlus,
+  Link2,
   Minus,
   MousePointer2,
   Move3d,
@@ -17,7 +18,6 @@ import {
   Plus,
   RotateCcw,
   ScanLine,
-  ShoppingBag,
   Store,
   X,
 } from 'lucide-react';
@@ -34,7 +34,8 @@ import { useAiRender } from '../lib/hooks/useAiRender';
 import { baseToothState, useGrillzCustomization } from '../lib/hooks/useGrillzCustomization';
 import { toothCustomization } from '../lib/toothCustomization';
 import { InscriptionEditor } from './builder/InscriptionEditor';
-import { draftRow, inscriptionsFrom, newDraft, pickTooth, type InscriptionDraft } from '../lib/inscriptionDrafts';
+import { draftRow, inscriptionsFrom, newDraft, pickTooth, placeDrafts, unplaceDrafts, type InscriptionDraft } from '../lib/inscriptionDrafts';
+import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWithoutInscriptions, startingDesign, startingPoster, type DesignSnapshot } from '../lib/savedDesign';
 import {
   OPALS,
   VISION_MAX,
@@ -48,7 +49,6 @@ import {
 } from '../lib/renderSpec';
 import { FANG_OPTIONS, FANG_TEETH, label, METALS } from '../lib/renderSpec';
 import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
-import { posterFor } from '../lib/poster';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -121,23 +121,33 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
   );
 }
 
+/** On a shop's own domain the server marks the page (see App.tsx); the builder is then at "/". */
+const onCustomDomain = () => typeof document !== 'undefined' && Boolean(document.querySelector('meta[name="vvs-shop"]'));
+
+/** Everything "Start over" clears, for its Undo. */
+type ResetSnapshot = { design: DesignSnapshot; inspiration: string | null; step: StepId };
+
 function Configurator() {
   const posthog = usePostHog();
   const tenant = useTenant();
   const { catalog, hints } = tenant;
   const hasCapturedOpen = useRef(false);
   const openedAt = useRef(Date.now());
+  // A design from a shared link, or the one this customer left on this device (MAG-148).
+  const [start] = useState(() => startingDesign(tenant));
   const [step, setStep] = useState<StepId>('teeth');
   const [panelOpen, setPanelOpen] = useState(true);
-  const [base, setBase] = useState<ToothDesign>(tenant.defaultTooth);
-  const [overrides, setOverrides] = useState<Record<number, ToothDesign>>({});
+  const [base, setBase] = useState<ToothDesign>(start?.snapshot.base ?? tenant.defaultTooth);
+  const [overrides, setOverrides] = useState<Record<number, ToothDesign>>(start?.snapshot.overrides ?? {});
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
   // Once a customer has styled a tooth on its own, the tip on the model moves on.
   const [triedPicking, setTriedPicking] = useState(false);
   const coarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-  const [setOptions, setSetOptions] = useState<SetOptions>(tenant.defaultSet);
-  const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() => [newDraft(catalog.inscriptionStyles[0]?.id)]);
+  const [setOptions, setSetOptions] = useState<SetOptions>(() => (start ? { ...start.snapshot.set, inscriptions: [] } : tenant.defaultSet));
+  const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() =>
+    start?.snapshot.drafts.length ? start.snapshot.drafts : [newDraft(catalog.inscriptionStyles[0]?.id)],
+  );
   /** Which inscription is choosing its teeth on the model, if any. */
   const [inscriptionPicking, setInscriptionPicking] = useState<number | null>(null);
   const [inspiration, setInspiration] = useState<string | null>(null);
@@ -146,7 +156,10 @@ function Configurator() {
   const [promo, setPromo] = useState<Promo | null>(null);
   const threeState = useRef<RootState | null>(null);
   // A still of the design the builder opens on, up until the 3D model is drawn.
-  const [poster] = useState(() => posterFor(tenant.defaultTooth, tenant.defaultSet));
+  const [poster] = useState(() => startingPoster(start?.snapshot ?? null, openingDesign(tenant)));
+  // After "Start over": what it cleared, for a few seconds' Undo.
+  const [undoReset, setUndoReset] = useState<ResetSnapshot | null>(null);
+  const [linkState, setLinkState] = useState<{ status: 'copied' | 'manual'; link: string } | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
   const [moreBelow, setMoreBelow] = useState(false);
@@ -164,7 +177,8 @@ function Configurator() {
     setRowCount,
     clearAllTeeth,
     resetAll,
-  } = useGrillzCustomization();
+    setSelectedTeeth,
+  } = useGrillzCustomization(start?.snapshot.teeth);
 
   const selectedSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
   const upperCount = selectedTeeth.filter((index) => index < 16).length;
@@ -227,8 +241,10 @@ function Configurator() {
   }, [step, panelOpen]);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
 
-  // An inscription only counts once it has text and sits on teeth in the set.
-  const inscriptions = inscriptionsFrom(inscriptionDrafts, selectedSet);
+  // An inscription only counts once it has text and sits on teeth in the set. Typed text
+  // sits on the front teeth until the customer picks teeth for it (MAG-148).
+  const placedDrafts = placeDrafts(inscriptionDrafts, selectedSet);
+  const inscriptions = inscriptionsFrom(placedDrafts, selectedSet);
   const inscriptionsKey = JSON.stringify(inscriptions);
   // Fangs are built on the upper canines: without one in the set there's nothing to put a fang on.
   const canHaveFangs = selectedTeeth.some((index) => FANG_TEETH.includes(index));
@@ -252,7 +268,7 @@ function Configurator() {
   const highlighted = step === 'teeth'
     ? selectedTeeth
     : pickingInscription
-      ? inscriptionDrafts[inscriptionPicking!]?.teeth ?? []
+      ? placedDrafts[inscriptionPicking!]?.teeth ?? []
       : activePicked;
   const customizations = useMemo<ToothCustomization[]>(
     () =>
@@ -270,7 +286,7 @@ function Configurator() {
     }
     if (pickingInscription) {
       const which = inscriptionPicking!;
-      const other = inscriptionDrafts.find((_, i) => i !== which);
+      const other = placedDrafts.find((_, i) => i !== which);
       const { draft, done } = pickTooth(inscriptionDrafts[which], index, selectedSet, other ? draftRow(other) : null);
       setInscriptionDrafts((previous) => previous.map((item, i) => (i === which ? draft : item)));
       if (done) setInscriptionPicking(null);
@@ -482,7 +498,24 @@ function Configurator() {
     panelScroll.current?.scrollTo({ top: 0 });
   };
 
+  /** The design as it stands, for saving, the link and Undo. */
+  const snapshot = (): DesignSnapshot => {
+    return { teeth: selectedTeeth, base, overrides, set: setWithoutInscriptions(setOptions), drafts: inscriptionDrafts };
+  };
+
+  const restoreDesign = (design: DesignSnapshot) => {
+    setSelectedTeeth(design.teeth);
+    setBase(design.base);
+    setOverrides(design.overrides);
+    setSetOptions({ ...design.set, inscriptions: [] });
+    setInscriptionDrafts(design.drafts.length ? design.drafts : [newDraft(catalog.inscriptionStyles[0]?.id)]);
+  };
+
   const handleReset = () => {
+    // No "are you sure?": it clears at once, and Undo puts it all back.
+    setUndoReset({ design: snapshot(), inspiration, step });
+    posthog.capture('sample_start_over', designProperties());
+    setLinkState(null);
     render.reset();
     setLead(null);
     setReceipt(null);
@@ -499,6 +532,60 @@ function Configurator() {
     setInscriptionPicking(null);
     setStep('teeth');
     setPanelOpen(true);
+  };
+
+  const undoStartOver = () => {
+    if (!undoReset) return;
+    restoreDesign(undoReset.design);
+    setInspiration(undoReset.inspiration);
+    setStep(undoReset.step);
+    setUndoReset(null);
+    posthog.capture('sample_start_over_undone', { step: undoReset.step });
+  };
+
+  // The Undo offer goes after a few seconds.
+  useEffect(() => {
+    if (!undoReset) return;
+    const timer = window.setTimeout(() => setUndoReset(null), 6500);
+    return () => window.clearTimeout(timer);
+  }, [undoReset]);
+
+  // Keep the design on this device, per shop, so a refresh or a trip to Instagram doesn't lose it.
+  const savedKey = JSON.stringify([selectedTeeth, base, overrides, setOptions, inscriptionDrafts]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const current = snapshot();
+      // An empty set or the untouched opening design: nothing worth keeping.
+      saveDesign(tenant.slug, current.teeth.length && !sameDesign(current, openingDesign(tenant)) ? current : null);
+    }, 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey, tenant.slug]);
+
+  // A shared link: say whether it opened, then take the design out of the address so edits aren't confused with it.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (start?.source === 'saved') posthog.capture('sample_design_restored', { source: 'saved' });
+    if (!hasDesignHash(window.location.hash)) return;
+    posthog.capture('sample_design_restored', { source: 'link', valid: start?.source === 'link' });
+    try {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    } catch {
+      // Some frames don't allow it; the hash just stays.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const copyDesignLink = async () => {
+    const link = designLink(snapshot(), tenant.slug, window.location.origin, onCustomDomain());
+    posthog.capture('sample_design_link_copied', designProperties());
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkState({ status: 'copied', link });
+    } catch {
+      // Inside some embeds the clipboard is off limits: show the link to copy by hand.
+      setLinkState({ status: 'manual', link });
+    }
   };
 
   const reserveDeposit = () => {
@@ -617,10 +704,6 @@ function Configurator() {
             <small>Estimated total</small>
             <strong>{totalText(totalCost)}</strong>
           </div>
-          <button className="cart-button" type="button" onClick={() => goTo('photo')} disabled={!selectedTeeth.length} aria-label="Review your design">
-            <ShoppingBag size={17} />
-            <span>Review</span>
-          </button>
         </div>
       </header>
 
@@ -929,8 +1012,8 @@ function Configurator() {
                 <fieldset className="control-group">
                   <legend>Initials or text <em className="legend-optional">Optional</em></legend>
                   <InscriptionEditor
-                    drafts={inscriptionDrafts}
-                    onChange={setInscriptionDrafts}
+                    drafts={placedDrafts}
+                    onChange={(drafts) => setInscriptionDrafts(unplaceDrafts(drafts))}
                     picking={inscriptionPicking}
                     onPicking={setInscriptionPicking}
                     styles={catalog.inscriptionStyles}
@@ -985,6 +1068,21 @@ function Configurator() {
                         <button key={id} type="button" onClick={() => goTo(id)}>{STEP_LABELS[id]}</button>
                       ))}
                     </nav>
+                    <div className="design-link">
+                      <button className="text-button text-button--left" type="button" onClick={() => void copyDesignLink()}>
+                        <Link2 size={14} /> {linkState?.status === 'copied' ? 'Link copied' : 'Copy link to this design'}
+                      </button>
+                      {linkState?.status === 'manual' && (
+                        <input
+                          className="design-link__field"
+                          readOnly
+                          value={linkState.link}
+                          aria-label="Link to this design"
+                          onFocus={(event) => event.currentTarget.select()}
+                          ref={(node) => node?.select()}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {catalog.molds.length > 0 && (
@@ -1162,6 +1260,14 @@ function Configurator() {
           </footer>
         </aside>
       </div>
+      {undoReset && (
+        <div className="undo-toast" role="status">
+          <span>Design cleared</span>
+          <button type="button" onClick={undoStartOver}>
+            Undo
+          </button>
+        </div>
+      )}
     </main>
   );
 }

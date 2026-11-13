@@ -25,11 +25,11 @@ const centeredSet = (teethPerRow: number) => {
   return [...top, ...bottom];
 };
 
-export const useGrillzCustomization = () => {
+export const useGrillzCustomization = (initialTeeth?: number[]) => {
   const [customizations, setCustomizations] = useState<ToothCustomization[]>(
     makeDefaultCustomizations,
   );
-  const [selectedTeeth, setSelectedTeeth] = useState<number[]>(() => centeredSet(6));
+  const [selectedTeeth, setSelectedTeeth] = useState<number[]>(() => initialTeeth ?? centeredSet(6));
   const [isSelectionMode, setIsSelectionMode] = useState(true);
 
   const toggleToothSelection = useCallback((index: number) => {
@@ -104,5 +104,7 @@ export const useGrillzCustomization = () => {
     setIsSelectionMode,
     resetCustomizationForSelection,
     resetAll,
+    /** Puts back a whole selection (undo, a restored design). */
+    setSelectedTeeth,
   };
 };
