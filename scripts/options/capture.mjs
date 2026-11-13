@@ -72,7 +72,8 @@ for (const shot of shots) {
   const info = await sharp(Buffer.from(png.split(',')[1], 'base64'))
     .resize(SIZE, SIZE)
     .flatten({ background: BACKDROP })
-    .webp({ quality: 74, effort: 6 })
+    // Close-ups of stones are busy: a little more compression keeps them under 25 KB.
+    .webp({ quality: /^setting-/.test(shot.file) ? 44 : /^stone-/.test(shot.file) ? 58 : 74, effort: 6 })
     .toFile(`${out}${shot.file}.webp`);
   console.log(`${shot.file}.webp ${info.width}x${info.height} ${Math.round(info.size / 1024)} KB`);
   await page.close();
