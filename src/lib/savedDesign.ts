@@ -85,6 +85,9 @@ export function checkSnapshot(value: unknown, shop: Shop): DesignSnapshot | null
   };
 }
 
+/** A design built in code (a starting look), through the same check as a stored one. */
+export const validSnapshot = (snapshot: DesignSnapshot, shop: Shop) => checkSnapshot(JSON.parse(toJson(snapshot)), shop);
+
 const toJson = (snapshot: DesignSnapshot) =>
   JSON.stringify({
     v: VERSION,

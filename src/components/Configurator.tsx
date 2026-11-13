@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { usePostHog } from '@posthog/react';
 import type { RootState } from '@react-three/fiber';
 import { Link } from 'react-router-dom';
@@ -47,12 +47,13 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS, FANG_TEETH, label, METALS } from '../lib/renderSpec';
+import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
 import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
 import type { CloseUp, ToothCustomization, ViewRequest } from '../lib/types';
+import { lookImage, shopLooks } from '../lib/startingLooks';
 
 // Five steps, one question each (MAG-95): which teeth, what metal, what look,
 // anything personal, then review and send. Order details (how the shop gets
@@ -121,6 +122,70 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
   );
 }
 
+type LookGroupId = 'type' | 'stones' | 'setting' | 'finish' | 'fangs' | 'cut';
+
+/**
+ * One group of the Look step (MAG-148). On phones it is a row that names the
+ * current choice and opens on a tap, one at a time, so every group is in reach
+ * without scrolling past the others. On wider screens every group stays open.
+ */
+function LookGroup({
+  id,
+  title,
+  summary,
+  collapsible,
+  open,
+  onToggle,
+  revealed,
+  children,
+}: {
+  id: LookGroupId;
+  title: string;
+  summary: string;
+  collapsible: boolean;
+  open: boolean;
+  onToggle: (id: LookGroupId) => void;
+  revealed?: boolean;
+  children: ReactNode;
+}) {
+  if (!collapsible) {
+    return (
+      <fieldset className={revealed ? 'control-group control-group--revealed' : 'control-group'}>
+        <legend>{title}</legend>
+        {children}
+      </fieldset>
+    );
+  }
+  return (
+    <section className={open ? 'look-group look-group--open' : 'look-group'}>
+      <h2 className="look-group__heading">
+        <button type="button" aria-expanded={open} aria-controls={`look-group-${id}`} onClick={() => onToggle(id)}>
+          <span className="look-group__title">{title}</span>
+          <span className="look-group__value">{summary}</span>
+          <ChevronDown size={16} aria-hidden="true" />
+        </button>
+      </h2>
+      <div id={`look-group-${id}`} className="look-group__body" role="group" aria-label={title} hidden={!open}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Does a media query match, kept up to date. */
+function useMedia(query: string) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
+  useEffect(() => {
+    const list = window.matchMedia?.(query);
+    if (!list) return;
+    const update = () => setMatches(list.matches);
+    update();
+    list.addEventListener('change', update);
+    return () => list.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
+
 /** On a shop's own domain the server marks the page (see App.tsx); the builder is then at "/". */
 const onCustomDomain = () => typeof document !== 'undefined' && Boolean(document.querySelector('meta[name="vvs-shop"]'));
 
@@ -162,6 +227,11 @@ function Configurator() {
   // The camera: in close on the teeth an option changes, and the fixed views (MAG-148).
   const [closeUp, setCloseUp] = useState<CloseUp | null>(null);
   const [view, setView] = useState<ViewRequest | null>(null);
+  // Look on phones: one group open at a time, Type first (MAG-148).
+  const compactLook = useMedia('(max-width: 860px)');
+  const [lookOpen, setLookOpen] = useState<LookGroupId | null>('type');
+  // One-tap starting designs the shop sells all of (MAG-148).
+  const looks = useMemo(() => shopLooks(tenant), [tenant]);
   const [linkState, setLinkState] = useState<{ status: 'copied' | 'manual'; link: string } | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
@@ -363,6 +433,13 @@ function Configurator() {
     );
   };
 
+  const toggleLookGroup = (id: LookGroupId) => {
+    // Another group: the camera comes back from any close-up.
+    setCloseUp(null);
+    setLookOpen((current) => (current === id ? null : id));
+    posthog.capture('sample_look_group_toggled', { group: id, open: lookOpen !== id });
+  };
+
   const updateSet = (patch: Partial<SetOptions>) => {
     // Fangs on: turn to a canine to show one. Any other set choice: back out.
     const canine = FANG_TEETH.find((index) => selectedSet.has(index));
@@ -522,6 +599,7 @@ function Configurator() {
     }
     posthog.capture('sample_step_viewed', { step: target });
     setCloseUp(null);
+    if (target === 'look' && step !== 'look') setLookOpen('type');
     setPickMode(false);
     setPickedTeeth([]);
     setInscriptionPicking(null);
@@ -566,6 +644,24 @@ function Configurator() {
     setStep('teeth');
     setPanelOpen(true);
   };
+
+  const startFromLook = (id: string) => {
+    const found = looks.find(({ look }) => look.id === id);
+    if (!found) return;
+    const { design } = found;
+    setSelectedTeeth(design.teeth);
+    setBase(design.base);
+    setOverrides(design.overrides);
+    // Only the look's own choices change: cut, fit, add-ons and any text stay as they are.
+    setSetOptions((previous) => ({ ...previous, fangs: design.set.fangs }));
+    setCloseUp(null);
+    posthog.capture('sample_look_started', { look: id });
+  };
+  const lookActive = (design: DesignSnapshot) =>
+    design.teeth.join() === selectedTeeth.join() &&
+    JSON.stringify(design.base) === JSON.stringify(base) &&
+    JSON.stringify(design.overrides) === JSON.stringify(overrides) &&
+    design.set.fangs === setOptions.fangs;
 
   const undoStartOver = () => {
     if (!undoReset) return;
@@ -750,6 +846,7 @@ function Configurator() {
             selectionLook={step === 'teeth' ? 'none' : styleStep ? 'outline' : 'fill'}
             toggleToothSelection={handleToothClick}
             inscriptions={inscriptions}
+            photoImage={inspiration}
             poster={poster}
             frameTeeth={frameTeeth}
             closeUp={closeUp}
@@ -843,6 +940,25 @@ function Configurator() {
 
               {step === 'teeth' && (
                 <>
+                  {looks.length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>Start from a look</legend>
+                      <div className="look-tiles">
+                        {looks.map(({ look, design }) => (
+                          <button
+                            key={look.id}
+                            type="button"
+                            className={lookActive(design) ? 'look-tile look-tile--selected' : 'look-tile'}
+                            aria-pressed={lookActive(design)}
+                            onClick={() => startFromLook(look.id)}
+                          >
+                            <img src={lookImage(look.id)} alt="" loading="lazy" decoding="async" />
+                            <span>{look.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
                   <fieldset className="control-group">
                     <legend>Popular sets</legend>
                     <div className="preset-grid preset-grid--four">
@@ -929,8 +1045,14 @@ function Configurator() {
                 <>
                   {pickNote}
                   {mixLink}
-                  <fieldset className="control-group">
-                    <legend>Type</legend>
+                  <LookGroup
+                    id="type"
+                    title="Type"
+                    summary={label(GRILLZ_TYPES, shown.type)}
+                    collapsible={compactLook}
+                    open={lookOpen === 'type'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--three">
                       {catalog.types.map((type) => (
                         <OptionCard
@@ -942,16 +1064,44 @@ function Configurator() {
                           image={type.image}
                           selected={shown.type === type.id}
                           disabled={pickingNothing || (type.id === 'iced' && !icedPossible)}
-                          onSelect={() => applyDesign({ type: type.id })}
+                          onSelect={() => {
+                            applyDesign({ type: type.id });
+                            // Iced: the stones are the next thing to choose.
+                            if (type.id === 'iced') setLookOpen('stones');
+                          }}
                         />
                       ))}
                     </div>
-                  </fieldset>
+                    {/* Photo grillz: the picture can go on straight away (it also sits under Make it yours). */}
+                    {shown.type === 'photo' && (
+                      inspiration ? (
+                        <div className="inspiration-preview inspiration-preview--compact">
+                          <img src={inspiration} alt="Your photo for the grillz" />
+                          <span>Your photo is on the teeth</span>
+                          <button type="button" onClick={() => setInspiration(null)} aria-label="Remove photo"><X size={15} /></button>
+                        </div>
+                      ) : (
+                        <label className="upload-button upload-button--compact">
+                          <ImagePlus size={16} />
+                          Add your photo
+                          <input type="file" accept="image/*" onChange={handleInspiration} />
+                        </label>
+                      )
+                    )}
+                    {shown.type === 'photo' && inspirationError && <div className="inline-note" role="alert">{inspirationError}</div>}
+                  </LookGroup>
                   {/* Iced: the stones come straight after the choice, in the same step. */}
                   {(shown.type === 'iced' || (!pickMode && anyIced)) && (
                     <>
-                      <fieldset className="control-group control-group--revealed">
-                        <legend>Stones</legend>
+                      <LookGroup
+                        id="stones"
+                        title="Stones"
+                        summary={label(STONES, shown.stone)}
+                        collapsible={compactLook}
+                        open={lookOpen === 'stones'}
+                        onToggle={toggleLookGroup}
+                        revealed
+                      >
                         <div className="option-grid option-grid--three">
                           {catalog.stones.filter((stone) => !icedTable || icedOffers({ stone: stone.id })).map((stone) => (
                             <OptionCard
@@ -966,9 +1116,16 @@ function Configurator() {
                             />
                           ))}
                         </div>
-                      </fieldset>
-                      <fieldset className="control-group control-group--revealed">
-                        <legend>Setting</legend>
+                      </LookGroup>
+                      <LookGroup
+                        id="setting"
+                        title="Setting"
+                        summary={label(SETTINGS, shown.setting)}
+                        collapsible={compactLook}
+                        open={lookOpen === 'setting'}
+                        onToggle={toggleLookGroup}
+                        revealed
+                      >
                         <div className="option-grid option-grid--three">
                           {catalog.settings.map((setting) => (
                             <OptionCard
@@ -983,11 +1140,17 @@ function Configurator() {
                             />
                           ))}
                         </div>
-                      </fieldset>
+                      </LookGroup>
                     </>
                   )}
-                  <fieldset className="control-group">
-                    <legend>Finish</legend>
+                  <LookGroup
+                    id="finish"
+                    title="Finish"
+                    summary={`${label(STYLES, shown.style)}${opalOf(shown) ? ` · ${label(OPALS, opalOf(shown)!)}` : ''}`}
+                    collapsible={compactLook}
+                    open={lookOpen === 'finish'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--three">
                       {catalog.styles.map((style) => (
                         <OptionCard
@@ -1022,10 +1185,16 @@ function Configurator() {
                       </div>
                     )}
                     {shown.type === 'iced' && <small className="field-hint">Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.</small>}
-                  </fieldset>
+                  </LookGroup>
                   {catalog.fangs && (
-                    <fieldset className="control-group">
-                      <legend>Fangs</legend>
+                    <LookGroup
+                      id="fangs"
+                      title="Fangs"
+                      summary={fangsOn ? 'Fangs' : 'No fangs'}
+                      collapsible={compactLook}
+                      open={lookOpen === 'fangs'}
+                      onToggle={toggleLookGroup}
+                    >
                       <div className="option-grid option-grid--two">
                         {FANG_OPTIONS.map((option) => (
                           <OptionCard
@@ -1040,10 +1209,16 @@ function Configurator() {
                           />
                         ))}
                       </div>
-                    </fieldset>
+                    </LookGroup>
                   )}
-                  <fieldset className="control-group">
-                    <legend>Cut</legend>
+                  <LookGroup
+                    id="cut"
+                    title="Cut"
+                    summary={label(CUTS, setOptions.cut)}
+                    collapsible={compactLook}
+                    open={lookOpen === 'cut'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--two option-grid--switch">
                       {catalog.cuts.map((cut) => (
                         <OptionCard
@@ -1057,7 +1232,7 @@ function Configurator() {
                         />
                       ))}
                     </div>
-                  </fieldset>
+                  </LookGroup>
                 </>
               )}
 

@@ -284,6 +284,7 @@ function Scene({
   selectionLook,
   toggleToothSelection,
   inscriptions,
+  photoImage,
   poster,
   frameTeeth,
   closeUp,
@@ -351,6 +352,7 @@ function Scene({
             selectionLook={selectionLook}
             toggleToothSelection={toggleToothSelection}
             inscriptions={inscriptions}
+            photoImage={photoImage}
             onFocusTooth={(point) => setFocus((current) => (current && current.distanceTo(point) < 0.3 ? null : point))}
             onDrawn={() => setDrawn(true)}
           />

@@ -2706,3 +2706,130 @@
     padding: 0 7px;
   }
 }
+
+/* Look on phones (MAG-148): each group is a row naming its choice; one opens at a time. */
+.look-group {
+  border-bottom: 1px solid rgba(37, 31, 23, 0.12);
+}
+
+.look-group__heading {
+  margin: 0;
+  font: inherit;
+}
+
+.look-group__heading button {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.look-group__heading button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.look-group__title {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.look-group__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.look-group__heading svg {
+  flex: none;
+  color: var(--muted);
+  transition: transform 180ms var(--ease-out);
+}
+
+.look-group--open .look-group__heading svg {
+  transform: rotate(180deg);
+}
+
+.look-group__body {
+  padding: 0 0 8px;
+}
+
+.upload-button--compact,
+.inspiration-preview--compact {
+  min-height: 40px;
+  margin-top: 10px;
+}
+
+.inspiration-preview--compact img {
+  width: 36px;
+  height: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .look-group__heading svg {
+    transition: none;
+  }
+}
+
+/* "Start from a look" on the first step (MAG-148): small tiles, all in one row. */
+.look-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.look-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 3px 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 180ms ease, transform 140ms var(--ease-out);
+}
+
+.look-tile:active {
+  transform: scale(0.97);
+}
+
+.look-tile img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  object-fit: cover;
+  background: #ebe6df;
+}
+
+.look-tile span {
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.look-tile--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.look-tile:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}

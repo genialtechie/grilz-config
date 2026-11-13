@@ -7,6 +7,7 @@ import { gemSupport } from './gems';
 import { dentalStone, polishedMetal } from './materials';
 import { fangGeometry, finishFor, ICED_RING } from './styles';
 import { clearInscriptionDecals, inscriptionDecals, loadInscriptionFont } from './inscriptions';
+import { clearPhotoDecals, loadPhoto, photoDecals, photoRuns } from './photoDecals';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
@@ -43,6 +44,7 @@ function GrillzModel({
   selectionLook = 'fill',
   toggleToothSelection,
   inscriptions,
+  photoImage,
   onFocusTooth,
   onDrawn,
 }: Omit<GrillzModelProps, 'poster'> & { onFocusTooth?: (point: THREE.Vector3) => void; onDrawn?: () => void }) {
@@ -241,6 +243,38 @@ function GrillzModel({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clonedScene, customizations, inscriptionKey, invalidate]);
+
+  // Photo teeth: the customer's picture (or the stand-in) across each run of neighbouring photo teeth.
+  const photoTeeth = customizations.flatMap((tooth, index) => (tooth.photo && tooth.material !== 'default' ? [index] : []));
+  const photoKey = photoTeeth.join(',');
+  useEffect(() => {
+    const disposed = new Set<THREE.Material>();
+    const teeth = new Map<number, THREE.Mesh>();
+    clonedScene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const index = getToothIndexFromName(child.name);
+      if (index === null) return;
+      teeth.set(index, child);
+      clearPhotoDecals(child, disposed);
+    });
+    if (!photoTeeth.length) {
+      invalidate();
+      return;
+    }
+    let cancelled = false;
+    void loadPhoto(photoImage).then((image) => {
+      if (cancelled) return;
+      photoRuns(photoTeeth).forEach((run) => {
+        const meshes = run.map((index) => teeth.get(index)).filter((mesh): mesh is THREE.Mesh => Boolean(mesh));
+        photoDecals(meshes, image).forEach(({ tooth, decal }) => tooth.add(decal));
+      });
+      invalidate();
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clonedScene, customizations, photoKey, photoImage, invalidate]);
 
   useEffect(() => {
     return () => {
