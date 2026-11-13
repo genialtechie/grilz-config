@@ -36,10 +36,8 @@ function hitFront(front: Front, u: number, v: number) {
   return { point: hit.point, normal: hit.face.normal.clone() };
 }
 
-/** The tooth's front: its facing, and the outline of the face (found once per tooth). */
-export function frontOf(geometry: THREE.BufferGeometry): Front {
-  const cached = fronts.get(geometry);
-  if (cached) return cached;
+/** Which way a tooth faces out of the arch, with its own across and up, its middle and its largest size. */
+export function frameOf(geometry: THREE.BufferGeometry) {
   if (!geometry.boundingBox) geometry.computeBoundingBox();
   const box = geometry.boundingBox!;
   const centre = box.getCenter(new THREE.Vector3());
@@ -47,7 +45,14 @@ export function frontOf(geometry: THREE.BufferGeometry): Front {
   const facial = new THREE.Vector3(centre.x - ARCH_CENTRE.x, 0, centre.z - ARCH_CENTRE.z).normalize();
   const up = new THREE.Vector3(0, 1, 0);
   const across = new THREE.Vector3().crossVectors(up, facial).normalize();
-  const front: Front = { centre, facial, across, up, reach: Math.max(size.x, size.y, size.z), outline: [], probe: new THREE.Mesh(geometry) };
+  return { centre, facial, across, up, reach: Math.max(size.x, size.y, size.z) };
+}
+
+/** The tooth's front: its facing, and the outline of the face (found once per tooth). */
+export function frontOf(geometry: THREE.BufferGeometry): Front {
+  const cached = fronts.get(geometry);
+  if (cached) return cached;
+  const front: Front = { ...frameOf(geometry), outline: [], probe: new THREE.Mesh(geometry) };
   for (let i = 0; i < SECTORS; i += 1) {
     const angle = (i / SECTORS) * Math.PI * 2;
     // Binary search for the edge of the front face along this direction.

@@ -8,7 +8,7 @@ import type { MetalId } from '../../lib/renderSpec';
 // jeweler describes it, so a customer can see which one is picked: rhodium
 // white gold cool and bright, silver the brightest and a touch warm, platinum
 // a deeper grey with a softer sheen.
-const METAL_BASE: Record<MetalId, string> = {
+export const METAL_BASE: Record<MetalId, string> = {
   yellow: '#edb84f',
   white: '#e3e7ec',
   rose: '#efae9f',
@@ -26,14 +26,6 @@ export function polishedMetal(metal: MetalId) {
     roughness: METAL_ROUGHNESS[metal],
     envMapIntensity: 1.25,
   });
-}
-
-/** The metal under a pavé setting: the same alloy, a touch rougher so the stones lead. */
-export function settingMetal(metal: MetalId) {
-  const material = polishedMetal(metal);
-  material.roughness = 0.22;
-  material.envMapIntensity = 0.9;
-  return material;
 }
 
 /** Fine plaster grain for the dental-stone mould (a small tiling bump texture, made once). */
@@ -68,21 +60,5 @@ export function dentalStone() {
     bumpMap: plasterGrain(),
     bumpScale: 0.6,
     envMapIntensity: 0.55,
-  });
-}
-
-/**
- * Pavé stones: mirror facets with a little icy body. Each facet reflects a
- * different part of the studio, so a stone is a mosaic of hard white and dark
- * facets that changes as the set turns, which is how diamonds read in photos.
- * No transmission pass, so it stays cheap on phones.
- */
-export function stoneMaterial() {
-  return new THREE.MeshStandardMaterial({
-    color: '#ffffff',
-    metalness: 0.55,
-    roughness: 0.02,
-    envMapIntensity: 3.6,
-    flatShading: true,
   });
 }

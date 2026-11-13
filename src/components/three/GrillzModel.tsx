@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { createDiamondStones } from './DiamondStones';
-import { dentalStone, polishedMetal, settingMetal } from './materials';
+import { createDiamondStones, disposeDiamondStones } from './DiamondStones';
+import { gemSupport } from './gems';
+import { dentalStone, polishedMetal } from './materials';
 import { fangGeometry, finishFor, ICED_RING } from './styles';
 import { clearInscriptionDecals, inscriptionDecals, loadInscriptionFont } from './inscriptions';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
@@ -33,15 +34,6 @@ const findToothMesh = (object: THREE.Object3D): THREE.Mesh | null => {
     current = current.parent;
   }
   return null;
-};
-
-// Stones share one cached geometry (DiamondStones), so only their material is disposed.
-const disposeStones = (object: THREE.Object3D) => {
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const childMaterials = Array.isArray(child.material) ? child.material : [child.material];
-    childMaterials.forEach((material) => material.dispose());
-  });
 };
 
 function GrillzModel({
@@ -96,6 +88,8 @@ function GrillzModel({
   }, [selectColor, selectGlow]);
 
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
+  /** Bumped to redress the teeth when the stones have to change material (see gemSupport). */
+  const [stoneEpoch, setStoneEpoch] = useState(0);
 
   // The gums, for keeping stones on the part of each tooth that shows.
   const moulds = useMemo(() => {
@@ -106,13 +100,13 @@ function GrillzModel({
     return found;
   }, [clonedScene]);
 
+  // The cap's own metal, polished, iced or not: round an iced face it is the rim the stones sit in.
   const getFinishMaterial = useCallback((customization: ToothCustomization) => {
     const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
-    const key = `${metal}:${customization.hasDiamonds ? 'set' : 'polished'}`;
-    const existing = materials.finishCache.get(key);
+    const existing = materials.finishCache.get(metal);
     if (existing) return existing;
-    const material = customization.hasDiamonds ? settingMetal(metal) : polishedMetal(metal);
-    materials.finishCache.set(key, material);
+    const material = polishedMetal(metal);
+    materials.finishCache.set(metal, material);
     return material;
   }, [materials]);
 
@@ -131,7 +125,7 @@ function GrillzModel({
       const existingStones = child.getObjectByName('diamond_stones');
       if (existingStones) {
         child.remove(existingStones);
-        disposeStones(existingStones);
+        disposeDiamondStones(existingStones);
       }
       // Finishes are cached and shared between teeth, so they are only detached.
       const existingFinish = child.getObjectByName('tooth_finish');
@@ -170,7 +164,13 @@ function GrillzModel({
       if (capped && customization.hasDiamonds) {
         // Iced open face: one ring of stones round the frame, the tooth showing in the middle.
         const openFace = customization.style === 'open-face';
-        const stones = createDiamondStones(child, customization.diamondType, openFace ? ICED_RING : 0, moulds);
+        const stones = createDiamondStones(child, {
+          kind: customization.diamondType === 'moissanite' ? 'moissanite' : 'diamond',
+          setting: customization.setting,
+          metal,
+          ring: openFace ? ICED_RING : 0,
+          moulds,
+        });
         stones.name = 'diamond_stones';
         child.add(stones);
         const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
@@ -182,7 +182,18 @@ function GrillzModel({
     });
     invalidate();
     dressed.current = true;
-  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, moulds, selectedToothSet, selectionLook]);
+  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, moulds, selectedToothSet, selectionLook, stoneEpoch]);
+
+  // The traced stones need a shader some graphics drivers may refuse. Once it has been built,
+  // check it ran; if not, dress the teeth again and the stones come back in a plain material.
+  const stonesChecked = useRef(false);
+  useFrame(({ gl }) => {
+    if (stonesChecked.current) return;
+    const support = gemSupport(gl);
+    if (support === 'pending') return;
+    stonesChecked.current = true;
+    if (support === 'unsupported') setStoneEpoch((epoch) => epoch + 1);
+  });
 
   // Says when the dressed model is on screen: one frame after the first one that draws
   // it (that frame compiles the shaders, which can take a moment on a phone).

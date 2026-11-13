@@ -1,4 +1,4 @@
-import type { CutId, Inscription, MetalId, OpalId, StyleId } from './renderSpec';
+import type { CutId, Inscription, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -19,6 +19,8 @@ export type ToothCustomization = {
   variant?: string;
   hasDiamonds: boolean;
   diamondType?: DiamondType;
+  /** How an iced tooth's stones are set (honeycomb when absent). */
+  setting?: SettingId;
 };
 
 export interface SceneProps {

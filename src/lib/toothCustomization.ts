@@ -14,5 +14,6 @@ export function toothCustomization(design: ToothDesign, set: Pick<SetOptions, 'f
     cut: set.cut,
     hasDiamonds: design.type === 'iced',
     diamondType: design.stone === 'moissanite' ? 'moissanite' : 'lab',
+    setting: design.setting,
   };
 }
