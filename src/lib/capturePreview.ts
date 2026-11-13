@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { RootState } from '@react-three/fiber';
 import { captureSide, withCaptureFraming } from './framing';
+import { hidePhotoPlaceholders } from '../components/three/photoDecals';
 
 const OUTPUT_SIZE = 1024;
 const CAPTURE_PIXELS = 800; // crop resolution before upscaling; keeps the GPU work light on phones
@@ -28,12 +29,18 @@ const toothIndexOf = (object: THREE.Object3D): number | null => {
 function renderCrop(state: RootState, background: string): HTMLCanvasElement {
   const { gl, scene, camera, size } = state;
   const previousRatio = gl.getPixelRatio();
+  // The photo teeth's stand-in mark isn't the customer's design: never in a capture.
+  const showPlaceholders = hidePhotoPlaceholders(scene);
   const side = captureSide(size.width, size.height);
   const ratio = Math.min(CAPTURE_PIXELS / side, MAX_BUFFER / Math.max(size.width, size.height));
 
   gl.setPixelRatio(ratio);
   // Always the standard framing, however far the viewer is zoomed in.
-  withCaptureFraming(camera, () => gl.render(scene, camera));
+  try {
+    withCaptureFraming(camera, () => gl.render(scene, camera));
+  } finally {
+    showPlaceholders();
+  }
 
   const output = document.createElement('canvas');
   output.width = OUTPUT_SIZE;

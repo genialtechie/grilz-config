@@ -10,6 +10,7 @@ export function toothCustomization(design: ToothDesign, set: Pick<SetOptions, 'f
     metal: metal.id,
     style: design.type === 'plain' || icedOpenFace(design) ? design.style : undefined,
     opal: opalOf(design) ?? undefined,
+    photo: design.type === 'photo',
     fang: set.fangs && FANG_TEETH.includes(index),
     cut: set.cut,
     hasDiamonds: design.type === 'iced',

@@ -12,6 +12,8 @@ export type ToothCustomization = {
   style?: StyleId;
   /** The opal's colour, for the opals style. */
   opal?: OpalId;
+  /** A photo grillz tooth: the customer's picture goes on its face. */
+  photo?: boolean;
   /** This tooth is a fang cap (an upper canine with fangs on). */
   fang?: boolean;
   /** Deep cut (separate teeth, the default) or permanent look (fuller caps that meet). */
@@ -23,6 +25,11 @@ export type ToothCustomization = {
   setting?: SettingId;
 };
 
+/** Teeth the camera glides in on, filling `fill` of the canvas; `turn` also turns to face them (MAG-148). */
+export type CloseUp = { teeth: number[]; fill: number; turn?: boolean };
+/** A fixed view the customer asked for; a new object each time, so asking twice glides twice. */
+export type ViewRequest = { side: 'front' | 'left' | 'right' };
+
 export interface SceneProps {
   customizations: ToothCustomization[];
   selectedTeeth: number[];
@@ -32,8 +39,16 @@ export interface SceneProps {
   selectionLook?: 'fill' | 'outline' | 'none';
   /** Letters drawn on the set. */
   inscriptions?: Inscription[];
+  /** The customer's picture for photo teeth (a data URL); a stand-in mark shows without one. */
+  photoImage?: string | null;
   /** A still of the opening design, shown until the model is drawn (src/lib/poster.ts). */
   poster?: string | null;
+  /** The covered teeth: once the model is drawn the camera frames them rather than the whole model. Absent: it stays on the whole model (the /lab page and its stills). */
+  frameTeeth?: number[];
+  closeUp?: CloseUp | null;
+  view?: ViewRequest | null;
+  /** The customer dragged or pinched the model. */
+  onUserControl?: () => void;
 }
 
 export type GrillzModelProps = SceneProps;

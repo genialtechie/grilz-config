@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { RootState } from '@react-three/fiber';
 import { MODEL_CENTRE } from './framing';
 import { labelColor } from './photoLabels';
+import { hidePhotoPlaceholders } from '../components/three/photoDecals';
 
 // The photo stage (MAG-76): the 3D still the AI photo starts from, set up the
 // way jewelers shoot grillz on a model. The AI then only has to make it
@@ -168,6 +169,8 @@ export function capturePhotoStill(state: RootState, coveredTeeth: number[]): Pho
   const intensity = scene.environmentIntensity;
   const exposure = gl.toneMappingExposure;
   const undo = stage(state, covered);
+  // The photo teeth's stand-in mark isn't the customer's design: left out of the still.
+  const showPlaceholders = hidePhotoPlaceholders(scene);
   const moulds = new Map<THREE.MeshStandardMaterial, number>();
   const lights = new Map<THREE.Light, number>();
   let image = '';
@@ -245,6 +248,7 @@ export function capturePhotoStill(state: RootState, coveredTeeth: number[]): Pho
     lights.forEach((value, light) => {
       light.intensity = value;
     });
+    showPlaceholders();
     undo();
     gl.render(scene, camera);
   }

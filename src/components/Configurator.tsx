@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { usePostHog } from '@posthog/react';
 import type { RootState } from '@react-three/fiber';
 import { Link } from 'react-router-dom';
@@ -10,6 +10,7 @@ import {
   ChevronUp,
   CreditCard,
   ImagePlus,
+  Link2,
   Minus,
   MousePointer2,
   Move3d,
@@ -17,7 +18,6 @@ import {
   Plus,
   RotateCcw,
   ScanLine,
-  ShoppingBag,
   Store,
   X,
 } from 'lucide-react';
@@ -34,7 +34,8 @@ import { useAiRender } from '../lib/hooks/useAiRender';
 import { baseToothState, useGrillzCustomization } from '../lib/hooks/useGrillzCustomization';
 import { toothCustomization } from '../lib/toothCustomization';
 import { InscriptionEditor } from './builder/InscriptionEditor';
-import { draftRow, inscriptionsFrom, newDraft, pickTooth, type InscriptionDraft } from '../lib/inscriptionDrafts';
+import { draftRow, inscriptionsFrom, newDraft, pickTooth, placeDrafts, unplaceDrafts, type InscriptionDraft } from '../lib/inscriptionDrafts';
+import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWithoutInscriptions, startingDesign, startingPoster, type DesignSnapshot } from '../lib/savedDesign';
 import {
   OPALS,
   VISION_MAX,
@@ -46,13 +47,13 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
-import { FANG_OPTIONS, FANG_TEETH, label, METALS } from '../lib/renderSpec';
+import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
 import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
-import { posterFor } from '../lib/poster';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
-import type { ToothCustomization } from '../lib/types';
+import type { CloseUp, ToothCustomization, ViewRequest } from '../lib/types';
+import { lookImage, shopLooks } from '../lib/startingLooks';
 
 // Five steps, one question each (MAG-95): which teeth, what metal, what look,
 // anything personal, then review and send. Order details (how the shop gets
@@ -121,23 +122,97 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
   );
 }
 
+type LookGroupId = 'type' | 'stones' | 'setting' | 'finish' | 'fangs' | 'cut';
+
+/**
+ * One group of the Look step (MAG-148). On phones it is a row that names the
+ * current choice and opens on a tap, one at a time, so every group is in reach
+ * without scrolling past the others. On wider screens every group stays open.
+ */
+function LookGroup({
+  id,
+  title,
+  summary,
+  collapsible,
+  open,
+  onToggle,
+  revealed,
+  children,
+}: {
+  id: LookGroupId;
+  title: string;
+  summary: string;
+  collapsible: boolean;
+  open: boolean;
+  onToggle: (id: LookGroupId) => void;
+  revealed?: boolean;
+  children: ReactNode;
+}) {
+  if (!collapsible) {
+    return (
+      <fieldset className={revealed ? 'control-group control-group--revealed' : 'control-group'}>
+        <legend>{title}</legend>
+        {children}
+      </fieldset>
+    );
+  }
+  return (
+    <section className={open ? 'look-group look-group--open' : 'look-group'}>
+      <h2 className="look-group__heading">
+        <button type="button" aria-expanded={open} aria-controls={`look-group-${id}`} onClick={() => onToggle(id)}>
+          <span className="look-group__title">{title}</span>
+          <span className="look-group__value">{summary}</span>
+          <ChevronDown size={16} aria-hidden="true" />
+        </button>
+      </h2>
+      <div id={`look-group-${id}`} className="look-group__body" role="group" aria-label={title} hidden={!open}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Does a media query match, kept up to date. */
+function useMedia(query: string) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
+  useEffect(() => {
+    const list = window.matchMedia?.(query);
+    if (!list) return;
+    const update = () => setMatches(list.matches);
+    update();
+    list.addEventListener('change', update);
+    return () => list.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
+
+/** On a shop's own domain the server marks the page (see App.tsx); the builder is then at "/". */
+const onCustomDomain = () => typeof document !== 'undefined' && Boolean(document.querySelector('meta[name="vvs-shop"]'));
+
+/** Everything "Start over" clears, for its Undo. */
+type ResetSnapshot = { design: DesignSnapshot; inspiration: string | null; step: StepId };
+
 function Configurator() {
   const posthog = usePostHog();
   const tenant = useTenant();
   const { catalog, hints } = tenant;
   const hasCapturedOpen = useRef(false);
   const openedAt = useRef(Date.now());
+  // A design from a shared link, or the one this customer left on this device (MAG-148).
+  const [start] = useState(() => startingDesign(tenant));
   const [step, setStep] = useState<StepId>('teeth');
   const [panelOpen, setPanelOpen] = useState(true);
-  const [base, setBase] = useState<ToothDesign>(tenant.defaultTooth);
-  const [overrides, setOverrides] = useState<Record<number, ToothDesign>>({});
+  const [base, setBase] = useState<ToothDesign>(start?.snapshot.base ?? tenant.defaultTooth);
+  const [overrides, setOverrides] = useState<Record<number, ToothDesign>>(start?.snapshot.overrides ?? {});
   const [pickMode, setPickMode] = useState(false);
   const [pickedTeeth, setPickedTeeth] = useState<number[]>([]);
   // Once a customer has styled a tooth on its own, the tip on the model moves on.
   const [triedPicking, setTriedPicking] = useState(false);
   const coarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-  const [setOptions, setSetOptions] = useState<SetOptions>(tenant.defaultSet);
-  const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() => [newDraft(catalog.inscriptionStyles[0]?.id)]);
+  const [setOptions, setSetOptions] = useState<SetOptions>(() => (start ? { ...start.snapshot.set, inscriptions: [] } : tenant.defaultSet));
+  const [inscriptionDrafts, setInscriptionDrafts] = useState<InscriptionDraft[]>(() =>
+    start?.snapshot.drafts.length ? start.snapshot.drafts : [newDraft(catalog.inscriptionStyles[0]?.id)],
+  );
   /** Which inscription is choosing its teeth on the model, if any. */
   const [inscriptionPicking, setInscriptionPicking] = useState<number | null>(null);
   const [inspiration, setInspiration] = useState<string | null>(null);
@@ -146,7 +221,18 @@ function Configurator() {
   const [promo, setPromo] = useState<Promo | null>(null);
   const threeState = useRef<RootState | null>(null);
   // A still of the design the builder opens on, up until the 3D model is drawn.
-  const [poster] = useState(() => posterFor(tenant.defaultTooth, tenant.defaultSet));
+  const [poster] = useState(() => startingPoster(start?.snapshot ?? null, openingDesign(tenant)));
+  // After "Start over": what it cleared, for a few seconds' Undo.
+  const [undoReset, setUndoReset] = useState<ResetSnapshot | null>(null);
+  // The camera: in close on the teeth an option changes, and the fixed views (MAG-148).
+  const [closeUp, setCloseUp] = useState<CloseUp | null>(null);
+  const [view, setView] = useState<ViewRequest | null>(null);
+  // Look on phones: one group open at a time, Type first (MAG-148).
+  const compactLook = useMedia('(max-width: 860px)');
+  const [lookOpen, setLookOpen] = useState<LookGroupId | null>('type');
+  // One-tap starting designs the shop sells all of (MAG-148).
+  const looks = useMemo(() => shopLooks(tenant), [tenant]);
+  const [linkState, setLinkState] = useState<{ status: 'copied' | 'manual'; link: string } | null>(null);
   const panelScroll = useRef<HTMLDivElement | null>(null);
   // Phones show the options in a short bottom sheet: say when more sits below.
   const [moreBelow, setMoreBelow] = useState(false);
@@ -164,7 +250,8 @@ function Configurator() {
     setRowCount,
     clearAllTeeth,
     resetAll,
-  } = useGrillzCustomization();
+    setSelectedTeeth,
+  } = useGrillzCustomization(start?.snapshot.teeth);
 
   const selectedSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
   const upperCount = selectedTeeth.filter((index) => index < 16).length;
@@ -227,8 +314,10 @@ function Configurator() {
   }, [step, panelOpen]);
   const prevStep = stepIndex > 0 ? steps.at(stepIndex - 1) : undefined;
 
-  // An inscription only counts once it has text and sits on teeth in the set.
-  const inscriptions = inscriptionsFrom(inscriptionDrafts, selectedSet);
+  // An inscription only counts once it has text and sits on teeth in the set. Typed text
+  // sits on the front teeth until the customer picks teeth for it (MAG-148).
+  const placedDrafts = placeDrafts(inscriptionDrafts, selectedSet);
+  const inscriptions = inscriptionsFrom(placedDrafts, selectedSet);
   const inscriptionsKey = JSON.stringify(inscriptions);
   // Fangs are built on the upper canines: without one in the set there's nothing to put a fang on.
   const canHaveFangs = selectedTeeth.some((index) => FANG_TEETH.includes(index));
@@ -252,7 +341,7 @@ function Configurator() {
   const highlighted = step === 'teeth'
     ? selectedTeeth
     : pickingInscription
-      ? inscriptionDrafts[inscriptionPicking!]?.teeth ?? []
+      ? placedDrafts[inscriptionPicking!]?.teeth ?? []
       : activePicked;
   const customizations = useMemo<ToothCustomization[]>(
     () =>
@@ -263,6 +352,18 @@ function Configurator() {
     [base, overrides, selectedSet, setOptions.fangs, setOptions.cut],
   );
 
+  // What the camera frames at rest: the set, and on the Teeth step a tooth either side of each
+  // row too, so there is always a neighbour in view to tap and add. No teeth: the whole model.
+  const frameTeeth = useMemo(() => {
+    if (step !== 'teeth' || !selectedTeeth.length) return selectedTeeth;
+    const rows = [0, 16].flatMap((offset) => {
+      const row = selectedTeeth.filter((index) => index >= offset && index < offset + 16);
+      if (!row.length) return [];
+      return [Math.max(offset, row[0] - 1), ...row, Math.min(offset + 15, row.at(-1)! + 1)];
+    });
+    return [...new Set(rows)];
+  }, [step, selectedTeeth]);
+
   const handleToothClick = (index: number) => {
     if (step === 'teeth') {
       toggleToothSelection(index);
@@ -270,7 +371,7 @@ function Configurator() {
     }
     if (pickingInscription) {
       const which = inscriptionPicking!;
-      const other = inscriptionDrafts.find((_, i) => i !== which);
+      const other = placedDrafts.find((_, i) => i !== which);
       const { draft, done } = pickTooth(inscriptionDrafts[which], index, selectedSet, other ? draftRow(other) : null);
       setInscriptionDrafts((previous) => previous.map((item, i) => (i === which ? draft : item)));
       if (done) setInscriptionPicking(null);
@@ -302,8 +403,19 @@ function Configurator() {
   const icedStone = shown.type === 'iced' ? shown.stone : undefined;
   const icedPossible = nearestOffered(shopPricing, { ...shown, type: 'iced' }, stoneIds, karatIds) !== null;
 
+  /** The tooth that shows the set's stones best: a front tooth (a picked one while styling single teeth). */
+  const showcaseTooth = () => {
+    const pool = activePicked.length ? activePicked : selectedTeeth;
+    const iced = pool.filter((index) => designFor(index).type === 'iced');
+    const candidates = iced.length ? iced : pool;
+    return [...candidates].sort((a, b) => Math.abs((a % 16) - 7.5) + (a >= 16 ? 0.1 : 0) - (Math.abs((b % 16) - 7.5) + (b >= 16 ? 0.1 : 0)))[0];
+  };
+
   // Applies a design change to every tooth, or only to the picked teeth.
   const applyDesign = (patch: Partial<ToothDesign>) => {
+    // Stones and settings differ stone by stone: go in close to show it. Any other choice: back out.
+    const tooth = showcaseTooth();
+    setCloseUp(tooth !== undefined && (patch.stone || patch.setting) ? { teeth: [tooth], fill: 0.42 } : null);
     if (pickMode) {
       if (!activePicked.length) return;
       setOverrides((previous) => {
@@ -321,7 +433,19 @@ function Configurator() {
     );
   };
 
-  const updateSet = (patch: Partial<SetOptions>) => setSetOptions((previous) => ({ ...previous, ...patch }));
+  const toggleLookGroup = (id: LookGroupId) => {
+    // Another group: the camera comes back from any close-up.
+    setCloseUp(null);
+    setLookOpen((current) => (current === id ? null : id));
+    posthog.capture('sample_look_group_toggled', { group: id, open: lookOpen !== id });
+  };
+
+  const updateSet = (patch: Partial<SetOptions>) => {
+    // Fangs on: turn to a canine to show one. Any other set choice: back out.
+    const canine = FANG_TEETH.find((index) => selectedSet.has(index));
+    setCloseUp(patch.fangs && canine !== undefined ? { teeth: [canine], fill: 0.3, turn: true } : null);
+    setSetOptions((previous) => ({ ...previous, ...patch }));
+  };
 
   const renderSpec = useMemo<RenderSpec | null>(
     () => (teethDesigns.length ? { ...setOptions, fangs: fangsOn, inscriptions, teeth: teethDesigns } : null),
@@ -474,6 +598,8 @@ function Configurator() {
       setDepositReached(false);
     }
     posthog.capture('sample_step_viewed', { step: target });
+    setCloseUp(null);
+    if (target === 'look' && step !== 'look') setLookOpen('type');
     setPickMode(false);
     setPickedTeeth([]);
     setInscriptionPicking(null);
@@ -482,7 +608,25 @@ function Configurator() {
     panelScroll.current?.scrollTo({ top: 0 });
   };
 
+  /** The design as it stands, for saving, the link and Undo. */
+  const snapshot = (): DesignSnapshot => {
+    return { teeth: selectedTeeth, base, overrides, set: setWithoutInscriptions(setOptions), drafts: inscriptionDrafts };
+  };
+
+  const restoreDesign = (design: DesignSnapshot) => {
+    setSelectedTeeth(design.teeth);
+    setBase(design.base);
+    setOverrides(design.overrides);
+    setSetOptions({ ...design.set, inscriptions: [] });
+    setInscriptionDrafts(design.drafts.length ? design.drafts : [newDraft(catalog.inscriptionStyles[0]?.id)]);
+  };
+
   const handleReset = () => {
+    // No "are you sure?": it clears at once, and Undo puts it all back.
+    setUndoReset({ design: snapshot(), inspiration, step });
+    posthog.capture('sample_start_over', designProperties());
+    setLinkState(null);
+    setCloseUp(null);
     render.reset();
     setLead(null);
     setReceipt(null);
@@ -499,6 +643,78 @@ function Configurator() {
     setInscriptionPicking(null);
     setStep('teeth');
     setPanelOpen(true);
+  };
+
+  const startFromLook = (id: string) => {
+    const found = looks.find(({ look }) => look.id === id);
+    if (!found) return;
+    const { design } = found;
+    setSelectedTeeth(design.teeth);
+    setBase(design.base);
+    setOverrides(design.overrides);
+    // Only the look's own choices change: cut, fit, add-ons and any text stay as they are.
+    setSetOptions((previous) => ({ ...previous, fangs: design.set.fangs }));
+    setCloseUp(null);
+    posthog.capture('sample_look_started', { look: id });
+  };
+  const lookActive = (design: DesignSnapshot) =>
+    design.teeth.join() === selectedTeeth.join() &&
+    JSON.stringify(design.base) === JSON.stringify(base) &&
+    JSON.stringify(design.overrides) === JSON.stringify(overrides) &&
+    design.set.fangs === setOptions.fangs;
+
+  const undoStartOver = () => {
+    if (!undoReset) return;
+    restoreDesign(undoReset.design);
+    setInspiration(undoReset.inspiration);
+    setStep(undoReset.step);
+    setUndoReset(null);
+    posthog.capture('sample_start_over_undone', { step: undoReset.step });
+  };
+
+  // The Undo offer goes after a few seconds.
+  useEffect(() => {
+    if (!undoReset) return;
+    const timer = window.setTimeout(() => setUndoReset(null), 6500);
+    return () => window.clearTimeout(timer);
+  }, [undoReset]);
+
+  // Keep the design on this device, per shop, so a refresh or a trip to Instagram doesn't lose it.
+  const savedKey = JSON.stringify([selectedTeeth, base, overrides, setOptions, inscriptionDrafts]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const current = snapshot();
+      // An empty set or the untouched opening design: nothing worth keeping.
+      saveDesign(tenant.slug, current.teeth.length && !sameDesign(current, openingDesign(tenant)) ? current : null);
+    }, 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey, tenant.slug]);
+
+  // A shared link: say whether it opened, then take the design out of the address so edits aren't confused with it.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (start?.source === 'saved') posthog.capture('sample_design_restored', { source: 'saved' });
+    if (!hasDesignHash(window.location.hash)) return;
+    posthog.capture('sample_design_restored', { source: 'link', valid: start?.source === 'link' });
+    try {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    } catch {
+      // Some frames don't allow it; the hash just stays.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const copyDesignLink = async () => {
+    const link = designLink(snapshot(), tenant.slug, window.location.origin, onCustomDomain());
+    posthog.capture('sample_design_link_copied', designProperties());
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkState({ status: 'copied', link });
+    } catch {
+      // Inside some embeds the clipboard is off limits: show the link to copy by hand.
+      setLinkState({ status: 'manual', link });
+    }
   };
 
   const reserveDeposit = () => {
@@ -617,10 +833,6 @@ function Configurator() {
             <small>Estimated total</small>
             <strong>{totalText(totalCost)}</strong>
           </div>
-          <button className="cart-button" type="button" onClick={() => goTo('photo')} disabled={!selectedTeeth.length} aria-label="Review your design">
-            <ShoppingBag size={17} />
-            <span>Review</span>
-          </button>
         </div>
       </header>
 
@@ -634,9 +846,16 @@ function Configurator() {
             selectionLook={step === 'teeth' ? 'none' : styleStep ? 'outline' : 'fill'}
             toggleToothSelection={handleToothClick}
             inscriptions={inscriptions}
+            photoImage={inspiration}
             poster={poster}
+            frameTeeth={frameTeeth}
+            closeUp={closeUp}
+            view={view}
+            onUserControl={() => setCloseUp(null)}
             onReady={(state) => {
               threeState.current = state;
+              // Dev only: lets the visual checks reach the 3D view.
+              if (import.meta.env.DEV) (window as unknown as { __vvs?: RootState }).__vvs = state;
             }}
           />
 
@@ -654,6 +873,22 @@ function Configurator() {
               onClose={() => setShowPhoto(false)}
             />
           )}
+
+          <div className="viewer-views" role="group" aria-label="Turn the model">
+            {(['left', 'front', 'right'] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => {
+                  setCloseUp(null);
+                  setView({ side });
+                  posthog.capture('sample_view_changed', { view: side, step });
+                }}
+              >
+                {side === 'left' ? 'Left' : side === 'front' ? 'Front' : 'Right'}
+              </button>
+            ))}
+          </div>
 
           <div className="viewer-status">
             <span className="status-dot" />
@@ -705,6 +940,25 @@ function Configurator() {
 
               {step === 'teeth' && (
                 <>
+                  {looks.length > 0 && (
+                    <fieldset className="control-group">
+                      <legend>Start from a look</legend>
+                      <div className="look-tiles">
+                        {looks.map(({ look, design }) => (
+                          <button
+                            key={look.id}
+                            type="button"
+                            className={lookActive(design) ? 'look-tile look-tile--selected' : 'look-tile'}
+                            aria-pressed={lookActive(design)}
+                            onClick={() => startFromLook(look.id)}
+                          >
+                            <img src={lookImage(look.id)} alt="" loading="lazy" decoding="async" />
+                            <span>{look.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
                   <fieldset className="control-group">
                     <legend>Popular sets</legend>
                     <div className="preset-grid preset-grid--four">
@@ -791,8 +1045,14 @@ function Configurator() {
                 <>
                   {pickNote}
                   {mixLink}
-                  <fieldset className="control-group">
-                    <legend>Type</legend>
+                  <LookGroup
+                    id="type"
+                    title="Type"
+                    summary={label(GRILLZ_TYPES, shown.type)}
+                    collapsible={compactLook}
+                    open={lookOpen === 'type'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--three">
                       {catalog.types.map((type) => (
                         <OptionCard
@@ -804,16 +1064,44 @@ function Configurator() {
                           image={type.image}
                           selected={shown.type === type.id}
                           disabled={pickingNothing || (type.id === 'iced' && !icedPossible)}
-                          onSelect={() => applyDesign({ type: type.id })}
+                          onSelect={() => {
+                            applyDesign({ type: type.id });
+                            // Iced: the stones are the next thing to choose.
+                            if (type.id === 'iced') setLookOpen('stones');
+                          }}
                         />
                       ))}
                     </div>
-                  </fieldset>
+                    {/* Photo grillz: the picture can go on straight away (it also sits under Make it yours). */}
+                    {shown.type === 'photo' && (
+                      inspiration ? (
+                        <div className="inspiration-preview inspiration-preview--compact">
+                          <img src={inspiration} alt="Your photo for the grillz" />
+                          <span>Your photo is on the teeth</span>
+                          <button type="button" onClick={() => setInspiration(null)} aria-label="Remove photo"><X size={15} /></button>
+                        </div>
+                      ) : (
+                        <label className="upload-button upload-button--compact">
+                          <ImagePlus size={16} />
+                          Add your photo
+                          <input type="file" accept="image/*" onChange={handleInspiration} />
+                        </label>
+                      )
+                    )}
+                    {shown.type === 'photo' && inspirationError && <div className="inline-note" role="alert">{inspirationError}</div>}
+                  </LookGroup>
                   {/* Iced: the stones come straight after the choice, in the same step. */}
                   {(shown.type === 'iced' || (!pickMode && anyIced)) && (
                     <>
-                      <fieldset className="control-group control-group--revealed">
-                        <legend>Stones</legend>
+                      <LookGroup
+                        id="stones"
+                        title="Stones"
+                        summary={label(STONES, shown.stone)}
+                        collapsible={compactLook}
+                        open={lookOpen === 'stones'}
+                        onToggle={toggleLookGroup}
+                        revealed
+                      >
                         <div className="option-grid option-grid--three">
                           {catalog.stones.filter((stone) => !icedTable || icedOffers({ stone: stone.id })).map((stone) => (
                             <OptionCard
@@ -828,9 +1116,16 @@ function Configurator() {
                             />
                           ))}
                         </div>
-                      </fieldset>
-                      <fieldset className="control-group control-group--revealed">
-                        <legend>Setting</legend>
+                      </LookGroup>
+                      <LookGroup
+                        id="setting"
+                        title="Setting"
+                        summary={label(SETTINGS, shown.setting)}
+                        collapsible={compactLook}
+                        open={lookOpen === 'setting'}
+                        onToggle={toggleLookGroup}
+                        revealed
+                      >
                         <div className="option-grid option-grid--three">
                           {catalog.settings.map((setting) => (
                             <OptionCard
@@ -845,11 +1140,17 @@ function Configurator() {
                             />
                           ))}
                         </div>
-                      </fieldset>
+                      </LookGroup>
                     </>
                   )}
-                  <fieldset className="control-group">
-                    <legend>Finish</legend>
+                  <LookGroup
+                    id="finish"
+                    title="Finish"
+                    summary={`${label(STYLES, shown.style)}${opalOf(shown) ? ` · ${label(OPALS, opalOf(shown)!)}` : ''}`}
+                    collapsible={compactLook}
+                    open={lookOpen === 'finish'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--three">
                       {catalog.styles.map((style) => (
                         <OptionCard
@@ -884,10 +1185,16 @@ function Configurator() {
                       </div>
                     )}
                     {shown.type === 'iced' && <small className="field-hint">Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.</small>}
-                  </fieldset>
+                  </LookGroup>
                   {catalog.fangs && (
-                    <fieldset className="control-group">
-                      <legend>Fangs</legend>
+                    <LookGroup
+                      id="fangs"
+                      title="Fangs"
+                      summary={fangsOn ? 'Fangs' : 'No fangs'}
+                      collapsible={compactLook}
+                      open={lookOpen === 'fangs'}
+                      onToggle={toggleLookGroup}
+                    >
                       <div className="option-grid option-grid--two">
                         {FANG_OPTIONS.map((option) => (
                           <OptionCard
@@ -902,10 +1209,16 @@ function Configurator() {
                           />
                         ))}
                       </div>
-                    </fieldset>
+                    </LookGroup>
                   )}
-                  <fieldset className="control-group">
-                    <legend>Cut</legend>
+                  <LookGroup
+                    id="cut"
+                    title="Cut"
+                    summary={label(CUTS, setOptions.cut)}
+                    collapsible={compactLook}
+                    open={lookOpen === 'cut'}
+                    onToggle={toggleLookGroup}
+                  >
                     <div className="option-grid option-grid--two option-grid--switch">
                       {catalog.cuts.map((cut) => (
                         <OptionCard
@@ -919,7 +1232,7 @@ function Configurator() {
                         />
                       ))}
                     </div>
-                  </fieldset>
+                  </LookGroup>
                 </>
               )}
 
@@ -929,8 +1242,8 @@ function Configurator() {
                 <fieldset className="control-group">
                   <legend>Initials or text <em className="legend-optional">Optional</em></legend>
                   <InscriptionEditor
-                    drafts={inscriptionDrafts}
-                    onChange={setInscriptionDrafts}
+                    drafts={placedDrafts}
+                    onChange={(drafts) => setInscriptionDrafts(unplaceDrafts(drafts))}
                     picking={inscriptionPicking}
                     onPicking={setInscriptionPicking}
                     styles={catalog.inscriptionStyles}
@@ -985,6 +1298,21 @@ function Configurator() {
                         <button key={id} type="button" onClick={() => goTo(id)}>{STEP_LABELS[id]}</button>
                       ))}
                     </nav>
+                    <div className="design-link">
+                      <button className="text-button text-button--left" type="button" onClick={() => void copyDesignLink()}>
+                        <Link2 size={14} /> {linkState?.status === 'copied' ? 'Link copied' : 'Copy link to this design'}
+                      </button>
+                      {linkState?.status === 'manual' && (
+                        <input
+                          className="design-link__field"
+                          readOnly
+                          value={linkState.link}
+                          aria-label="Link to this design"
+                          onFocus={(event) => event.currentTarget.select()}
+                          ref={(node) => node?.select()}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {catalog.molds.length > 0 && (
@@ -1162,6 +1490,14 @@ function Configurator() {
           </footer>
         </aside>
       </div>
+      {undoReset && (
+        <div className="undo-toast" role="status">
+          <span>Design cleared</span>
+          <button type="button" onClick={undoStartOver}>
+            Undo
+          </button>
+        </div>
+      )}
     </main>
   );
 }

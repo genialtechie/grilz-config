@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
 import { BuilderShell } from './builder/BuilderShell';
 import { loadable } from '../lib/loadable';
-import { posterFor } from '../lib/poster';
+import { openingDesign, startingDesign, startingPoster } from '../lib/savedDesign';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { useTenant } from '../lib/tenant/useTenant';
 import { TenantProvider } from '../lib/tenant/context';
@@ -47,7 +47,8 @@ function ShopShell() {
   const brand = tenant.config.brand;
   return (
     <BuilderShell
-      poster={posterFor(tenant.defaultTooth, tenant.defaultSet)}
+      // The still of the set the builder will open on: none when it opens on a saved or shared design.
+      poster={startingPoster(startingDesign(tenant)?.snapshot ?? null, openingDesign(tenant))}
       className={tenant.demo ? undefined : `configurator-shell shop-shell ${fontPairClass(brand)}`}
       style={tenant.demo ? undefined : themeStyle(brand)}
     />

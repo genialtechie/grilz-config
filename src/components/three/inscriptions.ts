@@ -150,47 +150,40 @@ function letterMaterial(inscription: Inscription, texture: THREE.Texture) {
   });
 }
 
+/** Where a picture lies across a run of teeth, seen from the front of the run. */
+export type RunProjection = { orientation: THREE.Euler; position: THREE.Vector3; size: THREE.Vector3; box: THREE.Box3 };
+
 /**
- * Decals for one inscription on its teeth (meshes already in the scene, world
- * matrices current). Each decal is returned with the tooth it belongs to, in
- * that tooth's local space.
+ * The projection for a picture across a run of neighbouring teeth (meshes in
+ * the scene, world matrices current): from the front of the run, outward from
+ * the middle of the arch and level, spanning the run's width. `height` is the
+ * share of a tooth's height it covers; `level(lowerRow)` where its middle sits,
+ * as a share of the tooth's height from the bottom.
  */
-export function inscriptionDecals(inscription: Inscription, teeth: THREE.Mesh[], metal: MetalId): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
-  if (!teeth.length || typeof document === 'undefined') return [];
+export function runProjection(teeth: THREE.Mesh[], height: number, level: (lowerRow: boolean) => number): RunProjection {
   teeth.forEach((tooth) => tooth.updateWorldMatrix(true, false));
   const box = new THREE.Box3();
   teeth.forEach((tooth) => box.expandByObject(tooth));
   const centre = box.getCenter(new THREE.Vector3());
-
-  // Project from the front of the run: outward from the middle of the arch, level.
   const outward = new THREE.Vector3(centre.x, 0, centre.z + 1.2).normalize();
   if (outward.lengthSq() < 0.5) outward.set(0, 0, 1);
   const up = new THREE.Vector3(0, 1, 0);
   const right = new THREE.Vector3().crossVectors(up, outward).normalize();
   const orientation = new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, outward));
-
-  // The decal spans the run's width (measured across the projection) and most of a tooth's height.
   const corners = [box.min, box.max].flatMap((a) => [box.min, box.max].map((b) => new THREE.Vector3(a.x, 0, b.z)));
   const across = corners.map((corner) => corner.dot(right));
   const width = (Math.max(...across) - Math.min(...across)) * 0.94;
   const toothHeight = box.max.y - box.min.y;
-  // A monogram on one tooth fills most of its face; a name across teeth keeps to a band.
-  const height = toothHeight * (inscription.teeth.length === 1 ? 0.7 : 0.66);
-  const depth = (box.max.z - box.min.z) + 0.6;
-  // Letters sit towards the biting edge, clear of the gum (the lower row's gum is at the bottom,
-  // the upper row's at the top), while staying below where the upper teeth overlap the lower ones.
+  const depth = box.max.z - box.min.z + 0.6;
   const lowerRow = centre.y < 0;
-  const position = centre.clone().setY(lowerRow ? box.min.y + toothHeight * 0.52 : box.min.y + toothHeight * 0.44);
+  const position = centre.clone().setY(box.min.y + toothHeight * level(lowerRow));
+  return { orientation, position, size: new THREE.Vector3(width, toothHeight * height, depth), box };
+}
 
-  const canvas = drawLetters(inscription, metal, width / height);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  const material = letterMaterial(inscription, texture);
-  const size = new THREE.Vector3(width, height, depth);
-
+/** One decal per tooth for a projection, each hung on its tooth in the tooth's own space. */
+export function projectOnTeeth(teeth: THREE.Mesh[], projection: RunProjection, material: THREE.Material, name: string): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
   return teeth.flatMap((tooth) => {
-    const geometry = new DecalGeometry(tooth, position, orientation, size);
+    const geometry = new DecalGeometry(tooth, projection.position, projection.orientation, projection.size);
     if (!geometry.getAttribute('position')?.count) {
       geometry.dispose();
       return [];
@@ -198,15 +191,33 @@ export function inscriptionDecals(inscription: Inscription, teeth: THREE.Mesh[],
     // DecalGeometry is in world space; hang it on the tooth in the tooth's own space.
     geometry.applyMatrix4(tooth.matrixWorld.clone().invert());
     const decal = new THREE.Mesh(geometry, material);
-    decal.name = INSCRIPTION_DECAL;
+    decal.name = name;
     decal.renderOrder = 2;
     return [{ tooth, decal }];
   });
 }
 
-/** Removes a tooth's inscription decals (their texture and material are shared per inscription). */
-export function clearInscriptionDecals(tooth: THREE.Object3D, disposed: Set<THREE.Material>) {
-  tooth.children.filter((child) => child.name === INSCRIPTION_DECAL).forEach((child) => {
+/**
+ * Decals for one inscription on its teeth (meshes already in the scene, world
+ * matrices current). Each decal is returned with the tooth it belongs to, in
+ * that tooth's local space.
+ */
+export function inscriptionDecals(inscription: Inscription, teeth: THREE.Mesh[], metal: MetalId): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
+  if (!teeth.length || typeof document === 'undefined') return [];
+  // A monogram on one tooth fills most of its face; a name across teeth keeps to a band.
+  // Letters sit towards the biting edge, clear of the gum (the lower row's gum is at the bottom,
+  // the upper row's at the top), while staying below where the upper teeth overlap the lower ones.
+  const projection = runProjection(teeth, inscription.teeth.length === 1 ? 0.7 : 0.66, (lowerRow) => (lowerRow ? 0.52 : 0.44));
+  const canvas = drawLetters(inscription, metal, projection.size.x / projection.size.y);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  return projectOnTeeth(teeth, projection, letterMaterial(inscription, texture), INSCRIPTION_DECAL);
+}
+
+/** Removes a tooth's decals of one kind (their texture and material are shared per run). */
+export function clearDecals(tooth: THREE.Object3D, name: string, disposed: Set<THREE.Material>) {
+  tooth.children.filter((child) => child.name === name).forEach((child) => {
     tooth.remove(child);
     const mesh = child as THREE.Mesh;
     mesh.geometry.dispose();
@@ -218,3 +229,6 @@ export function clearInscriptionDecals(tooth: THREE.Object3D, disposed: Set<THRE
     }
   });
 }
+
+/** Removes a tooth's inscription decals. */
+export const clearInscriptionDecals = (tooth: THREE.Object3D, disposed: Set<THREE.Material>) => clearDecals(tooth, INSCRIPTION_DECAL, disposed);
