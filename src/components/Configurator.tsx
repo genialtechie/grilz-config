@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import Scene from './three/Scene';
+import { ViewerBoundary } from './three/ViewerBoundary';
 import { LeadCapture, RenderOverlay, type Lead, type LeadExtras } from './AiRender';
 import { submitLead, type LeadReceipt } from '../lib/leads';
 import { OptionCard } from './builder/OptionCard';
@@ -838,6 +839,9 @@ function Configurator() {
 
       <div className={panelOpen ? 'builder-workspace' : 'builder-workspace builder-workspace--closed'}>
         <section className="visualizer" aria-label="Interactive 3D grillz preview">
+          <ViewerBoundary
+            onError={(error) => posthog.capture('sample_3d_failed', { reason: error.message.slice(0, 200) })}
+          >
           <Scene
             customizations={customizations}
             selectedTeeth={highlighted}
@@ -858,6 +862,7 @@ function Configurator() {
               if (import.meta.env.DEV) (window as unknown as { __vvs?: RootState }).__vvs = state;
             }}
           />
+          </ViewerBoundary>
 
           {showPhoto && (
             <RenderOverlay
