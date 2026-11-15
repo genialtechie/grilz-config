@@ -1,5 +1,13 @@
 # Working on VVS Lab
 
+## Asking questions and showing plans
+
+- Ask every question with the multiple-choice question tool (the "slides"),
+  never as a list in chat. One question per slide, a recommended option first,
+  and each slide readable on its own.
+- On design and UX work, show the plan (what, how, open choices) and get it
+  approved before building. The owner leads on taste and UX.
+
 ## Choosing services and data sources
 
 Before recommending a paid service, API key or new vendor, check the simple
