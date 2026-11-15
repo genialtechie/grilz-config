@@ -1,0 +1,878 @@
+<title>VVS Lab Blank Canvas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Archivo:wdth,wght@62..125,400..700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
+<style>
+/* Layout: the prototype is the page. A quiet neutral frame around one live stage; notes underneath in a narrow column. */
+:root {
+  --bg: #f4f4f2; --fg: #111110; --body: #3b3b38; --mut: #6d6d68; --line: rgba(17,17,16,.12); --card: #ffffff; --hi: #111110; --hi-fg: #ffffff;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0e0e0f; --fg: #f3f3f1; --body: #c9c9c5; --mut: #8d8d88; --line: rgba(243,243,241,.14); --card: #18181a; --hi: #f3f3f1; --hi-fg: #0e0e0f; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0e0e0f; --fg: #f3f3f1; --body: #c9c9c5; --mut: #8d8d88; --line: rgba(243,243,241,.14); --card: #18181a; --hi: #f3f3f1; --hi-fg: #0e0e0f; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--body); font: 400 16px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { color: var(--fg); margin: 0; font-weight: 500; letter-spacing: -.025em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; }
+h2 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.1; }
+h3 { font-size: 17px; letter-spacing: -.01em; line-height: 1.3; }
+p { margin: 0; }
+a { color: var(--fg); text-underline-offset: 3px; }
+.label { font: 500 11px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mut); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+.intro { padding-block: 36px 22px; display: grid; gap: 12px; }
+.intro p { max-width: 62ch; font-size: 17px; }
+.dirs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-block: 0 14px; }
+.dirs .label { margin-right: 6px; }
+.dirs button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 9px 14px 9px 10px; font: 500 14px/1 var(--sans); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; color: var(--fg); }
+.dirs button[aria-pressed="true"] { background: var(--hi); color: var(--hi-fg); border-color: var(--hi); }
+.dirs i { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(128,128,128,.45); display: inline-block; }
+
+/* ===== the stage: its own world, three fixed looks on purpose ===== */
+.stage { --s-bg: radial-gradient(120% 90% at 50% 38%, #f6f5f2 0%, #e3e2dd 55%, #cfcec8 100%); --s-fg: #111110; --s-mut: #66665f; --s-surf: rgba(255,255,255,.74); --s-line: rgba(17,17,16,.14);
+  --s-cta: #111110; --s-cta-fg: #ffffff; --s-sel: #111110; --s-font: 'Geist', system-ui, sans-serif; --s-hw: 500; --s-ht: -.035em; --s-hs: clamp(34px, 5.2vw, 64px); --s-lab: 500 10.5px/1 'Geist Mono', ui-monospace, monospace; --s-labt: .08em; --s-rad: 16px; --s-stretch: 100%;
+  position: relative; height: clamp(600px, 62vw, 760px); border-radius: 22px; overflow: hidden; background: var(--s-bg); color: var(--s-fg); font-family: var(--s-font); isolation: isolate; user-select: none; -webkit-user-select: none; transition: color .3s ease; }
+.stage[data-dir="night"] { --s-bg: radial-gradient(90% 70% at 50% 36%, #25262b 0%, #101114 52%, #050506 100%); --s-fg: #f4f4f1; --s-mut: #9a9a94; --s-surf: rgba(22,23,26,.72); --s-line: rgba(244,244,241,.16);
+  --s-cta: #f4f4f1; --s-cta-fg: #08080a; --s-sel: #f4f4f1; --s-font: 'Archivo', 'Arial Narrow', sans-serif; --s-hw: 600; --s-ht: -.02em; --s-stretch: 112%; --s-lab: 600 10px/1 'Archivo', sans-serif; --s-labt: .16em; --s-rad: 6px; }
+.stage[data-dir="ultra"] { --s-bg: radial-gradient(110% 85% at 50% 36%, #3a52ff 0%, #1c2fe0 50%, #0e1ba0 100%); --s-fg: #ffffff; --s-mut: rgba(255,255,255,.72); --s-surf: rgba(255,255,255,.14); --s-line: rgba(255,255,255,.26);
+  --s-cta: #ffffff; --s-cta-fg: #1424c4; --s-sel: #ffffff; --s-font: 'Bricolage Grotesque', system-ui, sans-serif; --s-hw: 700; --s-ht: -.045em; --s-hs: clamp(38px, 5.8vw, 72px); --s-lab: 600 11px/1 'Bricolage Grotesque', sans-serif; --s-labt: .04em; --s-rad: 22px; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; z-index: 0; }
+.stage canvas.pt { cursor: pointer; }
+.stage > * { z-index: 1; }
+.s-top { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 18px 20px; pointer-events: none; }
+.s-top > * { pointer-events: auto; }
+.s-mark { font-weight: var(--s-hw); font-stretch: var(--s-stretch); font-size: 17px; letter-spacing: var(--s-ht); display: flex; align-items: baseline; gap: 6px; }
+.s-mark small { font: var(--s-lab); letter-spacing: var(--s-labt); text-transform: uppercase; color: var(--s-mut); }
+.s-mode { display: flex; background: var(--s-surf); border: 1px solid var(--s-line); border-radius: 999px; padding: 3px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.s-mode button { border: 0; background: transparent; padding: 7px 12px; border-radius: 999px; font: 500 12px/1 var(--s-font); cursor: pointer; color: var(--s-mut); }
+.s-mode button[aria-pressed="true"] { background: var(--s-cta); color: var(--s-cta-fg); }
+
+/* landing layer */
+.s-land { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px; display: grid; gap: 14px; justify-items: center; text-align: center; pointer-events: none; transition: opacity .35s ease, transform .35s ease; }
+.s-land > * { pointer-events: auto; }
+.s-land h2 { color: var(--s-fg); font-family: var(--s-font); font-weight: var(--s-hw); font-stretch: var(--s-stretch); letter-spacing: var(--s-ht); font-size: var(--s-hs); line-height: .98; max-width: 14ch; }
+.s-land p { color: var(--s-mut); font-size: 15px; max-width: 44ch; line-height: 1.45; }
+.s-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.s-btn { border: 1px solid var(--s-line); background: var(--s-surf); color: var(--s-fg); border-radius: 999px; padding: 13px 18px; font: 600 14px/1 var(--s-font); cursor: pointer; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.s-btn.p { background: var(--s-cta); color: var(--s-cta-fg); border-color: var(--s-cta); }
+.stage[data-dir="night"] .s-btn { border-radius: 4px; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+.s-hint { font: var(--s-lab); letter-spacing: var(--s-labt); text-transform: uppercase; color: var(--s-mut); }
+
+/* builder layer */
+.s-hud { position: absolute; left: 20px; right: 20px; top: 64px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none; transition: opacity .3s ease; }
+.s-rcpt { font: var(--s-lab); letter-spacing: var(--s-labt); text-transform: uppercase; color: var(--s-mut); line-height: 1.5; max-width: 60%; }
+.s-price { background: var(--s-surf); border: 1px solid var(--s-line); border-radius: 999px; padding: 8px 12px; font: 600 13px/1 var(--s-font); font-variant-numeric: tabular-nums; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); display: flex; gap: 6px; align-items: baseline; }
+.s-price small { font: var(--s-lab); letter-spacing: var(--s-labt); color: var(--s-mut); text-transform: uppercase; }
+.s-panel { position: absolute; left: 50%; bottom: 16px; width: min(480px, calc(100% - 24px)); transform: translateX(-50%); background: var(--s-surf); border: 1px solid var(--s-line); border-radius: calc(var(--s-rad) + 6px); padding: 16px; display: grid; gap: 14px; backdrop-filter: blur(22px) saturate(1.3); -webkit-backdrop-filter: blur(22px) saturate(1.3); transition: opacity .35s ease, transform .35s ease; }
+.s-dots { display: flex; gap: 6px; align-items: center; }
+.s-dots button { flex: 1; border: 0; background: transparent; padding: 6px 0; cursor: pointer; display: grid; gap: 6px; text-align: left; font: var(--s-lab); letter-spacing: var(--s-labt); text-transform: uppercase; color: var(--s-mut); }
+.s-dots button::before { content: ""; height: 2px; border-radius: 2px; background: var(--s-line); }
+.s-dots button.done::before, .s-dots button[aria-current="step"]::before { background: var(--s-sel); }
+.s-dots button[aria-current="step"] { color: var(--s-fg); }
+.s-q { font-weight: var(--s-hw); font-stretch: var(--s-stretch); letter-spacing: var(--s-ht); font-size: 24px; line-height: 1.05; }
+.s-opts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.s-opt { border: 1px solid var(--s-line); background: transparent; border-radius: var(--s-rad); padding: 12px 8px; cursor: pointer; display: grid; gap: 7px; justify-items: center; text-align: center; min-width: 0; color: var(--s-fg); transition: transform .12s ease; }
+.s-opt:active { transform: scale(.96); }
+.s-opt[aria-pressed="true"] { border-color: var(--s-sel); box-shadow: inset 0 0 0 1px var(--s-sel); }
+.s-opt b { font: 600 13px/1.1 var(--s-font); }
+.s-opt span { font: var(--s-lab); letter-spacing: var(--s-labt); color: var(--s-mut); text-transform: uppercase; }
+.s-opt i { width: 30px; height: 30px; border-radius: 50%; display: block; box-shadow: inset 0 -6px 10px rgba(0,0,0,.18), inset 0 4px 6px rgba(255,255,255,.5); }
+.s-sub { display: flex; gap: 6px; flex-wrap: wrap; }
+.s-chip { border: 1px solid var(--s-line); background: transparent; border-radius: 999px; padding: 8px 12px; font: 500 12.5px/1 var(--s-font); cursor: pointer; color: var(--s-fg); }
+.s-chip[aria-pressed="true"] { background: var(--s-cta); color: var(--s-cta-fg); border-color: var(--s-cta); }
+.stage[data-dir="night"] .s-chip { border-radius: 4px; }
+.s-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.s-back { border: 0; background: transparent; font: 500 13px/1 var(--s-font); color: var(--s-mut); cursor: pointer; padding: 10px 4px; }
+.s-note { font-size: 13px; color: var(--s-mut); line-height: 1.4; }
+.stage[data-mode="land"] .s-panel, .stage[data-mode="land"] .s-hud { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(20px); }
+.stage[data-mode="land"] .s-hud { transform: none; }
+.stage[data-mode="build"] .s-land { opacity: 0; pointer-events: none; transform: translateY(20px); }
+.stage[data-mode="build"] .s-land > * { pointer-events: none; }
+.s-load { position: absolute; inset: 0; display: grid; place-items: center; font: var(--s-lab); letter-spacing: var(--s-labt); text-transform: uppercase; color: var(--s-mut); pointer-events: none; }
+
+.s-jaw { position: absolute; right: 20px; top: 66px; border: 1px solid var(--s-line); background: var(--s-surf); color: var(--s-fg); border-radius: 999px; padding: 8px 12px; font: 500 12px/1 var(--s-font); cursor: pointer; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: top .3s ease; }
+.stage[data-mode="build"] .s-jaw { top: 108px; }
+.s-tools { position: absolute; right: 20px; top: 66px; display: grid; gap: 6px; justify-items: end; transition: top .3s ease; }
+.stage[data-mode="build"] .s-tools { top: 108px; }
+.s-tools .s-jaw { position: static; }
+.s-dial { display: flex; align-items: center; gap: 8px; border: 1px solid var(--s-line); background: var(--s-surf); border-radius: 999px; padding: 6px 10px 6px 12px; font: 500 12px/1 var(--s-font); color: var(--s-fg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); font-variant-numeric: tabular-nums; }
+.s-dial input { width: 76px; accent-color: var(--s-fg); margin: 0; }
+.s-note b { color: var(--s-fg); font-weight: 600; }
+.s-sub + .s-sub { margin-top: -6px; }
+.s-price { white-space: nowrap; }
+.s-rcpt { max-width: 52%; }
+/* photo */
+.s-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
+.s-flash.go { animation: flash .5s ease-out; }
+@keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.s-photo { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, #000 38%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.s-card { width: min(360px, 100%); background: #ffffff; color: #111110; border-radius: 14px; padding: 12px 12px 16px; display: grid; gap: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.4); transform: rotate(-1.5deg); font-family: 'Geist', system-ui, sans-serif; }
+.s-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; display: block; background: #ddd; }
+.s-card .row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 0 4px; }
+.s-card .row b { font: 600 15px/1.2 'Geist', sans-serif; }
+.s-card .row span { font: 500 11px/1.4 'Geist Mono', monospace; color: #66665f; letter-spacing: .04em; text-transform: uppercase; }
+.s-card .acts { display: flex; gap: 8px; padding: 0 4px; }
+.s-card button { flex: 1; border-radius: 999px; padding: 12px; font: 600 13px/1 'Geist', sans-serif; cursor: pointer; border: 1px solid rgba(17,17,16,.16); background: transparent; color: #111110; }
+.s-card button.p { background: #111110; color: #fff; border-color: #111110; }
+.s-card p { font-size: 12.5px; line-height: 1.4; color: #66665f; padding: 0 4px; }
+
+/* notes */
+section { padding-block: 56px; border-top: 1px solid var(--line); }
+.stage-wrap { padding-bottom: 56px; }
+.caption { margin-top: 12px; font-size: 14px; color: var(--mut); max-width: 78ch; }
+.head { display: grid; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.cell { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.cell p { font-size: 14.5px; line-height: 1.5; }
+.plain { display: grid; gap: 6px; align-content: start; padding-top: 14px; border-top: 1px solid var(--fg); min-width: 0; }
+.plain p { font-size: 14.5px; line-height: 1.5; }
+.swatch { height: 92px; border-radius: 10px; display: flex; align-items: flex-end; padding: 12px; font-size: 22px; margin-bottom: 6px; }
+.sw-stone { background: radial-gradient(120% 120% at 50% 20%, #f6f5f2, #cfcec8); color: #111110; font: 500 24px/1 'Geist', sans-serif; letter-spacing: -.035em; }
+.sw-night { background: radial-gradient(100% 120% at 50% 20%, #25262b, #050506); color: #f4f4f1; font: 600 22px/1 'Archivo', sans-serif; font-stretch: 112%; letter-spacing: -.02em; }
+.sw-ultra { background: radial-gradient(120% 120% at 50% 20%, #3a52ff, #0e1ba0); color: #fff; font: 700 26px/1 'Bricolage Grotesque', sans-serif; letter-spacing: -.045em; }
+.refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.refs span { font: 500 11px/1 var(--mono); border: 1px solid var(--line); border-radius: 999px; padding: 6px 9px; color: var(--mut); }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--card); }
+.steps > div { padding: 20px; display: grid; gap: 8px; align-content: start; border-left: 1px solid var(--line); min-width: 0; }
+.steps > div:first-child { border-left: 0; }
+.steps p { font-size: 14.5px; line-height: 1.5; }
+.ask { display: grid; gap: 10px; }
+.ask li { font-size: 16px; color: var(--fg); padding: 16px 0; border-top: 1px solid var(--line); list-style: none; }
+.ask ol { margin: 0; padding: 0; }
+.ask li span { display: block; font-size: 14.5px; color: var(--mut); margin-top: 4px; }
+footer { padding-block: 28px 56px; font-size: 13px; color: var(--mut); border-top: 1px solid var(--line); }
+@media (max-width: 860px) {
+  .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .steps > div:nth-child(3) { border-left: 0; }
+  .steps > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 560px) {
+  .grid3, .grid4, .steps { grid-template-columns: 1fr; }
+  .steps > div { border-left: 0; border-top: 1px solid var(--line); }
+  .steps > div:first-child { border-top: 0; }
+  .stage { height: 640px; border-radius: 18px; }
+  .s-top { padding: 14px; }
+  .s-hud { left: 14px; right: 14px; top: 58px; }
+  .s-tools { right: 14px; top: 60px; }
+  .stage[data-mode="build"] .s-tools { top: 104px; }
+  .s-dots button { font-size: 9.5px; }
+  .s-opt { padding: 10px 4px; }
+  .s-opt b { font-size: 12px; }
+  .s-q { font-size: 21px; }
+  .s-mark small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<main>
+  <div class="wrap intro">
+    <p class="label">VVS Lab · redesign · blank canvas</p>
+    <h1>Starting again from the object.</h1>
+    <p>Third pass, on the 3D only. The grill now sits on a clear holder like a jeweler's mold. The teeth are rounder and touch their neighbours, iced teeth carry real set stones, and one-of-one charms can go on any tooth.</p>
+  </div>
+
+  <div class="wrap stage-wrap">
+    <div class="stage" id="stage" data-dir="stone" data-mode="land">
+      <canvas id="gl" aria-label="Live 3D grill on a clear holder. Drag to turn it, tap a tooth to add, remove or select it."></canvas>
+      <div class="s-load" id="load">Setting the stage…</div>
+
+      <div class="s-top">
+        <div class="s-mark" id="mark">VVS Lab</div>
+        <div class="s-mode" role="group" aria-label="View">
+          <button type="button" data-mode="land" aria-pressed="true">Front door</button>
+          <button type="button" data-mode="build" aria-pressed="false">Builder</button>
+        </div>
+      </div>
+
+      <div class="s-land" id="land">
+        <p class="s-hint">Go on, tap a tooth</p>
+        <h2>They design it. You make it.</h2>
+        <p>A 3D grillz builder with your shop's name on it. Every finished design reaches you as a priced request.</p>
+        <div class="s-btns">
+          <button type="button" class="s-btn p" id="tryit">Try it as a customer</button>
+          <button type="button" class="s-btn" id="oneof">See a one-of-one</button>
+          <button type="button" class="s-btn" id="startfree">Start free</button>
+        </div>
+      </div>
+
+      <div class="s-hud" id="hud">
+        <div class="s-rcpt" id="rcpt">12 teeth · 14K yellow · polished</div>
+        <div class="s-price"><span id="price">$1,920</span><small>est.</small></div>
+      </div>
+
+      <div class="s-panel" id="panel">
+        <div class="s-dots" id="dots" role="group" aria-label="Steps">
+          <button type="button" data-step="0">Teeth</button>
+          <button type="button" data-step="1">Metal</button>
+          <button type="button" data-step="2">Finish</button>
+          <button type="button" data-step="3">Custom</button>
+          <button type="button" data-step="4">Photo</button>
+        </div>
+        <div id="stepbody"></div>
+        <div class="s-nav">
+          <button type="button" class="s-back" id="back">Back</button>
+          <button type="button" class="s-btn p" id="next">Next: Metal</button>
+        </div>
+      </div>
+
+      <div class="s-tools">
+        <button type="button" class="s-jaw" id="jawbtn" aria-pressed="false">Open mouth</button>
+        <label class="s-dial" for="solid"><span id="solidval">70% solid</span><input type="range" id="solid" min="30" max="100" step="5" value="70" aria-label="How solid the clear holder is"></label>
+      </div>
+
+      <div class="s-flash" id="flash"></div>
+      <div class="s-photo" id="photo" hidden>
+        <div class="s-card">
+          <img id="shot" alt="Photo of your design">
+          <div class="row"><b id="cardspec">12 teeth · 14K yellow</b><b id="cardprice">$1,920</b></div>
+          <div class="row"><span id="cardcode">Design VVS-7K2Q</span><span>Example shop</span></div>
+          <div class="acts"><button type="button" id="keep">Keep editing</button><button type="button" class="p" id="send">Send to the shop</button></div>
+          <p id="cardnote">In the real builder this is the studio photo, and sending asks for a name and Instagram or phone.</p>
+        </div>
+      </div>
+    </div>
+    <p class="caption">A working sketch, not finished art. The teeth, holder, stones and charms are all generated in code and rendered live in your browser. Prices are examples, and charms show as a quote. The shutter takes a still of the scene; the real product would show its AI studio photo there.</p>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="head">
+        <p class="label">This round</p>
+        <h2>What changed in the 3D.</h2>
+        <p>The plan, decisions and what comes next live in the <a href="https://claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD">redesign plan</a>.</p>
+      </div>
+      <div class="grid3">
+        <div class="plain"><h3>A clear holder</h3><p>The grill sits on a clear resin mold, like the one in your reference photos. It starts at 70% solid; the dial on the stage changes how see-through it is.</p></div>
+        <div class="plain"><h3>Rounder teeth that touch</h3><p>Every tooth is one smooth form with its own shape for front teeth, canines and back teeth. Neighbours meet side to side without running into each other.</p></div>
+        <div class="plain"><h3>Cream first, metal second</h3><p>Picked teeth show in the cream material on the Teeth step. The real metal appears when you move to Metal.</p></div>
+        <div class="plain"><h3>Real set stones</h3><p>Iced teeth carry separate cut stones in a honeycomb inside a gold rim. A raised gold bezel frames them, as in your reference photos.</p></div>
+        <div class="plain"><h3>One-of-one charms</h3><p>Eight original charms can go on any tooth: a crest, a crown, a cross, a spade, a bolt, a wing and two bezel-set stones. They are premium, so they show as a quote from the shop.</p></div>
+        <div class="plain"><h3>One tooth at a time</h3><p>On Metal, Finish and Custom, tap a tooth to change just that one. It lifts forward and the camera turns to face it. Tap empty space to go back to all teeth.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap ask">
+      <div class="head">
+        <p class="label">Things to try</p>
+        <h2>Five minutes with it.</h2>
+      </div>
+      <ol>
+        <li>Press "See a one-of-one" on the front door.<span>A full showpiece: iced canines in gold bezels, a cross, crest, crown and spade on top, onyx and diamond cut below.</span></li>
+        <li>Slide the holder from 30% to 100% solid.<span>Find the point where it looks right to you.</span></li>
+        <li>Go to Finish, tap one tooth, and make it iced.<span>Then turn the piece slowly and watch the stones.</span></li>
+        <li>Open the mouth and look from the side.<span>Check the tooth shapes: front, canine and back.</span></li>
+      </ol>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">VVS Lab · blank-canvas concept, round 3 · November 2026. The wordmark is plain type as a placeholder. Charms are original motifs.</div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script>
+(function () {
+  var stage = document.getElementById('stage'), canvas = document.getElementById('gl'), load = document.getElementById('load');
+  var $ = function (id) { return document.getElementById(id); };
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- catalogue (example prices) ----------
+  var METALS = {
+    yellow: { name: 'Yellow', rgb: { '10K': [1, .80, .47], '14K': [1, .735, .335], '18K': [1, .67, .235] }, css: 'linear-gradient(140deg,#ffe7ac,#e0a93f 55%,#9a6a16)' },
+    white: { name: 'White', rgb: { '10K': [.90, .90, .89], '14K': [.93, .92, .90], '18K': [.95, .93, .89] }, css: 'linear-gradient(140deg,#ffffff,#d9d6cf 55%,#8d8a83)' },
+    rose: { name: 'Rose', rgb: { '10K': [.96, .66, .55], '14K': [.97, .60, .47], '18K': [.98, .55, .40] }, css: 'linear-gradient(140deg,#ffd9c8,#dd9274 55%,#96563d)' },
+    silver: { name: 'Silver', rgb: { '925': [.96, .97, .98] }, css: 'linear-gradient(140deg,#ffffff,#cfd4da 55%,#7f868f)' }
+  };
+  var BASE = { '10K': 130, '14K': 160, '18K': 205, '925': 60 };
+  var FINISH = { polished: { name: 'Polished', add: 0 }, cut: { name: 'Diamond cut', add: 30 }, iced: { name: 'Iced', add: 240 } };
+  var CHARMS = { crest: 'Crest', crown: 'Crown', cross: 'Cross', spade: 'Spade', bolt: 'Bolt', wing: 'Wing', onyx: 'Onyx', sapphire: 'Sapphire' };
+  var STEPS = ['Teeth', 'Metal', 'Finish', 'Custom', 'Photo'];
+  var VIEWS = [{ yaw: 0, pitch: .05, zoom: 1 }, { yaw: .46, pitch: .08, zoom: .94 }, { yaw: -.34, pitch: .07, zoom: .76 }, { yaw: .1, pitch: .04, zoom: .72 }, { yaw: .3, pitch: -.05, zoom: .92 }];
+  var LANDVIEW = { yaw: -.3, pitch: .08, zoom: 1 };
+
+  // ---------- state: every tooth carries its own choices ----------
+  var T = [], i;
+  for (i = 0; i < 32; i++) T.push({ on: false, metal: 'yellow', karat: '14K', finish: 'polished', charm: null });
+  var state = { mode: 'land', step: 0, sel: null, def: { metal: 'yellow', karat: '14K', finish: 'polished' }, showcase: false, solid: 70 };
+  function metalOn() { return state.showcase || (state.mode === 'build' && state.step >= 1); }
+  function onList() { var a = []; for (var k = 0; k < 32; k++) if (T[k].on) a.push(k); return a; }
+  function targets() { return state.sel !== null && T[state.sel].on ? [state.sel] : onList(); }
+  function cur() { return state.sel !== null && T[state.sel].on ? T[state.sel] : state.def; }
+  function toothPrice(t) { return BASE[t.karat] + FINISH[t.finish].add; }
+  function price() { return onList().reduce(function (s, k) { return s + toothPrice(T[k]); }, 0); }
+  function charmCount() { return onList().filter(function (k) { return T[k].charm; }).length; }
+  function money(n) { return '$' + n.toLocaleString('en-US'); }
+  function priceText() { return money(price()) + (metalOn() && charmCount() ? ' + quote' : ''); }
+  function setMetal(c, k) { c.metal = k; if (k === 'silver') c.karat = '925'; else if (c.karat === '925') c.karat = '14K'; }
+  function deltaFor(change) {
+    var d = 0; targets().forEach(function (k) { var c = { metal: T[k].metal, karat: T[k].karat, finish: T[k].finish }, before = toothPrice(c); change(c); d += toothPrice(c) - before; });
+    return d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : '';
+  }
+  function same(key) { var on = onList(), v = on.length ? T[on[0]][key] : null; return on.every(function (k) { return T[k][key] === v; }) ? v : null; }
+  function spec(short) {
+    var on = onList(), n = on.length; if (!n) return 'No teeth yet';
+    var s = n + (n === 1 ? ' tooth' : ' teeth'); if (!metalOn()) return s;
+    var m = same('metal'), k = same('karat'), f = same('finish'), c = charmCount();
+    s += ' · ' + (m && k ? (k === '925' ? 'sterling silver' : k + ' ' + METALS[m].name.toLowerCase()) : 'mixed metals');
+    if (!short) s += ' · ' + (f ? FINISH[f].name.toLowerCase() : 'mixed finishes');
+    if (c) s += ' · ' + c + (c === 1 ? ' charm' : ' charms');
+    return s;
+  }
+  function setRange(top, bottom) {
+    var st = Math.floor((16 - top) / 2), sb = Math.floor((16 - bottom) / 2), k;
+    for (k = 0; k < 32; k++) T[k].on = k < 16 ? (k >= st && k < st + top) : (k - 16 >= sb && k - 16 < sb + bottom);
+    if (state.sel !== null && !T[state.sel].on) state.sel = null;
+  }
+  function counts() { var t = 0, b = 0; onList().forEach(function (k) { if (k < 16) t++; else b++; }); return [t, b]; }
+  function isCentered() {
+    var c = counts(), st = Math.floor((16 - c[0]) / 2), sb = Math.floor((16 - c[1]) / 2), k;
+    for (k = 0; k < c[0]; k++) if (!T[st + k].on) return false;
+    for (k = 0; k < c[1]; k++) if (!T[16 + sb + k].on) return false;
+    return true;
+  }
+  function loadShowpiece() {
+    setRange(6, 6);
+    T.forEach(function (t) { t.metal = 'yellow'; t.karat = '18K'; t.finish = 'polished'; t.charm = null; });
+    var map = { 5: { finish: 'iced' }, 6: { charm: 'cross' }, 7: { charm: 'crest' }, 8: { charm: 'crown' }, 9: { charm: 'spade' }, 10: { finish: 'iced' }, 21: { charm: 'onyx' }, 22: { finish: 'cut' }, 25: { finish: 'cut' }, 26: { charm: 'onyx' } };
+    Object.keys(map).forEach(function (k) { var m = map[k]; if (m.finish) T[k].finish = m.finish; if (m.charm) T[k].charm = m.charm; });
+    state.def = { metal: 'yellow', karat: '18K', finish: 'polished' }; state.sel = null;
+  }
+  function plainSet() {
+    setRange(6, 6);
+    T.forEach(function (t) { t.metal = 'yellow'; t.karat = '14K'; t.finish = 'polished'; t.charm = null; });
+    state.def = { metal: 'yellow', karat: '14K', finish: 'polished' }; state.sel = null;
+  }
+  plainSet();
+
+  // ---------- controls ----------
+  var body = $('stepbody');
+  function opt(group, key, title, sub, pressed, sw) {
+    return '<button type="button" class="s-opt" data-g="' + group + '" data-k="' + key + '" aria-pressed="' + pressed + '">' + (sw ? '<i style="background:' + sw + '"></i>' : '') + '<b>' + title + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</button>';
+  }
+  function chip(group, key, label, pressed, extra) {
+    return '<button type="button" class="s-chip" data-g="' + group + '" data-k="' + key + '" aria-pressed="' + pressed + '">' + label + (extra ? ' <span style="opacity:.65">' + extra + '</span>' : '') + '</button>';
+  }
+  function selNote() {
+    if (state.sel !== null && T[state.sel].on) return '<p class="s-note"><b>Changing one tooth.</b> Tap empty space to go back to all of them.</p>';
+    return '<p class="s-note">Tap a tooth on the piece to change just that one.</p>';
+  }
+  function renderStep() {
+    var s = state.step, h = '', c = cur();
+    if (s === 0) {
+      var n = counts(), sets = [['6,0', 'Top 6'], ['0,6', 'Bottom 6'], ['6,6', '6 + 6'], ['8,8', '8 + 8'], ['0,0', 'Clear']];
+      h = '<p class="s-q">Tap the teeth you want.</p><div class="s-sub">' + sets.map(function (x) { return chip('set', x[0], x[1], x[0] === n.join(',') && isCentered()); }).join('') + '</div>';
+    } else if (s === 1) {
+      h = '<p class="s-q">Choose the metal.</p><div class="s-opts">' + Object.keys(METALS).map(function (k) { return opt('metal', k, METALS[k].name, '', c.metal === k, METALS[k].css); }).join('') + '</div><div class="s-sub">' +
+        (c.metal === 'silver' ? chip('karat', '925', '925 sterling', true) : ['10K', '14K', '18K'].map(function (k) { return chip('karat', k, k, c.karat === k, c.karat === k ? '' : deltaFor(function (x) { x.karat = k; })); }).join('')) + '</div>' + selNote();
+    } else if (s === 2) {
+      h = '<p class="s-q">Choose the finish.</p><div class="s-opts">' + Object.keys(FINISH).map(function (k) { return opt('finish', k, FINISH[k].name, c.finish === k ? 'Current' : deltaFor(function (x) { x.finish = k; }), c.finish === k); }).join('') + '</div>' + selNote();
+    } else if (s === 3) {
+      var ch = state.sel !== null && T[state.sel].on ? T[state.sel].charm : null;
+      h = '<p class="s-q">Add a one-of-one charm.</p><div class="s-sub">' + chip('charm', 'none', 'None', !ch) + Object.keys(CHARMS).map(function (k) { return chip('charm', k, CHARMS[k], ch === k); }).join('') + '</div>' +
+        '<div class="s-sub">' + chip('show', 'on', 'Load the showpiece', false) + chip('ask', 'on', 'Request your own idea', false) + '</div>' +
+        '<p class="s-note" id="customnote">Tap a tooth, then a charm. One-of-ones are premium: the shop quotes them.</p>';
+    } else {
+      h = '<p class="s-q">Take the photo.</p><p class="s-note">Turn the piece to the angle you like, then press the shutter. You can keep editing afterwards.</p>';
+    }
+    body.innerHTML = h;
+    Array.prototype.forEach.call($('dots').children, function (b, k) { b.classList.toggle('done', k < s); if (k === s) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+    $('next').textContent = s < 4 ? 'Next: ' + STEPS[s + 1] : 'Take the photo';
+    $('back').style.visibility = s === 0 ? 'hidden' : 'visible';
+    $('rcpt').textContent = spec();
+    $('price').textContent = priceText();
+  }
+  function setMode(m) {
+    state.mode = m; stage.setAttribute('data-mode', m);
+    if (m === 'build' && state.showcase) { state.showcase = false; $('oneof').textContent = 'See a one-of-one'; }
+    Array.prototype.forEach.call(document.querySelectorAll('.s-mode button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-mode') === m ? 'true' : 'false'); });
+    $('mark').innerHTML = m === 'land' ? 'VVS Lab' : 'Your Shop <small>built with VVS Lab</small>';
+    if (m === 'land') state.sel = null;
+    renderStep(); sync(); goal();
+  }
+  function setStep(s) { state.step = Math.max(0, Math.min(4, s)); if (state.step === 0 || state.step === 4) state.sel = null; renderStep(); sync(); goal(); }
+  body.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var g = b.getAttribute('data-g'), k = b.getAttribute('data-k'), tg = targets(), all = !(state.sel !== null && T[state.sel].on);
+    if (g === 'set') { var p = k.split(','); setRange(+p[0], +p[1]); popAll(); }
+    if (g === 'metal') { tg.forEach(function (x) { setMetal(T[x], k); }); if (all) setMetal(state.def, k); glint(); }
+    if (g === 'karat') { tg.forEach(function (x) { if (T[x].metal !== 'silver') T[x].karat = k; }); if (all && state.def.metal !== 'silver') state.def.karat = k; glint(); }
+    if (g === 'finish') { tg.forEach(function (x) { T[x].finish = k; }); if (all) state.def.finish = k; glint(); }
+    if (g === 'charm') {
+      if (all && k !== 'none') { var pick = [7, 8, 6, 9, 5, 10, 23, 24].filter(function (x) { return T[x].on && !T[x].charm; })[0]; if (pick === undefined) pick = onList()[0]; if (pick !== undefined) state.sel = pick; }
+      if (k === 'none') targets().forEach(function (x) { T[x].charm = null; }); else if (state.sel !== null) T[state.sel].charm = k;
+      glint();
+    }
+    if (g === 'show') { loadShowpiece(); popAll(); }
+    renderStep(); sync(); goal();
+    if (g === 'ask') $('customnote').textContent = 'In the real builder this opens a note and a photo upload. The shop replies with a quote.';
+  });
+  $('dots').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setStep(+b.getAttribute('data-step')); });
+  $('next').addEventListener('click', function () { if (state.step < 4) setStep(state.step + 1); else shoot(); });
+  $('back').addEventListener('click', function () { setStep(state.step - 1); });
+  $('tryit').addEventListener('click', function () { plainSet(); state.step = 0; setMode('build'); });
+  $('startfree').addEventListener('click', function () { this.textContent = '14 days free · then $199/mo'; });
+  $('oneof').addEventListener('click', function () {
+    state.showcase = !state.showcase; if (state.showcase) loadShowpiece(); else plainSet();
+    this.textContent = state.showcase ? 'Back to the plain set' : 'See a one-of-one'; popAll(); renderStep(); sync(); goal();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.s-mode button'), function (b) { b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); }); });
+  $('jawbtn').addEventListener('click', function () { openGoal = openGoal > .5 ? 0 : 1; this.textContent = openGoal > .5 ? 'Close mouth' : 'Open mouth'; this.setAttribute('aria-pressed', openGoal > .5 ? 'true' : 'false'); });
+  $('solid').addEventListener('input', function () { state.solid = +this.value; $('solidval').textContent = state.solid + '% solid'; applySolid(); });
+  $('keep').addEventListener('click', function () { $('photo').hidden = true; });
+  $('send').addEventListener('click', function () { $('cardnote').textContent = 'Sent. On the jeweler\'s side this arrives as a request with the photo, every tooth, its metal and finish, any charms to quote, and the price shown here.'; this.disabled = true; this.textContent = 'Sent'; });
+
+  // stubs, replaced once the 3D is up
+  var sync = function () {}, goal = function () {}, popAll = function () {}, glint = function () {}, shoot = function () {}, applySolid = function () {}, openGoal = 0;
+  renderStep();
+
+  // ---------- 3D ----------
+  if (!window.THREE) { load.textContent = '3D could not load here. The notes below still describe the idea.'; return; }
+  var renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, powerPreference: 'high-performance' }); }
+  catch (err) { load.textContent = '3D is not available in this browser.'; return; }
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  var V3 = THREE.Vector3, scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(26, 1, .1, 100), pmrem = new THREE.PMREMGenerator(renderer);
+  var MM = 2.3 / 62, rig = new THREE.Group(), jaw = new THREE.Group(), PIVOT = new V3(0, 2 * MM, -48 * MM);
+  scene.add(rig); jaw.position.copy(PIVOT); rig.add(jaw);
+
+  // the room: a pale stone studio, painted once and used as the scene's backdrop
+  (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 512; var x = c.getContext('2d');
+    x.fillStyle = '#cfcec8'; x.fillRect(0, 0, 512, 512);
+    x.translate(256, 195); x.scale(614, 461);
+    var g = x.createRadialGradient(0, 0, 0, 0, 0, 1); g.addColorStop(0, '#f6f5f2'); g.addColorStop(.55, '#e3e2dd'); g.addColorStop(1, '#cfcec8');
+    x.fillStyle = g; x.fillRect(-2, -2, 4, 4);
+    var tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; scene.background = tex;
+  })();
+
+  // ---------- lighting: three rooms, each reflected by different things ----------
+  function sceneEnv(room, panels) {
+    var s = new THREE.Scene();
+    s.add(new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), new THREE.MeshBasicMaterial({ color: room, side: THREE.BackSide })));
+    panels.forEach(function (p) {
+      var m = new THREE.Mesh(new THREE.PlaneGeometry(p[0], p[1]), new THREE.MeshBasicMaterial({ color: new THREE.Color(p[6] || 0xffffff).multiplyScalar(p[5]), side: THREE.DoubleSide, toneMapped: false }));
+      m.position.set(p[2], p[3], p[4]); m.lookAt(0, 0, 0); s.add(m);
+    });
+    var rt = pmrem.fromScene(s, .035);
+    s.traverse(function (o) { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    return rt.texture;
+  }
+  // the studio the clear holder sits in
+  var studioEnv = sceneEnv(0x77756e, [[13, 8, 0, 11, 4, 2.4, 0xfff6e8], [9, 7, -9, 3, 9, 1.7, 0xfff6e8], [1.6, 12, 12, 3, 3, 5], [1.2, 10, -13, 4, -2, 4], [16, 4, 0, -10, 6, 1.4, 0xffe2b8], [9, 1.2, 0, 7, -12, 3.5]]);
+  // the bright room the default cream caps reflect (the look from the first version)
+  var creamEnv = sceneEnv(0xdad9d3, [[10, 6, 0, 11, 5, 5.5], [2.2, 12, -11, 2, 6, 4.4], [2.2, 12, 11, 3, 4, 3], [14, 3, 0, -9, 8, 1.2], [5, 5, 0, 4, 13, 1.9], [8, 1.2, 0, 6, -12, 5]]);
+  scene.environment = studioEnv;
+  function equirect(w, h, fn) {
+    var data = new Uint16Array(w * h * 4), hf = THREE.DataUtils.toHalfFloat, rgb = [0, 0, 0];
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+      var el = ((y + .5) / h - .5) * Math.PI, phi = ((x + .5) / w - .5) * Math.PI * 2; fn(el, phi, rgb, x, y);
+      var k = (y * w + x) * 4; data[k] = hf(rgb[0]); data[k + 1] = hf(rgb[1]); data[k + 2] = hf(rgb[2]); data[k + 3] = hf(1);
+    }
+    var tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.HalfFloatType);
+    tex.mapping = THREE.EquirectangularReflectionMapping; tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+    var out = pmrem.fromEquirectangular(tex).texture; tex.dispose(); return out;
+  }
+  function box(v, lo, hi, soft) { return Math.min(1, Math.max(0, (v - lo) / soft)) * Math.min(1, Math.max(0, (hi - v) / soft)); }
+  // a jeweler's light tent, for the metal: broad soft light for body colour, dark gaps for contrast, hard strips for glints
+  var metalEnv = equirect(512, 256, function (el, phi, c) {
+    var deg = Math.PI / 180, dx = Math.cos(phi) * Math.cos(el), dz = Math.sin(phi) * Math.cos(el), az = Math.abs(Math.atan2(dx, dz)) / deg, e = el / deg;
+    var r = .05, g = .045, b = .04, up = Math.max(0, e) / 90; r += .16 * up; g += .16 * up; b += .17 * up;
+    var top = box(e, 34, 88, 7) * box(az, -1, 96, 16) * 5.2; r += top; g += top * .98; b += top * .94;
+    var card = box(e, -3, 24, 5) * box(az, -1, 46, 10) * 1.55; r += card; g += card * .97; b += card * .92;
+    var strip = box(e, -28, 62, 4) * box(az, 62, 71, 1.5) * 9; r += strip; g += strip; b += strip;
+    var rim = box(e, 6, 46, 5) * box(az, 138, 181, 8) * 3.4; r += rim; g += rim; b += rim * 1.04;
+    var floor = box(e, -91, -18, 14) * .62; r += floor; g += floor * .84; b += floor * .62;
+    c[0] = r; c[1] = g; c[2] = b;
+  });
+  // a dark room full of small hot lights, for the stones: every facet catches a different one as the piece turns
+  var sparkleEnv = (function () {
+    var seed = 7, rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, lights = [], k;
+    for (k = 0; k < 150; k++) { var tint = rnd(); lights.push([(rnd() - .5) * Math.PI * .94, (rnd() - .5) * Math.PI * 2, .035 + rnd() * .05, 5 + rnd() * 26, tint < .12 ? [.6, .8, 1.5] : tint < .22 ? [1.5, .95, .55] : [1, 1, 1]]); }
+    return equirect(512, 256, function (el, phi, c) {
+      var r = .05, g = .055, b = .065, up = Math.max(0, el) / 1.57; r += .5 * up; g += .5 * up; b += .52 * up;
+      for (var q = 0; q < lights.length; q++) {
+        var L = lights[q], de = el - L[0], dp = Math.abs(phi - L[1]); if (dp > Math.PI) dp = 2 * Math.PI - dp; dp *= Math.cos(el);
+        var d2 = (de * de + dp * dp) / (L[2] * L[2]); if (d2 < 6) { var w = Math.exp(-d2) * L[3]; r += w * L[4][0]; g += w * L[4][1]; b += w * L[4][2]; }
+      }
+      c[0] = r; c[1] = g; c[2] = b;
+    });
+  })();
+
+  // ---------- materials ----------
+  // clear resin, drawn in two passes: the far inside walls first, then the near surface, which turns solid at its edges and wherever it catches a light
+  var resinBack = new THREE.MeshStandardMaterial({ color: 0x8fa3ad, roughness: .5, metalness: 0, transparent: true, opacity: .3, side: THREE.BackSide, depthWrite: false, envMapIntensity: .8 });
+  var depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true });
+  function resinFront(write) {
+    var m = new THREE.MeshPhysicalMaterial({ color: 0xcfd9de, roughness: .2, metalness: 0, clearcoat: 1, clearcoatRoughness: .05, transparent: true, opacity: .66, depthWrite: write, envMapIntensity: 1 });
+    m.onBeforeCompile = function (sh) {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <output_fragment>', 'float vvsEdge = pow(1.0 - saturate(dot(geometry.normal, geometry.viewDir)), 2.2); float vvsGlare = max(0.0, dot(outgoingLight - totalDiffuse, vec3(0.3333))); diffuseColor.a = clamp(diffuseColor.a + vvsEdge * 0.45 + vvsGlare * 0.9, 0.0, 1.0);\n#include <output_fragment>');
+    };
+    return m;
+  }
+  var resinTooth = resinFront(true), resinGum = resinFront(false);
+  var creamMat = new THREE.MeshStandardMaterial({ color: 0xffc35a, metalness: 1, roughness: .14, envMap: creamEnv, envMapIntensity: 1.15, side: THREE.DoubleSide });
+  var diamondMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0, envMap: sparkleEnv, envMapIntensity: 1.25 });
+  var mats = {};
+  function metalColor(metal, karat) { var c = METALS[metal].rgb[karat] || METALS[metal].rgb['14K'] || METALS[metal].rgb['925']; return new THREE.Color(c[0], c[1], c[2]); }
+  function matFor(metal, karat, finish) {
+    var cut = finish === 'cut', key = metal + karat + (cut ? 'c' : 'p'); if (mats[key]) return mats[key];
+    var m = new THREE.MeshStandardMaterial({ color: metalColor(metal, karat), metalness: 1, roughness: cut ? .13 : .17, envMap: metalEnv, envMapIntensity: cut ? 1.05 : 1, side: THREE.DoubleSide });
+    if (cut) m.onBeforeCompile = function (sh) {      // diamond cut: fine crossed grooves engraved into the surface
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vObj;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vObj;')
+        .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nfloat s1 = fract(dot(vObj, vec3(0.70, 0.70, 0.14)) * 46.0) - 0.5; float s2 = fract(dot(vObj, vec3(-0.70, 0.70, 0.14)) * 46.0) - 0.5; normal = normalize(normal + vec3(0.7, 0.7, 0.0) * s1 * 0.85 + vec3(-0.7, 0.7, 0.0) * s2 * 0.85);');
+    };
+    return (mats[key] = m);
+  }
+  var enamel = {}, jewel = {};
+  function enamelMat(hex) { return enamel[hex] || (enamel[hex] = new THREE.MeshPhysicalMaterial({ color: hex, roughness: .22, metalness: 0, clearcoat: 1, clearcoatRoughness: .04, envMap: metalEnv, envMapIntensity: .9 })); }
+  function cabMat(hex) { return jewel[hex] || (jewel[hex] = new THREE.MeshPhysicalMaterial({ color: hex, emissive: hex, emissiveIntensity: .1, roughness: .03, metalness: 0, clearcoat: 1, clearcoatRoughness: 0, envMap: metalEnv, envMapIntensity: 1.2 })); }
+  function facetMat(hex) { return jewel['f' + hex] || (jewel['f' + hex] = new THREE.MeshStandardMaterial({ color: hex, metalness: 1, roughness: 0, envMap: sparkleEnv, envMapIntensity: 1.5 })); }
+
+  // ---------- sculpting: every tooth is one smooth rounded form ----------
+  // [type, width, crown height, depth] in millimetres; proportions follow the product's hosted model
+  var UPPER = [['inc', 9.0, 10.5, 6.4], ['inc', 6.9, 9.2, 5.8], ['can', 7.6, 10.2, 7.2], ['pre', 6.9, 8.0, 8.4], ['pre', 6.5, 7.6, 8.2], ['mol', 10.6, 7.2, 10.2], ['mol', 10.0, 6.8, 10.0], ['mol', 9.0, 6.2, 9.4]];
+  var LOWER = [['inc', 5.6, 8.6, 5.4], ['inc', 6.1, 8.9, 5.6], ['can', 6.9, 9.8, 6.8], ['pre', 7.0, 7.9, 7.8], ['pre', 7.1, 7.5, 8.0], ['mol', 10.8, 6.8, 9.8], ['mol', 10.2, 6.4, 9.6], ['mol', 9.4, 5.8, 9.2]];
+  // m1: how square the side profile is, m2: how square the cross-section is, neck: width at the gum, thin: how far the biting edge thins, tip: taper to a point, kl: narrowing on the tongue side
+  var PAR = {
+    inc: { m1: 3.6, m2: 3.0, neck: .78, thin: .60, tip: 0, kl: .30 },
+    can: { m1: 3.0, m2: 2.7, neck: .80, thin: .40, tip: .30, kl: .30 },
+    pre: { m1: 3.4, m2: 2.9, neck: .85, thin: .08, tip: 0, kl: .14, cusp: .075, fos: .08, n: 2, ph: Math.PI / 2 },
+    mol: { m1: 3.8, m2: 3.3, neck: .89, thin: .03, tip: 0, kl: .10, cusp: .06, fos: .09, n: 4, ph: Math.PI / 4 }
+  };
+  function ss(a, b, x) { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+  function srad(a, m) { return Math.pow(Math.pow(Math.abs(Math.cos(a)), m) + Math.pow(Math.abs(Math.sin(a)), m), -1 / m); }
+  function sect(def, phi) {
+    var p = PAR[def[0]], r1 = srad(phi, p.m1), ce = r1 * Math.cos(phi), se = r1 * Math.sin(phi), t = (se + 1) / 2;
+    var wf = p.neck + (1 - p.neck) * ss(.08, .72, t); if (p.tip) wf *= 1 - p.tip * ss(.64, 1, t);
+    return { ce: ce, se: se, t: t, wf: wf, df: 1 - p.thin * ss(.42, 1, t) };
+  }
+  // a point on the tooth: phi runs root to tip, th runs round the tooth (th = 90 degrees is the lip side). Gum line at y = 0, tip at y = height.
+  function S(def, phi, th, out) {
+    var p = PAR[def[0]], w = def[1], h = def[2], d = def[3], q = sect(def, phi), r2 = srad(th, p.m2), cx = r2 * Math.cos(th), cz = r2 * Math.sin(th);
+    var x = w / 2 * q.wf * q.ce * cx, z = d / 2 * q.df * q.ce * cz;
+    if (cz < 0) x *= 1 + p.kl * cz;
+    z += d / 2 * (1 - q.df) * .5 + d / 2 * .1 * Math.sin(Math.PI * ss(.15, 1, q.t));
+    var y = .28 * h + .72 * h * q.se;
+    if (p.cusp) { var tw = ss(.55, .95, q.t); y += h * p.cusp * tw * q.ce * Math.cos(p.n * (th - p.ph)) - h * p.fos * tw * (1 - q.ce) * (1 - q.ce); }
+    return out.set(x, y, z);
+  }
+  var _a = new V3(), _b = new V3(), _c = new V3(), _d = new V3();
+  function normalAt(def, phi, th, out) {
+    if (Math.abs(phi) > Math.PI / 2 - .02) return out.set(0, phi > 0 ? 1 : -1, 0);
+    var e = .004; S(def, phi, th + e, _a); S(def, phi, th - e, _b); _a.sub(_b); S(def, phi + e, th, _c); S(def, phi - e, th, _d); _c.sub(_d);
+    return out.crossVectors(_c, _a).normalize();
+  }
+  function solve(f, lo, hi) { for (var k = 0; k < 40; k++) { var mid = (lo + hi) / 2; if (f(mid) > 0) hi = mid; else lo = mid; } return (lo + hi) / 2; }
+  function phiForY(def, y) { var se = (y - .28 * def[2]) / (.72 * def[2]), m = PAR[def[0]].m1; return solve(function (a) { return srad(a, m) * Math.sin(a) - se; }, -Math.PI / 2, Math.PI / 2); }
+  function thForX(def, cxn) { var m = PAR[def[0]].m2; return solve(function (a) { return cxn - srad(a, m) * Math.cos(a); }, 0, Math.PI); }
+  var CAP_OFF = .24;                      // a cap sits a quarter of a millimetre proud of the tooth, front and back, never sideways
+  function facePoint(def, x, y, P, N) {   // the point on a cap's lip-side face above (x, y), and which way it faces
+    var phi = phiForY(def, y), q = sect(def, phi), half = def[1] / 2 * q.wf * q.ce, th = thForX(def, Math.max(-.999, Math.min(.999, x / half)));
+    S(def, phi, th, P); normalAt(def, phi, th, N); P.y += N.y * CAP_OFF; P.z += N.z * CAP_OFF; return half;
+  }
+  function orient(geo, closed) {          // make every face point outwards
+    var p = geo.attributes.position, ix = geo.index.array, c = new V3(), vol = 0, k;
+    if (!closed) { for (k = 0; k < p.count; k++) c.add(_a.fromBufferAttribute(p, k)); c.multiplyScalar(1 / p.count); }
+    for (k = 0; k < ix.length; k += 3) { _a.fromBufferAttribute(p, ix[k]).sub(c); _b.fromBufferAttribute(p, ix[k + 1]).sub(c); _c.fromBufferAttribute(p, ix[k + 2]).sub(c); vol += _a.dot(_b.cross(_c)); }
+    if (vol < 0) for (k = 0; k < ix.length; k += 3) { var t = ix[k + 1]; ix[k + 1] = ix[k + 2]; ix[k + 2] = t; }
+    geo.computeVertexNormals(); return geo;
+  }
+  function toothGeo(def, inflate) {
+    var asCap = true, NU = 56, phi0 = phiForY(def, -.6), NV = 34, pos = [], idx = [], v = new V3(), n = new V3(), k, j;
+    function put(phi, th) { S(def, phi, th, v); if (inflate) { normalAt(def, phi, th, n); v.y += n.y * inflate; v.z += n.z * inflate; } pos.push(v.x * MM, v.y * MM, v.z * MM); }
+    var first = asCap ? 0 : 1, rings = NV - first;
+    for (k = first; k < NV; k++) { var phi = phi0 + (Math.PI / 2 - phi0) * k / NV; for (j = 0; j < NU; j++) put(phi, j / NU * Math.PI * 2); }
+    for (k = 0; k < rings - 1; k++) for (j = 0; j < NU; j++) { var a = k * NU + j, b = k * NU + (j + 1) % NU, c = a + NU, d = b + NU; idx.push(a, c, b, b, c, d); }
+    var tipI = pos.length / 3; put(Math.PI / 2, 0);
+    for (j = 0; j < NU; j++) idx.push(tipI, (rings - 1) * NU + (j + 1) % NU, (rings - 1) * NU + j);
+    if (!asCap) { var rootI = pos.length / 3; put(-Math.PI / 2, 0); for (j = 0; j < NU; j++) idx.push(rootI, j, (j + 1) % NU); }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    return orient(g, !asCap);
+  }
+
+  // ---------- the arch: where each tooth sits, walked so neighbours touch ----------
+  function archPath(pts, zshift) {
+    var v = [], k; for (k = pts.length - 1; k >= 1; k--) v.push(new V3(-pts[k][0], 0, pts[k][1] + zshift)); for (k = 0; k < pts.length; k++) v.push(new V3(pts[k][0], 0, pts[k][1] + zshift));
+    var P = new THREE.CatmullRomCurve3(v, false, 'centripetal').getPoints(1200).slice(600), len = [0];
+    for (k = 1; k < P.length; k++) len.push(len[k - 1] + P[k].distanceTo(P[k - 1]));
+    return { len: len[len.length - 1], at: function (s) {
+      s = Math.max(0, Math.min(len[len.length - 1] - .001, s)); var lo = 0, hi = len.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (len[mid] > s) hi = mid; else lo = mid; }
+      var f = (s - len[lo]) / (len[hi] - len[lo] || 1), a = P[lo], b = P[hi], tx = b.x - a.x, tz = b.z - a.z, tl = Math.hypot(tx, tz) || 1;
+      return { x: a.x + tx * f, z: a.z + tz * f, nx: -tz / tl, nz: tx / tl, ang: Math.atan2(-tz / tl, tx / tl) };
+    } };
+  }
+  var ARCH_U = archPath([[0, 17.5], [4.1, 16.6], [11.3, 14.6], [16.3, 10.0], [19.6, 4.9], [21.9, -0.7], [24.2, -8.4], [26.2, -18.4], [26.9, -29.8], [27.2, -50]], 0);
+  var ARCH_L = archPath([[0, 19.2], [3.2, 18.8], [9.4, 17.35], [14.35, 13.55], [17.65, 8.75], [20.8, 3.15], [23.4, -5.0], [25.25, -15.5], [25.85, -27.25], [26.1, -47]], -3.6);
+  var LOW_Y = -.25, GAP = .06, teeth = [], hit = [], geoCache = {};
+  function geo(def, cap) { var key = def.join('_') + (cap ? 'c' : 't'); return geoCache[key] || (geoCache[key] = toothGeo(def, cap ? CAP_OFF : 0)); }
+  function layout(list, path) { var s = GAP / 2, out = []; list.forEach(function (def) { out.push({ def: def, s: s + def[1] / 2 }); s += def[1] + GAP; }); out.end = s; return out; }
+  function buildRow(list, path, upper) {
+    var lay = layout(list, path);
+    lay.forEach(function (it, k) {
+      var pt = path.at(it.s), def = it.def, h = def[2];
+      [1, -1].forEach(function (side) {
+        var g = new THREE.Group(); g.rotation.order = 'YXZ'; g.rotation.set(0, side * pt.ang, upper ? Math.PI : 0);
+        var base = new V3(side * pt.x * MM, (upper ? h : LOW_Y - h) * MM, pt.z * MM); if (!upper) base.sub(PIVOT);
+        g.position.copy(base);
+        var rm = new THREE.Mesh(geo(def, false), resinTooth), rb = new THREE.Mesh(geo(def, false), resinBack), cm = new THREE.Mesh(geo(def, true), creamMat); cm.visible = false;
+        rb.renderOrder = 1; rm.renderOrder = 2;
+        var idx = (upper ? 0 : 16) + (side > 0 ? 8 + k : 7 - k);
+        rm.userData.idx = cm.userData.idx = idx; g.add(rb); g.add(rm); g.add(cm); (upper ? rig : jaw).add(g);
+        teeth[idx] = { g: g, resin: rm, back: rb, cap: cm, def: def, upper: upper, base: base, out: new V3(Math.sin(side * pt.ang), 0, Math.cos(side * pt.ang)), ang: side * pt.ang, pop: 0, lift: 0, stones: null, charm: null, charmKey: null };
+        hit.push(rm, cm);
+      });
+    });
+    return lay;
+  }
+  // the clear holder: a gum ridge swept along the arch, rounded off behind the last tooth
+  function ridge(lay, path, upper) {
+    var NS = 28, end = lay.end + 1.2, tail = 5, pos = [], idx = [], rings = 0, s, j, u = upper ? 1 : -1, y0 = upper ? 0 : LOW_Y;
+    function prop(as, n) { if (as <= lay[0].s) return lay[0].def[n]; for (var k = 1; k < lay.length; k++) if (as <= lay[k].s) { var f = (as - lay[k - 1].s) / (lay[k].s - lay[k - 1].s); f = f * f * (3 - 2 * f); return lay[k - 1].def[n] + (lay[k].def[n] - lay[k - 1].def[n]) * f; } return lay[lay.length - 1].def[n]; }
+    var centre = [];
+    var stations = [], q0; for (s = -end; s <= end + .001; s += 1) stations.push(s);
+    [12, 24, 36, 48, 59, 69, 77, 83, 87.5].forEach(function (dg) { var e = end + tail * Math.sin(dg * Math.PI / 180); stations.push(e); stations.unshift(-e); });
+    for (q0 = 0; q0 < stations.length; q0++) {
+      s = stations[q0];
+      var as = Math.abs(s), over = Math.max(0, as - end) / tail, shrink = Math.sqrt(Math.max(0, 1 - over * over)), pt = path.at(as), sx = s < 0 ? -1 : 1;
+      var gum = prop(as, 2), dep = prop(as, 3), crest = y0 + u * (gum - .45), base = y0 + u * 17, yc = (crest + base) / 2, hh = Math.abs(base - crest) / 2, aC = Math.max(3.3, dep / 2 + .55), aB = aC + 3;
+      for (j = 0; j < NS; j++) {
+        var a = j / NS * Math.PI * 2, r = srad(a, 2.7), nn = r * Math.cos(a), ny = r * Math.sin(a), n = -.7 + nn * (aC + (aB - aC) * (ny + 1) / 2) * shrink;
+        pos.push((sx * pt.x + sx * pt.nx * n) * MM, (yc + u * ny * hh * shrink) * MM, (pt.z + pt.nz * n) * MM);
+      }
+      centre.push([(sx * pt.x - sx * pt.nx * .7) * MM, yc * MM, (pt.z - pt.nz * .7) * MM]); rings++;
+    }
+    for (var k = 0; k < rings - 1; k++) for (j = 0; j < NS; j++) { var p0 = k * NS + j, p1 = k * NS + (j + 1) % NS, p2 = p0 + NS, p3 = p1 + NS; idx.push(p0, p2, p1, p1, p2, p3); }
+    var e0 = pos.length / 3; pos.push.apply(pos, centre[0]); for (j = 0; j < NS; j++) idx.push(e0, (j + 1) % NS, j);
+    var e1 = pos.length / 3; pos.push.apply(pos, centre[rings - 1]); for (j = 0; j < NS; j++) idx.push(e1, (rings - 1) * NS + j, (rings - 1) * NS + (j + 1) % NS);
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); orient(g, true);
+    [resinBack, depthOnly, resinGum].forEach(function (mat, n) { var m = new THREE.Mesh(g, mat); m.renderOrder = n + 1 + (n ? 1 : 0); if (!upper) m.position.copy(PIVOT).multiplyScalar(-1); (upper ? rig : jaw).add(m); });
+  }
+
+  // ---------- set stones: real cut stones in a honeycomb, each seated in the cap ----------
+  var gemGeo = (function () {
+    var seg = 8, step = Math.PI * 2 / seg, tr = .56, th = .36, pos = [], mid = new V3(0, -.2, 0);
+    function P(r, y, a) { return new V3(r * Math.cos(a), y, r * Math.sin(a)); }
+    function tri(a, b, c) { var n = new V3().subVectors(b, a).cross(new V3().subVectors(c, a)), ctr = new V3().add(a).add(b).add(c).multiplyScalar(1 / 3).sub(mid); if (n.dot(ctr) < 0) { var t = b; b = c; c = t; } pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z); }
+    for (var k = 0; k < seg; k++) {
+      var t0 = P(tr, th, k * step), t1 = P(tr, th, (k + 1) * step), g0 = P(1, 0, (k - .5) * step), g1 = P(1, 0, (k + .5) * step);
+      tri(new V3(0, th, 0), t0, t1); tri(t0, t1, g1); tri(t0, g1, g0);
+      tri(g0, g1, P(1, -.3, (k + .5) * step)); tri(g0, P(1, -.3, (k + .5) * step), P(1, -.3, (k - .5) * step));
+    }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
+  })();
+  var UPY = new V3(0, 1, 0), UPZ = new V3(0, 0, 1);
+  function buildStones(o) {
+    var def = o.def, h = def[2], pitch = .99, rad = .52, list = [], P = new V3(), N = new V3(), row = 0, y, k, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), sc = new V3(rad * MM, rad * MM, rad * MM);
+    var seed = 11 + o.cap.userData.idx * 97, rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    var RIM = .62, TUBE = .27, y0 = .95, y1 = h - .5, inset = RIM + TUBE + rad * .9;
+    for (y = y0 + TUBE + rad; y <= y1 - TUBE - rad * .8; y += pitch * .866, row++) {
+      var half = facePoint(def, 0, y, P, N), lim = half - inset, K = Math.floor(lim / pitch) + 1;
+      for (k = -K; k <= K; k++) {
+        var x = (k + (row % 2 ? .5 : 0)) * pitch; if (Math.abs(x) > lim) continue;
+        facePoint(def, x, y, P, N); if (N.z < .4) continue;
+        P.addScaledVector(N, .03); q.setFromUnitVectors(UPY, N); q2.setFromAxisAngle(UPY, rnd() * 6.283); q.multiply(q2);
+        list.push(m4.compose(P.clone().multiplyScalar(MM), q, sc).clone());
+      }
+    }
+    var grp = new THREE.Group(), im = new THREE.InstancedMesh(gemGeo, diamondMat, list.length); list.forEach(function (m, n) { im.setMatrixAt(n, m); }); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; grp.add(im);
+    // the bezel: a raised gold border that follows the tooth's outline round the stones
+    var pts = [], ym = (y0 + y1) / 2, yh = (y1 - y0) / 2;
+    for (k = 0; k < 72; k++) { var a = k / 72 * Math.PI * 2, r = srad(a, 4.5), yy = ym + r * Math.sin(a) * yh, hw = facePoint(def, 0, yy, P, N) - RIM; facePoint(def, r * Math.cos(a) * hw, yy, P, N); pts.push(P.clone().addScaledVector(N, .1).multiplyScalar(MM)); }
+    var bez = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 144, TUBE * MM, 8, true), creamMat); grp.add(bez); grp.userData.bezel = bez;
+    o.cap.add(grp); return grp;
+  }
+
+  // ---------- one-of-one charms: raised reliefs built from drawn outlines. All original motifs. ----------
+  var charmGeo = {};
+  function ext(shape, depth, bevel) { var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 22 }); return g; }
+  function scaled(points, k) { return points.map(function (p) { return [p[0] * k, p[1] * k]; }); }
+  function shield(k) { var s = new THREE.Shape(); s.moveTo(-3.4 * k, 3.8 * k); s.quadraticCurveTo(-1.7 * k, 3.2 * k, 0, 4.2 * k); s.quadraticCurveTo(1.7 * k, 3.2 * k, 3.4 * k, 3.8 * k); s.bezierCurveTo(3.6 * k, .5 * k, 2.6 * k, -2.6 * k, 0, -4.4 * k); s.bezierCurveTo(-2.6 * k, -2.6 * k, -3.6 * k, .5 * k, -3.4 * k, 3.8 * k); return s; }
+  function spade(k) { var s = new THREE.Shape(); s.moveTo(0, 3.7 * k); s.bezierCurveTo(-.6 * k, 2.6 * k, -3.4 * k, .7 * k, -3.4 * k, -.9 * k); s.bezierCurveTo(-3.4 * k, -2.6 * k, -1.3 * k, -3.0 * k, -.5 * k, -1.7 * k); s.lineTo(-1.25 * k, -3.7 * k); s.lineTo(1.25 * k, -3.7 * k); s.lineTo(.5 * k, -1.7 * k); s.bezierCurveTo(1.3 * k, -3.0 * k, 3.4 * k, -2.6 * k, 3.4 * k, -.9 * k); s.bezierCurveTo(3.4 * k, .7 * k, .6 * k, 2.6 * k, 0, 3.7 * k); return s; }
+  function poly(pts) { var s = new THREE.Shape(); pts.forEach(function (p, n) { if (n) s.lineTo(p[0], p[1]); else s.moveTo(p[0], p[1]); }); s.closePath(); return s; }
+  function charmParts(id) {            // [geometry, material role, x, y, z, scale] with sizes in millimetres; cached per charm
+    if (charmGeo[id]) return charmGeo[id];
+    var parts = [], sph = new THREE.SphereGeometry(1, 28, 18), k;
+    function add(g, role, x, y, z, s, rz) { parts.push({ g: g, role: role, x: x || 0, y: y || 0, z: z || 0, s: s || 1, rz: rz || 0 }); }
+    if (id === 'crest') {
+      add(ext(shield(1), .55, .26), 'gold', 0, 0, 0); add(ext(shield(.76), .1, .06), 'e:0x09090b', 0, .05, .82);
+      add(ext(poly([[-2.5, -.2], [0, -2.0], [2.5, -.2], [2.5, .75], [0, -1.05], [-2.5, .75]]), .22, .1), 'gold', 0, .1, .95);
+      add(gemGeo, 'diamond', 0, 1.75, 1.12, .78);
+      parts.w = 7.2; parts.h = 8.6;
+    } else if (id === 'spade') {
+      add(ext(spade(1), .5, .26), 'gold', 0, 0, 0); add(ext(spade(.72), .12, .08), 'e:0x09090b', 0, .1, .76);
+      parts.w = 7.6; parts.h = 8.2;
+    } else if (id === 'cross') {
+      var ca = .9, cy0 = 1.2;
+      add(ext(poly([[-ca, 3.9], [ca, 3.9], [ca, cy0 + ca], [2.7, cy0 + ca], [2.7, cy0 - ca], [ca, cy0 - ca], [ca, -3.9], [-ca, -3.9], [-ca, cy0 - ca], [-2.7, cy0 - ca], [-2.7, cy0 + ca], [-ca, cy0 + ca]]), .5, .22), 'gold', 0, 0, 0);
+      [[0, 2.85], [0, 1.2], [0, -.4], [0, -1.9], [0, -3.2], [-1.75, 1.2], [1.75, 1.2]].forEach(function (p) { add(gemGeo, 'diamond', p[0], p[1], .78, .56); });
+      parts.w = 6.2; parts.h = 8.6;
+    } else if (id === 'bolt') {
+      add(ext(poly([[1.0, 3.9], [-2.3, -.4], [-.2, -.4], [-1.2, -3.9], [2.3, .7], [.2, .7]]), .55, .24), 'gold', 0, 0, 0);
+      parts.w = 5.6; parts.h = 8.6;
+    } else if (id === 'crown') {
+      add(ext(poly([[-3.4, -2.4], [3.4, -2.4], [3.8, 2.0], [2.85, .3], [1.9, 2.6], [.95, .3], [0, 3.2], [-.95, .3], [-1.9, 2.6], [-2.85, .3], [-3.8, 2.0]]), .5, .24), 'gold', 0, 0, 0);
+      [[-3.8, 2.0], [-1.9, 2.6], [0, 3.2], [1.9, 2.6], [3.8, 2.0]].forEach(function (p) { add(sph, 'gold', p[0], p[1] + .15, .5, .46); });
+      add(gemGeo, 'f:0x1d49c8', -2.05, -1.35, .78, .62); add(gemGeo, 'diamond', 0, -1.35, .78, .7); add(gemGeo, 'f:0x1d49c8', 2.05, -1.35, .78, .62);
+      parts.w = 8.0; parts.h = 6.2;
+    } else if (id === 'wing') {
+      for (k = 0; k < 6; k++) { var L = 4.2 + k * .95, ang = (-14 + k * 13.5) * Math.PI / 180, s = new THREE.Shape(); s.absellipse(0, 0, L / 2, .86, 0, Math.PI * 2, false, 0); parts.push({ g: ext(s, .22, .16), role: 'gold', x: -3.5 + Math.cos(ang) * L / 2, y: -2.2 + Math.sin(ang) * L / 2, z: .1 + (5 - k) * .09, s: 1, rz: ang }); }
+      add(sph, 'gold', -3.5, -2.2, .5, .95);
+      for (k = 0; k < 5; k++) { var a5 = 53.5 * Math.PI / 180, dd = 1.9 + k * 1.45; add(gemGeo, 'diamond', -3.5 + Math.cos(a5) * dd, -2.2 + Math.sin(a5) * dd, .56, .5); }
+      parts.w = 9.4; parts.h = 8.6; parts.cx = .6; parts.cy = .9;
+    } else {                              // onyx or sapphire: a domed stone in a gold bezel
+      var hex = id === 'onyx' ? '0x060607' : '0x0a2170', tor = new THREE.TorusGeometry(1, .13, 12, 48);
+      parts.push({ g: tor, role: 'gold', x: 0, y: 0, z: .3, s: 1, sx: 2.15, sy: 2.85, sz: 2.6 });
+      parts.push({ g: sph, role: 'c:' + hex, x: 0, y: 0, z: .25, s: 1, sx: 1.95, sy: 2.65, sz: 1.15 });
+      [[0, 2.85], [0, -2.85], [2.15, 0], [-2.15, 0]].forEach(function (p) { add(sph, 'gold', p[0], p[1], .55, .36); });
+      parts.w = 5.2; parts.h = 6.6;
+    }
+    return (charmGeo[id] = parts);
+  }
+  function buildCharm(o, id, gold) {
+    var parts = charmParts(id), grp = new THREE.Group(), def = o.def, P = new V3(), N = new V3(), q = new THREE.Quaternion();
+    parts.forEach(function (p) {
+      var mat = p.role === 'gold' ? gold : p.role === 'diamond' ? diamondMat : p.role.charAt(0) === 'e' ? enamelMat(+p.role.slice(2)) : p.role.charAt(0) === 'c' ? cabMat(+p.role.slice(2)) : facetMat(+p.role.slice(2));
+      var m = new THREE.Mesh(p.g, mat); m.position.set(p.x - (parts.cx || 0), p.y - (parts.cy || 0), p.z);
+      if (p.sx) m.scale.set(p.sx, p.sy, p.sz); else m.scale.setScalar(p.s);
+      if (p.g === gemGeo) m.rotation.x = Math.PI / 2; m.rotation.z = p.rz || 0;
+      grp.add(m);
+    });
+    var k = Math.min(.84 * def[1] / parts.w, .66 * def[2] / parts.h);
+    facePoint(def, 0, def[2] * .52, P, N);
+    grp.position.copy(P).addScaledVector(N, -.12).multiplyScalar(MM); grp.scale.setScalar(k * MM);
+    q.setFromUnitVectors(UPZ, N); grp.quaternion.copy(q); if (o.upper) grp.rotateZ(Math.PI);
+    o.cap.add(grp); return grp;
+  }
+
+  // ---------- build it ----------
+  var layU = buildRow(UPPER, ARCH_U, true), layL = buildRow(LOWER, ARCH_L, false);
+  ridge(layU, ARCH_U, true); ridge(layL, ARCH_L, false);
+  var shadowMesh = (function () {
+    var cv = document.createElement('canvas'); cv.width = cv.height = 128; var cx = cv.getContext('2d'), gr = cx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
+    var m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, opacity: .2, depthWrite: false, toneMapped: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set(0, -19.5 * MM, -12 * MM); scene.add(m); return m;
+  })();
+  var open = 0, dirty = true, ready = false;
+  function setJaw(o) { open = o; jaw.rotation.x = o * .095; dirty = true; }
+  var CLEAR = new THREE.Color(0xa9b9c1), MILK = new THREE.Color(0xeef1f1);
+  applySolid = function () {
+    var t = Math.max(0, Math.min(1, (state.solid - 30) / 70));
+    [resinTooth, resinGum].forEach(function (m) { m.opacity = .2 + .8 * t; m.color.copy(CLEAR).lerp(MILK, t); m.roughness = .06 + .42 * t; });
+    resinBack.opacity = .5 - .36 * t; dirty = true;
+  };
+  popAll = function () { teeth.forEach(function (o, k) { if (T[k].on) o.pop = 1; }); };
+  var glintT = 0; glint = function () { glintT = 1; };
+
+  sync = function () {                   // make the 3D match the state
+    var mOn = metalOn();
+    teeth.forEach(function (o, k) {
+      var t = T[k]; o.cap.visible = t.on; o.resin.visible = o.back.visible = !t.on; if (!t.on) return;
+      var gold = matFor(t.metal, t.karat, 'polished');
+      o.cap.material = mOn ? matFor(t.metal, t.karat, t.finish) : creamMat;
+      var iced = mOn && t.finish === 'iced'; if (iced && !o.stones) o.stones = buildStones(o); if (o.stones) { o.stones.visible = iced; o.stones.userData.bezel.material = gold; }
+      var key = mOn && t.charm ? t.charm + t.metal + t.karat : null;
+      if (key !== o.charmKey) { if (o.charm) o.cap.remove(o.charm); o.charm = key ? buildCharm(o, t.charm, gold) : null; o.charmKey = key; }
+    });
+    dirty = true;
+  };
+
+  // ---------- camera ----------
+  var curv = { yaw: LANDVIEW.yaw, pitch: LANDVIEW.pitch, zoom: LANDVIEW.zoom }, tgt = { yaw: 0, pitch: 0, zoom: 1 }, user = { yaw: 0, pitch: 0 }, dragging = false, idleAt = 0, W = 1, H = 1;
+  goal = function (snap) {
+    var v = state.mode === 'land' ? LANDVIEW : VIEWS[state.step];
+    tgt.yaw = v.yaw; tgt.pitch = v.pitch; tgt.zoom = v.zoom;
+    if (state.mode === 'build' && state.sel !== null && teeth[state.sel]) { tgt.yaw = Math.max(-1.15, Math.min(1.15, teeth[state.sel].ang * .85)); tgt.zoom = Math.min(tgt.zoom, .74); }
+    user.yaw = 0; user.pitch = 0;
+    if (snap) { curv.yaw = tgt.yaw; curv.pitch = tgt.pitch; curv.zoom = tgt.zoom; }
+    dirty = true;
+  };
+  function resize() { W = stage.clientWidth; H = stage.clientHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); dirty = true; }
+  window.addEventListener('resize', resize);
+  function place(t) {
+    var vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
+    var r = Math.max(34 * MM / Math.tan(hf / 2) * 1.14, 19 * MM / Math.tan(vf / 2) * 2.3) * curv.zoom;
+    var sway = (!reduce && !dragging && t - idleAt > 2500) ? Math.sin((t - idleAt - 2500) / 2600) * .16 : 0;
+    var yaw = curv.yaw + user.yaw + sway, pitch = Math.max(-.5, Math.min(.6, curv.pitch + user.pitch));
+    var lift = -.3 * r * Math.tan(vf / 2) * (W < 560 ? 1.2 : 1), cz = -6 * MM;       // the controls sit low, so the piece sits a little above centre
+    camera.position.set(Math.sin(yaw) * Math.cos(pitch) * r, Math.sin(pitch) * r + lift, cz + Math.cos(yaw) * Math.cos(pitch) * r);
+    camera.lookAt(0, lift, cz);
+    return sway !== 0;
+  }
+
+  // ---------- touch ----------
+  var ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), down = null;
+  function pick(e) {
+    var r = canvas.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera); var hits = ray.intersectObjects(hit, false);
+    for (var k = 0; k < hits.length; k++) if (hits[k].object.visible) return hits[k].object.userData.idx;
+    return null;
+  }
+  canvas.addEventListener('pointerdown', function (e) { down = { x: e.clientX, y: e.clientY, moved: false }; dragging = true; });
+  window.addEventListener('pointermove', function (e) {
+    if (!down) { if (ready && e.target === canvas) canvas.classList.toggle('pt', pick(e) !== null); return; }
+    var dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if (!down.moved && Math.abs(dx) + Math.abs(dy) > 7) { down.moved = true; down.lx = e.clientX; down.ly = e.clientY; }
+    if (down.moved) { user.yaw -= (e.clientX - down.lx) * .008; user.pitch += (e.clientY - down.ly) * .005; user.yaw = Math.max(-1.5, Math.min(1.5, user.yaw)); down.lx = e.clientX; down.ly = e.clientY; dirty = true; }
+  });
+  window.addEventListener('pointerup', function (e) {
+    if (!down) return; var d = down; down = null; dragging = false; idleAt = performance.now();
+    if (d.moved || !ready || e.target !== canvas) return;
+    var k = pick(e);
+    if (state.mode === 'land') { if (k === null) return; plainSet(); T[k].on = !T[k].on; teeth[k].pop = 1; state.step = 0; setMode('build'); return; }
+    if (state.step === 0) { if (k === null) return; T[k].on = !T[k].on; teeth[k].pop = 1; }
+    else if (state.step < 4) { if (k !== null && T[k].on) { state.sel = state.sel === k ? null : k; teeth[k].pop = .6; } else state.sel = null; }
+    else return;
+    renderStep(); sync(); goal();
+  });
+  window.addEventListener('pointercancel', function () { down = null; dragging = false; });
+
+  // ---------- photo ----------
+  shoot = function () {
+    var f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+    var keep = state.sel; state.sel = null; teeth.forEach(function (o) { o.lift = 0; o.g.position.copy(o.base); o.g.scale.setScalar(1); });
+    place(performance.now()); renderer.render(scene, camera); var url = canvas.toDataURL('image/jpeg', .9); state.sel = keep; dirty = true;
+    $('shot').src = url; $('cardspec').textContent = spec(true); $('cardprice').textContent = priceText();
+    $('cardnote').textContent = 'In the real builder this is the studio photo, and sending asks for a name and Instagram or phone.';
+    $('send').disabled = false; $('send').textContent = 'Send to the shop';
+    setTimeout(function () { $('photo').hidden = false; }, 260);
+  };
+
+  // ---------- loop: draws only when something changes ----------
+  var visible = true;
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { visible = en[0].isIntersecting; }).observe(stage);
+  function frame(t) {
+    requestAnimationFrame(frame);
+    if (!ready || !visible) return;
+    var k = reduce ? 1 : .085, moving = false;
+    ['yaw', 'pitch', 'zoom'].forEach(function (a) { var d = tgt[a] - curv[a]; if (Math.abs(d) > .0005) { curv[a] += d * k; moving = true; } });
+    if (!dragging && (Math.abs(user.yaw) > .001 || Math.abs(user.pitch) > .001) && t - idleAt > 4000) { user.yaw *= .96; user.pitch *= .96; moving = true; }
+    teeth.forEach(function (o, n) {
+      var want = state.mode === 'build' && state.sel === n ? 1 : 0;
+      if (Math.abs(want - o.lift) > .002) { o.lift += (want - o.lift) * (reduce ? 1 : .16); o.g.position.copy(o.base).addScaledVector(o.out, o.lift * 1.3 * MM); moving = true; }
+      if (o.pop > 0) { o.pop = Math.max(0, o.pop - .06); o.g.scale.setScalar(1 + Math.sin(o.pop * Math.PI) * .1); moving = true; }
+    });
+    if (Math.abs(openGoal - open) > .002) { setJaw(open + (openGoal - open) * (reduce ? 1 : .12)); moving = true; }
+    if (glintT > 0) { glintT = Math.max(0, glintT - .035); renderer.toneMappingExposure = 1 + Math.sin(glintT * Math.PI) * .3; rig.rotation.y = Math.sin(glintT * Math.PI) * .1; moving = true; }
+    var swaying = place(t);
+    if (moving || swaying || dirty) { renderer.render(scene, camera); dirty = false; }
+  }
+  applySolid(); sync(); resize(); goal(true);
+  load.hidden = true; ready = true; dirty = true; window.__vvs = { T: T, state: state, teeth: teeth, sync: sync };
+  requestAnimationFrame(frame);
+})();
+</script>
