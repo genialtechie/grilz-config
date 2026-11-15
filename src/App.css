@@ -2833,3 +2833,33 @@
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+/* The 3D view couldn't start (WebGL off or blocked): a note in its place, the rest of the builder still works. */
+.viewer-fallback {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.viewer-fallback__card {
+  max-width: 340px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(250, 248, 245, 0.95);
+  color: var(--ink);
+  text-align: center;
+}
+
+.viewer-fallback__card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.viewer-fallback__card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
