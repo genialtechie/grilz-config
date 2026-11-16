@@ -1,4 +1,4 @@
-import type { CutId, Inscription, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
+import type { CutId, Inscription, KaratId, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -8,6 +8,8 @@ export type ToothCustomization = {
   color: string;
   /** Which alloy, for the 3D view's physically based colour (falls back to `material`). */
   metal?: MetalId;
+  /** The gold's karat: the 3D view shows deeper yellow at higher karats (10K when absent; ignored for silver and platinum). */
+  karat?: KaratId;
   /** The finish cut into the front of a plain cap (open face, diamond cut…); solid when absent. */
   style?: StyleId;
   /** The opal's colour, for the opals style. */

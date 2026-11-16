@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
 import { ENAMELS, type Inscription, type MetalId } from '../../lib/renderSpec';
 
 // Inscriptions drawn on the 3D set (MAG-76): the letters are part of the
 // preview, so the AI photo starts from the exact text, font and placement
-// instead of inventing them. One texture per inscription is projected across
-// its teeth from the front; each tooth gets its own decal (a child of the
-// tooth, so it follows the jaw and the permanent-look scale).
+// instead of inventing them. One texture per inscription is laid across its
+// teeth from the front: each tooth gets its own panel on the face of its cap,
+// cut from the one picture (redesign/overlays.ts), so a name runs across
+// neighbouring teeth as a jeweler lays it out.
 
 export const INSCRIPTION_DECAL = 'inscription_decal';
 
@@ -36,8 +36,8 @@ const shade = (hex: string, factor: number) => {
   return `rgb(${channel(16)},${channel(8)},${channel(0)})`;
 };
 
-/** The letters on a canvas the shape of the decal (width:height), drawn in their colours. */
-function drawLetters(inscription: Inscription, metal: MetalId, aspect: number): HTMLCanvasElement {
+/** The letters on a canvas the shape of the panel (width:height), drawn in their colours. */
+export function drawLetters(inscription: Inscription, metal: MetalId, aspect: number): HTMLCanvasElement {
   // One tooth curves away at its edges, so its letters keep a wider margin.
   const fill = inscription.teeth.length === 1 ? 0.84 : 0.92;
   const height = 256;
@@ -129,106 +129,35 @@ function drawLetters(inscription: Inscription, metal: MetalId, aspect: number): 
   return canvas;
 }
 
-function letterMaterial(inscription: Inscription, texture: THREE.Texture) {
+/**
+ * The letters' material over their picture. Raised letters are metal (or
+ * stones) and mirror the stones' bright room, as the prototype's raised letters
+ * do; engraved lines are dark cuts in the metal's light tent; enamel is glossy
+ * glass-like paint that keeps its colour under the studio light.
+ */
+export function letterMaterial(inscription: Inscription, texture: THREE.Texture, rooms: { metal: THREE.Texture; sparkle: THREE.Texture }) {
   const raised = inscription.style !== 'engraved';
   return new THREE.MeshPhysicalMaterial({
     map: texture,
     transparent: true,
     alphaTest: 0.08,
     depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -4,
-    // Raised letters are metal (or stones); engraved lines are dark cuts; enamel is glossy glass-like paint.
     metalness: raised ? 0.9 : inscription.enamel ? 0 : 0.4,
     roughness: raised ? 0.12 : inscription.enamel ? 0.4 : 0.5,
     clearcoat: 0,
-    // Enamel is coloured glass: it keeps its colour under bright studio light.
     emissiveMap: inscription.enamel ? texture : null,
     emissive: inscription.enamel ? new THREE.Color('#ffffff') : new THREE.Color('#000000'),
     emissiveIntensity: inscription.enamel ? 0.45 : 0,
-    envMapIntensity: inscription.style === 'iced' ? 2.6 : inscription.enamel ? 0.5 : 1.2,
+    envMap: raised ? rooms.sparkle : rooms.metal,
+    envMapIntensity: inscription.style === 'iced' ? 1.6 : inscription.style === 'cut' ? 1.2 : inscription.enamel ? 0.5 : 0.8,
   });
 }
 
-/** Where a picture lies across a run of teeth, seen from the front of the run. */
-export type RunProjection = { orientation: THREE.Euler; position: THREE.Vector3; size: THREE.Vector3; box: THREE.Box3 };
-
-/**
- * The projection for a picture across a run of neighbouring teeth (meshes in
- * the scene, world matrices current): from the front of the run, outward from
- * the middle of the arch and level, spanning the run's width. `height` is the
- * share of a tooth's height it covers; `level(lowerRow)` where its middle sits,
- * as a share of the tooth's height from the bottom.
- */
-export function runProjection(teeth: THREE.Mesh[], height: number, level: (lowerRow: boolean) => number): RunProjection {
-  teeth.forEach((tooth) => tooth.updateWorldMatrix(true, false));
-  const box = new THREE.Box3();
-  teeth.forEach((tooth) => box.expandByObject(tooth));
-  const centre = box.getCenter(new THREE.Vector3());
-  const outward = new THREE.Vector3(centre.x, 0, centre.z + 1.2).normalize();
-  if (outward.lengthSq() < 0.5) outward.set(0, 0, 1);
-  const up = new THREE.Vector3(0, 1, 0);
-  const right = new THREE.Vector3().crossVectors(up, outward).normalize();
-  const orientation = new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, outward));
-  const corners = [box.min, box.max].flatMap((a) => [box.min, box.max].map((b) => new THREE.Vector3(a.x, 0, b.z)));
-  const across = corners.map((corner) => corner.dot(right));
-  const width = (Math.max(...across) - Math.min(...across)) * 0.94;
-  const toothHeight = box.max.y - box.min.y;
-  const depth = box.max.z - box.min.z + 0.6;
-  const lowerRow = centre.y < 0;
-  const position = centre.clone().setY(box.min.y + toothHeight * level(lowerRow));
-  return { orientation, position, size: new THREE.Vector3(width, toothHeight * height, depth), box };
-}
-
-/** One decal per tooth for a projection, each hung on its tooth in the tooth's own space. */
-export function projectOnTeeth(teeth: THREE.Mesh[], projection: RunProjection, material: THREE.Material, name: string): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
-  return teeth.flatMap((tooth) => {
-    const geometry = new DecalGeometry(tooth, projection.position, projection.orientation, projection.size);
-    if (!geometry.getAttribute('position')?.count) {
-      geometry.dispose();
-      return [];
-    }
-    // DecalGeometry is in world space; hang it on the tooth in the tooth's own space.
-    geometry.applyMatrix4(tooth.matrixWorld.clone().invert());
-    const decal = new THREE.Mesh(geometry, material);
-    decal.name = name;
-    decal.renderOrder = 2;
-    return [{ tooth, decal }];
-  });
-}
-
-/**
- * Decals for one inscription on its teeth (meshes already in the scene, world
- * matrices current). Each decal is returned with the tooth it belongs to, in
- * that tooth's local space.
- */
-export function inscriptionDecals(inscription: Inscription, teeth: THREE.Mesh[], metal: MetalId): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
-  if (!teeth.length || typeof document === 'undefined') return [];
-  // A monogram on one tooth fills most of its face; a name across teeth keeps to a band.
-  // Letters sit towards the biting edge, clear of the gum (the lower row's gum is at the bottom,
-  // the upper row's at the top), while staying below where the upper teeth overlap the lower ones.
-  const projection = runProjection(teeth, inscription.teeth.length === 1 ? 0.7 : 0.66, (lowerRow) => (lowerRow ? 0.52 : 0.44));
-  const canvas = drawLetters(inscription, metal, projection.size.x / projection.size.y);
-  const texture = new THREE.CanvasTexture(canvas);
+/** The letters' picture for a run `aspect` wide (width over height). */
+export function letterTexture(inscription: Inscription, metal: MetalId, aspect: number) {
+  const texture = new THREE.CanvasTexture(drawLetters(inscription, metal, aspect));
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
-  return projectOnTeeth(teeth, projection, letterMaterial(inscription, texture), INSCRIPTION_DECAL);
+  return texture;
 }
 
-/** Removes a tooth's decals of one kind (their texture and material are shared per run). */
-export function clearDecals(tooth: THREE.Object3D, name: string, disposed: Set<THREE.Material>) {
-  tooth.children.filter((child) => child.name === name).forEach((child) => {
-    tooth.remove(child);
-    const mesh = child as THREE.Mesh;
-    mesh.geometry.dispose();
-    const material = mesh.material as THREE.MeshPhysicalMaterial;
-    if (!disposed.has(material)) {
-      disposed.add(material);
-      material.map?.dispose();
-      material.dispose();
-    }
-  });
-}
-
-/** Removes a tooth's inscription decals. */
-export const clearInscriptionDecals = (tooth: THREE.Object3D, disposed: Set<THREE.Material>) => clearDecals(tooth, INSCRIPTION_DECAL, disposed);

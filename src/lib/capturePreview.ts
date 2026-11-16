@@ -9,6 +9,9 @@ const MAX_BUFFER = 4096;
 const MASK_DILATE_PX = 10; // the AI photo never lines up pixel-perfectly with the 3D view
 
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
+/** The stones on each tooth, and the glints over them (flashes of light for the whole set, not part of any tooth). */
+const STONES = 'diamond_stones';
+const GLINTS = 'stone_glints';
 
 const toothIndexOf = (object: THREE.Object3D): number | null => {
   let current: THREE.Object3D | null = object;
@@ -79,7 +82,7 @@ export function capturePreview(state: RootState, grillzTeeth: number[], hideSton
   const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   const hidden: THREE.Object3D[] = [];
   state.scene.traverse((object) => {
-    if (hideStones && object.name === 'diamond_stones' && object.visible) {
+    if (hideStones && (object.name === STONES || object.name === GLINTS) && object.visible) {
       object.visible = false;
       hidden.push(object);
       return;
@@ -121,7 +124,8 @@ export function captureToothMask(state: RootState, teeth: number[], extendDown =
 
   state.scene.traverse((object) => {
     // Stones poke past the tooth outline and make ragged mask edges; mask the tooth shape only.
-    if (object.name === 'diamond_stones' && object.visible) {
+    // Glints are drawn additively over everything, so they'd show in a mask as stray white.
+    if ((object.name === STONES || object.name === GLINTS) && object.visible) {
       object.visible = false;
       hidden.push(object);
       return;

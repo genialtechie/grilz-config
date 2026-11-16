@@ -8,6 +8,7 @@ export function toothCustomization(design: ToothDesign, set: Pick<SetOptions, 'f
     material: isGold(design.metal) ? 'gold' : 'silver',
     color: metal.swatch,
     metal: metal.id,
+    karat: design.karat,
     style: design.type === 'plain' || icedOpenFace(design) ? design.style : undefined,
     opal: opalOf(design) ?? undefined,
     photo: design.type === 'photo',

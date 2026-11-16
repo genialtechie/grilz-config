@@ -7,7 +7,8 @@ import { hidePhotoPlaceholders } from '../components/three/photoDecals';
 // The photo stage (MAG-76): the 3D still the AI photo starts from, set up the
 // way jewelers shoot grillz on a model. The AI then only has to make it
 // photographic; the less it has to invent, the less it changes the piece.
-//   - the bite closed, upper incisors just over the lower ones;
+//   - the bite closed, upper incisors just over the lower ones (the piece is
+//     modelled that way, so nothing moves);
 //   - a fixed camera: front, a little above and turned slightly, the set filling a 3:2 frame;
 //   - a charcoal backdrop and a studio of big soft boxes for the metal to reflect, with dark flags
 //     so polished edges read (all-white surroundings make metal look flat);
@@ -19,8 +20,6 @@ export const BACKDROP = '#2c2a27';
 export const PHOTO_WIDTH = 1536;
 export const PHOTO_HEIGHT = 1024;
 const SUPERSAMPLE = 1.5;
-/** How far the upper jaw moves to close the bite, in scene units (measured on the model). The lower one stays on its shadow. */
-const BITE = new THREE.Vector3(0, -0.93, 0.3);
 const CAMERA_FOV = 30;
 /** A little above the bite line and a little to the side, as on a bench shot. */
 const CAMERA_DIRECTION = new THREE.Vector3(0.22, 0.1, 1).normalize();
@@ -77,19 +76,6 @@ function photoEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
 function stage(state: RootState, covered: Set<number>) {
   const { scene, camera, gl } = state;
   const restore: (() => void)[] = [];
-
-  // Close the bite: move the upper mould and upper teeth.
-  const upper: THREE.Object3D[] = [];
-  scene.traverse((object) => {
-    if (object.name === 'top_mould' || /^top_teeth\d{3}$/.test(object.name)) upper.push(object);
-  });
-  upper.forEach((object) => {
-    const scale = object.parent ? object.parent.getWorldScale(new THREE.Vector3()) : new THREE.Vector3(1, 1, 1);
-    const offset = BITE.clone().divide(scale);
-    const before = object.position.clone();
-    object.position.add(offset);
-    restore.push(() => object.position.copy(before));
-  });
 
   // Frame the covered teeth (or the front of the set) in a 3:2 shot.
   scene.updateMatrixWorld(true);
@@ -181,9 +167,10 @@ export function capturePhotoStill(state: RootState, coveredTeeth: number[]): Pho
     scene.environment = photoEnvironment(gl);
     scene.environmentIntensity = 1;
     gl.toneMappingExposure = 0.95;
-    // The mould is matte stone: under the studio it should read as stone, not glow white.
+    // A matte stone mould should read as stone under the studio, not glow white. (The clear resin
+    // holder is see-through and keeps its own light: dimmed, it would turn dark glass.)
     scene.traverse((object) => {
-      if (!(object instanceof THREE.Mesh) || !(object.material instanceof THREE.MeshStandardMaterial) || object.material.metalness > 0) return;
+      if (!(object instanceof THREE.Mesh) || !(object.material instanceof THREE.MeshStandardMaterial) || object.material.metalness > 0 || object.material.transparent) return;
       const material = object.material;
       if (moulds.has(material)) return;
       moulds.set(material, material.envMapIntensity);

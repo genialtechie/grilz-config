@@ -1,41 +1,48 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { createDiamondStones, disposeDiamondStones } from './DiamondStones';
-import { gemSupport } from './gems';
-import { dentalStone, polishedMetal } from './materials';
-import { fangGeometry, finishFor, ICED_RING } from './styles';
-import { clearInscriptionDecals, inscriptionDecals, loadInscriptionFont } from './inscriptions';
-import { clearPhotoDecals, loadPhoto, photoDecals, photoRuns } from './photoDecals';
-import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
+import { loadInscriptionFont, INSCRIPTION_DECAL } from './inscriptions';
+import { loadPhoto, PHOTO_DECAL, photoRuns } from './photoDecals';
+import { capShape, dressTooth, toothLook, type ToothLook } from './redesign/dress';
+import { Glints } from './redesign/glints';
+import { lookFor } from './redesign/look';
+import { clearOverlay, layLetters, layPhoto, type Shaped } from './redesign/overlays';
+import { buildPiece, noRaycast, SCENE_SCALE, type ToothSlot } from './redesign/piece';
+import { capGeo, SIDE, toothGeo } from './redesign/sculpt';
+import type { GrillzModelProps } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
 
+// The set on its stand: the redesign's sculpted teeth in a clear resin holder,
+// dressed from what the builder asks for each tooth (redesign/, a port of the
+// approved prototype in docs/redesign/prototype). The piece is built once, in
+// code (nothing is downloaded), and only the teeth that change are redressed.
+
 const toothNameRegex = /^(top|bottom)_teeth(\d{3})$/;
-const PERMANENT_GROW = 1.08;
 /** The outline round a tooth picked to style on its own: a slightly bigger back-face shell. */
 const MARK_GROW = 1.12;
+/** How far a glint stands off its stone, in the scene's units (the prototype's, scaled up). */
+const GLINT_LIFT = 0.012 * SCENE_SCALE;
 
 const getToothIndexFromName = (name: string): number | null => {
   const match = name.match(toothNameRegex);
   if (!match) return null;
-
   const [, row, numberString] = match;
   const toothNumber = Number.parseInt(numberString, 10) - 1;
   return row === 'top' ? toothNumber : 16 + toothNumber;
 };
 
-const findToothMesh = (object: THREE.Object3D): THREE.Mesh | null => {
-  let current: THREE.Object3D | null = object;
-  while (current) {
-    if (current instanceof THREE.Mesh && getToothIndexFromName(current.name) !== null) {
-      return current;
-    }
-    current = current.parent;
+/** The tooth a picked object belongs to. */
+const findTooth = (object: THREE.Object3D): number | null => {
+  for (let current: THREE.Object3D | null = object; current; current = current.parent) {
+    const index = getToothIndexFromName(current.name);
+    if (index !== null) return index;
   }
   return null;
 };
+
+/** The prototype numbers each row the other way round; glints pick their stones by its numbering, so they fall as there. */
+const prototypeOrder = (index: number) => (index < 16 ? 0 : 16) + 15 - (index % 16);
 
 function GrillzModel({
   customizations,
@@ -48,158 +55,74 @@ function GrillzModel({
   onFocusTooth,
   onDrawn,
 }: Omit<GrillzModelProps, 'poster'> & { onFocusTooth?: (point: THREE.Vector3) => void; onDrawn?: () => void }) {
-  const { scene } = useGLTF('/assets/teeth_final.glb');
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
   // The canvas draws on demand: changes made here ask for a frame.
   const invalidate = useThree((state) => state.invalidate);
 
-  const clonedScene = useMemo(() => {
-    const clone = scene.clone(true);
+  const look = useMemo(() => lookFor(gl), [gl]);
+  const piece = useMemo(() => buildPiece(look), [look]);
+  const glints = useMemo(() => new Glints(GLINT_LIFT), []);
+  useEffect(() => () => glints.dispose(), [glints]);
 
-    clone.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      child.castShadow = true;
-      child.receiveShadow = true;
-      // The tooth as modelled; a fang swaps in a drawn-out copy and swaps back.
-      child.userData.baseGeometry = child.geometry;
-      if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
-      child.userData.centre = child.geometry.boundingBox!.getCenter(new THREE.Vector3());
-    });
-
-    return clone;
-  }, [scene]);
+  // The studio lights whatever has no room of its own: the selection colour, and the plain white
+  // teeth and flat colours the captures swap in.
+  useEffect(() => {
+    const previous = scene.environment;
+    scene.environment = look.studioEnv;
+    return () => {
+      scene.environment = previous;
+    };
+  }, [scene, look]);
 
   // Selected teeth glow in the shop's accent (the demo keeps its original red).
   const tenant = useTenant();
   const selectColor = tenant.demo ? '#ce4257' : usableAccent(tenant.config.brand.accent);
   const selectGlow = tenant.demo ? '#712432' : mix(selectColor, '#000000', 0.45);
+  const marks = useMemo(
+    () => ({
+      selected: new THREE.MeshStandardMaterial({ color: selectColor, emissive: selectGlow, emissiveIntensity: 0.22, metalness: 0.25, roughness: 0.34, side: THREE.DoubleSide }),
+      mark: new THREE.MeshBasicMaterial({ color: selectColor, side: THREE.BackSide }),
+    }),
+    [selectColor, selectGlow],
+  );
+  useEffect(
+    () => () => {
+      marks.selected.dispose();
+      marks.mark.dispose();
+    },
+    [marks],
+  );
 
-  const materials = useMemo(() => {
-    const selected = new THREE.MeshStandardMaterial({
-      color: selectColor,
-      emissive: selectGlow,
-      emissiveIntensity: 0.22,
-      metalness: 0.25,
-      roughness: 0.34,
-    });
-    // The mould and the bare teeth are one dental-stone cast, as on a jeweler's bench.
-    const mould = dentalStone();
-    const mark = new THREE.MeshBasicMaterial({ color: selectColor, side: THREE.BackSide });
-    const finishCache = new Map<string, THREE.MeshPhysicalMaterial>();
-
-    return { selected, mark, mould, finishCache };
-  }, [selectColor, selectGlow]);
-
+  const looks = useMemo(() => Array.from({ length: 32 }, (_, index) => toothLook(customizations[index])), [customizations]);
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
-  /** Bumped to redress the teeth when the stones have to change material (see gemSupport). */
-  const [stoneEpoch, setStoneEpoch] = useState(0);
 
-  // The gums, for keeping stones on the part of each tooth that shows.
-  const moulds = useMemo(() => {
-    const found: THREE.Mesh[] = [];
-    clonedScene.traverse((child) => {
-      if (child instanceof THREE.Mesh && (child.name === 'top_mould' || child.name === 'bottom_mould')) found.push(child);
-    });
-    return found;
-  }, [clonedScene]);
-
-  // The cap's own metal, polished, iced or not: round an iced face it is the rim the stones sit in.
-  const getFinishMaterial = useCallback((customization: ToothCustomization) => {
-    const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
-    const existing = materials.finishCache.get(metal);
-    if (existing) return existing;
-    const material = polishedMetal(metal);
-    materials.finishCache.set(metal, material);
-    return material;
-  }, [materials]);
-
+  // Dress the teeth, then mark the picked ones.
+  const dressed = useRef(false);
   useEffect(() => {
-    clonedScene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-
-      if (child.name === 'bottom_mould' || child.name === 'top_mould') {
-        child.material = materials.mould;
-        return;
-      }
-
-      const index = getToothIndexFromName(child.name);
-      if (index === null || index >= customizations.length) return;
-
-      const existingStones = child.getObjectByName('diamond_stones');
-      if (existingStones) {
-        child.remove(existingStones);
-        disposeDiamondStones(existingStones);
-      }
-      // Finishes are cached and shared between teeth, so they are only detached.
-      const existingFinish = child.getObjectByName('tooth_finish');
-      if (existingFinish) child.remove(existingFinish);
-      const existingMark = child.getObjectByName('tooth_mark');
-      if (existingMark) child.remove(existingMark);
-
-      const customization = customizations[index];
-      const isSelected = selectedToothSet.has(index);
-      const capped = customization.material !== 'default';
-      const base = child.userData.baseGeometry as THREE.BufferGeometry;
-      child.geometry = capped && customization.fang ? fangGeometry(base) : base;
-      // Permanent look: fuller caps, grown about the tooth's own centre until
-      // neighbours meet and the metal reaches the gum. Deep cut keeps the teeth apart.
-      const grow = capped && customization.cut === 'permanent' ? PERMANENT_GROW : 1;
-      child.scale.setScalar(grow);
-      child.position.copy(child.userData.centre as THREE.Vector3).multiplyScalar(1 - grow);
-
-      if (isSelectionMode && isSelected && selectionLook === 'fill') {
-        child.material = materials.selected;
-        return;
-      }
-      if (isSelectionMode && isSelected && selectionLook === 'outline') {
-        // Styling this tooth on its own: it keeps its design, outlined, so each change shows.
-        const mark = new THREE.Mesh(child.geometry, materials.mark);
-        mark.name = 'tooth_mark';
-        mark.scale.setScalar(MARK_GROW);
-        mark.position.copy(child.userData.centre as THREE.Vector3).multiplyScalar(1 - MARK_GROW);
-        mark.raycast = () => {};
-        child.add(mark);
-      }
-
-      child.material = customization.material === 'default' ? materials.mould : getFinishMaterial(customization);
-
-      const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
-      if (capped && customization.hasDiamonds) {
-        // Iced open face: one ring of stones round the frame, the tooth showing in the middle.
-        const openFace = customization.style === 'open-face';
-        const stones = createDiamondStones(child, {
-          kind: customization.diamondType === 'moissanite' ? 'moissanite' : 'diamond',
-          setting: customization.setting,
-          metal,
-          ring: openFace ? ICED_RING : 0,
-          moulds,
-        });
-        stones.name = 'diamond_stones';
-        child.add(stones);
-        const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
-        if (finish) child.add(finish);
-      } else if (capped && customization.style) {
-        const finish = finishFor(child, customization.style, metal, false, customization.opal);
-        if (finish) child.add(finish);
-      }
+    piece.teeth.forEach((slot, index) => {
+      const t = looks[index];
+      dressTooth(slot, look, t);
+      const selected = isSelectionMode && selectedToothSet.has(index);
+      showSelection(slot, t, selected && selectionLook === 'fill', selected && selectionLook === 'outline', marks);
     });
+    glints.collect(
+      piece.teeth
+        .filter((slot) => slot.cap.visible && slot.deco?.visible !== false)
+        .map((slot) => ({ cap: slot.cap, spots: slot.spots, order: prototypeOrder(slot.index) })),
+    );
     invalidate();
     dressed.current = true;
-  }, [clonedScene, customizations, getFinishMaterial, invalidate, isSelectionMode, materials, moulds, selectedToothSet, selectionLook, stoneEpoch]);
+  }, [piece, look, looks, glints, isSelectionMode, selectedToothSet, selectionLook, marks, invalidate]);
 
-  // The traced stones need a shader some graphics drivers may refuse. Once it has been built,
-  // check it ran; if not, dress the teeth again and the stones come back in a plain material.
-  const stonesChecked = useRef(false);
-  useFrame(({ gl }) => {
-    if (stonesChecked.current) return;
-    const support = gemSupport(gl);
-    if (support === 'pending') return;
-    stonesChecked.current = true;
-    if (support === 'unsupported') setStoneEpoch((epoch) => epoch + 1);
+  // The glints follow the camera.
+  useFrame(({ camera }) => {
+    piece.root.updateMatrixWorld();
+    glints.update(camera, gl.getPixelRatio());
   });
 
   // Says when the dressed model is on screen: one frame after the first one that draws
   // it (that frame compiles the shaders, which can take a moment on a phone).
-  const dressed = useRef(false);
   const announced = useRef(false);
   useFrame(() => {
     if (!dressed.current || announced.current) return;
@@ -211,19 +134,22 @@ function GrillzModel({
     });
   });
 
-  // Letters, after the teeth are dressed (fang shapes and permanent-look scale change where they land).
+  /** A tooth with the shape its cap is dressed in (letters and pictures lie on that face). */
+  const shaped = (index: number): Shaped | null => {
+    const slot = piece.teeth[index];
+    const t = looks[index];
+    if (!slot) return null;
+    const { def, rise } = t ? capShape(slot, t) : { def: slot.def, rise: SIDE.deep };
+    return { slot, def, rise };
+  };
+
+  // Letters, after the teeth are dressed (a fang or the cut changes the face they lie on).
   const inscriptionKey = JSON.stringify(inscriptions ?? []);
+  const shapeKey = looks.map((t) => (t ? `${t.fang}${t.cut}${t.metal}` : '')).join(',');
   useEffect(() => {
     const list = inscriptions ?? [];
     const disposed = new Set<THREE.Material>();
-    const teeth = new Map<number, THREE.Mesh>();
-    clonedScene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const index = getToothIndexFromName(child.name);
-      if (index === null) return;
-      teeth.set(index, child);
-      clearInscriptionDecals(child, disposed);
-    });
+    piece.teeth.forEach((slot) => clearOverlay(slot, INSCRIPTION_DECAL, disposed));
     if (!list.length) {
       invalidate();
       return;
@@ -232,58 +158,46 @@ function GrillzModel({
     void Promise.all(list.map((inscription) => loadInscriptionFont(inscription.font))).then(() => {
       if (cancelled) return;
       list.forEach((inscription) => {
-        const meshes = inscription.teeth.map((index) => teeth.get(index)).filter((mesh): mesh is THREE.Mesh => Boolean(mesh));
+        const run = inscription.teeth.map(shaped).filter((item): item is Shaped => Boolean(item));
         const metal = customizations[inscription.teeth[0]]?.metal ?? 'yellow';
-        inscriptionDecals(inscription, meshes, metal).forEach(({ tooth, decal }) => tooth.add(decal));
+        layLetters(piece, look, run, inscription, metal);
       });
       invalidate();
     });
     return () => {
       cancelled = true;
+      const gone = new Set<THREE.Material>();
+      piece.teeth.forEach((slot) => clearOverlay(slot, INSCRIPTION_DECAL, gone));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clonedScene, customizations, inscriptionKey, invalidate]);
+  }, [piece, look, inscriptionKey, shapeKey, invalidate]);
 
   // Photo teeth: the customer's picture (or the stand-in) across each run of neighbouring photo teeth.
-  const photoTeeth = customizations.flatMap((tooth, index) => (tooth.photo && tooth.material !== 'default' ? [index] : []));
-  const photoKey = photoTeeth.join(',');
+  const photoTeeth = looks.flatMap((t, index) => (t?.type === 'photo' ? [index] : []));
+  const photoKey = `${photoTeeth.join(',')}|${shapeKey}`;
   useEffect(() => {
     const disposed = new Set<THREE.Material>();
-    const teeth = new Map<number, THREE.Mesh>();
-    clonedScene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const index = getToothIndexFromName(child.name);
-      if (index === null) return;
-      teeth.set(index, child);
-      clearPhotoDecals(child, disposed);
-    });
+    piece.teeth.forEach((slot) => clearOverlay(slot, PHOTO_DECAL, disposed));
     if (!photoTeeth.length) {
       invalidate();
       return;
     }
     let cancelled = false;
-    void loadPhoto(photoImage).then((image) => {
+    void Promise.all([loadPhoto(photoImage), loadInscriptionFont('block')]).then(([image]) => {
       if (cancelled) return;
-      photoRuns(photoTeeth).forEach((run) => {
-        const meshes = run.map((index) => teeth.get(index)).filter((mesh): mesh is THREE.Mesh => Boolean(mesh));
-        photoDecals(meshes, image).forEach(({ tooth, decal }) => tooth.add(decal));
+      photoRuns(photoTeeth).forEach((indices) => {
+        const run = indices.map(shaped).filter((item): item is Shaped => Boolean(item));
+        layPhoto(piece, look, run, image);
       });
       invalidate();
     });
     return () => {
       cancelled = true;
+      const gone = new Set<THREE.Material>();
+      piece.teeth.forEach((slot) => clearOverlay(slot, PHOTO_DECAL, gone));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clonedScene, customizations, photoKey, photoImage, invalidate]);
-
-  useEffect(() => {
-    return () => {
-      materials.selected.dispose();
-      materials.mark.dispose();
-      materials.mould.dispose();
-      materials.finishCache.forEach((material) => material.dispose());
-    };
-  }, [materials]);
+  }, [piece, look, photoKey, photoImage, invalidate]);
 
   const handleToothClick = (event: ThreeEvent<MouseEvent>) => {
     if (!isSelectionMode) {
@@ -292,28 +206,64 @@ function GrillzModel({
       onFocusTooth?.(event.point.clone());
       return;
     }
-    const tooth = findToothMesh(event.object);
-    if (!tooth) return;
+    const toothIndex = findTooth(event.object);
+    // The holder: let the tap carry on to whatever tooth lies behind it.
+    if (toothIndex === null) return;
     event.stopPropagation();
-    const toothIndex = getToothIndexFromName(tooth.name);
-    if (toothIndex !== null) toggleToothSelection(toothIndex);
+    toggleToothSelection(toothIndex);
   };
 
   return (
-    <primitive
-      object={clonedScene}
-      scale={34}
-      onClick={handleToothClick}
-      onPointerOver={() => {
-        if (isSelectionMode) document.body.style.cursor = 'pointer';
-      }}
-      onPointerOut={() => {
-        document.body.style.cursor = 'default';
-      }}
-    />
+    <>
+      <primitive
+        object={piece.root}
+        onClick={handleToothClick}
+        onPointerOver={() => {
+          if (isSelectionMode) document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'default';
+        }}
+      />
+      <primitive object={glints.points} />
+    </>
   );
 }
 
-useGLTF.preload('/assets/teeth_final.glb');
+/**
+ * How a tooth shows while teeth are being picked: filled in the accent (choosing
+ * teeth for letters), outlined in it (styling teeth on their own), or as dressed.
+ */
+function showSelection(slot: ToothSlot, t: ToothLook | null, fill: boolean, outline: boolean, marks: { selected: THREE.Material; mark: THREE.Material }) {
+  const cap = slot.cap;
+  if (fill) {
+    if (!t) cap.geometry = capGeo(slot.def, SIDE.deep);
+    cap.material = marks.selected;
+    cap.visible = true;
+    cap.raycast = THREE.Mesh.prototype.raycast;
+  } else {
+    cap.visible = Boolean(t);
+    if (t) cap.material = cap.userData.dressed as THREE.Material;
+    cap.raycast = t ? THREE.Mesh.prototype.raycast : noRaycast;
+  }
+  if (slot.deco) slot.deco.visible = !fill;
+
+  if (slot.mark) {
+    slot.group.remove(slot.mark);
+    slot.mark = null;
+  }
+  if (outline) {
+    // Round the cap only: the root stands inside the clear holder, where a shell round it would show.
+    const geometry = t ? capGeo(capShape(slot, t).def, capShape(slot, t).rise) : toothGeo(slot.def);
+    const mark = new THREE.Mesh(geometry, marks.mark);
+    mark.name = 'tooth_mark';
+    const centre = geometry.boundingBox!.getCenter(new THREE.Vector3());
+    mark.scale.setScalar(MARK_GROW);
+    mark.position.copy(centre).multiplyScalar(1 - MARK_GROW);
+    mark.raycast = noRaycast;
+    slot.group.add(mark);
+    slot.mark = mark;
+  }
+}
 
 export default GrillzModel;

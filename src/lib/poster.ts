@@ -16,7 +16,7 @@ import type { SetOptions, ToothDesign } from './renderSpec.js';
  * model's own, MODEL_SIZE in framing.ts. Written out here so this file, which
  * loads with the page, doesn't pull in three.js; a test keeps the two equal.
  */
-export const POSTER_ASPECT = 4.3 / 3.4;
+export const POSTER_ASPECT = 4.84 / 2.41;
 
 /**
  * The poster for a builder that opens on this design, or null when there is no

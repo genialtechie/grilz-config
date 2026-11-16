@@ -1,12 +1,13 @@
 import * as THREE from 'three';
-import { clearDecals, projectOnTeeth, runProjection } from './inscriptions';
 
 // Photo grillz in 3D (MAG-148): the customer's picture across each run of
-// neighbouring photo teeth, projected like the letters (inscriptions.ts). Until
-// they upload one, a soft portrait mark stands in so the choice visibly does
-// something. The mark is only for the screen: the captures the AI photo starts
-// from leave it out (hidePhotoPlaceholders), while a real picture stays in, so
-// the photo is made from the customer's image on the teeth.
+// neighbouring photo teeth, laid like the letters (inscriptions.ts): one
+// picture per run, each tooth showing its part on a panel inside a gold rim
+// (redesign/overlays.ts). Until they upload one, the prototype's stand-in shows
+// so the choice visibly does something. The stand-in is only for the screen:
+// the captures the AI photo starts from leave it out (hidePhotoPlaceholders),
+// while a real picture stays in, so the photo is made from the customer's
+// image on the teeth.
 
 export const PHOTO_DECAL = 'photo_decal';
 const PLACEHOLDER = 'photoPlaceholder';
@@ -22,17 +23,7 @@ export function photoRuns(indices: number[]): number[][] {
   return runs;
 }
 
-const roundedRect = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
-  context.beginPath();
-  context.moveTo(x + radius, y);
-  context.arcTo(x + width, y, x + width, y + height, radius);
-  context.arcTo(x + width, y + height, x, y + height, radius);
-  context.arcTo(x, y + height, x, y, radius);
-  context.arcTo(x, y, x + width, y, radius);
-  context.closePath();
-};
-
-/** The picture (or the stand-in mark) on a canvas the shape of the run's face, inside a thin dark edge. */
+/** The picture (or the stand-in) on a canvas the shape of the run's face (width over height). */
 function drawPhoto(image: HTMLImageElement | null, aspect: number): HTMLCanvasElement {
   const height = 384;
   const width = Math.max(64, Math.min(4096, Math.round(height * aspect)));
@@ -40,11 +31,6 @@ function drawPhoto(image: HTMLImageElement | null, aspect: number): HTMLCanvasEl
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d')!;
-  const inset = height * 0.04;
-  const radius = Math.min(width, height) * 0.16;
-  roundedRect(context, inset, inset, width - inset * 2, height - inset * 2, radius);
-  context.save();
-  context.clip();
   if (image) {
     // Cover the face, cropped from the middle (portraits keep the upper part, where faces are).
     const scale = Math.max(width / image.width, height / image.height);
@@ -53,25 +39,32 @@ function drawPhoto(image: HTMLImageElement | null, aspect: number): HTMLCanvasEl
     const top = image.height > image.width ? Math.min(0, (height - drawHeight) * 0.3) : (height - drawHeight) / 2;
     context.drawImage(image, (width - drawWidth) / 2, top, drawWidth, drawHeight);
   } else {
-    // A soft portrait mark: head and shoulders, engraved-looking, on a pale enamel panel.
-    context.fillStyle = '#e4e0d9';
+    // The prototype's stand-in: a bold colour sweep with "YOUR PHOTO" across it.
+    const gradient = context.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#0f1c3f');
+    gradient.addColorStop(0.5, '#b3222f');
+    gradient.addColorStop(1, '#f2a33a');
+    context.fillStyle = gradient;
     context.fillRect(0, 0, width, height);
-    context.fillStyle = '#9a948b';
-    const middle = width / 2;
-    const unit = Math.min(height, width * 1.1);
-    context.beginPath();
-    context.arc(middle, height * 0.4, unit * 0.17, 0, Math.PI * 2);
-    context.fill();
-    context.beginPath();
-    context.ellipse(middle, height * 0.98, unit * 0.36, unit * 0.32, 0, Math.PI, Math.PI * 2);
-    context.fill();
+    context.fillStyle = 'rgba(255,255,255,.92)';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    let size = height * 0.58;
+    context.font = `800 ${size}px "Inter Tight", Arial, sans-serif`;
+    const measured = context.measureText('YOUR PHOTO').width;
+    if (measured > width * 0.9) size *= (width * 0.9) / measured;
+    context.font = `800 ${size}px "Inter Tight", Arial, sans-serif`;
+    context.fillText('YOUR PHOTO', width / 2, height * 0.53);
   }
-  context.restore();
-  context.lineWidth = height * 0.035;
-  context.strokeStyle = 'rgba(40, 34, 28, 0.85)';
-  roundedRect(context, inset, inset, width - inset * 2, height - inset * 2, radius);
-  context.stroke();
   return canvas;
+}
+
+/** The run's picture as a texture, `aspect` wide (width over height). */
+export function photoTexture(image: HTMLImageElement | null, aspect: number) {
+  const texture = new THREE.CanvasTexture(drawPhoto(image, aspect));
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
 }
 
 const images = new Map<string, Promise<HTMLImageElement | null>>();
@@ -93,37 +86,13 @@ export function loadPhoto(src: string | null | undefined): Promise<HTMLImageElem
   return images.get(src)!;
 }
 
-/** Decals for one run of photo teeth: the picture, or the stand-in when there is none yet. */
-export function photoDecals(teeth: THREE.Mesh[], image: HTMLImageElement | null): { tooth: THREE.Mesh; decal: THREE.Mesh }[] {
-  if (!teeth.length || typeof document === 'undefined') return [];
-  // Most of the face, a touch towards the biting edge, clear of the gum.
-  const projection = runProjection(teeth, 0.74, (lowerRow) => (lowerRow ? 0.52 : 0.46));
-  const texture = new THREE.CanvasTexture(drawPhoto(image, projection.size.x / projection.size.y));
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  // Enamelled picture under a clear glaze: keeps its colours under the studio light.
-  const material = new THREE.MeshPhysicalMaterial({
-    map: texture,
-    transparent: true,
-    alphaTest: 0.08,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -4,
-    metalness: 0,
-    roughness: 0.35,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.2,
-    envMapIntensity: 0.5,
-  });
-  return projectOnTeeth(teeth, projection, material, PHOTO_DECAL).map((item) => {
-    item.decal.userData[PLACEHOLDER] = !image;
-    return item;
-  });
+/** Marks a photo panel as the stand-in (not the customer's design), so captures leave it out. */
+export function markPlaceholder(panel: THREE.Object3D, placeholder: boolean) {
+  panel.name = PHOTO_DECAL;
+  panel.userData[PLACEHOLDER] = placeholder;
 }
 
-export const clearPhotoDecals = (tooth: THREE.Object3D, disposed: Set<THREE.Material>) => clearDecals(tooth, PHOTO_DECAL, disposed);
-
-/** Hides the stand-in marks (they are not the customer's design) for a capture; returns how to put them back. */
+/** Hides the stand-in panels (they are not the customer's design) for a capture; returns how to put them back. */
 export function hidePhotoPlaceholders(scene: THREE.Object3D): () => void {
   const hidden: THREE.Object3D[] = [];
   scene.traverse((object) => {

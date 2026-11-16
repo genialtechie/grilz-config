@@ -138,14 +138,14 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
   },
 })
 
-// The builder's code and 3D model are lazy-loaded, so a shop page used to fetch
-// them one after another: app code, then the shop's config, then the builder
-// chunk, then the model. This puts a small script at the top of the page that,
-// on builder routes only (the landing page stays light), starts all of them at
-// once while the app code is still downloading:
+// The builder's code is lazy-loaded, so a shop page used to fetch things one
+// after another: app code, then the shop's config, then the builder chunk. This
+// puts a small script at the top of the page that, on builder routes only (the
+// landing page stays light), starts all of them at once while the app code is
+// still downloading:
 //   - <link rel="modulepreload"> for the builder's chunks (names known at build time);
-//   - a preload for the 3D model (low priority: the code that draws it is needed first);
 //   - the shop's config request, picked up later by loadTenant().
+// The 3D model is generated in code (src/components/three/redesign): there is no model file to fetch.
 const builderPreload = (): Plugin => ({
   name: 'builder-preload',
   transformIndexHtml: {
@@ -166,7 +166,7 @@ const builderPreload = (): Plugin => ({
         .filter((chunk) => /\/src\/components\/(Configurator|ShopPage)\.tsx$/.test(chunk.facadeModuleId ?? ''))
         .forEach((chunk) => collect(chunk.fileName, wanted))
       const files = [...wanted].map((fileName) => `/${fileName}`)
-      const script = `(function(){try{var d=document,p=location.pathname,m=p.match(/^\\/b\\/([^/]+)/),c=d.querySelector('meta[name="vvs-shop"]'),s=m?decodeURIComponent(m[1]).toLowerCase():(c&&p==='/'?c.content:null);if(!s&&p!=='/configurator')return;var a=function(r,h,f){var l=d.createElement('link');l.rel=r;l.href=h;if(f){l.as='fetch';l.crossOrigin='anonymous';l.fetchPriority='low'}d.head.appendChild(l)};${JSON.stringify(files)}.forEach(function(h){a('modulepreload',h)});a('preload','/assets/teeth_final.glb',1);if(s&&!/[?&]preview=/.test(location.search))window.__vvsTenant={slug:s,response:fetch('/api/tenant/'+encodeURIComponent(s),{headers:{accept:'application/json'}})}}catch(e){}})();`
+      const script = `(function(){try{var d=document,p=location.pathname,m=p.match(/^\\/b\\/([^/]+)/),c=d.querySelector('meta[name="vvs-shop"]'),s=m?decodeURIComponent(m[1]).toLowerCase():(c&&p==='/'?c.content:null);if(!s&&p!=='/configurator')return;var a=function(r,h){var l=d.createElement('link');l.rel=r;l.href=h;d.head.appendChild(l)};${JSON.stringify(files)}.forEach(function(h){a('modulepreload',h)});if(s&&!/[?&]preview=/.test(location.search))window.__vvsTenant={slug:s,response:fetch('/api/tenant/'+encodeURIComponent(s),{headers:{accept:'application/json'}})}}catch(e){}})();`
       return [{ tag: 'script', children: script, injectTo: 'body-prepend' }]
     },
   },
