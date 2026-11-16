@@ -7,6 +7,13 @@
   and each slide readable on its own.
 - On design and UX work, show the plan (what, how, open choices) and get it
   approved before building. The owner leads on taste and UX.
+- Approving a plan's outline is not approving the flow. Before building any
+  user journey or UX flow, take the owner through it screen by screen: the
+  order, what each screen holds, what is required, the copy. Bring each choice
+  as a slide, and build only what they picked. Never change an earlier
+  decision of theirs (it is in the plan page's Decisions table) without asking.
+  (Owner, Nov 16: "you are not one shotting the customer journey and ux
+  flows, you need to run that by me, i know better".)
 
 ## The redesign
 
