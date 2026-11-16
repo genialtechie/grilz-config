@@ -1,60 +1,166 @@
 
-  // ---------- sculpting: every tooth is one smooth, bulging form, widest near the biting edge and rounding off toward the gum ----------
-  // [type, width, crown height, depth] in millimetres; proportions follow the product's hosted model
-  var UPPER = [['inc', 9.0, 10.5, 6.4], ['inc', 6.9, 9.2, 5.8], ['can', 7.6, 10.2, 7.2], ['pre', 6.9, 8.0, 8.4], ['pre', 6.5, 7.6, 8.2], ['mol', 10.6, 7.2, 10.2], ['mol', 10.0, 6.8, 10.0], ['mol', 9.0, 6.2, 9.4]];
-  var LOWER = [['inc', 5.6, 8.6, 5.4], ['inc', 6.1, 8.9, 5.6], ['can', 6.9, 9.8, 6.8], ['pre', 7.0, 7.9, 7.8], ['pre', 7.1, 7.5, 8.0], ['mol', 10.8, 6.8, 9.8], ['mol', 10.2, 6.4, 9.6], ['mol', 9.4, 5.8, 9.2]];
-  // m1i / m1c: how square the outline is at the biting end and the gum end. m2l / m2n: how square the cross-section is on the lip side and the tongue side.
-  // neck: width at the gum. thin: how far the biting edge thins. tip: taper to a point (from tf). kl: narrowing on the tongue side. bl: share of the depth in front of the contact line. bulge: how far the face domes out.
-  var PAR = {
-    inc: { m1i: 3.3, m1c: 2.3, m2l: 3.3, m2n: 2.2, neck: .80, thin: .55, tip: 0, kl: .32, bl: .32, bulge: .17 },
-    can: { m1i: 2.8, m1c: 2.2, m2l: 2.9, m2n: 2.2, neck: .82, thin: .38, tip: .2, kl: .30, bl: .36, bulge: .2 },
-    fang: { m1i: 2.0, m1c: 2.2, m2l: 2.7, m2n: 2.2, neck: .84, thin: .42, tip: .8, tf: .4, kl: .30, bl: .38, bulge: .18 },
-    pre: { m1i: 3.2, m1c: 2.4, m2l: 3.0, m2n: 2.4, neck: .86, thin: .06, tip: 0, kl: .14, bl: .44, bulge: .12, cusp: .075, fos: .08, n: 2, ph: Math.PI / 2 },
-    mol: { m1i: 3.6, m1c: 2.6, m2l: 3.4, m2n: 3.0, neck: .90, thin: .02, tip: 0, kl: .08, bl: .47, bulge: .08, cusp: .06, fos: .09, n: 4, ph: Math.PI / 4 }
-  };
-  var Y0 = .39, Y1 = .61;                 // the form runs from a little under the gum line (y = -0.22 h) to the tip (y = h)
-  function ss(a, b, x) { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+  // ---------- sculpting: the teeth are real crown shapes. Each one is stored as a coarse cage (TOOTH_DATA) and smoothed here into one soft, continuous surface ----------
+  function unpack(str, Type) { var bin = atob(str), u = new Uint8Array(bin.length); for (var k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return new Type(u.buffer); }
+  // a tooth is [type, width, crown height, depth at the gum, which shape, mirrored (the left side of the mouth), sharpened into a fang]; sizes in millimetres.
+  // In its own space the gum line is y = 0, the biting end is y = height, and z points out of the mouth.
+  function defs(row) { return TOOTH_DATA[row].map(function (r, k) { return [r.t, r.w, r.h, r.d, row + k, 0, 0]; }); }
+  var UPPER = defs('U'), LOWER = defs('L'), FANG = 3.4;
+  function mirrorOf(def) { var d = def.slice(); d[5] = 1; return d; }
+  function fangOf(def) { var d = def.slice(); d[2] = def[2] + FANG; d[6] = 1; return d; }
   function srad(a, m) { return Math.pow(Math.pow(Math.abs(Math.cos(a)), m) + Math.pow(Math.abs(Math.sin(a)), m), -1 / m); }
-  function sect(def, phi) {
-    var p = PAR[def[0]], r1 = srad(phi, phi >= 0 ? p.m1i : p.m1c), ce = r1 * Math.cos(phi), se = r1 * Math.sin(phi), t = (se + 1) / 2;
-    var wf = p.neck + (1 - p.neck) * ss(.1, .62, t); if (p.tip) wf *= 1 - p.tip * ss(p.tf || .66, 1, t);
-    return { ce: ce, se: se, t: t, wf: wf, df: 1 - p.thin * ss(.45, 1, t) };
-  }
-  // a point on the tooth: phi runs root to tip, th runs round the tooth (th = 90 degrees is the lip side). The arch line passes through z = 0, where the tooth is widest.
-  function S(def, phi, th, out) {
-    var p = PAR[def[0]], w = def[1], h = def[2], d = def[3], q = sect(def, phi), lab = Math.sin(th) >= 0, r2 = srad(th, lab ? p.m2l : p.m2n), cx = r2 * Math.cos(th), cz = r2 * Math.sin(th);
-    var x = w / 2 * q.wf * q.ce * cx, z;
-    if (lab) z = d * p.bl * q.df * q.ce * cz + d * p.bulge * q.ce * (1 - cx * cx);
-    else { z = d * (1 - p.bl) * q.df * q.ce * cz; x *= 1 + p.kl * cz; }
-    z += d * p.bl * (1 - q.df) * .9;
-    var y = Y0 * h + Y1 * h * q.se;
-    if (p.cusp) { var tw = ss(.55, .95, q.t); y += h * p.cusp * tw * q.ce * Math.cos(p.n * (th - p.ph)) - h * p.fos * tw * (1 - q.ce) * (1 - q.ce); }
-    return out.set(x, y, z);
-  }
-  var _a = new V3(), _b = new V3(), _c = new V3(), _d = new V3();
-  function normalAt(def, phi, th, out) {
-    if (Math.abs(phi) > Math.PI / 2 - .02) return out.set(0, phi > 0 ? 1 : -1, 0);
-    var e = .004; S(def, phi, th + e, _a); S(def, phi, th - e, _b); _a.sub(_b); S(def, phi + e, th, _c); S(def, phi - e, th, _d); _c.sub(_d);
-    return out.crossVectors(_c, _a).normalize();
-  }
   function solve(f, lo, hi) { for (var k = 0; k < 34; k++) { var mid = (lo + hi) / 2; if (f(mid) > 0) hi = mid; else lo = mid; } return (lo + hi) / 2; }
-  function phiForY(def, y) { var se = Math.max(-.999, Math.min(.999, (y - Y0 * def[2]) / (Y1 * def[2]))), p = PAR[def[0]]; return solve(function (a) { return srad(a, a >= 0 ? p.m1i : p.m1c) * Math.sin(a) - se; }, -Math.PI / 2, Math.PI / 2); }
-  function thForX(def, cxn) { var m = PAR[def[0]].m2l; return solve(function (a) { return cxn - srad(a, m) * Math.cos(a); }, 0, Math.PI); }
+  var _a = new V3(), _b = new V3(), _c = new V3();
+  var cache = {};
+  function memo(key, make) { return cache[key] || (cache[key] = make()); }
+  function skey(def) { return def[4] + '_' + def[5] + '_' + def[6]; }
+  function dkey(def, side) { return def.join('_') + '|' + side; }
+  function subdivide(P, Q) {              // one round of Catmull-Clark smoothing on a cage of four-sided faces that is open at the root end
+    var nv = P.length / 3, nq = Q.length / 4, edge = new Map(), ea = [], eb = [], ef = [], fe = new Int32Array(nq * 4), fp = new Float64Array(nq * 3), k, j, c, a, b, key, e;
+    for (k = 0; k < nq; k++) for (c = 0; c < 3; c++) fp[k * 3 + c] = (P[Q[k * 4] * 3 + c] + P[Q[k * 4 + 1] * 3 + c] + P[Q[k * 4 + 2] * 3 + c] + P[Q[k * 4 + 3] * 3 + c]) / 4;
+    for (k = 0; k < nq; k++) for (j = 0; j < 4; j++) {
+      a = Q[k * 4 + j]; b = Q[k * 4 + (j + 1) % 4]; key = a < b ? a * 65536 + b : b * 65536 + a; e = edge.get(key);
+      if (e === undefined) { e = ea.length; edge.set(key, e); ea.push(a); eb.push(b); ef.push(k, -1); } else ef[e * 2 + 1] = k;
+      fe[k * 4 + j] = e;
+    }
+    var ne = ea.length, out = new Float64Array((nv + nq + ne) * 3), sf = new Float64Array(nv * 3), sr = new Float64Array(nv * 3), sb = new Float64Array(nv * 3), nf = new Int32Array(nv), nr = new Int32Array(nv), nb = new Int32Array(nv);
+    for (k = 0; k < nq; k++) for (j = 0; j < 4; j++) { a = Q[k * 4 + j]; nf[a]++; for (c = 0; c < 3; c++) sf[a * 3 + c] += fp[k * 3 + c]; }
+    for (e = 0; e < ne; e++) {
+      a = ea[e]; b = eb[e]; var f0 = ef[e * 2], f1 = ef[e * 2 + 1], o = (nv + nq + e) * 3;
+      for (c = 0; c < 3; c++) {
+        var mid = (P[a * 3 + c] + P[b * 3 + c]) / 2;
+        out[o + c] = f1 < 0 ? mid : (P[a * 3 + c] + P[b * 3 + c] + fp[f0 * 3 + c] + fp[f1 * 3 + c]) / 4;
+        sr[a * 3 + c] += mid; sr[b * 3 + c] += mid;
+        if (f1 < 0) { sb[a * 3 + c] += P[b * 3 + c]; sb[b * 3 + c] += P[a * 3 + c]; }
+      }
+      nr[a]++; nr[b]++; if (f1 < 0) { nb[a]++; nb[b]++; }
+    }
+    for (k = 0; k < nv; k++) for (c = 0; c < 3; c++) { var p = P[k * 3 + c], n = nf[k]; out[k * 3 + c] = nb[k] ? .75 * p + .125 * sb[k * 3 + c] : (sf[k * 3 + c] / n + 2 * sr[k * 3 + c] / nr[k] + (n - 3) * p) / n; }
+    for (k = 0; k < nq * 3; k++) out[nv * 3 + k] = fp[k];
+    var Q2 = new Int32Array(nq * 16);
+    for (k = 0; k < nq; k++) for (j = 0; j < 4; j++) { var o2 = (k * 4 + j) * 4; Q2[o2] = Q[k * 4 + j]; Q2[o2 + 1] = nv + nq + fe[k * 4 + j]; Q2[o2 + 2] = nv + k; Q2[o2 + 3] = nv + nq + fe[k * 4 + (j + 3) % 4]; }
+    return { P: out, Q: Q2 };
+  }
+  function shape(def) {                   // the finished tooth: points, the way each faces, and triangles (the last few close the root end)
+    return memo('sh' + skey(def), function () {
+      var k, c, j;
+      if (def[5]) {                       // the left side of the mouth: the same tooth in a mirror
+        var o = shape(def.slice(0, 5).concat(0, def[6])), mp = new Float64Array(o.P), mn = new Float64Array(o.N), mf = o.F.slice(), ms = {};
+        for (k = 0; k < mp.length; k += 3) { mp[k] = -mp[k]; mn[k] = -mn[k]; }
+        for (k = 0; k < mf.length; k += 3) { c = mf[k + 1]; mf[k + 1] = mf[k + 2]; mf[k + 2] = c; }
+        for (c in o) ms[c] = o[c];
+        ms.P = mp; ms.N = mn; ms.F = mf; ms.x0 = -o.x1; ms.x1 = -o.x0; ms.cx = -o.cx; return ms;
+      }
+      var rec = TOOTH_DATA[def[4].charAt(0)][+def[4].slice(1)], v = unpack(rec.v, Int16Array), P = new Float64Array(v.length);
+      for (k = 0; k < v.length; k++) P[k] = v[k] / 1000;
+      var m = subdivide(P, unpack(rec.q, Uint16Array)); m = subdivide(m.P, m.Q); P = m.P;
+      var Q = m.Q, nq = Q.length / 4, nv = P.length / 3, tip = 0;
+      if (def[6]) {                       // a fang: the top of the canine drawn out and down into a point
+        for (k = 1; k < nv; k++) if (P[k * 3 + 1] > P[tip * 3 + 1]) tip = k;
+        var tx = P[tip * 3], tz = P[tip * 3 + 2];
+        for (k = 0; k < nv; k++) { var t = P[k * 3 + 1] / rec.h; if (t <= .34) continue; var g = Math.pow(Math.min(1, (t - .34) / .66), 1.55), nar = 1 - .34 * g; P[k * 3 + 1] += FANG * g; P[k * 3] = tx + (P[k * 3] - tx) * nar; P[k * 3 + 2] = tz + (P[k * 3 + 2] - tz) * nar + .8 * g; }
+      }
+      var F = [], cnt = new Map(), dir = [], key, a, b;
+      for (k = 0; k < nq; k++) {
+        F.push(Q[k * 4], Q[k * 4 + 1], Q[k * 4 + 2], Q[k * 4], Q[k * 4 + 2], Q[k * 4 + 3]);
+        for (j = 0; j < 4; j++) { a = Q[k * 4 + j]; b = Q[k * 4 + (j + 1) % 4]; key = a < b ? a * 65536 + b : b * 65536 + a; if (!cnt.has(key)) { cnt.set(key, dir.length); dir.push(a, b, 1); } else dir[cnt.get(key) + 2]++; }
+      }
+      var nt = F.length, N = new Float64Array(nv * 3 + 3), P2 = new Float64Array(nv * 3 + 3), loop = 0, cx = 0, cy = 0, cz = 0;
+      P2.set(P);
+      for (k = 0; k < dir.length; k += 3) if (dir[k + 2] === 1) { F.push(dir[k + 1], dir[k], nv); loop++; cx += P[dir[k] * 3]; cy += P[dir[k] * 3 + 1]; cz += P[dir[k] * 3 + 2]; }
+      P2[nv * 3] = cx / loop; P2[nv * 3 + 1] = cy / loop; P2[nv * 3 + 2] = cz / loop; P = P2;
+      var mx = 0, my = 0, mz = 0, vol = 0;
+      for (k = 0; k < nv; k++) { mx += P[k * 3]; my += P[k * 3 + 1]; mz += P[k * 3 + 2]; } mx /= nv; my /= nv; mz /= nv;
+      function tri(k2) { _a.set(P[F[k2] * 3] - mx, P[F[k2] * 3 + 1] - my, P[F[k2] * 3 + 2] - mz); _b.set(P[F[k2 + 1] * 3] - mx, P[F[k2 + 1] * 3 + 1] - my, P[F[k2 + 1] * 3 + 2] - mz); _c.set(P[F[k2 + 2] * 3] - mx, P[F[k2 + 2] * 3 + 1] - my, P[F[k2 + 2] * 3 + 2] - mz); }
+      for (k = 0; k < F.length; k += 3) { tri(k); vol += _a.dot(_b.cross(_c)); }
+      if (vol < 0) for (k = 0; k < F.length; k += 3) { var sw = F[k + 1]; F[k + 1] = F[k + 2]; F[k + 2] = sw; }
+      for (k = 0; k < nt; k += 3) { tri(k); _b.sub(_a); _c.sub(_a); _b.cross(_c); for (j = 0; j < 3; j++) { N[F[k + j] * 3] += _b.x; N[F[k + j] * 3 + 1] += _b.y; N[F[k + j] * 3 + 2] += _b.z; } }
+      for (k = 0; k < nv; k++) { var l = Math.hypot(N[k * 3], N[k * 3 + 1], N[k * 3 + 2]) || 1; N[k * 3] /= l; N[k * 3 + 1] /= l; N[k * 3 + 2] /= l; }
+      N[nv * 3 + 1] = -1;
+      var s = { P: P, N: N, F: F, nt: nt, nv: nv, x0: 1e9, x1: -1e9, y1: -1e9, z0: 1e9, z1: -1e9 }, nx0 = 1e9, nx1 = -1e9, nz0 = 1e9, nz1 = -1e9;
+      for (k = 0; k < nv; k++) {
+        var x = P[k * 3], y = P[k * 3 + 1], z = P[k * 3 + 2];
+        s.x0 = Math.min(s.x0, x); s.x1 = Math.max(s.x1, x); s.y1 = Math.max(s.y1, y); s.z0 = Math.min(s.z0, z); s.z1 = Math.max(s.z1, z);
+        if (Math.abs(y) < .6) { nx0 = Math.min(nx0, x); nx1 = Math.max(nx1, x); nz0 = Math.min(nz0, z); nz1 = Math.max(nz1, z); }
+      }
+      s.cx = (nx0 + nx1) / 2; s.cz = (nz0 + nz1) / 2; s.hx = (nx1 - nx0) / 2; s.hz = (nz1 - nz0) / 2; s.zs = (s.z0 + s.z1) / 2;   // the neck, and the line between the lip half and the tongue half
+      return s;
+    });
+  }
+  function thOf(s, x, z) { return Math.atan2((z - s.cz) / s.hz, (x - s.cx) / s.hx); }   // the way round the tooth: 90 degrees is the middle of the lip side, 0 and 180 are where it meets its neighbours
   var CAP_OFF = .24, LIP = .4, WIN = 1.45;   // a cap sits a quarter of a millimetre proud of the tooth; its edge shows a lip; an open face leaves a frame this wide
   var SIDE = { deep: .27, permanent: .06 };  // how far a cap's edge arches away from the gum between teeth: deep cut shows each tooth, the permanent look runs straight
   function margin(def, th, side) { var s = side * def[2]; return Math.sin(th) > 0 ? -.35 + (s + .35) * Math.pow(Math.abs(Math.cos(th)), 3.2) : s; }
+  // the lip-side face seen from straight in front, as a fine height map: how far forward the surface is at each point, and which way it faces there
+  var CELL = 1 / 16;
+  function face(def) {
+    return memo('f' + skey(def), function () {
+      var s = shape(def), P = s.P, N = s.N, F = s.F, x0 = s.x0 - .6, y0 = -1.4, nx = Math.ceil((s.x1 - s.x0 + 1.2) / CELL) + 1, ny = Math.ceil((s.y1 + .6 - y0) / CELL) + 1, n = nx * ny;
+      var Z = new Float32Array(n), A = new Float32Array(n), B = new Float32Array(n), C = new Float32Array(n), cov = new Uint8Array(n), k, i, j, o;
+      for (k = 0; k < n; k++) { Z[k] = -1e9; C[k] = 1; }
+      for (k = 0; k < s.nt; k += 3) {
+        var a = F[k] * 3, b = F[k + 1] * 3, c = F[k + 2] * 3;
+        if (P[a + 2] < s.zs || P[b + 2] < s.zs || P[c + 2] < s.zs) continue;
+        if (N[a + 2] < .1 && N[b + 2] < .1 && N[c + 2] < .1) continue;
+        var ax = (P[a] - x0) / CELL, ay = (P[a + 1] - y0) / CELL, bx = (P[b] - x0) / CELL, by = (P[b + 1] - y0) / CELL, cx = (P[c] - x0) / CELL, cy = (P[c + 1] - y0) / CELL, det = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+        if (Math.abs(det) < 1e-9) continue;
+        var i0 = Math.max(0, Math.ceil(Math.min(ax, bx, cx))), i1 = Math.min(nx - 1, Math.floor(Math.max(ax, bx, cx))), j0 = Math.max(0, Math.ceil(Math.min(ay, by, cy))), j1 = Math.min(ny - 1, Math.floor(Math.max(ay, by, cy)));
+        for (j = j0; j <= j1; j++) for (i = i0; i <= i1; i++) {
+          var w1 = ((i - ax) * (cy - ay) - (cx - ax) * (j - ay)) / det, w2 = ((bx - ax) * (j - ay) - (i - ax) * (by - ay)) / det, w0 = 1 - w1 - w2;
+          if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+          var z = w0 * P[a + 2] + w1 * P[b + 2] + w2 * P[c + 2]; o = j * nx + i;
+          if (z > Z[o]) { Z[o] = z; A[o] = w0 * N[a] + w1 * N[b] + w2 * N[c]; B[o] = w0 * N[a + 1] + w1 * N[b + 1] + w2 * N[c + 1]; C[o] = w0 * N[a + 2] + w1 * N[b + 2] + w2 * N[c + 2]; cov[o] = 1; }
+        }
+      }
+      // carry the surface a little past its own edge, so anything sitting right on the edge still has something to rest on
+      var have = new Uint8Array(cov), nb4 = [-1, 1, -nx, nx];
+      for (var pass = 0; pass < 16; pass++) {
+        var add = [];
+        for (j = 1; j < ny - 1; j++) for (i = 1; i < nx - 1; i++) {
+          o = j * nx + i; if (have[o]) continue; var cn = 0, sz = 0, sa = 0, sb = 0, sc = 0;
+          for (k = 0; k < 4; k++) { var q = o + nb4[k]; if (have[q]) { cn++; sz += Z[q]; sa += A[q]; sb += B[q]; sc += C[q]; } }
+          if (cn) add.push(o, sz / cn, sa / cn, sb / cn, sc / cn);
+        }
+        for (k = 0; k < add.length; k += 5) { o = add[k]; have[o] = 1; Z[o] = add[k + 1]; A[o] = add[k + 2]; B[o] = add[k + 3]; C[o] = add[k + 4]; }
+      }
+      for (k = 0; k < n; k++) if (!have[k]) Z[k] = s.zs;
+      return { x0: x0, y0: y0, nx: nx, ny: ny, Z: Z, A: A, B: B, C: C, cov: cov };
+    });
+  }
+  function samp(arr, f, x, y) {           // read a height map between its points
+    var gx = Math.min(f.nx - 1.001, Math.max(0, (x - f.x0) / CELL)), gy = Math.min(f.ny - 1.001, Math.max(0, (y - f.y0) / CELL)), i = Math.floor(gx), j = Math.floor(gy), u = gx - i, v = gy - j, o = j * f.nx + i;
+    return (arr[o] * (1 - u) + arr[o + 1] * u) * (1 - v) + (arr[o + f.nx] * (1 - u) + arr[o + f.nx + 1] * u) * v;
+  }
+  function spread(mask, nx, ny) {         // for every point inside a shape, how far it is from the shape's edge (measured in points of the map)
+    var INF = 1e12, f = new Float64Array(nx * ny), n = Math.max(nx, ny), v = new Int32Array(n), z = new Float64Array(n + 1), g = new Float64Array(n), k, q;
+    for (k = 0; k < nx * ny; k++) f[k] = mask[k] ? INF : 0;
+    function run(off, stride, len) {
+      for (q = 0; q < len; q++) g[q] = f[off + q * stride];
+      var kk = 0, s2; v[0] = 0; z[0] = -INF; z[1] = INF;
+      for (q = 1; q < len; q++) {
+        for (;;) { var p = v[kk]; s2 = ((g[q] + q * q) - (g[p] + p * p)) / (2 * q - 2 * p); if (s2 <= z[kk] && kk > 0) kk--; else break; }
+        kk++; v[kk] = q; z[kk] = s2; z[kk + 1] = INF;
+      }
+      kk = 0;
+      for (q = 0; q < len; q++) { while (z[kk + 1] < q) kk++; var p2 = v[kk]; f[off + q * stride] = (q - p2) * (q - p2) + g[p2]; }
+    }
+    for (k = 0; k < nx; k++) run(k, nx, ny);
+    for (k = 0; k < ny; k++) run(k * nx, 1, nx);
+    for (k = 0; k < nx * ny; k++) f[k] = Math.max(0, Math.sqrt(f[k]) - .5);
+    return f;
+  }
+  function reach(def, side) {             // the part of the face a cap covers, as distance in from its edge
+    return memo('g' + skey(def) + '|' + def[2] + '|' + side, function () {
+      var f = face(def), s = shape(def), mask = new Uint8Array(f.nx * f.ny), i, j, o;
+      for (j = 0; j < f.ny; j++) for (i = 0; i < f.nx; i++) { o = j * f.nx + i; if (f.cov[o] && f.y0 + j * CELL >= margin(def, thOf(s, f.x0 + i * CELL, f.Z[o]), side)) mask[o] = 1; }
+      return spread(mask, f.nx, f.ny);
+    });
+  }
   function facePoint(def, x, y, P, N) {   // the point on a cap's lip-side face above (x, y), and which way it faces
-    var phi = phiForY(def, y), q = sect(def, phi), half = def[1] / 2 * q.wf * q.ce, th = thForX(def, Math.max(-.999, Math.min(.999, x / half)));
-    S(def, phi, th, P); normalAt(def, phi, th, N); P.y += N.y * CAP_OFF; P.z += N.z * CAP_OFF; return half;
+    var f = face(def); N.set(samp(f.A, f, x, y), samp(f.B, f, x, y), samp(f.C, f, x, y)).normalize();
+    P.set(x, y + N.y * CAP_OFF, samp(f.Z, f, x, y) + N.z * CAP_OFF);
   }
-  function onFace(def, x, y, inset, side) {  // is (x, y) on the cap's face, at least `inset` from its edge?
-    var h = def[2]; if (y > h - inset * .8 || y < -.35) return false;
-    var phi = phiForY(def, y), q = sect(def, phi), half = def[1] / 2 * q.wf * q.ce; if (Math.abs(x) > half - inset) return false;
-    return y >= margin(def, thForX(def, x / half), side) + inset;
-  }
-  var cache = {};
-  function memo(key, make) { return cache[key] || (cache[key] = make()); }
-  function dkey(def, side) { return def.join('_') + '|' + side; }
+  function inFrom(def, x, y, side) { return samp(reach(def, side), face(def), x, y) * CELL; }   // how far (x, y) is in from the cap's edge; 0 off the face
+  function onFace(def, x, y, inset, side) { return inFrom(def, x, y, side) >= inset; }
   function outline(def, side, inset, n) {     // the face's outline, `inset` in from its edge, as points round its centre
     return memo('ol' + dkey(def, side) + inset + n, function () {
       var pts = [], yc = def[2] * .45;
@@ -71,29 +177,35 @@
   }
   function grid(idx, rings, NU) { for (var k = 0; k < rings - 1; k++) for (var j = 0; j < NU; j++) { var a = k * NU + j, b = k * NU + (j + 1) % NU, c = a + NU, d = b + NU; idx.push(a, c, b, b, c, d); } }
   function bufGeo(pos, idx, uv) { var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); if (uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g; }
-  function toothGeo(def) {                // the whole tooth, closed at both ends
-    return memo('t' + def.join('_'), function () {
-      var NU = 56, NV = 40, pos = [], idx = [], v = new V3(), k, j;
-      function put(phi, th) { S(def, phi, th, v); pos.push(v.x * MM, v.y * MM, v.z * MM); }
-      for (k = 1; k < NV; k++) { var phi = -Math.PI / 2 + Math.PI * k / NV; for (j = 0; j < NU; j++) put(phi, j / NU * Math.PI * 2); }
-      grid(idx, NV - 1, NU);
-      var tip = pos.length / 3; put(Math.PI / 2, 0); for (j = 0; j < NU; j++) idx.push(tip, (NV - 2) * NU + (j + 1) % NU, (NV - 2) * NU + j);
-      var root = pos.length / 3; put(-Math.PI / 2, 0); for (j = 0; j < NU; j++) idx.push(root, j, (j + 1) % NU);
-      return orient(bufGeo(pos, idx), true);
+  function toothGeo(def) {                // the whole tooth, closed at the root
+    return memo('t' + skey(def), function () {
+      var s = shape(def), n = s.P.length, pos = new Float32Array(n), k;
+      for (k = 0; k < n; k++) pos[k] = s.P[k] * MM;
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(s.N), 3)); g.setIndex(s.F); return g;
     });
   }
-  function capGeo(def, side) {            // the grill cap: the tooth's face and edge, a little fuller, stopping at an arched edge with a lip
+  function capGeo(def, side) {            // the grill cap: the tooth's own surface, a little fuller, cut off along an arched edge that turns in to show its thickness
     return memo('c' + dkey(def, side), function () {
-      var NU = 60, NV = 30, pos = [], uv = [], idx = [], v = new V3(), n = new V3(), k, j, start = [], w = def[1], h = def[2];
-      function put(phi, th, lip) {
-        S(def, phi, th, v); normalAt(def, phi, th, n);
-        if (Math.sin(th) > .03) uv.push(v.x / w + .5, (v.y + 1) / (h + 2)); else uv.push(3, 3);
-        v.y += n.y * CAP_OFF; v.z += n.z * CAP_OFF; if (lip) v.addScaledVector(n, -LIP); pos.push(v.x * MM, v.y * MM, v.z * MM);
+      var s = shape(def), P = s.P, N = s.N, F = s.F, f = new Float32Array(s.nv), at = new Int32Array(s.nv), cuts = {}, lips = {}, pos = [], uv = [], idx = [], w = def[1], h = def[2], k, j;
+      for (k = 0; k < s.nv; k++) { f[k] = P[k * 3 + 1] - margin(def, thOf(s, P[k * 3], P[k * 3 + 2]), side); at[k] = -1; }
+      function put(x, y, z, nx, ny, nz, drop) {
+        var front = nz > .12 && z > s.zs; uv.push(x / w + .5, front ? (y + 1) / (h + 2) : 3);
+        pos.push((x - nx * drop) * MM, (y + ny * CAP_OFF - ny * drop) * MM, (z + nz * CAP_OFF - nz * drop) * MM); return pos.length / 3 - 1;
       }
-      for (j = 0; j < NU; j++) { var th = j / NU * Math.PI * 2; start[j] = phiForY(def, margin(def, th, side)); put(start[j], th, true); }
-      for (k = 0; k < NV; k++) for (j = 0; j < NU; j++) put(start[j] + (Math.PI / 2 - start[j]) * k / NV, j / NU * Math.PI * 2, false);
-      grid(idx, NV + 1, NU);
-      var tip = pos.length / 3; put(Math.PI / 2, Math.PI / 2, false); for (j = 0; j < NU; j++) idx.push(tip, NV * NU + (j + 1) % NU, NV * NU + j);
+      function whole(v) { return at[v] >= 0 ? at[v] : (at[v] = put(P[v * 3], P[v * 3 + 1], P[v * 3 + 2], N[v * 3], N[v * 3 + 1], N[v * 3 + 2], 0)); }
+      function cut(a, b) {                // the point where the cap's edge crosses the line from a to b, and the same point turned in for the lip
+        var key = a < b ? a * 65536 + b : b * 65536 + a; if (cuts[key] !== undefined) return cuts[key];
+        var t = f[a] / (f[a] - f[b]), x = P[a * 3] + (P[b * 3] - P[a * 3]) * t, y = P[a * 3 + 1] + (P[b * 3 + 1] - P[a * 3 + 1]) * t, z = P[a * 3 + 2] + (P[b * 3 + 2] - P[a * 3 + 2]) * t;
+        _a.set(N[a * 3] + (N[b * 3] - N[a * 3]) * t, N[a * 3 + 1] + (N[b * 3 + 1] - N[a * 3 + 1]) * t, N[a * 3 + 2] + (N[b * 3 + 2] - N[a * 3 + 2]) * t).normalize();
+        var id = put(x, y, z, _a.x, _a.y, _a.z, 0); lips[id] = put(x, y, z, _a.x, _a.y, _a.z, LIP); return (cuts[key] = id);
+      }
+      for (k = 0; k < s.nt; k += 3) {
+        var poly = [], edge = [];
+        for (j = 0; j < 3; j++) { var a = F[k + j], b = F[k + (j + 1) % 3]; if (f[a] >= 0) { poly.push(whole(a)); edge.push(0); } if ((f[a] >= 0) !== (f[b] >= 0)) { poly.push(cut(a, b)); edge.push(1); } }
+        if (poly.length < 3) continue;
+        idx.push(poly[0], poly[1], poly[2]); if (poly.length === 4) idx.push(poly[0], poly[2], poly[3]);
+        for (j = 0; j < poly.length; j++) { var p = poly[j], q = poly[(j + 1) % poly.length]; if (edge[j] && edge[(j + 1) % poly.length] && p !== q) idx.push(q, p, lips[p], q, lips[p], lips[q]); }
+      }
       return orient(bufGeo(pos, idx, uv), false);
     });
   }
@@ -114,8 +226,8 @@
   }
   function maskTex(def, side) {           // an open face: the part of the cap that is cut away
     return memo('m' + dkey(def, side), function () {
-      var W = 72, H = 96, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d'), im = x.createImageData(W, H), w = def[1], h = def[2];
-      for (var j = 0; j < H; j++) for (var i2 = 0; i2 < W; i2++) { var u = (i2 + .5) / W, v = 1 - (j + .5) / H, inside = onFace(def, (u - .5) * w, v * (h + 2) - 1, WIN, side), k = (j * W + i2) * 4; im.data[k] = im.data[k + 1] = im.data[k + 2] = inside ? 0 : 255; im.data[k + 3] = 255; }
+      var W = 144, H = 192, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d'), im = x.createImageData(W, H), w = def[1], h = def[2];
+      for (var j = 0; j < H; j++) for (var i2 = 0; i2 < W; i2++) { var u = (i2 + .5) / W, v = 1 - (j + .5) / H, keep = Math.round(255 * Math.min(1, Math.max(0, .5 + (WIN - inFrom(def, (u - .5) * w, v * (h + 2) - 1, side)) / .2))), k = (j * W + i2) * 4; im.data[k] = im.data[k + 1] = im.data[k + 2] = keep; im.data[k + 3] = 255; }
       x.putImageData(im, 0, 0); var t = new THREE.CanvasTexture(c); t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; return t;
     });
   }

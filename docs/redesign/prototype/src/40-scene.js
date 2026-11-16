@@ -1,64 +1,76 @@
 
-  // ---------- the arch: where each tooth sits, walked so neighbours touch at their widest points ----------
-  function archPath(pts, zshift) {
-    var v = [], k; for (k = pts.length - 1; k >= 1; k--) v.push(new V3(-pts[k][0], 0, pts[k][1] + zshift)); for (k = 0; k < pts.length; k++) v.push(new V3(pts[k][0], 0, pts[k][1] + zshift));
+  // ---------- the arch: every tooth sits where it was measured, touching its neighbours. The lower row closes just inside the upper one, as a real bite does ----------
+  function archPath(pts) {
+    var v = [], k; for (k = pts.length - 1; k >= 1; k--) v.push(new V3(-pts[k][0], 0, pts[k][1])); for (k = 0; k < pts.length; k++) v.push(new V3(pts[k][0], 0, pts[k][1]));
     var P = new THREE.CatmullRomCurve3(v, false, 'centripetal').getPoints(1200).slice(600), len = [0];
     for (k = 1; k < P.length; k++) len.push(len[k - 1] + P[k].distanceTo(P[k - 1]));
-    return { at: function (s) {
-      s = Math.max(0, Math.min(len[len.length - 1] - .001, s)); var lo = 0, hi = len.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (len[mid] > s) hi = mid; else lo = mid; }
-      var f = (s - len[lo]) / (len[hi] - len[lo] || 1), a = P[lo], b = P[hi], tx = b.x - a.x, tz = b.z - a.z, tl = Math.hypot(tx, tz) || 1;
-      return { x: a.x + tx * f, z: a.z + tz * f, nx: -tz / tl, nz: tx / tl, ang: Math.atan2(-tz / tl, tx / tl) };
-    } };
+    return {
+      at: function (s) {
+        s = Math.max(0, Math.min(len[len.length - 1] - .001, s)); var lo = 0, hi = len.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (len[mid] > s) hi = mid; else lo = mid; }
+        var f = (s - len[lo]) / (len[hi] - len[lo] || 1), a = P[lo], b = P[hi], tx = b.x - a.x, tz = b.z - a.z, tl = Math.hypot(tx, tz) || 1;
+        return { x: a.x + tx * f, z: a.z + tz * f, nx: -tz / tl, nz: tx / tl };
+      },
+      where: function (x, z) { var best = 0, bd = 1e9; for (var q = 0; q < P.length; q++) { var d = (P[q].x - x) * (P[q].x - x) + (P[q].z - z) * (P[q].z - z); if (d < bd) { bd = d; best = q; } } return len[best]; }
+    };
   }
-  var ARCH_U = archPath([[0, 17.5], [4.1, 16.6], [11.3, 14.6], [16.3, 10.0], [19.6, 4.9], [21.9, -0.7], [24.2, -8.4], [26.2, -18.4], [26.9, -29.8], [27.2, -50]], .9);
-  var ARCH_L = archPath([[0, 19.2], [3.2, 18.8], [9.4, 17.35], [14.35, 13.55], [17.65, 8.75], [20.8, 3.15], [23.4, -5.0], [25.25, -15.5], [25.85, -27.25], [26.1, -47]], -2.9);
-  var LOW_Y = -.25, teeth = [], hit = [], dirty = true, ready = false;
-  function layout(list) { var s = 0, out = []; list.forEach(function (def) { out.push({ def: def, s: s + def[1] / 2 }); s += def[1]; }); out.end = s; return out; }
-  function buildRow(list, path, upper) {
-    var lay = layout(list);
-    lay.forEach(function (it, k) {
-      var pt = path.at(it.s), def = it.def, h = def[2];
+  var teeth = [], hit = [], dirty = true, ready = false;
+  function buildRow(row, upper) {
+    var recs = TOOTH_DATA[row], list = upper ? UPPER : LOWER, pts = [[0, recs[0].p[2] + .3]], lay = [], a = recs[6].p, b = recs[7].p;
+    recs.forEach(function (r) { pts.push([r.p[0], r.p[2]]); });
+    pts.push([b[0] + (b[0] - a[0]) * 1.7, b[2] + (b[2] - a[2]) * 1.7]);
+    lay.path = archPath(pts);
+    recs.forEach(function (r, k) {
       [1, -1].forEach(function (side) {
-        var g = new THREE.Group(); g.rotation.order = 'YXZ'; g.rotation.set(0, side * pt.ang, upper ? Math.PI : 0);
-        var base = new V3(side * pt.x * MM, (upper ? h : LOW_Y - h) * MM, pt.z * MM); if (!upper) base.sub(PIVOT);
+        var def = side > 0 ? list[k] : mirrorOf(list[k]), g = new THREE.Group(); g.rotation.order = 'YXZ'; g.rotation.set(0, side * r.a, upper ? Math.PI : 0);
+        var base = new V3(side * r.p[0] * MM, r.p[1] * MM, r.p[2] * MM); if (!upper) base.sub(PIVOT);
         g.position.copy(base);
         var rm = new THREE.Mesh(toothGeo(def), resinTooth), rb = new THREE.Mesh(toothGeo(def), resinBack), cm = new THREE.Mesh(capGeo(def, SIDE.deep), creamMat); cm.visible = false;
         rb.renderOrder = 1; rm.renderOrder = 2;
         var idx = (upper ? 0 : 16) + (side > 0 ? 8 + k : 7 - k);
         rm.userData.idx = cm.userData.idx = idx; g.add(rb); g.add(rm); g.add(cm); (upper ? rig : jaw).add(g);
-        teeth[idx] = { g: g, resin: rm, back: rb, cap: cm, deco: null, key: null, spots: [], def: def, upper: upper, base: base, out: new V3(Math.sin(side * pt.ang), 0, Math.cos(side * pt.ang)), ang: side * pt.ang, pop: 0, lift: 0 };
+        teeth[idx] = { g: g, resin: rm, back: rb, cap: cm, deco: null, key: null, spots: [], def: def, upper: upper, base: base, out: new V3(Math.sin(side * r.a), 0, Math.cos(side * r.a)), ang: side * r.a, pop: 0, lift: 0 };
         hit.push(rm, cm);
       });
+      lay.push({ s: lay.path.where(r.p[0], r.p[2]), gum: Math.abs(r.p[1]), dep: r.d, w: r.w });
     });
+    lay.end = lay[7].s + list[7][1] / 2;
     return lay;
   }
-  // the clear holder: a flat-topped block, like a jeweler's mold or a display case, with a slim gum roll where the teeth meet it
-  var BLOCK0 = 11.4, BLOCK1 = 18.6;
-  function holder(lay, path, upper) {
-    var NS = 24, end = lay.end + 1.2, tail = 4, pos = [], idx = [], rings = 0, s, j, u = upper ? 1 : -1, y0 = upper ? 0 : LOW_Y, centre = [], stations = [], q0;
-    function prop(as, n) { if (as <= lay[0].s) return lay[0].def[n]; for (var k = 1; k < lay.length; k++) if (as <= lay[k].s) { var f = (as - lay[k - 1].s) / (lay[k].s - lay[k - 1].s); f = f * f * (3 - 2 * f); return lay[k - 1].def[n] + (lay[k].def[n] - lay[k - 1].def[n]) * f; } return lay[lay.length - 1].def[n]; }
-    for (s = -end; s <= end + .001; s += 1) stations.push(s);
+  // the clear holder: a flat-topped block, like a jeweler's mold or a display case, with a slim gum roll where the teeth meet it.
+  // The roll's edge is scalloped as a gum line is: it arcs over each tooth and comes to a point between neighbours, filling the small gap there.
+  var BLOCK = { U: [11.4, 18.6], L: [8.6, 15.8] };   // where each block starts and ends, measured from the biting line
+  function holder(lay, upper) {
+    var path = lay.path, NS = 24, end = lay.end + 1.2, tail = 4, pos = [], idx = [], rings = 0, s, j, u = upper ? 1 : -1, B0 = BLOCK[upper ? 'U' : 'L'][0], B1 = BLOCK[upper ? 'U' : 'L'][1], centre = [], stations = [], q0;
+    function prop(as, n) { if (as <= lay[0].s) return lay[0][n]; for (var k = 1; k < lay.length; k++) if (as <= lay[k].s) { var f = (as - lay[k - 1].s) / (lay[k].s - lay[k - 1].s); f = f * f * (3 - 2 * f); return lay[k - 1][n] + (lay[k][n] - lay[k - 1][n]) * f; } return lay[lay.length - 1][n]; }
+    var PAP = [1.7, 1.7, 1.6, 1.35, 1.2, 1.05, .9, 0], cuts = [0], k2;      // how far the gum reaches down between each pair of neighbours, starting between the two front teeth
+    for (k2 = 0; k2 < 7; k2++) cuts.push((lay[k2].s + lay[k2].w / 2 + lay[k2 + 1].s - lay[k2 + 1].w / 2) / 2);
+    cuts.push(lay.end);
+    function pap(as) {
+      for (var k = 0; k < 8; k++) if (as <= cuts[k + 1]) { var mid = (cuts[k] + cuts[k + 1]) / 2, t = (as - mid) / ((cuts[k + 1] - cuts[k]) / 2); return (t < 0 ? PAP[k === 0 ? 0 : k - 1] : PAP[k]) * Math.pow(Math.abs(t), 2.6); }
+      return 0;
+    }
+    for (s = -end; s <= end + .001; s += .5) stations.push(s);
     [15, 30, 45, 59, 70, 79, 86].forEach(function (dg) { var e = end + tail * Math.sin(dg * Math.PI / 180); stations.push(e); stations.unshift(-e); });
     for (q0 = 0; q0 < stations.length; q0++) {
       s = stations[q0];
       var as = Math.abs(s), over = Math.max(0, as - end) / tail, shrink = Math.sqrt(Math.max(0, 1 - over * over)), pt = path.at(as), sx = s < 0 ? -1 : 1;
-      var gum = prop(as, 2), dep = prop(as, 3), crest = y0 + u * (gum - .15), base = y0 + u * (BLOCK0 + 1), yc = (crest + base) / 2, hh = Math.abs(base - crest) / 2, half = dep / 2 + .75, off = -.12 * dep;
+      var pp = pap(as), crest = u * (prop(as, 'gum') - .15 - pp), base = u * (B0 + 1), yc = (crest + base) / 2, hh = Math.abs(base - crest) / 2, half = prop(as, 'dep') / 2 + 1.25;
       for (j = 0; j < NS; j++) {
-        var a = j / NS * Math.PI * 2, r = srad(a, 2.6), n = off + r * Math.cos(a) * half * shrink;
+        var a = j / NS * Math.PI * 2, r = srad(a, Math.sin(a) < 0 ? 2.6 - .76 * pp : 2.6), n = r * Math.cos(a) * half * shrink;   // between teeth the edge thins to a wedge that tucks in behind their faces
         pos.push((sx * pt.x + sx * pt.nx * n) * MM, (yc + u * r * Math.sin(a) * hh * shrink) * MM, (pt.z + pt.nz * n) * MM);
       }
-      centre.push([(sx * pt.x + sx * pt.nx * off) * MM, yc * MM, (pt.z + pt.nz * off) * MM]); rings++;
+      centre.push([sx * pt.x * MM, yc * MM, pt.z * MM]); rings++;
     }
     grid(idx, rings, NS);
     var e0 = pos.length / 3; pos.push.apply(pos, centre[0]); for (j = 0; j < NS; j++) idx.push(e0, (j + 1) % NS, j);
     var e1 = pos.length / 3; pos.push.apply(pos, centre[rings - 1]); for (j = 0; j < NS; j++) idx.push(e1, (rings - 1) * NS + j, (rings - 1) * NS + (j + 1) % NS);
     var roll = orient(bufGeo(pos, idx), true);
     // the block: the arch's outline pushed out past the teeth, closed straight across the back, with a flat top and bevelled edges
-    var shape = new THREE.Shape(), first = true, bt = .9, thick = BLOCK1 - BLOCK0;
-    for (s = -end - 2; s <= end + 2.001; s += 1.5) { var p2 = path.at(Math.abs(s)), sg = s < 0 ? -1 : 1, o2 = prop(Math.abs(s), 3) * .52 + 1.3, X = sg * (p2.x + p2.nx * o2), Z = p2.z + p2.nz * o2; if (first) { shape.moveTo(X, Z); first = false; } else shape.lineTo(X, Z); }
-    shape.closePath();
-    var block = new THREE.ExtrudeGeometry(shape, { depth: thick - 2 * bt, bevelEnabled: true, bevelThickness: bt, bevelSize: bt, bevelSegments: 3, curveSegments: 4 });
-    block.rotateX(Math.PI / 2); block.translate(0, (upper ? BLOCK1 : LOW_Y - BLOCK0) - bt, 0); block.scale(MM, MM, MM); block.computeVertexNormals();
+    var shape2 = new THREE.Shape(), first = true, bt = .9, thick = B1 - B0;
+    for (s = -end - 2; s <= end + 2.001; s += 1.5) { var p2 = path.at(Math.abs(s)), sg = s < 0 ? -1 : 1, o2 = prop(Math.abs(s), 'dep') * .5 + 2.6, X = sg * (p2.x + p2.nx * o2), Z = p2.z + p2.nz * o2; if (first) { shape2.moveTo(X, Z); first = false; } else shape2.lineTo(X, Z); }
+    shape2.closePath();
+    var block = new THREE.ExtrudeGeometry(shape2, { depth: thick - 2 * bt, bevelEnabled: true, bevelThickness: bt, bevelSize: bt, bevelSegments: 3, curveSegments: 4 });
+    block.rotateX(Math.PI / 2); block.translate(0, (upper ? B1 : -B0) - bt, 0); block.scale(MM, MM, MM); block.computeVertexNormals();
     [roll, block].forEach(function (g, gi) {
       [resinBack, depthOnly, gi ? resinBlock : resinGum].forEach(function (mat, n) { var m = new THREE.Mesh(g, mat); m.renderOrder = n === 0 ? 1 : n === 1 ? 3 + gi * 2 : 4 + gi * 2; if (!upper) m.position.copy(PIVOT).multiplyScalar(-1); (upper ? rig : jaw).add(m); });
     });
@@ -66,7 +78,6 @@
 
   // ---------- dressing a tooth: its cap, finish, stones, panels, letters and charm ----------
   var letterMats = {}, photoVer = 0;
-  function fangOf(def) { return ['fang', def[1], def[2] + 3.4, def[3]]; }
   function instanced(geo, mat, list) { var im = new THREE.InstancedMesh(geo, mat, list.length); list.forEach(function (m, n) { im.setMatrixAt(n, m); }); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; return im; }
   function letterMat(ins, flip, t) {
     var key = ins.text + ins.style + flip + t.metal + t.karat; if (letterMats[key]) return letterMats[key];
@@ -137,16 +148,16 @@
   }
 
   // ---------- build the piece ----------
-  var layU = buildRow(UPPER, ARCH_U, true), layL = buildRow(LOWER, ARCH_L, false);
-  holder(layU, ARCH_U, true); holder(layL, ARCH_L, false);
+  holder(buildRow('U', true), true); holder(buildRow('L', false), false);
+  rig.position.y = (BLOCK.L[1] - BLOCK.U[1]) / 2 * MM;   // the piece sits centred on the stage
   (function () {
     var cv = document.createElement('canvas'); cv.width = cv.height = 128; var cx = cv.getContext('2d'), gr = cx.createRadialGradient(64, 64, 4, 64, 64, 64);
     gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
     var m = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, opacity: .2, depthWrite: false, toneMapped: false }));
-    m.rotation.x = -Math.PI / 2; m.position.set(0, -20.6 * MM, -12 * MM); scene.add(m);
+    m.rotation.x = -Math.PI / 2; m.position.set(0, -((BLOCK.L[1] + BLOCK.U[1]) / 2 + 1.75) * MM, -12 * MM); scene.add(m);
   })();
   var open = 0, openGoal = 0, glintT = 0;
-  function setJaw(o) { open = o; jaw.rotation.x = o * .095; dirty = true; }
+  function setJaw(o) { open = o; jaw.rotation.x = o * .12; dirty = true; }
   G.jaw = function (wide) { openGoal = wide ? 1 : 0; };
   G.view = function (dir) { user.yaw = dir * 1.1 - tgt.yaw; user.pitch = 0; hold = true; idleAt = performance.now(); dirty = true; };
   G.pop = function (k) { if (k === undefined) teeth.forEach(function (o, n) { if (T[n].on) o.pop = 1; }); else teeth[k].pop = 1; };
@@ -196,7 +207,7 @@
   function place(t) {
     // the piece is framed in the free area above the controls, whatever their height
     var tan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), fh = Math.max(140, boxC.bottom - boxC.top), yc = (boxC.top + boxC.bottom) / 2;
-    var r = Math.max(21 * MM * H / (.9 * fh * tan), 36 * MM * H / (.92 * W * tan)) * curv.zoom;
+    var r = Math.max(19.4 * MM * H / (.9 * fh * tan), 36 * MM * H / (.92 * W * tan)) * curv.zoom;
     var sway = (!reduce && !dragging && t - idleAt > 2500) ? Math.sin((t - idleAt - 2500) / 2600) * .16 : 0;
     var yaw = curv.yaw + user.yaw + sway, pitch = Math.max(-.5, Math.min(.6, curv.pitch + user.pitch));
     var lift = -((H / 2 - yc) / (H / 2)) * r * tan, cz = -6 * MM;
