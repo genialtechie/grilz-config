@@ -150,6 +150,54 @@ h1, h2, h3, p { margin: 0; }
 .cta svg { width: 16px; height: 16px; }
 .cta[disabled] { opacity: .35; cursor: default; }
 
+/* the menu, in two looks: what each tab holds, what's been opened, and how far the build has got */
+.mhead { display: grid; gap: 8px; padding: 16px 18px 6px; }
+.mhead .t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.mhead h2 { font: 600 24px/1.1 var(--sans); letter-spacing: -.035em; }
+.bigprice { font: 600 20px/1 var(--sans); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.prog { height: 6px; border-radius: 6px; background: rgba(18,18,17,.09); overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #f1c35e, #c98a14); transition: width .4s ease; }
+.prog-l { font: 500 10.5px/1 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--s-mut); }
+.mrow { position: relative; width: 100%; border: 0; text-align: left; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; color: var(--s-fg); transition: transform .12s ease, box-shadow .15s ease; }
+.mrow:active { transform: scale(.99); }
+.mrow .txt { display: grid; gap: 2px; min-width: 0; }
+.mrow b { font: 600 15.5px/1.2 var(--sans); letter-spacing: -.01em; }
+.mrow .cur { font-size: 13px; color: var(--s-fg); opacity: .78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mrow .ins { font: 500 10.5px/1.35 var(--mono); letter-spacing: .02em; color: var(--s-mut); }
+.mrow .prev { width: 54px; height: 54px; border-radius: 14px; overflow: hidden; display: grid; place-items: center; background: radial-gradient(90% 90% at 50% 30%, #f6f5f1, var(--s-tile)); }
+.mrow .prev img { width: 100%; height: 100%; object-fit: cover; }
+.mrow .prev svg { width: 90%; height: 90%; }
+.mrow .prev .swatch { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 -6px 10px rgba(0,0,0,.18), inset 0 4px 6px rgba(255,255,255,.55); }
+.mrow .prev .dash { font: 600 12px/1 var(--mono); color: var(--s-mut); }
+.mrow.todo .cur { color: var(--s-gold); opacity: 1; font-weight: 600; }
+.hico { display: none; }
+.intro { font-size: 13.5px; line-height: 1.4; color: var(--s-fg); opacity: .8; }
+.locked { font-size: 12.5px; color: var(--s-mut); margin-top: -4px; }
+.chip[disabled] { opacity: .38; cursor: default; }
+.tip { margin-top: 2px; }
+/* game-like: cards with icons, live previews and a "not opened yet" tag */
+.app[data-menu="game"] .rows { gap: 8px; }
+.app[data-menu="game"] .mrow { background: rgba(255,255,255,.74); border-radius: 18px; padding: 12px; box-shadow: 0 0 0 1px var(--s-line), 0 8px 18px -12px rgba(40,36,24,.4); }
+.app[data-menu="game"] .mrow:hover { box-shadow: 0 0 0 1.5px var(--ink), 0 8px 18px -12px rgba(40,36,24,.4); }
+.app[data-menu="game"] .mrow .ico { width: 42px; height: 42px; border-radius: 13px; background: var(--ink); color: #f1c35e; display: grid; place-items: center; }
+.app[data-menu="game"] .mrow .ico svg { width: 21px; height: 21px; }
+.app[data-menu="game"] .mrow .new { position: absolute; top: -7px; right: 12px; background: #f1c35e; color: #3d2a05; font: 700 9.5px/1 var(--mono); font-style: normal; letter-spacing: .07em; text-transform: uppercase; padding: 4px 7px; border-radius: 7px; box-shadow: 0 4px 10px -4px rgba(120,80,0,.5); }
+.app[data-menu="game"] .hico { display: grid; width: 32px; height: 32px; border-radius: 10px; background: var(--ink); color: #f1c35e; place-items: center; flex: 0 0 auto; }
+.app[data-menu="game"] .hico svg { width: 17px; height: 17px; }
+/* jeweler-like: a quiet list on hairlines, the price set large, untouched rows marked with a small gold dot */
+.app[data-menu="jeweler"] .mhead h2 { font-weight: 500; letter-spacing: -.03em; }
+.app[data-menu="jeweler"] .bigprice { font: 400 30px/1 var(--sans); letter-spacing: -.045em; }
+.app[data-menu="jeweler"] .prog { height: 2px; }
+.app[data-menu="jeweler"] .prog i { background: var(--s-gold); }
+.app[data-menu="jeweler"] .rows { gap: 0; }
+.app[data-menu="jeweler"] .mrow { background: transparent; border-radius: 0; padding: 15px 2px 15px 14px; border-top: 1px solid var(--s-line); grid-template-columns: minmax(0, 1fr) auto; }
+.app[data-menu="jeweler"] .mrow:last-child { border-bottom: 1px solid var(--s-line); }
+.app[data-menu="jeweler"] .mrow:hover b { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.app[data-menu="jeweler"] .mrow .ico { display: none; }
+.app[data-menu="jeweler"] .mrow b { font: 500 17px/1.2 var(--sans); letter-spacing: -.02em; }
+.app[data-menu="jeweler"] .mrow .prev { width: 42px; height: 42px; border-radius: 50%; background: transparent; box-shadow: 0 0 0 1px var(--s-line); }
+.app[data-menu="jeweler"] .mrow .new { position: absolute; left: 2px; top: 22px; width: 6px; height: 6px; border-radius: 50%; background: var(--s-gold); font-size: 0; }
+
 /* questions at the start */
 .qs { display: grid; gap: 14px; }
 .qs .step { font: 500 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--s-faint); }

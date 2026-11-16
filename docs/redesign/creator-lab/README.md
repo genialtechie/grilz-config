@@ -14,6 +14,12 @@ switcher (top right) flips between the options the owner asked to see.
   applies to that tooth until "Whole set".
 - Jeweler terms are kept, as the owner chose.
 
+Chosen on Nov 16: the bare-teeth opening, the EA FC-style menu and the guide
+when stuck. The menu now says what each tab holds, marks tabs not opened yet,
+and shows a progress bar; inside a tab every option stays visible and locked
+ones say why. The switcher now compares two looks for the menu: game-like
+(cards, icons, live previews) and jeweler-like (a quiet list on hairlines).
+
 `creator.html` is the built page. `src/` holds its parts; run `python3 build.py`
 inside `src/` to rebuild (it writes `creator.html` and `engine.js` there).
 The 3D parts are the prototype's (see `../prototype/`), with a camera move per
