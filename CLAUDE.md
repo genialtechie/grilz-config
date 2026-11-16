@@ -15,6 +15,10 @@
   (vvslab.magpollo.com) depends on until the owner says so.
 - The living plan and the prototype are private Claude artifacts; their
   sources and a README are in `docs/redesign/`.
+- The redesign goes into the owner's portfolio. After each round, add to the
+  "Case study notes" tab of the plan page (what was made, the owner's verdict,
+  the decision and why, craft details, numbers) and save dated screenshots of
+  our own work to `docs/redesign/case-study/`.
 
 ## Choosing services and data sources
 
