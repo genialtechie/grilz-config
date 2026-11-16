@@ -29,7 +29,7 @@
         g.position.copy(base);
         var rm = new THREE.Mesh(toothGeo(def), resinTooth), rb = new THREE.Mesh(toothGeo(def), resinBack), cm = new THREE.Mesh(capGeo(def, SIDE.deep), creamMat); cm.visible = false;
         rb.renderOrder = 1; rm.renderOrder = 2;
-        var gw = new THREE.Mesh(cm.geometry, glowMat); gw.visible = false; gw.renderOrder = 7; g.add(gw);
+        var gw = new THREE.Mesh(cm.geometry, glowMat); gw.visible = false; gw.layers.set(2); g.add(gw); cm.layers.enable(1);   // the glow is drawn in its own pass, above the holder
         var idx = (upper ? 0 : 16) + (side > 0 ? 8 + k : 7 - k);
         rm.userData.idx = cm.userData.idx = idx; g.add(rb); g.add(rm); g.add(cm); (upper ? rig : jaw).add(g);
         teeth[idx] = { g: g, resin: rm, back: rb, cap: cm, glow: gw, deco: null, key: null, spots: [], def: def, upper: upper, base: base, out: new V3(Math.sin(side * r.a), 0, Math.cos(side * r.a)), ang: side * r.a, pop: 0, lift: 0 };
@@ -257,6 +257,17 @@
     return c.toDataURL('image/jpeg', .9);
   };
 
+  // ---------- the selected tooth's glow: a pass of its own after the scene, hidden only by the teeth, never by the clear holder ----------
+  var anyGlow = false, capDepth = new THREE.MeshBasicMaterial({ colorWrite: false });
+  function renderAll() {
+    renderer.render(scene, camera);
+    if (!anyGlow) return;
+    var bg = scene.background; scene.background = null; renderer.autoClear = false; renderer.clearDepth();
+    camera.layers.set(1); scene.overrideMaterial = capDepth; renderer.render(scene, camera);   // the caps' depth only
+    scene.overrideMaterial = null; camera.layers.set(2); renderer.render(scene, camera);      // then the glow on top
+    camera.layers.set(0); renderer.autoClear = true; scene.background = bg;
+  }
+
   // ---------- the loop: draws only when something changes ----------
   var visible = true, lastYaw = 9;
   if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { visible = en[0].isIntersecting; }).observe(stage);
@@ -266,11 +277,12 @@
     var k = reduce ? 1 : .075, moving = false;
     ['yaw', 'pitch', 'zoom'].forEach(function (a) { var d = tgt[a] - curv[a]; if (Math.abs(d) > .0005) { curv[a] += d * k; moving = true; } });
     if (!dragging && !hold && (Math.abs(user.yaw) > .001 || Math.abs(user.pitch) > .001) && t - idleAt > 4000) { user.yaw *= .96; user.pitch *= .96; moving = true; }
+    anyGlow = false;
     teeth.forEach(function (o, n) {
       var want = ui.mode === 'build' && ui.sel === n ? 1 : 0;
       if (Math.abs(want - o.lift) > .002) { o.lift += (want - o.lift) * (reduce ? 1 : .16); o.g.position.copy(o.base).addScaledVector(o.out, o.lift * 1.3 * MM); moving = true; }
       var gwant = ui.mode === 'build' && ui.sel === n && T[n].on; if (o.glow && o.glow.visible !== gwant) { o.glow.visible = gwant; moving = true; }
-      if (gwant) { glowMat.uniforms.t.value = t; moving = true; }
+      if (gwant) { glowMat.uniforms.t.value = t; moving = true; anyGlow = true; }
       if (o.pop > 0) { o.pop = Math.max(0, o.pop - .06); o.g.scale.setScalar(1 + Math.sin(o.pop * Math.PI) * .1); moving = true; }
     });
     var bx = G.box || boxC; ['top', 'bottom', 'left', 'right'].forEach(function (a) { var d = (bx[a] || 0) - boxC[a]; if (Math.abs(d) > .5) { boxC[a] += d * (reduce ? 1 : .14); moving = true; } });
@@ -278,7 +290,7 @@
     if (glintT > 0) { glintT = Math.max(0, glintT - .035); renderer.toneMappingExposure = 1 + Math.sin(glintT * Math.PI) * .3; rig.rotation.y = Math.sin(glintT * Math.PI) * .1; moving = true; }
     if (G.tick) G.tick(t);
     var swaying = place(t);
-    if (moving || swaying || dirty) { updateGlints(); renderer.render(scene, camera); dirty = false; }
+    if (moving || swaying || dirty) { updateGlints(); renderAll(); dirty = false; }
   }
   G.solid(70); resize(); G.goal(reduce);
   G.boot = function () { G.sync(); load.hidden = true; ready = true; G.ready = true; dirty = true; requestAnimationFrame(frame); };
