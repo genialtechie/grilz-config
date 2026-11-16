@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 export const MODEL_SIZE = { width: 4.84, height: 2.41 };
 /** How far the front of the holder stands in front of the model's centre (it renders biggest). */
-const FRONT_DEPTH = 2.05;
+export const FRONT_DEPTH = 2.05;
 export const MODEL_CENTRE = new THREE.Vector3(0, 0, 0);
 /** The viewer's lens (vertical field of view, degrees): the approved prototype's long lens, so the set isn't distorted by being close. */
 export const CAMERA_FOV = 26;

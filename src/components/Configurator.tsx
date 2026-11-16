@@ -353,18 +353,6 @@ function Configurator() {
     [base, overrides, selectedSet, setOptions.fangs, setOptions.cut],
   );
 
-  // What the camera frames at rest: the set, and on the Teeth step a tooth either side of each
-  // row too, so there is always a neighbour in view to tap and add. No teeth: the whole model.
-  const frameTeeth = useMemo(() => {
-    if (step !== 'teeth' || !selectedTeeth.length) return selectedTeeth;
-    const rows = [0, 16].flatMap((offset) => {
-      const row = selectedTeeth.filter((index) => index >= offset && index < offset + 16);
-      if (!row.length) return [];
-      return [Math.max(offset, row[0] - 1), ...row, Math.min(offset + 15, row.at(-1)! + 1)];
-    });
-    return [...new Set(rows)];
-  }, [step, selectedTeeth]);
-
   const handleToothClick = (index: number) => {
     if (step === 'teeth') {
       toggleToothSelection(index);
@@ -852,7 +840,6 @@ function Configurator() {
             inscriptions={inscriptions}
             photoImage={inspiration}
             poster={poster}
-            frameTeeth={frameTeeth}
             closeUp={closeUp}
             view={view}
             onUserControl={() => setCloseUp(null)}

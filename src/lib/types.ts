@@ -45,8 +45,6 @@ export interface SceneProps {
   photoImage?: string | null;
   /** A still of the opening design, shown until the model is drawn (src/lib/poster.ts). */
   poster?: string | null;
-  /** The covered teeth: once the model is drawn the camera frames them rather than the whole model. Absent: it stays on the whole model (the /lab page and its stills). */
-  frameTeeth?: number[];
   closeUp?: CloseUp | null;
   view?: ViewRequest | null;
   /** The customer dragged or pinched the model. */

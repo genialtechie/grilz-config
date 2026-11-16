@@ -5,12 +5,10 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import GrillzModel from './GrillzModel';
 import type { CloseUp, SceneProps, ViewRequest } from '../../lib/types';
-import { CAMERA_FOV, fitDistance, MODEL_CENTRE, VIEW_FRACTION } from '../../lib/framing';
+import { CAMERA_FOV, fitDistance, FRONT_DEPTH, MODEL_CENTRE, MODEL_SIZE, VIEW_FRACTION } from '../../lib/framing';
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SWING_SECONDS = 7;
-/** How much of the clear part of the canvas the covered teeth fill at rest (MAG-148). */
-const TEETH_FRACTION = 0.95;
 /**
  * The bands of the canvas the controls sit over, as shares of its height: the
  * tooth count and view buttons along the top, the tip (and on phones the edge
@@ -53,7 +51,8 @@ const turn = (from: number, to: number) => {
 
 /**
  * The camera: opens on the framing the still was taken at (so the still and the
- * model line up), then glides in on the covered teeth (`frameTeeth`, MAG-148).
+ * model line up), then settles on the whole piece (the teeth in their clear holder,
+ * as in the approved redesign), fitted between the controls.
  * It glides in to a tapped tooth, to the teeth an option changes (`closeUp`),
  * and to a fixed view (`view`), and back. Glides keep the angle the customer
  * looks from unless a view or close-up turns it. Any drag or pinch hands control
@@ -63,14 +62,12 @@ const turn = (from: number, to: number) => {
 function Rig({
   focus,
   started,
-  frameTeeth,
   closeUp,
   view,
   onUserControl,
 }: {
   focus: THREE.Vector3 | null;
   started: boolean;
-  frameTeeth?: number[];
   closeUp?: CloseUp | null;
   view?: ViewRequest | null;
   onUserControl?: () => void;
@@ -82,32 +79,26 @@ function Rig({
   const swing = useRef({ until: reducedMotion() ? 0 : -1, base: 0 });
   const goal = useRef<Goal | null>(null);
 
-  // Home: the covered teeth filling the canvas, once the model is drawn and the still has gone.
+  // Home: the whole piece filling the clear band between the controls, once the model is drawn and the still has gone.
   const [settled, setSettled] = useState(false);
   useEffect(() => {
     if (!started) return;
     const timer = window.setTimeout(() => setSettled(true), POSTER_FADE_MS);
     return () => window.clearTimeout(timer);
   }, [started]);
-  const teethKey = frameTeeth?.join(',') ?? '';
   const home = useMemo<Goal>(() => {
-    const box = settled && frameTeeth?.length ? teethBox(scene, frameTeeth) : null;
-    if (!box) return { target: MODEL_CENTRE.clone(), distance: rest };
-    // Fit the teeth to the clear band between the controls (its height, the canvas's full width)...
+    if (!settled) return { target: MODEL_CENTRE.clone(), distance: rest };
+    // Fit the whole piece to the clear band between the controls (its height, the canvas's full width)...
     const { top, bottom } = overlays();
     const clear = 1 - top - bottom;
-    const size3 = box.getSize(new THREE.Vector3());
     const tan = Math.tan(THREE.MathUtils.degToRad(perspective.fov / 2));
     const aspect = size.width / Math.max(1, size.height);
-    const fit = Math.max(size3.y / (2 * tan * clear * TEETH_FRACTION), size3.x / (2 * tan * aspect * TEETH_FRACTION)) + size3.z / 2;
-    // ...never further out than the whole model's framing...
-    const distance = Math.min(rest, fit);
-    // ...and centred in that band: aim below the teeth by as much as the band sits above the canvas's middle.
-    const target = box.getCenter(new THREE.Vector3());
-    target.y -= (bottom - top) * (distance - size3.z / 2) * tan;
-    return { target, distance };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settled, teethKey, rest, scene, perspective, size.width, size.height]);
+    const span = Math.max(MODEL_SIZE.height / (2 * tan * clear * VIEW_FRACTION), MODEL_SIZE.width / (2 * tan * aspect * VIEW_FRACTION));
+    // ...and centre it in that band: aim below the piece by as much as the band sits above the canvas's middle.
+    const target = MODEL_CENTRE.clone();
+    target.y -= (bottom - top) * span * tan;
+    return { target, distance: span + FRONT_DEPTH };
+  }, [settled, rest, perspective, size.width, size.height]);
 
   // The opening framing, on load and whenever the canvas changes size, before the model is drawn.
   useEffect(() => {
@@ -266,7 +257,6 @@ function Scene({
   inscriptions,
   photoImage,
   poster,
-  frameTeeth,
   closeUp,
   view,
   onUserControl,
@@ -298,7 +288,7 @@ function Scene({
         <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.75)} />
         {showFps && <Stats />}
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={CAMERA_FOV} />
-        <Rig focus={focus} started={drawn} frameTeeth={frameTeeth} closeUp={closeUp} view={view} onUserControl={onUserControl} />
+        <Rig focus={focus} started={drawn} closeUp={closeUp} view={view} onUserControl={onUserControl} />
         {/* No lamps: the piece is lit by the rooms its materials reflect (redesign/look.ts), with its own soft shadow. */}
         <GrillzModel
           customizations={customizations}
