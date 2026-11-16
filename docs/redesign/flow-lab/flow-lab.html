@@ -193,7 +193,7 @@ textarea.field { min-height: 92px; resize: none; }
       <section class="card">
         <p class="lab">What is free and what needs the sign-up</p>
         <p style="color:var(--mut)"><b style="color:var(--fg)">Free:</b> the front door, building it yourself (the default), the live price, and seeing the AI options.</p>
-        <p style="color:var(--mut)"><b style="color:var(--fg)">After a free sign-up (name and a phone verified by text):</b> using AI to build it, the studio photo, the design saved and texted to them, sending it to the jeweler, and the deposit.</p>
+        <p style="color:var(--mut)"><b style="color:var(--fg)">After a free sign-up (name and a phone verified by text; their Instagram is optional and not checked):</b> using AI to build it, the studio photo, the design saved and texted to them, sending it to the jeweler, and the deposit.</p>
       </section>
     </div>
   </div>
@@ -287,14 +287,15 @@ textarea.field { min-height: 92px; resize: none; }
     summary: ['Your design', 'free', 'Where every path meets: what they built, the price, a way to change any part, and the one big ask: see it as a studio photo.', ['Does "See it as a studio photo" make signing up feel worth it?', 'Is the price shown in full here, before signing up?']],
     verify: ['Sign up: verify your phone', 'lock', 'One free sign-up: name and phone, then a code by text. It comes before using AI, or before the studio photo for those who built it themselves. Once verified, they are never asked again.', ['Name and phone together, or phone only?', 'Offer email if they will not give a phone?', 'Phone codes by text are nearly free but not free: about $0 a month at 100 sign-ups, $7 at 1,000 and $47 at 5,000 with the cheapest reliable option. Verifying through WhatsApp is free but only a third of US adults use it. Your pick comes next.']],
     code: ['Enter the code', 'lock', 'Six digits from the text. In this prototype any six digits work.', ['Resend after how long?']],
+    insta: ['Your Instagram', 'lock', 'Optional, right after the phone code. Their handle, then a Follow button for our account. Nothing is checked and nobody is held back: Continue works either way, and the jeweler sees the handle as given, not verified.', ['Ask for the handle here, or only show the Follow button?', 'Should a jeweler\'s own shop ask them to follow the jeweler instead of VVS Lab?']],
     photo: ['The studio photo', 'lock', 'The reward. The photo develops, the design is saved, and sending it is one tap away. They choose how they get fitted here.', ['One free photo per verified phone, then a limit?', 'Send right here, or a separate send screen?']],
     sent: ['Sent', 'lock', 'Confirmation, the time it took, the deposit, and what happens next.', ['Deposit on this screen, or its own step?', 'Show the time it took to the shopper, or keep it for our numbers only?']],
     jeweler: ['For jewelers', 'free', 'The jeweler lane, kept as a stub here. Its own flow comes in a later round.', []]
   };
   var PATHS = {
-    self: ['door', 'teeth', 'metal', 'finish', 'details', 'summary', 'verify', 'code', 'photo', 'sent'],
-    describe: ['door', 'ai', 'verify', 'code', 'describe', 'building', 'summary', 'photo', 'sent'],
-    picture: ['door', 'ai', 'verify', 'code', 'picture', 'building', 'summary', 'photo', 'sent']
+    self: ['door', 'teeth', 'metal', 'finish', 'details', 'summary', 'verify', 'code', 'insta', 'photo', 'sent'],
+    describe: ['door', 'ai', 'verify', 'code', 'insta', 'describe', 'building', 'summary', 'photo', 'sent'],
+    picture: ['door', 'ai', 'verify', 'code', 'insta', 'picture', 'building', 'summary', 'photo', 'sent']
   };
   var view = document.getElementById('view');
   function nav(title, back, showPrice) {
@@ -399,6 +400,10 @@ textarea.field { min-height: 92px; resize: none; }
       return nav('Enter the code', true) + '<div class="body"><h2 class="h" style="font-size:23px">Enter the code we texted to ' + (S.phone || 'your phone') + '.</h2><div class="code" id="codebox">' + [0, 1, 2, 3, 4, 5].map(function (i) { return '<input inputmode="numeric" maxlength="1" aria-label="Digit ' + (i + 1) + '" data-d="' + i + '">'; }).join('') + '</div><p class="sub" style="font-size:12.5px">In this prototype any six digits work. <button type="button" class="txt" data-act="resend">Text it again</button></p></div>' +
         foot('<button type="button" class="cta" data-act="verify">Verify</button>');
     },
+    insta: function () {
+      return nav('Your Instagram', false) + '<div class="body"><div class="done" style="background:#1d5a35">✓</div><h2 class="h" style="font-size:23px">You\'re signed up.</h2><p class="sub">Add your Instagram if you like, so the jeweler can DM you too. Optional.</p><input class="field" id="vig" placeholder="@yourhandle" autocomplete="off" value="' + (S.ig || '') + '" aria-label="Your Instagram handle"><div class="rows"><div style="grid-template-columns:44px 1fr auto"><span class="w" style="width:44px;height:44px;border-radius:50%;background:var(--p-wire);display:grid;place-items:center;font:600 11px/1 var(--mono)">VV</span><span><b>@vvslab</b><br><span class="sub" style="font-size:12px">New pieces and drops</span></span><button type="button" class="chip" data-act="follow" aria-pressed="' + !!S.followed + '">' + (S.followed ? 'Following' : 'Follow') + '</button></div></div></div>' +
+        foot('<button type="button" class="cta" data-act="instadone">Continue</button>');
+    },
     photo: function () {
       var p = price();
       return nav('Your studio photo', false, false) + '<div class="body"><div class="piece photo big"><span class="lbl">AI studio photo of your design</span></div><p class="note">Saved. We texted you a link to this design.</p>' +
@@ -445,7 +450,7 @@ textarea.field { min-height: 92px; resize: none; }
     if (t.closest('.scr')) S.taps++;
     if (t.hasAttribute('data-layout')) { S.layout = t.getAttribute('data-layout'); S.hist = []; S.screen = 'door'; render(); return; }
     if (t.hasAttribute('data-jump')) { var j = t.getAttribute('data-jump'); if (!count() && j !== 'door' && j !== 'teeth' && j !== 'ai' && j !== 'describe' && j !== 'picture') applyPreset(1); if (j === 'building' && !D.heard.length) fromPick(0); if (j === 'describe' || j === 'picture') S.aiPath = j; go(j); return; }
-    if (t.hasAttribute('data-back')) { if (S.hist.length) { S.screen = S.hist.pop(); if (S.screen === 'building' || S.screen === 'code' || S.screen === 'verify') S.screen = S.hist.pop() || 'door'; S.sel = null; render(); } return; }
+    if (t.hasAttribute('data-back')) { if (S.hist.length) { S.screen = S.hist.pop(); while (S.screen === 'building' || S.screen === 'code' || S.screen === 'verify' || S.screen === 'insta') S.screen = S.hist.pop() || 'door'; S.sel = null; render(); } return; }
     if (t.hasAttribute('data-start')) { startSelf(); return; }
     if (t.hasAttribute('data-go')) { var g0 = t.getAttribute('data-go'); if (g0 === 'ai') S.path = S.aiPath || 'describe'; go(g0); return; }
     if (t.hasAttribute('data-ai')) { S.aiPath = t.getAttribute('data-ai'); S.path = S.aiPath; if (S.verified) go(S.aiPath); else { S.after = 'ai'; go('verify'); } return; }
@@ -479,7 +484,9 @@ textarea.field { min-height: 92px; resize: none; }
     if (a === 'photo') { if (S.verified) go('photo'); else { S.after = 'photo'; go('verify'); } }
     if (a === 'sendcode') { S.name = document.getElementById('vname').value.trim(); S.phone = document.getElementById('vphone').value.trim(); if (S.name.length < 2 || S.phone.replace(/\D/g, '').length < 10) { toast('Add your name and a 10-digit phone number.'); return; } go('code'); setTimeout(function () { var f = view.querySelector('[data-d="0"]'); if (f) f.focus(); }, 60); }
     if (a === 'resend') toast('Sent again. In the real builder there is a short wait before resending.');
-    if (a === 'verify') { var code = Array.prototype.map.call(view.querySelectorAll('[data-d]'), function (i2) { return i2.value; }).join(''); if (!/^\d{6}$/.test(code)) { toast('Enter all six digits.'); return; } S.verified = true; toast('Verified. You will not be asked again.'); go(S.after === 'ai' ? S.aiPath : 'photo'); }
+    if (a === 'verify') { var code = Array.prototype.map.call(view.querySelectorAll('[data-d]'), function (i2) { return i2.value; }).join(''); if (!/^\d{6}$/.test(code)) { toast('Enter all six digits.'); return; } S.verified = true; toast('Verified. You will not be asked again.'); go('insta'); }
+    if (a === 'follow') { S.followed = !S.followed; render(); if (S.followed) toast('In the real builder this opens Instagram to follow @vvslab.'); }
+    if (a === 'instadone') { var ig = document.getElementById('vig'); S.ig = ig ? ig.value.trim() : ''; go(S.after === 'ai' ? S.aiPath : 'photo', true); }
     if (a === 'send') { S.tEnd = Date.now(); go('sent'); }
     if (a === 'pay') { S.paid = true; render(); toast('Deposit paid. In the real builder this is the jeweler\'s own checkout.'); }
     if (a === 'again') { D = fresh(); var v = S.verified, nm = S.name, ph = S.phone, lay = S.layout; S = blankState(lay); S.verified = v; S.name = nm; S.phone = ph; applyPreset(1); D.preset = null; go('door', true); }
@@ -488,6 +495,7 @@ textarea.field { min-height: 92px; resize: none; }
     if (e.target.id === 'ini') D.initials = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     if (e.target.id === 'idea') D.idea = e.target.value;
     if (e.target.id === 'words') S.words = e.target.value;
+    if (e.target.id === 'vig') S.ig = e.target.value;
     if (e.target.hasAttribute('data-d')) { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 1); var nx = view.querySelector('[data-d="' + (+e.target.getAttribute('data-d') + 1) + '"]'); if (e.target.value && nx) nx.focus(); }
   });
   document.getElementById('reset').addEventListener('click', function () { S = blankState(S.layout); applyPreset(1); D.preset = null; render(); });

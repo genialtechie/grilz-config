@@ -18,3 +18,7 @@ What it shows (version 2, Nov 16, after the owner's comments):
   needs a free sign-up first, because AI costs money per use.
 - One sign-up (name and a phone verified by text) unlocks AI, the studio
   photo, sending to the jeweler and the deposit; nobody is asked twice.
+- After the code, an optional Instagram handle and a "Follow @vvslab" step.
+  Nothing is checked and nobody is held back; the jeweler sees the handle as
+  given, not verified. (Instagram's tools can't show who followed, so a follow
+  can't verify anyone, and the flow never pretends it does.)
