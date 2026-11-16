@@ -22,6 +22,9 @@ calm rows that clearly read as buttons, a picture of what's chosen, one price
 only (in the top bar). Several teeth can be edited at once: tap them on the 3D
 (each glows) or pick a quick group (top row, bottom row, front teeth, canines,
 every other). When teeth differ, the menu stacks their pictures with a count.
+Third pass (owner: zoom out and simplify): round pictures like the earlier rows,
+no arrow and no grey border on the rows (they read as tappable without them),
+one type family throughout, and a small gold dot instead of "Not opened yet".
 
 `creator.html` is the built page. `src/` holds its parts; run `python3 build.py`
 inside `src/` to rebuild (it writes `creator.html` and `engine.js` there).
