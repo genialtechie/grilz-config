@@ -1,0 +1,504 @@
+<title>Shopper Flow Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a review desk. The flow map on the left, the shopper's phone in the middle as plain wireframes, and the notes for the open screen on the right. */
+:root {
+  --bg: #ebeae5; --panel: #f7f6f2; --fg: #171716; --mut: #6b6962; --faint: #96948c; --line: rgba(23,23,22,.13); --accent: #9a6d16; --chip: rgba(23,23,22,.06);
+  /* the phone screen is wireframe paper in both themes */
+  --p-bg: #fbfaf7; --p-fg: #171716; --p-mut: #77756e; --p-line: rgba(23,23,22,.16); --p-wire: #e7e5df; --p-wire2: #d6d4cd; --p-ink: #171716; --p-gold: #c9a14a; --p-gold-d: #9a6d16;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121211; --panel: #1b1b1a; --fg: #eeede8; --mut: #a19f97; --faint: #77756e; --line: rgba(238,237,232,.13); --accent: #d6a94e; --chip: rgba(238,237,232,.08); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121211; --panel: #1b1b1a; --fg: #eeede8; --mut: #a19f97; --faint: #77756e; --line: rgba(238,237,232,.13); --accent: #d6a94e; --chip: rgba(238,237,232,.08); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 400 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, p, ol, ul { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; max-width: 1320px; margin: 0 auto; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 20px; margin-bottom: 18px; }
+.top h1 { font: 600 22px/1.1 var(--sans); letter-spacing: -.03em; }
+.top p { color: var(--mut); max-width: 70ch; }
+.desk { display: grid; grid-template-columns: 290px minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.col { display: grid; gap: 14px; min-width: 0; }
+.card { background: var(--panel); border-radius: 16px; box-shadow: 0 0 0 1px var(--line); padding: 14px 16px; display: grid; gap: 10px; min-width: 0; }
+.lab { font: 500 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 11px; font: 500 12.5px/1 var(--sans); color: var(--mut); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.map { list-style: none; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+.map li button { width: 100%; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 7px 8px; display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; align-items: center; color: var(--mut); font: 500 13px/1.25 var(--sans); }
+.map li button::before { counter-increment: s; content: counter(s); font: 500 10.5px/1 var(--mono); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--line); }
+.map li button[aria-current="step"] { background: var(--chip); color: var(--fg); font-weight: 600; }
+.map li button[aria-current="step"]::before { background: var(--fg); color: var(--bg); box-shadow: none; }
+.map li button.seen { color: var(--fg); }
+.map .tag { font: 500 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 6px; border-radius: 6px; background: var(--chip); color: var(--mut); }
+.map .tag.lock { background: rgba(154,109,22,.14); color: var(--accent); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat b { display: block; font: 600 24px/1 var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--mut); }
+.stat.good b { color: var(--accent); }
+.reset { justify-self: start; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 12px; font: 600 12.5px/1 var(--sans); }
+.notes h2 { font: 600 17px/1.2 var(--sans); letter-spacing: -.02em; }
+.notes p { color: var(--mut); }
+.access { justify-self: start; font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 6px 9px; border-radius: 999px; background: var(--chip); }
+.access.lock { background: rgba(154,109,22,.15); color: var(--accent); }
+.qs { padding-left: 18px; display: grid; gap: 6px; color: var(--fg); }
+.qs li::marker { color: var(--faint); }
+
+/* ===== the phone ===== */
+.stage { display: grid; justify-items: center; gap: 12px; }
+.phone { width: 360px; max-width: 100%; height: 740px; background: #0e0e0d; border-radius: 46px; padding: 11px; box-shadow: 0 40px 80px -40px rgba(0,0,0,.45); }
+.scr { position: relative; height: 100%; background: var(--p-bg); color: var(--p-fg); border-radius: 36px; overflow: hidden; display: flex; flex-direction: column; }
+.sbar { flex: 0 0 auto; height: 40px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font: 600 12.5px/1 var(--sans); }
+.sbar i { width: 60px; height: 6px; border-radius: 6px; background: var(--p-wire2); }
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; animation: in .25s ease; }
+@keyframes in { from { opacity: 0; transform: translateX(10px); } }
+.nav { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 2px 16px 8px; min-height: 40px; }
+.nav .bk { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--p-line); background: transparent; display: grid; place-items: center; font-size: 15px; color: var(--p-fg); }
+.nav b { font: 600 14px/1 var(--sans); flex: 1; letter-spacing: -.01em; }
+.nav .price { font: 600 12.5px/1 var(--mono); background: var(--p-wire); border-radius: 999px; padding: 6px 9px; font-variant-numeric: tabular-nums; }
+.body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 12px; display: grid; gap: 12px; align-content: start; scrollbar-width: none; }
+.body::-webkit-scrollbar { display: none; }
+.foot { flex: 0 0 auto; padding: 10px 16px 18px; display: grid; gap: 8px; border-top: 1px solid var(--p-line); background: var(--p-bg); }
+.cta { width: 100%; min-height: 50px; border: 0; border-radius: 999px; background: var(--p-ink); color: #fff; font: 600 15px/1 var(--sans); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.cta[disabled] { opacity: .35; cursor: default; }
+.cta.gold { background: var(--p-gold-d); }
+.ghost { width: 100%; min-height: 42px; border: 1px solid var(--p-line); border-radius: 999px; background: transparent; font: 600 13.5px/1 var(--sans); color: var(--p-fg); }
+.txt { border: 0; background: none; padding: 0; font: 600 13px/1.3 var(--sans); text-decoration: underline; text-underline-offset: 3px; color: var(--p-fg); }
+.h { font: 600 26px/1.04 var(--sans); letter-spacing: -.04em; }
+.sub { color: var(--p-mut); font-size: 14px; line-height: 1.4; }
+.mini { font: 500 10px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--p-mut); }
+.piece { position: relative; border-radius: 20px; background: radial-gradient(90% 90% at 50% 35%, #f3f2ee, var(--p-wire)); display: grid; place-items: center; min-height: 170px; overflow: hidden; }
+.piece .lbl { position: absolute; left: 10px; top: 10px; font: 500 9.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--p-mut); }
+.piece.big { min-height: 250px; }
+.piece.photo { background: repeating-linear-gradient(135deg, var(--p-wire) 0 10px, #efede8 10px 20px); }
+.teeth { display: grid; gap: 6px; padding: 18px 10px; }
+.trow { display: flex; gap: 3px; justify-content: center; }
+.tooth { display: block; flex: 0 0 auto; width: 15px; height: 26px; border-radius: 5px; border: 0; padding: 0; background: rgba(23,23,22,.08); transition: transform .12s ease, background .15s ease; }
+.tooth.on { background: var(--m, var(--p-gold)); box-shadow: inset 0 -5px 7px rgba(0,0,0,.14), inset 0 3px 5px rgba(255,255,255,.5); }
+.tooth.iced.on { background-image: radial-gradient(circle at 30% 30%, #fff 0 1.4px, transparent 2px), radial-gradient(circle at 70% 60%, #fff 0 1.4px, transparent 2px), radial-gradient(circle at 40% 80%, #fff 0 1.4px, transparent 2px); }
+.tooth.fang.on { clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%); height: 32px; }
+.teeth.tap .tooth { cursor: pointer; }
+.teeth.tap .tooth:active { transform: scale(.9); }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tiles.two { grid-template-columns: 1fr 1fr; }
+.tile { border: 0; background: transparent; padding: 0; display: grid; gap: 5px; text-align: left; }
+.tile .w { aspect-ratio: 1 / .8; border-radius: 14px; background: var(--p-wire); display: grid; place-items: center; position: relative; box-shadow: 0 0 0 1px transparent; font: 500 9.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--p-mut); text-align: center; padding: 6px; }
+.tile .w.sw { background: var(--m); box-shadow: inset 0 -10px 16px rgba(0,0,0,.14), inset 0 6px 10px rgba(255,255,255,.5); }
+.tile b { font: 600 12px/1.15 var(--sans); }
+.tile span { font: 500 10px/1 var(--mono); color: var(--p-mut); }
+.tile[aria-pressed="true"] .w { box-shadow: 0 0 0 2px var(--p-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--p-line); background: #fff; border-radius: 999px; padding: 8px 12px; font: 500 12.5px/1 var(--sans); color: var(--p-fg); }
+.chip[aria-pressed="true"] { background: var(--p-ink); color: #fff; border-color: var(--p-ink); }
+.chip em { font: 500 10px/1 var(--mono); font-style: normal; opacity: .7; }
+.start { border: 1px solid var(--p-line); background: #fff; border-radius: 18px; padding: 14px; text-align: left; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; }
+.start i { width: 44px; height: 44px; border-radius: 12px; background: var(--p-wire); display: grid; place-items: center; font: 600 13px/1 var(--mono); font-style: normal; }
+.start b { display: block; font: 600 15px/1.2 var(--sans); letter-spacing: -.01em; }
+.start span { font-size: 12.5px; color: var(--p-mut); line-height: 1.35; }
+.start.ai i { background: #f1e6cd; color: var(--p-gold-d); }
+.field { width: 100%; border: 1px solid var(--p-line); background: #fff; border-radius: 14px; padding: 12px 13px; font: 500 15px/1.3 var(--sans); color: var(--p-fg); }
+textarea.field { min-height: 92px; resize: none; }
+.rows { display: grid; gap: 0; border-radius: 16px; background: #fff; box-shadow: 0 0 0 1px var(--p-line); }
+.rows div { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; padding: 11px 12px; border-top: 1px solid var(--p-line); font-size: 13px; }
+.rows div:first-child { border-top: 0; }
+.rows em { font: 500 9.5px/1 var(--mono); font-style: normal; letter-spacing: .07em; text-transform: uppercase; color: var(--p-mut); }
+.rows b { font-weight: 600; }
+.note { border-radius: 14px; background: #f3ecdc; color: #5b4416; padding: 10px 12px; font-size: 12.5px; line-height: 1.4; }
+.total { display: flex; justify-content: space-between; align-items: baseline; }
+.total b { font: 600 24px/1 var(--sans); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.total span { color: var(--p-mut); font-size: 12.5px; }
+.code { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.code input { width: 100%; aspect-ratio: 1 / 1.15; text-align: center; border: 1px solid var(--p-line); border-radius: 12px; background: #fff; font: 600 20px/1 var(--mono); color: var(--p-fg); }
+.lines { display: grid; gap: 8px; }
+.lines div { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--p-mut); }
+.lines div i { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--p-line); flex: 0 0 auto; }
+.lines div.ok { color: var(--p-fg); }
+.lines div.ok i { background: var(--p-ink); border-color: var(--p-ink); }
+.tl { list-style: none; padding: 0; display: grid; }
+.tl li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding-bottom: 12px; position: relative; font-size: 13px; }
+.tl li::before { content: ""; position: absolute; left: 8px; top: 18px; bottom: 0; width: 1.5px; background: var(--p-line); }
+.tl li:last-child::before { display: none; }
+.tl i { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--p-line); background: var(--p-bg); position: relative; }
+.tl li.now i { background: var(--p-ink); border-color: var(--p-ink); }
+.tl b { display: block; font-weight: 600; }
+.tl span { color: var(--p-mut); }
+.done { width: 52px; height: 52px; border-radius: 50%; background: var(--p-ink); color: #fff; display: grid; place-items: center; font-size: 22px; }
+.timer { justify-self: start; font: 600 12px/1 var(--mono); background: var(--p-wire); border-radius: 999px; padding: 7px 10px; }
+.tooth.sel { outline: 2.5px solid var(--p-ink); outline-offset: 2px; }
+.tooth.open.on { background: transparent; box-shadow: inset 0 0 0 3px var(--m, var(--p-gold)); }
+.teeth.small { padding: 4px 2px; gap: 3px; }
+.teeth.small .trow { gap: 1px; }
+.teeth.small .tooth { width: 4px; height: 10px; border-radius: 1.5px; box-shadow: none; flex: 0 0 auto; }
+.tile .w { overflow: hidden; }
+.tile .w .teeth.small { padding: 0; }
+.teeth.small .tooth.fang.on { height: 12px; }
+.tile .w .pop { position: absolute; left: 6px; top: 6px; font: 600 8.5px/1 var(--mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; background: var(--p-ink); color: #fff; border-radius: 5px; padding: 3px 5px; }
+.start b em { font: 600 9px/1 var(--mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; background: #f1e6cd; color: var(--p-gold-d); border-radius: 5px; padding: 3px 5px; vertical-align: 2px; margin-left: 4px; }
+.start b em.ok { background: #dcefe2; color: #1d5a35; }
+.selbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--p-ink); color: #fff; border-radius: 12px; padding: 8px 8px 8px 12px; font-size: 12.5px; }
+.selbar button { border: 0; background: #fff; color: var(--p-ink); border-radius: 999px; padding: 6px 12px; font: 600 12px/1 var(--sans); }
+.toast { position: absolute; left: 16px; right: 16px; bottom: 96px; background: var(--p-ink); color: #fff; border-radius: 14px; padding: 10px 12px; font-size: 12.5px; line-height: 1.35; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+.toast.show { opacity: 1; }
+.doorcards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.doorcard { border: 1px solid var(--p-line); background: #fff; border-radius: 16px; padding: 12px; text-align: left; display: grid; gap: 4px; }
+.doorcard.ink { background: var(--p-ink); color: #fff; border-color: var(--p-ink); }
+.doorcard small { font: 500 9.5px/1 var(--mono); letter-spacing: .07em; text-transform: uppercase; opacity: .65; }
+.doorcard b { font: 600 15px/1.15 var(--sans); }
+
+@media (max-width: 1180px) { .desk { grid-template-columns: 270px minmax(0, 1fr); } .desk > .notescol { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) {
+  .desk { grid-template-columns: 1fr; }
+  .desk > .notescol { grid-template-columns: 1fr; }
+  .stage { order: -1; }
+  .phone { width: 100%; max-width: 380px; height: 720px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Shopper Flow Lab</h1>
+    <p>Low-fidelity and clickable, to compare how a shopper gets from the front door to a sent order and a deposit. Grey boxes stand in for the 3D and the photo. Nothing here is decided.</p>
+  </header>
+  <div class="desk">
+    <div class="col">
+      <section class="card">
+        <p class="lab">Front door layout</p>
+        <div class="seg" id="layouts"></div>
+      </section>
+      <section class="card">
+        <p class="lab">Path through the flow</p>
+        <ol class="map" id="map"></ol>
+      </section>
+      <section class="card">
+        <p class="lab">This run</p>
+        <div class="stats"><div class="stat" id="stTime"><b>0:00</b><span>since they started</span></div><div class="stat"><b id="stTaps">0</b><span>taps</span></div></div>
+        <button type="button" class="reset" id="reset">Start over</button>
+      </section>
+    </div>
+
+    <div class="stage">
+      <div class="phone"><div class="scr"><div class="sbar"><span>9:41</span><i></i><span>5G</span></div><div class="view" id="view"></div><div class="toast" id="toast" role="status"></div></div></div>
+    </div>
+
+    <div class="col notescol">
+      <section class="card notes" id="notes"></section>
+      <section class="card">
+        <p class="lab">What is free and what needs the sign-up</p>
+        <p style="color:var(--mut)"><b style="color:var(--fg)">Free:</b> the front door, building it yourself (the default), the live price, and seeing the AI options.</p>
+        <p style="color:var(--mut)"><b style="color:var(--fg)">After a free sign-up (name and a phone verified by text; their Instagram is optional and not checked):</b> using AI to build it, the studio photo, the design saved and texted to them, sending it to the jeweler, and the deposit.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- the design being built (example prices from the demo shop) ----------
+  var METALS = { yellow: ['Yellow gold', '#d6ad52', 150], white: ['White gold', '#d9d8d2', 150], rose: ['Rose gold', '#dc9a7c', 150], silver: ['Silver', '#cfd4da', 85], platinum: ['Platinum', '#b9c0c8', 320] };
+  var KARAT = { '10k': 1, '14k': 1.4, '18k': 1.85 };
+  var STYLES = { solid: ['Solid', 0], cut: ['Diamond cut', 35], dust: ['Diamond dust', 30], engr: ['Engraved', 45], open: ['Open face', 40], opal: ['Opals', 90] };
+  var SETTINGS = { honeycomb: ['Honeycomb', 0], mosaic: ['Mosaic', 25], prong: ['Prong', 0] };
+  var SETS = [['6 × 6', 6, 6], ['8 × 8', 8, 8], ['6 top', 6, 0], ['8 top', 8, 0], ['Single', 1, 0], ['Full set', 16, 16]];
+  var KEYS = ['metal', 'karat', 'type', 'style', 'setting'];
+  function fresh() { return { teeth: {}, over: {}, metal: 'yellow', karat: '10k', type: 'plain', style: 'solid', setting: 'honeycomb', fangs: false, initials: '', charm: false, perm: false, idea: '', mold: 'kit', from: null, heard: [], preset: null }; }
+  var D = fresh();
+  function setRange(top, bot) { D.teeth = {}; D.over = {}; for (var k = 0; k < 16; k++) { if (k >= (16 - top) / 2 && k < (16 + top) / 2) D.teeth['t' + k] = 1; if (k >= (16 - bot) / 2 && k < (16 + bot) / 2) D.teeth['b' + k] = 1; } }
+  function ids() { return Object.keys(D.teeth); }
+  function count() { return ids().length; }
+  function counts() { var t = 0, b = 0; ids().forEach(function (k) { if (k[0] === 't') t++; else b++; }); return [t, b]; }
+  function isCentered() { var c = counts(); for (var k = 0; k < 16; k++) { var ti = k >= (16 - c[0]) / 2 && k < (16 + c[0]) / 2, bi = k >= (16 - c[1]) / 2 && k < (16 + c[1]) / 2; if (!!D.teeth['t' + k] !== ti || !!D.teeth['b' + k] !== bi) return false; } return true; }
+  function matchedSet() { var c = counts(); if (!isCentered()) return -1; for (var i = 0; i < SETS.length; i++) if (SETS[i][1] === c[0] && SETS[i][2] === c[1]) return i; return -1; }
+  function setName() { var m = matchedSet(); return m >= 0 ? SETS[m][0] : count() + (count() === 1 ? ' tooth' : ' teeth') + ', custom'; }
+  function cfg(id) { var c = {}, o = D.over[id] || {}; KEYS.forEach(function (k) { c[k] = o[k] !== undefined ? o[k] : D[k]; }); return c; }
+  function gold(m) { return m !== 'silver' && m !== 'platinum'; }
+  function toothPrice(c) { var m = METALS[c.metal], p = Math.round(m[2] * (gold(c.metal) ? KARAT[c.karat] : 1)); return p + (c.type === 'iced' ? 75 + SETTINGS[c.setting][1] + (c.style === 'open' ? 40 : 0) : STYLES[c.style][1]); }
+  function price() {
+    var n = count(); if (!n) return { total: 0, deposit: 0 };
+    var total = 200 + ids().reduce(function (s, id) { return s + toothPrice(cfg(id)); }, 0) + (D.fangs ? 150 : 0) + (D.perm ? 100 : 0) + (D.initials ? 50 : 0) + (D.type === 'photo' ? 250 : 0);
+    return { total: total, deposit: Math.min(total, Math.max(100, Math.round(total * .25 / 10) * 10)), quote: D.charm };
+  }
+  function money(n) { return '$' + n.toLocaleString('en-US'); }
+  function metalWords(c) { c = c || D; return (gold(c.metal) ? c.karat.toUpperCase() + ' ' : '') + METALS[c.metal][0].toLowerCase(); }
+  function finishWords(c) { c = c || D; return c.type === 'iced' ? 'iced, ' + SETTINGS[c.setting][0].toLowerCase() + (c.style === 'open' ? ', open face' : '') : c.type === 'photo' ? 'photo' : STYLES[c.style][0].toLowerCase(); }
+  function changed(key) { return ids().filter(function (id) { return D.over[id] && D.over[id][key] !== undefined && D.over[id][key] !== D[key]; }).length; }
+  function extrasWords() { var e = []; if (D.fangs) e.push('fangs'); if (D.initials) e.push('"' + D.initials + '"'); if (D.charm) e.push('a charm (quoted)'); if (D.perm) e.push('permanent look'); return e.length ? e.join(', ') : 'none'; }
+
+  // popular whole sets: one tap fills every step, and Next takes you through
+  var PRESETS = [
+    ['Gold 6 top', 'Plain 10K', function () { setRange(6, 0); }],
+    ['Gold 6 × 6', 'Plain 10K', function () { setRange(6, 6); }],
+    ['Iced 8 bottom', 'Honeycomb', function () { setRange(0, 8); D.type = 'iced'; }],
+    ['Iced fangs', '6 top, 14K', function () { setRange(6, 0); D.type = 'iced'; D.fangs = true; D.karat = '14k'; }],
+    ['Two-tone 6 × 6', 'Gold and white', function () { setRange(6, 6); D.over = { t7: { metal: 'white' }, t8: { metal: 'white' }, b7: { metal: 'white' }, b8: { metal: 'white' } }; }],
+    ['Open face 6 top', 'Plain 10K', function () { setRange(6, 0); D.style = 'open'; }]
+  ];
+  function applyPreset(i) { var keep = D.mold; D = fresh(); D.mold = keep; PRESETS[i][2](); D.preset = i; }
+
+  // ---------- the AI starts, simulated: words or a picture become the closest design ----------
+  function fromWords(txt) {
+    var t = txt.toLowerCase(), heard = [], n = (t.match(/\b(1|one|single|2|two|4|four|6|six|8|eight|10|ten|16|full)\b/) || [])[1];
+    var num = { one: 1, single: 1, '1': 1, two: 2, '2': 2, four: 4, '4': 4, six: 6, '6': 6, eight: 8, '8': 8, ten: 10, '10': 10, '16': 16, full: 16 }[n] || 6;
+    var top = /bottom|lower/.test(t) && !/top|upper/.test(t) ? 0 : num, bot = /bottom|lower/.test(t) ? num : /top|upper/.test(t) ? 0 : num;
+    D = fresh(); setRange(top, bot); heard.push('Teeth: ' + setName());
+    ['rose', 'white', 'silver', 'platinum'].forEach(function (m) { if (t.indexOf(m) >= 0) D.metal = m; });
+    var k = (t.match(/\b(10|14|18)\s?k/) || [])[1]; if (k) D.karat = k + 'k';
+    heard.push('Metal: ' + metalWords());
+    if (/iced|diamond|vvs|stone|bust/.test(t) && !/diamond cut|diamond dust/.test(t)) D.type = 'iced';
+    if (/open/.test(t)) D.style = 'open'; if (/diamond cut|\bcut\b/.test(t) && D.type !== 'iced') D.style = 'cut'; if (/dust/.test(t)) D.style = 'dust'; if (/engrav/.test(t)) D.style = 'engr'; if (/opal/.test(t)) D.style = 'opal';
+    if (/mosaic/.test(t)) D.setting = 'mosaic'; if (/prong/.test(t)) D.setting = 'prong';
+    heard.push('Finish: ' + finishWords());
+    if (/fang/.test(t)) { D.fangs = true; if (counts()[0] < 6) { setRange(6, counts()[1]); heard[0] = 'Teeth: ' + setName() + ' (fangs need the canines)'; } heard.push('Fangs'); }
+    var q = txt.match(/["“']([A-Za-z0-9 ]{1,6})["”']/); if (q) { D.initials = q[1].toUpperCase(); heard.push('Initials: "' + D.initials + '"'); } else if (/initial|my name|letters/.test(t)) { D.initials = 'AB'; heard.push('Initials: placeholder "AB", change it'); }
+    if (/crown|charm|cross|star|logo|character/.test(t)) { D.charm = true; heard.push('A one-of-one charm, quoted by the jeweler'); }
+    D.heard = heard; D.from = 'words';
+  }
+  var PICKS = [
+    ['Iced 8 × 8', function () { setRange(8, 8); D.type = 'iced'; D.karat = '14k'; }],
+    ['Gold fangs', function () { setRange(6, 0); D.fangs = true; D.karat = '14k'; }],
+    ['Open face', function () { setRange(6, 6); D.style = 'open'; }],
+    ['Two-tone', function () { setRange(6, 6); D.metal = 'white'; }],
+    ['Diamond cut', function () { setRange(8, 8); D.style = 'cut'; D.karat = '14k'; }],
+    ['Rose gold six', function () { setRange(6, 0); D.metal = 'rose'; D.type = 'iced'; D.setting = 'mosaic'; }]
+  ];
+  function fromPick(i) { D = fresh(); PICKS[i][1](); D.from = 'picture'; D.heard = ['Teeth: ' + setName(), 'Metal: ' + metalWords(), 'Finish: ' + finishWords()]; if (D.fangs) D.heard.push('Fangs'); }
+
+  // ---------- screens ----------
+  function blankState(layout) { return { path: 'self', screen: 'door', layout: layout || 'a', hist: [], seen: {}, taps: 0, t0: 0, tEnd: 0, phone: '', name: '', paid: false, editing: null, sel: null, verified: false, after: null, aiPath: null }; }
+  var S = blankState();
+  var NOTES = {
+    door: ['Front door', 'free', 'Sells the grill to shoppers; jewelers find their way in from here too. "Start designing" goes straight into building it yourself, the default. Letting AI build it is the second way in.', ['How much does the jeweler lane show on a shopper\'s first screen?', 'Should the AI way in sit on the front door, or only inside the builder?']],
+    ai: ['Let AI build it', 'free', 'Anyone can see the two AI options. Using them needs a free sign-up first, because every AI build costs us. The screen says so plainly, so nobody is surprised.', ['Is "free sign-up" the right word, or "verify your phone"?', 'Should a verified shopper get a set number of AI builds, then a limit?']],
+    describe: ['Describe it', 'lock', 'After signing up, they write what they want and AI turns it into a design on the customiser. Try: iced bottom six with fangs, 14k.', ['Typing only, or also voice?', 'Should they see what AI understood before it builds, or after (as here)?']],
+    picture: ['From a picture', 'lock', 'After signing up, they upload a photo or pick one of these, and AI builds the closest version it can make.', ['Which example pictures? Real pieces from partner jewelers would sell best.', 'If the photo has something we cannot build, say so here or on the summary?']],
+    building: ['Building it', 'lock', 'A short moment that shows what AI understood, line by line, so the result makes sense.', ['Is two or three seconds right, or should it be instant?']],
+    teeth: ['Teeth', 'free', 'The default way in. A popular set fills the whole grill in one tap, and the later steps arrive already set to popular choices, so Next, Next, Next gives a popular grill. Or pick a number of teeth, or tap teeth on the piece: "Custom" selects itself.', ['Which presets? The real most-popular list should come from what customers pick in the live app\'s stats.', 'Six presets, or fewer?']],
+    metal: ['Metal', 'free', 'Comes set to the popular choice, so Next works. Tap a tooth on the piece to change just that one; "Done" goes back to all teeth.', ['Is tapping a tooth clear enough, or does single-tooth editing need its own button?']],
+    finish: ['Finish', 'free', 'Comes set to the popular choice. Plain, iced or photo, then the style. Tap a tooth to change just that one.', ['Should iced settings and stones be their own step?']],
+    details: ['Details', 'free', 'All optional: fangs, initials, a one-of-one charm, the permanent look, their own idea. Next skips it.', ['Keep this as a step, or move extras onto the summary?']],
+    summary: ['Your design', 'free', 'Where every path meets: what they built, the price, a way to change any part, and the one big ask: see it as a studio photo.', ['Does "See it as a studio photo" make signing up feel worth it?', 'Is the price shown in full here, before signing up?']],
+    verify: ['Sign up: verify your phone', 'lock', 'One free sign-up: name and phone, then a code by text. It comes before using AI, or before the studio photo for those who built it themselves. Once verified, they are never asked again.', ['Name and phone together, or phone only?', 'Offer email if they will not give a phone?', 'Phone codes by text are nearly free but not free: about $0 a month at 100 sign-ups, $7 at 1,000 and $47 at 5,000 with the cheapest reliable option. Verifying through WhatsApp is free but only a third of US adults use it. Your pick comes next.']],
+    code: ['Enter the code', 'lock', 'Six digits from the text. In this prototype any six digits work.', ['Resend after how long?']],
+    insta: ['Your Instagram', 'lock', 'Optional, right after the phone code. Their handle, then a Follow button for our account. Nothing is checked and nobody is held back: Continue works either way, and the jeweler sees the handle as given, not verified.', ['Ask for the handle here, or only show the Follow button?', 'Should a jeweler\'s own shop ask them to follow the jeweler instead of VVS Lab?']],
+    photo: ['The studio photo', 'lock', 'The reward. The photo develops, the design is saved, and sending it is one tap away. They choose how they get fitted here.', ['One free photo per verified phone, then a limit?', 'Send right here, or a separate send screen?']],
+    sent: ['Sent', 'lock', 'Confirmation, the time it took, the deposit, and what happens next.', ['Deposit on this screen, or its own step?', 'Show the time it took to the shopper, or keep it for our numbers only?']],
+    jeweler: ['For jewelers', 'free', 'The jeweler lane, kept as a stub here. Its own flow comes in a later round.', []]
+  };
+  var PATHS = {
+    self: ['door', 'teeth', 'metal', 'finish', 'details', 'summary', 'verify', 'code', 'insta', 'photo', 'sent'],
+    describe: ['door', 'ai', 'verify', 'code', 'insta', 'describe', 'building', 'summary', 'photo', 'sent'],
+    picture: ['door', 'ai', 'verify', 'code', 'insta', 'picture', 'building', 'summary', 'photo', 'sent']
+  };
+  var view = document.getElementById('view');
+  function nav(title, back, showPrice) {
+    return '<div class="nav">' + (back ? '<button type="button" class="bk" data-back aria-label="Back">←</button>' : '') + '<b>' + title + '</b>' + (showPrice && count() ? '<span class="price">' + money(price().total) + (price().quote ? ' +' : '') + '</span>' : '') + '</div>';
+  }
+  function teethHtml(mode, small) {        // mode: 'pick' toggles teeth, 'sel' selects one tooth, '' just shows
+    var h = '<div class="teeth' + (mode ? ' tap' : '') + (small ? ' small' : '') + '"' + (mode ? '' : ' aria-hidden="true"') + '>';
+    ['t', 'b'].forEach(function (r) {
+      h += '<div class="trow">';
+      for (var k = 0; k < 16; k++) {
+        var id = r + k, on = !!D.teeth[id], c = cfg(id), fang = D.fangs && r === 't' && (k === 5 || k === 10);
+        var live = mode && !small, cls = 'tooth' + (on ? ' on' : '') + (on && c.type === 'iced' ? ' iced' : '') + (on && c.style === 'open' && c.type !== 'iced' ? ' open' : '') + (fang ? ' fang' : '') + (S.sel === id ? ' sel' : '');
+        h += live ? '<button type="button" class="' + cls + '" style="--m:' + METALS[c.metal][1] + '" data-tooth="' + id + '" aria-label="Tooth ' + (r === 't' ? 'top ' : 'bottom ') + (k + 1) + (on ? ', in the set' : '') + '"></button>' : '<i class="' + cls + '" style="--m:' + METALS[c.metal][1] + '"></i>';
+      }
+      h += '</div>';
+    });
+    return h + '</div>';
+  }
+  function piece(label, mode, big) { return '<div class="piece' + (big ? ' big' : '') + '"><span class="lbl">' + label + '</span>' + teethHtml(mode) + '</div>'; }
+  function tile(g, k, title, sub, on, w, sw, pop) { return '<button type="button" class="tile" data-g="' + g + '" data-k="' + k + '" aria-pressed="' + !!on + '"><span class="w' + (sw ? ' sw" style="--m:' + sw : '') + '">' + (w || '') + (pop ? '<em class="pop">Popular</em>' : '') + '</span><b>' + title + '</b><span>' + (sub || '&nbsp;') + '</span></button>'; }
+  function chip(g, k, label, on, em) { return '<button type="button" class="chip" data-g="' + g + '" data-k="' + k + '" aria-pressed="' + !!on + '">' + label + (em ? ' <em>' + em + '</em>' : '') + '</button>'; }
+  function foot(inner) { return '<div class="foot">' + inner + '</div>'; }
+  var stepsOfSelf = ['teeth', 'metal', 'finish', 'details'];
+  function nextLabel(sc) { var i = stepsOfSelf.indexOf(sc); return i < 3 ? 'Next: ' + NOTES[stepsOfSelf[i + 1]][0] : 'See my design'; }
+  function editFoot(sc) { return S.editing ? foot('<button type="button" class="cta" data-go="summary">Done</button>') : foot('<button type="button" class="cta" data-next="' + sc + '"' + (sc === 'teeth' && !count() ? ' disabled' : '') + '>' + nextLabel(sc) + ' →</button>'); }
+  function cur() { return S.sel ? cfg(S.sel) : D; }
+  function selBar() {
+    if (!S.sel) return '<p class="sub" style="font-size:12.5px">Tap a tooth on the piece to change just that one.</p>';
+    var n = parseInt(S.sel.slice(1), 10) + 1;
+    return '<div class="selbar"><span>Changing only <b>' + (S.sel[0] === 't' ? 'top' : 'bottom') + ' tooth ' + n + '</b></span><button type="button" data-act="unsel">Done</button></div>';
+  }
+
+  var R = {
+    door: function () {
+      var a = '<div class="nav"><b>VVS Lab</b>' + (S.layout !== 'b' ? '<button type="button" class="txt" data-go="jeweler" style="font-weight:500">For jewelers</button>' : '') + '</div><div class="body">';
+      a += '<div class="piece big"><span class="lbl">3D piece, turning through looks</span>' + teethHtml('') + '</div>';
+      if (S.layout === 'a') a += '<h2 class="h">Design your grill.</h2><p class="sub">Build it in 3D and see the price as you go. A partner jeweler makes it by hand.</p>';
+      if (S.layout === 'b') a += '<h2 class="h">Custom grillz, designed in 3D.</h2><div class="doorcards"><button type="button" class="doorcard ink" data-start="self"><small>I want a grill</small><b>Design yours →</b></button><button type="button" class="doorcard" data-go="jeweler"><small>I make grillz</small><b>Get this for your shop →</b></button></div><p class="sub" style="font-size:12.5px">Or <button type="button" class="txt" data-go="ai">let AI build it</button> from a description or a picture.</p>';
+      if (S.layout === 'c') a += '<h2 class="h">Build a grill in 3D.</h2><p class="sub">Design it and order it, or put this builder on your own site.</p>';
+      a += '</div>';
+      if (S.layout !== 'b') a += foot('<button type="button" class="cta" data-start="self">Start designing →</button><button type="button" class="txt" data-go="ai" style="justify-self:center">Or let AI build it from a description or a picture</button>' + (S.layout === 'a' ? '<p class="sub" style="text-align:center;font-size:12.5px">Sell grillz? <button type="button" class="txt" data-go="jeweler">Put this builder on your site</button></p>' : ''));
+      return a;
+    },
+    ai: function () {
+      var tag = S.verified ? '<em class="ok">Ready</em>' : '<em>Free sign-up</em>';
+      return nav('Let AI build it', true) + '<div class="body"><h2 class="h">Let AI build it.</h2>' +
+        '<p class="note">AI costs us a little every time it runs, so we ask for a free sign-up first: your name and a phone we verify by text. Your design is saved to it too.</p>' +
+        '<button type="button" class="start ai" data-ai="describe"><i>AI</i><div><b>Describe it ' + tag + '</b><span>Tell us what you want. AI builds the closest version on the customiser.</span></div></button>' +
+        '<button type="button" class="start ai" data-ai="picture"><i>AI</i><div><b>From a picture ' + tag + '</b><span>Upload a photo or pick one. AI builds the closest version it can make.</span></div></button>' +
+        '</div>' + foot('<button type="button" class="ghost" data-start="self">Build it myself instead</button>');
+    },
+    describe: function () {
+      var ex = ['Iced bottom six with fangs, 14k', 'Gold top 8 with "KB" engraved', 'Rose gold open face, 6 top', 'Full set, platinum, diamond cut'];
+      return nav('Describe it', true) + '<div class="body"><h2 class="h">What do you want?</h2><textarea class="field" id="words" placeholder="e.g. iced bottom six with fangs, 14k gold" aria-label="Describe your grill">' + (S.words || '') + '</textarea><p class="mini">Or try one</p><div class="chips">' + ex.map(function (e) { return '<button type="button" class="chip" data-ex="' + e + '">' + e + '</button>'; }).join('') + '</div><p class="sub" style="font-size:12.5px">AI picks the closest design the jeweler can make. You see it in 3D and change anything.</p></div>' +
+        foot('<button type="button" class="cta gold" data-act="buildwords">Build it →</button>');
+    },
+    picture: function () {
+      return nav('From a picture', true) + '<div class="body"><h2 class="h">Show us a grill you like.</h2><button type="button" class="ghost" data-act="upload" style="min-height:52px">Upload a photo or screenshot</button><p class="mini">Or pick one</p><div class="tiles">' +
+        PICKS.map(function (p, i) { return tile('pick', i, p[0], '', false, 'Example photo'); }).join('') + '</div><p class="sub" style="font-size:12.5px">AI builds the closest version it can make, then you change anything.</p></div>';
+    },
+    building: function () {
+      var lines = D.heard.map(function (l) { return '<div><i></i><span>' + l + '</span></div>'; }).join('');
+      setTimeout(function () { var el = view.querySelectorAll('.lines div'), k = 0; (function tick() { if (S.screen !== 'building') return; if (k < el.length) { el[k].classList.add('ok'); k++; setTimeout(tick, 380); } else setTimeout(function () { if (S.screen === 'building') go('summary', true); }, 450); })(); }, 250);
+      return nav('', false) + '<div class="body"><div class="piece big"><span class="lbl">3D piece, assembling</span>' + teethHtml('') + '</div><h2 class="h" style="font-size:22px">Building the closest version…</h2><div class="lines">' + lines + '</div></div>';
+    },
+    teeth: function () {
+      var m = matchedSet();
+      return nav('1 of 4 · Teeth', true, true) + '<div class="body">' + piece('3D piece · tap teeth to add or remove', 'pick') + '<h2 class="h" style="font-size:22px">Pick your teeth.</h2>' +
+        '<p class="mini">Popular sets · one tap fills every step</p><div class="tiles">' + PRESETS.map(function (p, i) { var keep = D, S2 = S.sel; D = fresh(); p[2](); var mini = teethHtml('', true); D = keep; S.sel = S2; return tile('preset', i, p[0], p[1], D.preset === i, mini); }).join('') + '</div>' +
+        '<p class="mini">Or choose how many</p><div class="chips">' + SETS.map(function (s, i) { return chip('set', i, s[0], m === i); }).join('') + chip('custom', 'on', 'Custom', count() > 0 && m < 0) + '</div>' +
+        '<button type="button" class="txt" data-go="ai" style="justify-self:start">Or let AI build it</button></div>' + editFoot('teeth');
+    },
+    metal: function () {
+      var c = cur();
+      return nav('2 of 4 · Metal', true, true) + '<div class="body">' + piece('3D piece · tap a tooth to change just that one', 'sel') + selBar() + '<div class="tiles">' + Object.keys(METALS).map(function (k) { return tile('metal', k, METALS[k][0], '', c.metal === k, '', METALS[k][1], k === 'yellow'); }).join('') + '</div>' + (gold(c.metal) ? '<div class="chips">' + Object.keys(KARAT).map(function (k) { return chip('karat', k, k.toUpperCase(), c.karat === k, k === '10k' ? 'popular' : ''); }).join('') + '</div>' : '') + '</div>' + editFoot('metal');
+    },
+    finish: function () {
+      var c = cur(), h = nav('3 of 4 · Finish', true, true) + '<div class="body">' + piece('3D piece · tap a tooth to change just that one', 'sel') + selBar() + '<div class="chips">' + chip('type', 'plain', 'Plain', c.type === 'plain', 'popular') + chip('type', 'iced', 'Iced out', c.type === 'iced') + chip('type', 'photo', 'Photo', c.type === 'photo') + '</div>';
+      if (c.type === 'plain') h += '<div class="tiles">' + ['solid', 'cut', 'dust', 'engr', 'open', 'opal'].map(function (k) { return tile('style', k, STYLES[k][0], STYLES[k][1] ? '+$' + STYLES[k][1] : '', c.style === k, 'Finish', '', k === 'solid'); }).join('') + '</div>';
+      if (c.type === 'iced') h += '<div class="tiles">' + Object.keys(SETTINGS).map(function (k) { return tile('setting', k, SETTINGS[k][0], '', c.setting === k, 'Setting', '', k === 'honeycomb'); }).join('') + '</div><div class="chips">' + chip('open', 'on', 'Open face', c.style === 'open', '+$40') + '</div>';
+      if (c.type === 'photo') h += '<button type="button" class="ghost" data-act="upload">Add your photo</button>';
+      return h + '</div>' + editFoot('finish');
+    },
+    details: function () {
+      return nav('4 of 4 · Details', true, true) + '<div class="body">' + piece('3D piece', '') + '<p class="sub">All optional. Next skips them.</p><div class="chips">' + chip('x', 'fangs', 'Fangs', D.fangs, '+$150') + chip('x', 'initials', 'Initials', !!D.initials, '+$50') + chip('x', 'charm', 'One-of-one charm', D.charm, 'quoted') + chip('x', 'perm', 'Permanent look', D.perm, '+$100') + '</div>' +
+        (D.initials !== '' || S.showIni ? '<input class="field" id="ini" maxlength="6" placeholder="Up to 6 letters" value="' + D.initials + '" aria-label="Initials">' : '') + '<textarea class="field" id="idea" placeholder="Your own idea, if you have one (optional)" aria-label="Your idea" style="min-height:64px">' + D.idea + '</textarea></div>' + editFoot('details');
+    },
+    summary: function () {
+      var p = price(), from = D.from === 'words' ? 'Built from your description.' : D.from === 'picture' ? 'The closest version of your picture.' : '';
+      var mw = metalWords() + (changed('metal') ? ' · ' + changed('metal') + ' changed' : ''), fw = finishWords() + (changed('type') + changed('style') ? ' · some changed' : '');
+      return nav('Your design', true, false) + '<div class="body">' + piece('3D piece · your design', '', true) + (from ? '<p class="note">' + from + ' Anything off? Change it below.</p>' : '') +
+        '<div class="rows"><div><em>Teeth</em><b>' + setName() + '</b><button type="button" class="txt" data-edit="teeth">Change</button></div><div><em>Metal</em><b>' + mw + '</b><button type="button" class="txt" data-edit="metal">Change</button></div><div><em>Finish</em><b>' + fw + '</b><button type="button" class="txt" data-edit="finish">Change</button></div><div><em>Details</em><b>' + extrasWords() + '</b><button type="button" class="txt" data-edit="details">Change</button></div></div>' +
+        '<div class="total"><span>Estimated total</span><b>' + money(p.total) + (p.quote ? ' + quote' : '') + '</b></div></div>' +
+        foot('<button type="button" class="cta" data-act="photo">See it as a studio photo →</button><p class="sub" style="text-align:center;font-size:12px">' + (S.verified ? 'You are signed up, so it is ready.' : 'Free sign-up: we text you a code, then save it and send it to the jeweler.') + '</p>');
+    },
+    verify: function () {
+      var forAi = S.after === 'ai';
+      return nav('Free sign-up', true) + '<div class="body">' + (forAi ? '' : '<div class="piece photo"><span class="lbl">Your studio photo, waiting</span></div>') + '<h2 class="h" style="font-size:23px">' + (forAi ? 'Sign up to let AI build it.' : 'See your piece as a studio photo.') + '</h2><p class="sub">' + (forAi ? 'Your name and phone. We text you a code; it is free. You can also use it to see your studio photo and send your design later.' : 'Verify your phone and we make the photo, save your design and text you the link. The jeweler uses this number to reach you.') + '</p><input class="field" id="vname" placeholder="Your name" autocomplete="name" value="' + S.name + '" aria-label="Your name"><input class="field" id="vphone" placeholder="Phone number" inputmode="tel" autocomplete="tel" value="' + S.phone + '" aria-label="Phone number"></div>' +
+        foot('<button type="button" class="cta" data-act="sendcode">Text me a code</button><button type="button" class="txt" data-start="self" style="justify-self:center">' + (forAi ? 'Build it myself instead' : 'Not now, keep designing') + '</button>');
+    },
+    code: function () {
+      return nav('Enter the code', true) + '<div class="body"><h2 class="h" style="font-size:23px">Enter the code we texted to ' + (S.phone || 'your phone') + '.</h2><div class="code" id="codebox">' + [0, 1, 2, 3, 4, 5].map(function (i) { return '<input inputmode="numeric" maxlength="1" aria-label="Digit ' + (i + 1) + '" data-d="' + i + '">'; }).join('') + '</div><p class="sub" style="font-size:12.5px">In this prototype any six digits work. <button type="button" class="txt" data-act="resend">Text it again</button></p></div>' +
+        foot('<button type="button" class="cta" data-act="verify">Verify</button>');
+    },
+    insta: function () {
+      return nav('Your Instagram', false) + '<div class="body"><div class="done" style="background:#1d5a35">✓</div><h2 class="h" style="font-size:23px">You\'re signed up.</h2><p class="sub">Add your Instagram if you like, so the jeweler can DM you too. Optional.</p><input class="field" id="vig" placeholder="@yourhandle" autocomplete="off" value="' + (S.ig || '') + '" aria-label="Your Instagram handle"><div class="rows"><div style="grid-template-columns:44px 1fr auto"><span class="w" style="width:44px;height:44px;border-radius:50%;background:var(--p-wire);display:grid;place-items:center;font:600 11px/1 var(--mono)">VV</span><span><b>@vvslab</b><br><span class="sub" style="font-size:12px">New pieces and drops</span></span><button type="button" class="chip" data-act="follow" aria-pressed="' + !!S.followed + '">' + (S.followed ? 'Following' : 'Follow') + '</button></div></div></div>' +
+        foot('<button type="button" class="cta" data-act="instadone">Continue</button>');
+    },
+    photo: function () {
+      var p = price();
+      return nav('Your studio photo', false, false) + '<div class="body"><div class="piece photo big"><span class="lbl">AI studio photo of your design</span></div><p class="note">Saved. We texted you a link to this design.</p>' +
+        '<div class="total"><span>' + setName() + ' · ' + metalWords() + '</span><b>' + money(p.total) + '</b></div><p class="mini">How you get fitted</p><div class="chips">' + chip('mold', 'kit', 'Mold kit by mail', D.mold === 'kit') + chip('mold', 'own', 'I have a mold', D.mold === 'own') + chip('mold', 'store', 'In store', D.mold === 'store') + '</div></div>' +
+        foot('<button type="button" class="cta" data-act="send">Send to our partner jeweler</button><button type="button" class="txt" data-go="summary" style="justify-self:center">Change something first</button>');
+    },
+    sent: function () {
+      var p = price(), fit = D.mold === 'kit' ? 'A mold kit comes in the mail' : D.mold === 'own' ? 'You send your mold or scan' : 'You book a fitting';
+      return nav('', false) + '<div class="body"><div class="done">✓</div><h2 class="h">Sent.</h2><p class="sub">Our partner jeweler will text ' + (S.phone || 'you') + ' to confirm the price.</p><span class="timer">Designed and sent in ' + mmss(elapsed()) + '</span>' +
+        '<div class="rows" style="padding:4px 0"><div style="grid-template-columns:1fr auto"><b>' + (S.paid ? 'Deposit paid' : 'Hold your spot with a ' + money(p.deposit) + ' deposit') + '</b>' + (S.paid ? '<span class="mini">' + money(p.deposit) + '</span>' : '') + '</div></div>' +
+        '<ol class="tl"><li class="now"><i></i><div><b>Now</b><span>The jeweler has your design and photo.</span></div></li><li><i></i><div><b>They text you</b><span>To confirm the price and details.</span></div></li><li><i></i><div><b>Your fit</b><span>' + fit + '.</span></div></li><li><i></i><div><b>Made by hand</b><span>Then delivered, or ready to pick up.</span></div></li></ol></div>' +
+        foot(S.paid ? '<button type="button" class="ghost" data-act="again">Design another</button>' : '<button type="button" class="cta" data-act="pay">Pay ' + money(p.deposit) + ' deposit</button><button type="button" class="txt" data-act="again" style="justify-self:center">Not now</button>');
+    },
+    jeweler: function () {
+      return nav('For jewelers', true) + '<div class="body"><h2 class="h">Put this builder on your site.</h2><p class="sub">Shop name, Instagram and email, and it is live with your name on it. 14 days free.</p><div class="piece"><span class="lbl">Sign-up, next round</span></div></div>' + foot('<button type="button" class="ghost" data-go="door">Back to the front door</button>');
+    }
+  };
+
+  // ---------- moving through it ----------
+  function elapsed() { return S.t0 ? ((S.tEnd || Date.now()) - S.t0) / 1000 : 0; }
+  function mmss(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+  function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('show'); }, 2600); }
+  function go(sc, replace) {
+    if (!replace && S.screen !== sc) S.hist.push(S.screen);
+    if (sc !== 'door' && sc !== 'jeweler' && !S.t0) S.t0 = Date.now();
+    if (sc === 'summary') S.editing = null;
+    if (sc !== 'metal' && sc !== 'finish') S.sel = null;
+    S.screen = sc; S.seen[sc] = 1; render();
+  }
+  function render() { view.innerHTML = R[S.screen](); view.style.animation = 'none'; void view.offsetWidth; view.style.animation = ''; renderSide(); }
+  function renderSide() {
+    document.getElementById('layouts').innerHTML = [['a', 'A · Shopper first'], ['b', 'B · Two doors'], ['c', 'C · Two endings']].map(function (l) { return '<button type="button" data-layout="' + l[0] + '" aria-pressed="' + (S.layout === l[0]) + '">' + l[1] + '</button>'; }).join('');
+    var list = S.screen === 'jeweler' ? ['door', 'jeweler'] : PATHS[S.path];
+    document.getElementById('map').innerHTML = list.map(function (sc) { var n = NOTES[sc]; return '<li><button type="button" data-jump="' + sc + '"' + (sc === S.screen ? ' aria-current="step"' : '') + (S.seen[sc] ? ' class="seen"' : '') + '><span>' + n[0] + '</span><span class="tag' + (n[1] === 'lock' ? ' lock' : '') + '">' + (n[1] === 'lock' ? 'Signed up' : 'Free') + '</span></button></li>'; }).join('');
+    var n = NOTES[S.screen];
+    document.getElementById('notes').innerHTML = '<p class="lab">This screen</p><h2>' + n[0] + '</h2><span class="access' + (n[1] === 'lock' ? ' lock' : '') + '">' + (n[1] === 'lock' ? 'After the free sign-up' : 'Free, no sign-up needed') + '</span><p>' + n[2] + '</p>' + (n[3].length ? '<p class="lab" style="margin-top:4px">Your call</p><ol class="qs">' + n[3].map(function (q) { return '<li>' + q + '</li>'; }).join('') + '</ol>' : '');
+    document.getElementById('stTaps').textContent = S.taps;
+  }
+  setInterval(function () { var b = document.querySelector('#stTime b'); b.textContent = mmss(elapsed()); document.getElementById('stTime').classList.toggle('good', !!S.tEnd && elapsed() <= 120); }, 500);
+  function startSelf() { S.path = 'self'; S.after = null; if (D.from || !count()) D = fresh(); go('teeth'); }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t) return;
+    if (t.closest('.scr')) S.taps++;
+    if (t.hasAttribute('data-layout')) { S.layout = t.getAttribute('data-layout'); S.hist = []; S.screen = 'door'; render(); return; }
+    if (t.hasAttribute('data-jump')) { var j = t.getAttribute('data-jump'); if (!count() && j !== 'door' && j !== 'teeth' && j !== 'ai' && j !== 'describe' && j !== 'picture') applyPreset(1); if (j === 'building' && !D.heard.length) fromPick(0); if (j === 'describe' || j === 'picture') S.aiPath = j; go(j); return; }
+    if (t.hasAttribute('data-back')) { if (S.hist.length) { S.screen = S.hist.pop(); while (S.screen === 'building' || S.screen === 'code' || S.screen === 'verify' || S.screen === 'insta') S.screen = S.hist.pop() || 'door'; S.sel = null; render(); } return; }
+    if (t.hasAttribute('data-start')) { startSelf(); return; }
+    if (t.hasAttribute('data-go')) { var g0 = t.getAttribute('data-go'); if (g0 === 'ai') S.path = S.aiPath || 'describe'; go(g0); return; }
+    if (t.hasAttribute('data-ai')) { S.aiPath = t.getAttribute('data-ai'); S.path = S.aiPath; if (S.verified) go(S.aiPath); else { S.after = 'ai'; go('verify'); } return; }
+    if (t.hasAttribute('data-next')) { var i = stepsOfSelf.indexOf(t.getAttribute('data-next')); go(i < 3 ? stepsOfSelf[i + 1] : 'summary'); return; }
+    if (t.hasAttribute('data-edit')) { var ed = t.getAttribute('data-edit'); go(ed); S.editing = ed; render(); return; }
+    if (t.hasAttribute('data-ex')) { S.words = t.getAttribute('data-ex'); document.getElementById('words').value = S.words; return; }
+    if (t.hasAttribute('data-tooth')) {
+      var id = t.getAttribute('data-tooth');
+      if (S.screen === 'teeth') { if (D.teeth[id]) { delete D.teeth[id]; delete D.over[id]; } else D.teeth[id] = 1; D.preset = null; }
+      else { if (!D.teeth[id]) { toast('That tooth is not in your set. Add it on the Teeth step.'); return; } S.sel = S.sel === id ? null : id; }
+      render(); return;
+    }
+    var g = t.getAttribute('data-g'), k = t.getAttribute('data-k');
+    if (g) {
+      function put(key, val) { if (S.sel) { D.over[S.sel] = D.over[S.sel] || {}; D.over[S.sel][key] = val; } else D[key] = val; }
+      if (g === 'preset') applyPreset(+k);
+      if (g === 'set') { setRange(SETS[k][1], SETS[k][2]); D.preset = null; }
+      if (g === 'custom') toast(count() ? 'Custom is on: tap teeth on the piece to add or remove them.' : 'Tap teeth on the piece to build a custom set.');
+      if (g === 'metal') put('metal', k); if (g === 'karat') put('karat', k);
+      if (g === 'type') { put('type', k); var cc = cur(); if (k !== 'plain' && cc.style !== 'open') put('style', 'solid'); }
+      if (g === 'style') put('style', k); if (g === 'setting') put('setting', k); if (g === 'open') put('style', cur().style === 'open' ? 'solid' : 'open');
+      if (g === 'x') { if (k === 'fangs') { D.fangs = !D.fangs; if (D.fangs && counts()[0] < 6) toast('Fangs sit on the canines: pick 6 top or more.'); } if (k === 'charm') D.charm = !D.charm; if (k === 'perm') D.perm = !D.perm; if (k === 'initials') { if (D.initials) { D.initials = ''; S.showIni = false; } else S.showIni = true; } }
+      if (g === 'mold') D.mold = k;
+      if (g === 'pick') { fromPick(+k); go('building'); return; }
+      render(); return;
+    }
+    var a = t.getAttribute('data-act');
+    if (a === 'unsel') { S.sel = null; render(); }
+    if (a === 'buildwords') { var w = (document.getElementById('words').value || '').trim(); if (w.length < 4) { toast('Write a few words about the grill you want, or tap an example.'); return; } S.words = w; fromWords(w); go('building'); }
+    if (a === 'upload') { if (S.screen === 'picture') { fromPick(0); D.heard.unshift('Read your photo'); go('building'); } else toast('In the real builder this opens your photos.'); }
+    if (a === 'photo') { if (S.verified) go('photo'); else { S.after = 'photo'; go('verify'); } }
+    if (a === 'sendcode') { S.name = document.getElementById('vname').value.trim(); S.phone = document.getElementById('vphone').value.trim(); if (S.name.length < 2 || S.phone.replace(/\D/g, '').length < 10) { toast('Add your name and a 10-digit phone number.'); return; } go('code'); setTimeout(function () { var f = view.querySelector('[data-d="0"]'); if (f) f.focus(); }, 60); }
+    if (a === 'resend') toast('Sent again. In the real builder there is a short wait before resending.');
+    if (a === 'verify') { var code = Array.prototype.map.call(view.querySelectorAll('[data-d]'), function (i2) { return i2.value; }).join(''); if (!/^\d{6}$/.test(code)) { toast('Enter all six digits.'); return; } S.verified = true; toast('Verified. You will not be asked again.'); go('insta'); }
+    if (a === 'follow') { S.followed = !S.followed; render(); if (S.followed) toast('In the real builder this opens Instagram to follow @vvslab.'); }
+    if (a === 'instadone') { var ig = document.getElementById('vig'); S.ig = ig ? ig.value.trim() : ''; go(S.after === 'ai' ? S.aiPath : 'photo', true); }
+    if (a === 'send') { S.tEnd = Date.now(); go('sent'); }
+    if (a === 'pay') { S.paid = true; render(); toast('Deposit paid. In the real builder this is the jeweler\'s own checkout.'); }
+    if (a === 'again') { D = fresh(); var v = S.verified, nm = S.name, ph = S.phone, lay = S.layout; S = blankState(lay); S.verified = v; S.name = nm; S.phone = ph; applyPreset(1); D.preset = null; go('door', true); }
+  });
+  view.addEventListener('input', function (e) {
+    if (e.target.id === 'ini') D.initials = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    if (e.target.id === 'idea') D.idea = e.target.value;
+    if (e.target.id === 'words') S.words = e.target.value;
+    if (e.target.id === 'vig') S.ig = e.target.value;
+    if (e.target.hasAttribute('data-d')) { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 1); var nx = view.querySelector('[data-d="' + (+e.target.getAttribute('data-d') + 1) + '"]'); if (e.target.value && nx) nx.focus(); }
+  });
+  document.getElementById('reset').addEventListener('click', function () { S = blankState(S.layout); applyPreset(1); D.preset = null; render(); });
+  applyPreset(1); D.preset = null; S.seen.door = 1; render();
+})();
+</script>
