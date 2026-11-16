@@ -17,8 +17,11 @@ switcher (top right) flips between the options the owner asked to see.
 Chosen on Nov 16: the bare-teeth opening, the EA FC-style menu and the guide
 when stuck. The menu now says what each tab holds, marks tabs not opened yet,
 and shows a progress bar; inside a tab every option stays visible and locked
-ones say why. The switcher now compares two looks for the menu: game-like
-(cards, icons, live previews) and jeweler-like (a quiet list on hairlines).
+ones say why. Second pass (owner: neither look, lean jeweler, closer to the earlier rows):
+calm rows that clearly read as buttons, a picture of what's chosen, one price
+only (in the top bar). Several teeth can be edited at once: tap them on the 3D
+(each glows) or pick a quick group (top row, bottom row, front teeth, canines,
+every other). When teeth differ, the menu stacks their pictures with a count.
 
 `creator.html` is the built page. `src/` holds its parts; run `python3 build.py`
 inside `src/` to rebuild (it writes `creator.html` and `engine.js` there).

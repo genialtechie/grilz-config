@@ -51,7 +51,7 @@
     return (priceCache[id] = b.quote ? 'Quoted' : 'From ' + money(b.total));
   }
   function applyBuild(id) {
-    resetAll(); if (id !== 'empty') buildById(id)[3](); ui.build = id; ui.sel = null;
+    resetAll(); if (id !== 'empty') buildById(id)[3](); ui.build = id; clearPicks();
     G.sync(); if (id !== 'empty') { G.pop(); G.glint(); } meta();
   }
 
@@ -65,7 +65,7 @@
   }
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now();
-    ui.cat = null; ui.sel = null; ui.visited = {}; ui.extra = null;
+    ui.cat = null; clearPicks(); ui.visited = {}; ui.extra = null;
     if (!onList().length) {
       ui.build = 'empty';
       if (ui.guide === 'start') { ui.q = 0; setMode('q'); refresh(); return; }
@@ -79,12 +79,31 @@
   function tile(g, k, title, sub, on, picture, off) { return '<button type="button" class="tile" data-g="' + g + '" data-k="' + k + '" aria-pressed="' + !!on + '"' + (off ? ' disabled' : '') + '><span class="pic">' + picture + '</span><b>' + title + '</b><span>' + (sub || '&nbsp;') + '</span></button>'; }
   function chip(g, k, label, on, em, off) { return '<button type="button" class="chip" data-g="' + g + '" data-k="' + k + '" aria-pressed="' + !!on + '"' + (off ? ' disabled' : '') + '>' + label + (em ? ' <em>' + em + '</em>' : '') + '</button>'; }
   var SWATCH = { yellow: '#e0a93f', white: '#dcd9d2', rose: '#dd9274', silver: '#cfd4da', platinum: '#b8c0c8' };
-  function val(f) { if (hasSel()) return f(T[ui.sel]); return same(f) || 'Mixed'; }
+  function clearPicks() { ui.picks = []; ui.sel = null; }
+  function distinct(f) { var out = []; targets().forEach(function (k) { var v = f(T[k]); if (out.indexOf(v) < 0) out.push(v); }); return out; }
+  function val(f, noun) { var d = distinct(f); return d.length === 1 ? d[0] : d.length + ' ' + noun; }
+  function firstWith(f) { var seen = {}, out = []; targets().forEach(function (k) { var v = f(T[k]); if (!seen[v]) { seen[v] = 1; out.push(T[k]); } }); return out; }
+  // quick groups of the teeth in the set, to edit together
+  var GROUPS = [['top', 'Top row'], ['bottom', 'Bottom row'], ['front', 'Front teeth'], ['canines', 'Canines'], ['alt', 'Every other']];
+  function groupTeeth(g) {
+    var on = onList();
+    if (g === 'top') return on.filter(function (k) { return k < 16; });
+    if (g === 'bottom') return on.filter(function (k) { return k >= 16; });
+    if (g === 'front') return on.filter(function (k) { return [6, 7, 8, 9, 22, 23, 24, 25].indexOf(k) >= 0; });
+    if (g === 'canines') return on.filter(function (k) { return [5, 10, 21, 26].indexOf(k) >= 0; });
+    var out = []; [on.filter(function (k) { return k < 16; }), on.filter(function (k) { return k >= 16; })].forEach(function (row) { row.forEach(function (k, i) { if (i % 2 === 0) out.push(k); }); }); return out;
+  }
+  function sameSet(a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) >= 0; }); }
+  function applyRow() {                  // which teeth the choices below go to
+    var on = onList(), pk = picked(), mine = pk.length > 0;
+    var chips = GROUPS.map(function (g) { var tg = groupTeeth(g[0]); if (!tg.length || tg.length === on.length) return ''; var hit = mine && sameSet(pk, tg); if (hit) mine = false; return chip('pick', g[0], g[1], hit); }).join('');
+    return '<div class="apply"><p class="lab">Change</p><div class="chips">' + chip('pick', 'all', 'Whole set', !pk.length) + chips + (mine ? chip('pick', 'mine', pk.length + (pk.length === 1 ? ' tooth' : ' teeth') + ' picked', true) : '') + '</div></div>';
+  }
   var INTRO = {
     teeth: 'Pick a set, or tap teeth on the 3D to add or remove them one by one.',
-    metal: 'The metal for the whole set. Tap a tooth on the 3D to change just that one.',
-    finish: 'How the metal looks. Tap a tooth on the 3D to change just that one.',
-    stones: 'Set stones into the metal: pick a setting, then the stone.',
+    metal: 'The metal for your teeth. To change only some, tap them on the 3D or pick a group.',
+    finish: 'How the metal looks. To change only some teeth, tap them on the 3D or pick a group.',
+    stones: 'Set stones into the metal: pick a setting, then the stone. Works on a group or single teeth too.',
     extras: 'Optional touches. Turn on the ones you want.'
   };
   var INSIDE = { teeth: SETS.length + ' sets, or any tooth', metal: '5 metals · 10K, 14K, 18K', finish: '6 finishes + photo', stones: '3 settings · 3 stones', extras: 'Fangs · initials · charms · permanent look · your idea' };
@@ -96,22 +115,22 @@
     extras: '<path d="M10 4v12M4 10h12"/>'
   };
   function icon(c) { return '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + ICON[c] + '</svg>'; }
+  function stack(items) { return items.length === 1 ? items[0] : '<span class="stack n' + Math.min(3, items.length) + '">' + items.slice(0, 3).map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span>'; }
   function preview(c) {
     if (!onList().length && c !== 'teeth') return '<span class="dash">—</span>';
-    var cc = hasSel() ? T[ui.sel] : DEF;
     if (c === 'teeth') { var n = counts(); return setSvg(n[0], n[1], 'gold'); }
-    if (c === 'metal') return '<i class="swatch" style="background:' + SWATCH[cc.metal] + '"></i>';
-    if (c === 'finish') return pic('s' + cc.style + cc.metal, { metal: cc.metal, karat: cc.karat, style: cc.style, type: cc.type === 'iced' ? 'iced' : cc.type, opal: cc.opal }, null, SWATCH[cc.metal]);
-    if (c === 'stones') return cc.type === 'iced' ? pic('i' + cc.setting + cc.metal, { metal: cc.metal, karat: cc.karat, type: 'iced', setting: cc.setting }, null, '#f4f7f9') : '<span class="dash">None</span>';
+    if (c === 'metal') return stack(firstWith(function (t) { return t.metal; }).map(function (t) { return '<i class="swatch" style="background:' + SWATCH[t.metal] + '"></i>'; }));
+    if (c === 'finish') return stack(firstWith(function (t) { return t.type === 'photo' ? 'photo' : t.style; }).map(function (t) { return pic('s' + t.style + t.metal + t.type, { metal: t.metal, karat: t.karat, style: t.style, type: t.type, opal: t.opal }, null, SWATCH[t.metal]); }));
+    if (c === 'stones') { var st = firstWith(function (t) { return t.type === 'iced' ? t.setting : 'none'; }); if (st.length === 1 && st[0].type !== 'iced') return '<span class="dash">None</span>'; return stack(st.map(function (t) { return t.type === 'iced' ? pic('i' + t.setting + t.metal, { metal: t.metal, karat: t.karat, type: 'iced', setting: t.setting }, null, '#f4f7f9') : '<span class="dash">None</span>'; })); }
     var x = (SET.fangs ? 1 : 0) + (insOn() ? 1 : 0) + (charmCount() ? 1 : 0) + (SET.cut === 'permanent' ? 1 : 0) + (SET.idea || SET.inspo ? 1 : 0);
     return '<span class="dash">' + (x ? '+' + x : '—') + '</span>';
   }
   function rowValue(c) {
     if (c === 'teeth') return onList().length ? lookLabel() : 'None yet';
     if (!onList().length) return 'Pick teeth first';
-    if (c === 'metal') return val(metalWords).replace(/^./, function (x) { return x.toUpperCase(); });
-    if (c === 'finish') return val(function (t) { return t.type === 'photo' ? 'Photo' : STYLES[t.style][0]; });
-    if (c === 'stones') return val(function (t) { return t.type === 'iced' ? SETTINGS[t.setting][0] + ', ' + STONES[t.stone][0].toLowerCase() : 'None'; });
+    if (c === 'metal') return val(metalWords, 'metals').replace(/^./, function (x) { return x.toUpperCase(); });
+    if (c === 'finish') return val(function (t) { return t.type === 'photo' ? 'Photo' : STYLES[t.style][0]; }, 'finishes');
+    if (c === 'stones') return val(function (t) { return t.type === 'iced' ? SETTINGS[t.setting][0] + ', ' + STONES[t.stone][0].toLowerCase() : 'None'; }, 'settings');
     var e = []; if (SET.fangs) e.push('Fangs'); if (insOn()) e.push('"' + SET.ins.text + '"'); if (charmCount()) e.push(charmCount() + (charmCount() === 1 ? ' charm' : ' charms')); if (SET.cut === 'permanent') e.push('Permanent look'); if (SET.idea || SET.inspo) e.push('Your idea');
     return e.length ? e.join(', ') : 'None';
   }
@@ -142,7 +161,7 @@
       h = xrow('fangs', 'Fangs', SET.fangs ? 'On the upper canines' : '+$' + PRICE.fangs, SET.fangs) +
         xrow('perm', CUTS.permanent[0], SET.cut === 'permanent' ? CUTS.permanent[1] : '+$' + PRICE.permanent + ' · ' + CUTS.permanent[1].toLowerCase(), SET.cut === 'permanent') +
         xrow('ins', 'Initials', insOn() ? 'On ' + where + '. Tap a tooth to move them.' : 'From $' + PRICE.ins.engraved, ui.extra === 'ins' || !!SET.ins.text, '<div class="field"><input type="text" id="instext" maxlength="6" placeholder="Up to 6 letters" value="' + esc(SET.ins.text) + '" autocomplete="off" aria-label="Initials"></div><div class="chips">' + Object.keys(INS).map(function (k) { return chip('ins', k, INS[k][0], SET.ins.style === k, '$' + PRICE.ins[k]); }).join('') + '</div>') +
-        xrow('charm', 'One-of-one charm', charmCount() ? charmCount() + ' added, quoted by the jeweler' : 'Quoted by the jeweler', ui.extra === 'charm' || charmCount() > 0, '<div class="strip">' + Object.keys(CHARMS).map(function (k) { return tile('charm', k, CHARMS[k], '', hasSel() && T[ui.sel].charm === k, pic('c' + k, { metal: 'yellow', karat: '18k', charm: k })); }).join('') + '</div><p class="note">' + (hasSel() ? 'Goes on the ' + toothName(ui.sel).toLowerCase() + '.' : 'Tap a tooth on the 3D, then a charm.') + '</p>') +
+        xrow('charm', 'One-of-one charm', charmCount() ? charmCount() + ' added, quoted by the jeweler' : 'Quoted by the jeweler', ui.extra === 'charm' || charmCount() > 0, '<div class="strip">' + Object.keys(CHARMS).map(function (k) { return tile('charm', k, CHARMS[k], '', hasSel() && picked().every(function (x) { return T[x].charm === k; }), pic('c' + k, { metal: 'yellow', karat: '18k', charm: k })); }).join('') + '</div><p class="note">' + (hasSel() ? 'Goes on ' + (picked().length === 1 ? 'the ' + toothName(picked()[0]).toLowerCase() : 'the ' + picked().length + ' teeth you picked') + '.' : 'Tap a tooth on the 3D, then a charm.') + '</p>') +
         xrow('idea', 'Your idea', SET.idea || SET.inspo ? 'Added' : 'Describe it, or add a photo', ui.extra === 'idea' || !!(SET.idea || SET.inspo), '<div class="field"><textarea id="idea" placeholder="Describe a piece you have in mind." aria-label="Your idea">' + esc(SET.idea) + '</textarea></div><label class="up">' + (SET.inspo ? '<img alt="" src="' + SET.inspo + '">' : '') + '<span>' + (SET.inspo ? 'Change the photo' : 'Add an inspiration photo') + '</span><input type="file" accept="image/*" data-up="inspo"></label>');
     }
     return h;
@@ -154,13 +173,12 @@
     if (ui.mode === 'q') { tray.innerHTML = renderQuestions(); return; }
     if (ui.layout === 'menu') {
       if (ui.cat === null) {
-        var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length, bx = breakdown();
-        h = '<div class="mhead"><div class="t"><h2>Your build</h2><span class="bigprice">' + money(bx.total) + (bx.quote ? ' +' : '') + '</span></div>' +
-          '<div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · ' + (CATS.length - seen) + ' to look at') + '</p></div>' +
-          '<div class="tbody"><div class="rows">' + CATS.map(function (c) { var v = rowValue(c[0]), fresh = !ui.visited[c[0]]; return '<button type="button" class="mrow' + (!onList().length && c[0] === 'teeth' ? ' todo' : '') + '" data-open="' + c[0] + '"><span class="ico">' + icon(c[0]) + '</span><span class="txt"><b>' + c[1] + '</b><span class="cur">' + esc(v) + '</span><span class="ins">' + INSIDE[c[0]] + '</span></span><span class="prev">' + preview(c[0]) + '</span>' + (fresh ? '<em class="new">Not opened yet</em>' : '') + '</button>'; }).join('') +
-          '</div><p class="note tip">Tip: tap any tooth on the 3D to style it on its own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
+        var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
+        h = '<div class="mhead"><h2>Your build</h2><div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored') + '</p></div>' +
+          '<div class="tbody"><div class="rows">' + CATS.map(function (c) { var v = rowValue(c[0]), fresh = !ui.visited[c[0]]; return '<button type="button" class="mrow' + (!onList().length && c[0] === 'teeth' ? ' todo' : '') + '" data-open="' + c[0] + '"><span class="prev">' + preview(c[0]) + '</span><span class="txt"><b>' + c[1] + (fresh ? '<em class="new">Not opened yet</em>' : '') + '</b><span class="cur">' + esc(v) + '</span><span class="ins">' + INSIDE[c[0]] + '</span></span><span class="go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>'; }).join('') +
+          '</div><p class="note tip">Tip: tap teeth on the 3D to style them on their own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
       } else {
-        h = '<div class="thead"><button type="button" class="bk" data-a="menu" aria-label="Back to your build">' + BACK + '</button><span class="hico">' + icon(ui.cat) + '</span><h2>' + CATS[catIndex(ui.cat)][1] + '</h2></div><div class="tbody"><p class="intro">' + INTRO[ui.cat] + '</p>' + options(ui.cat) + '</div><div class="tfoot">' + doneBtn() + '</div>';
+        h = '<div class="thead"><button type="button" class="bk" data-a="menu" aria-label="Back to your build">' + BACK + '</button><h2>' + CATS[catIndex(ui.cat)][1] + '</h2></div><div class="tbody"><p class="intro">' + INTRO[ui.cat] + '</p>' + (onList().length && ['metal', 'finish', 'stones'].indexOf(ui.cat) >= 0 ? applyRow() : '') + options(ui.cat) + '</div><div class="tfoot">' + doneBtn() + '</div>';
       }
     } else {
       var i = catIndex(ui.cat), last = i === CATS.length - 1;
@@ -240,8 +258,8 @@
   });
 
   // ---------- moving around ----------
-  function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { ui.sel = null; hideBubble(); } box(); setTimeout(box, 450); }
-  function openCat(c) { ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') ui.sel = null; refresh(); }
+  function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { clearPicks(); hideBubble(); } box(); setTimeout(box, 450); }
+  function openCat(c) { ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') clearPicks(); refresh(); }
   function stepOf() { if (ui.mode === 'q') return ui.q === 2 ? 1 : 0; return ui.cat === null ? 5 : catIndex(ui.cat); }
   var shown = 0, anim = 0;
   function meta() {
@@ -264,7 +282,7 @@
     ui.step = stepOf();
     if (ui.mode === 'build' || ui.mode === 'q') renderTray();
     var sc = $('selchip'), show = ui.mode === 'build' && hasSel();
-    sc.hidden = !show; if (show) sc.innerHTML = 'Editing the <b>' + esc(toothName(ui.sel).toLowerCase()) + '</b> only <span class="x">Whole set</span>';
+    var pk = picked(); sc.hidden = !show; if (show) sc.innerHTML = (pk.length === 1 ? 'Editing the <b>' + esc(toothName(pk[0]).toLowerCase()) + '</b> only' : 'Editing <b>' + pk.length + ' teeth</b>') + ' <span class="x">Whole set</span>';
     meta(); box(); requestAnimationFrame(box); G.sync(); G.goal(); if (glint) G.glint(); if (!bubble.hidden) placeBubble();
     if (!proto.hidden) renderProto();
   }
@@ -285,10 +303,10 @@
     if (ui.mode !== 'build') return;
     ui.taps++;
     if (ui.cat === 'teeth') { if (k === null) return; T[k].on = !T[k].on; if (T[k].on) KEYS.forEach(function (key) { T[k][key] = DEF[key]; }); else T[k].charm = null; ui.build = null; ui.visited.teeth = 1; G.pop(k); buzz(); if (!bubble.hidden && onList().length) hideBubble(); refresh(); return; }
-    if (k === null) { ui.sel = null; refresh(); return; }
+    if (k === null) { clearPicks(); refresh(); return; }
     if (!T[k].on) { toast('That tooth isn\'t in your build. Add it in Teeth.'); return; }
     if (ui.extra === 'ins' && ui.cat === 'extras') { SET.ins.tooth = k; G.pop(k); refresh(); return; }
-    ui.sel = ui.sel === k ? null : k; buzz(); refresh();
+    var at = ui.picks.indexOf(k); if (at >= 0) ui.picks.splice(at, 1); else ui.picks.push(k); ui.sel = ui.picks.length ? ui.picks[ui.picks.length - 1] : null; buzz(); refresh();
   };
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, label'); if (!t || t.closest('#proto')) return;
@@ -296,7 +314,7 @@
     var bd = t.getAttribute('data-build'); if (bd) { applyBuild(bd); renderOpenings(); return; }
     var pk = t.getAttribute('data-pick'); if (pk) { applyBuild(pk); startCreator(); return; }
     if (t.id === 'goA') { if (!ui.build) applyBuild('empty'); startCreator(); return; }
-    if (t.id === 'selchip') { ui.sel = null; refresh(); return; }
+    if (t.id === 'selchip') { clearPicks(); refresh(); return; }
     var q = t.getAttribute('data-q'); if (q) { answerQ(q); return; }
     var op = t.getAttribute('data-open'); if (op) { if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble(); openCat(op); return; }
     var s = t.getAttribute('data-s'); if (s === 'keep') { sheet.hidden = true; ui.tDone = 0; setMode('build'); refresh(); return; } if (s === 'photo') { toast('Next comes the phone sign-up, the studio photo and sending it. That part is in the flow lab.'); return; }
@@ -312,6 +330,7 @@
     if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble();
     var tg = targets(), all = !hasSel(), n = counts(); buzz();
     function each(f) { tg.forEach(function (x) { f(T[x]); }); if (all) f(DEF); }
+    if (g === 'pick') { if (k === 'all') clearPicks(); else if (k !== 'mine') { ui.picks = groupTeeth(k).slice(); ui.sel = ui.picks[ui.picks.length - 1]; } refresh(); return; }
     if (g === 'set') { setRange(SETS[k][1], SETS[k][2]); ui.build = null; G.pop(); }
     if (g === 'cnt') { var top = n[0] + (k === 't+' ? 1 : k === 't-' ? -1 : 0), bot = n[1] + (k === 'b+' ? 1 : k === 'b-' ? -1 : 0); setRange(Math.max(0, Math.min(16, top)), Math.max(0, Math.min(16, bot))); ui.build = null; }
     if (g === 'metal') each(function (x) { x.metal = k; });
@@ -329,7 +348,7 @@
       if (k === 'idea') { if (ui.extra === 'idea' || SET.idea || SET.inspo) { ui.extra = null; SET.idea = ''; SET.inspo = null; } else ui.extra = 'idea'; }
     }
     if (g === 'ins') { SET.ins.style = k; if (SET.ins.tooth === null) SET.ins.tooth = firstFront(); }
-    if (g === 'charm') { if (!hasSel()) { var p = [7, 8, 6, 9, 5, 10, 23, 24, 22, 25].filter(function (x) { return T[x].on && !T[x].charm; })[0]; if (p === undefined) p = onList()[0]; if (p !== undefined) ui.sel = p; } if (hasSel()) T[ui.sel].charm = k; }
+    if (g === 'charm') { if (!hasSel()) { var p = [7, 8, 6, 9, 5, 10, 23, 24, 22, 25].filter(function (x) { return T[x].on && !T[x].charm; })[0]; if (p === undefined) p = onList()[0]; if (p !== undefined) { ui.picks = [p]; ui.sel = p; } } picked().forEach(function (x) { T[x].charm = k; }); }
     refresh(g !== 'cnt' && g !== 'set' && g !== 'x');
   });
   tray.addEventListener('input', function (e) {
@@ -347,13 +366,13 @@
   $('turnbtn').addEventListener('click', function () { if (G.turn) G.turn(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['menu', 'The menu\'s look', [['game', 'Game-like'], ['jeweler', 'Jeweler-like']]]];
+  var PAIRS = [];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
       '<div class="stat"><p>This run</p><b id="pclock">' + mmss(elapsed()) + ' · ' + ui.taps + ' taps</b></div>' +
       '<div class="pair"><p>Holder</p><input type="range" id="psolid" min="30" max="100" step="5" value="' + (ui.solid || 70) + '" aria-label="How solid the clear holder is"></div>' +
-      '<button type="button" class="sm" data-p="restart">Start again from the opening</button><p>Already chosen: bare teeth with a row of builds; the EA FC-style menu; a guide when you seem stuck. Tap a tooth on the 3D to see its glow; leave it alone for 9 seconds to meet the guide.</p>';
+      '<button type="button" class="sm" data-p="restart">Start again from the opening</button><p>Chosen so far: bare teeth with a row of builds; the EA FC-style menu, leaning jeweler; a guide when you seem stuck. Tap teeth on the 3D to pick several; leave it alone for 9 seconds to meet the guide.</p>';
   }
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
   function restart() { sheet.hidden = true; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
@@ -370,7 +389,7 @@
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'game');
+  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm');
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

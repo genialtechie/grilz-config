@@ -40,16 +40,17 @@
 
   function metalOn() { return true; }   // version 7 starts from a finished look, so the piece shows real metal from the first tap
   function onList() { var a = []; for (var k = 0; k < 32; k++) if (T[k].on) a.push(k); return a; }
-  function hasSel() { return ui.sel !== null && T[ui.sel].on; }
-  function targets() { return hasSel() ? [ui.sel] : onList(); }
-  function cur() { return hasSel() ? T[ui.sel] : DEF; }
+  function picked() { return (ui.picks || []).filter(function (k) { return T[k] && T[k].on; }); }   // the teeth tapped to edit on their own
+  function hasSel() { return picked().length > 0; }
+  function targets() { return hasSel() ? picked() : onList(); }
+  function cur() { var p = picked(); return p.length ? T[p[p.length - 1]] : DEF; }
   function isGold(m) { return METALS[m].gold; }
   function money(n) { return (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US'); }
   function counts() { var t = 0, b = 0; onList().forEach(function (k) { if (k < 16) t++; else b++; }); return [t, b]; }
   function setRange(top, bottom) {
     var st = Math.floor((16 - top) / 2), sb = Math.floor((16 - bottom) / 2), k;
     for (k = 0; k < 32; k++) { var was = T[k].on; T[k].on = k < 16 ? (k >= st && k < st + top) : (k - 16 >= sb && k - 16 < sb + bottom); if (T[k].on && !was) KEYS.forEach(function (key) { T[k][key] = DEF[key]; }); }
-    if (!hasSel()) ui.sel = null;
+    ui.picks = picked(); ui.sel = ui.picks.length ? ui.picks[ui.picks.length - 1] : null;
   }
   function isCentered() {
     var c = counts(), st = Math.floor((16 - c[0]) / 2), sb = Math.floor((16 - c[1]) / 2), k;
@@ -58,7 +59,7 @@
     return true;
   }
   function paint(patch, list) { (list || onList()).forEach(function (k) { for (var key in patch) T[k][key] = patch[key]; }); }
-  function resetAll() { for (var k = 0; k < 32; k++) T[k] = blank(); DEF = blank(); SET.fangs = false; SET.cut = 'deep'; SET.ins = { text: '', style: 'engraved', tooth: null }; ui.sel = null; }
+  function resetAll() { for (var k = 0; k < 32; k++) T[k] = blank(); DEF = blank(); SET.fangs = false; SET.cut = 'deep'; SET.ins = { text: '', style: 'engraved', tooth: null }; ui.sel = null; ui.picks = []; }
   // one-tap starting points, as in the live builder, plus the one-of-one showpiece
   var LOOKS = {
     gold: ['Plain gold', function () { setRange(6, 6); }],

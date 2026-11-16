@@ -203,7 +203,7 @@
   G.goal = function (snap) {
     var v = ui.mode === 'door' ? LANDVIEW : VIEWS[Math.max(0, Math.min(5, ui.step))];
     tgt.yaw = v.yaw; tgt.pitch = v.pitch; tgt.zoom = v.zoom;
-    if (ui.mode === 'build' && hasSel() && teeth[ui.sel]) { tgt.yaw = Math.max(-1.15, Math.min(1.15, teeth[ui.sel].ang * .85)); tgt.zoom = Math.min(tgt.zoom, .76); }
+    var pk = picked(); if (ui.mode === 'build' && pk.length) { var ang = pk.reduce(function (a, k) { return a + teeth[k].ang; }, 0) / pk.length; tgt.yaw = Math.max(-1.15, Math.min(1.15, ang * .85)); tgt.zoom = Math.min(tgt.zoom, pk.length === 1 ? .76 : .9); }
     user.yaw = 0; user.pitch = 0; hold = false;
     if (snap) { curv.yaw = tgt.yaw; curv.pitch = tgt.pitch; curv.zoom = tgt.zoom; }
     dirty = true;
@@ -279,9 +279,9 @@
     if (!dragging && !hold && (Math.abs(user.yaw) > .001 || Math.abs(user.pitch) > .001) && t - idleAt > 4000) { user.yaw *= .96; user.pitch *= .96; moving = true; }
     anyGlow = false;
     teeth.forEach(function (o, n) {
-      var want = ui.mode === 'build' && ui.sel === n ? 1 : 0;
+      var isPick = ui.mode === 'build' && (ui.picks || []).indexOf(n) >= 0, want = isPick ? 1 : 0;
       if (Math.abs(want - o.lift) > .002) { o.lift += (want - o.lift) * (reduce ? 1 : .16); o.g.position.copy(o.base).addScaledVector(o.out, o.lift * 1.3 * MM); moving = true; }
-      var gwant = ui.mode === 'build' && ui.sel === n && T[n].on; if (o.glow && o.glow.visible !== gwant) { o.glow.visible = gwant; moving = true; }
+      var gwant = isPick && T[n].on; if (o.glow && o.glow.visible !== gwant) { o.glow.visible = gwant; moving = true; }
       if (gwant) { glowMat.uniforms.t.value = t; moving = true; anyGlow = true; }
       if (o.pop > 0) { o.pop = Math.max(0, o.pop - .06); o.g.scale.setScalar(1 + Math.sin(o.pop * Math.PI) * .1); moving = true; }
     });
