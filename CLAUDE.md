@@ -8,6 +8,14 @@
 - On design and UX work, show the plan (what, how, open choices) and get it
   approved before building. The owner leads on taste and UX.
 
+## The redesign
+
+- All redesign work goes on the `redesign` branch and is pushed there.
+  Never push it to `main`, merge it, or change anything the live site
+  (vvslab.magpollo.com) depends on until the owner says so.
+- The living plan and the prototype are private Claude artifacts; their
+  sources and a README are in `docs/redesign/`.
+
 ## Choosing services and data sources
 
 Before recommending a paid service, API key or new vendor, check the simple
