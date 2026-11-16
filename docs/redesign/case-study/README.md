@@ -14,6 +14,7 @@ private Claude artifact.
 | v5 | Nov 15 | The full journey: front door, five-step builder, review, send and deposit, jeweler sign-up, phone |
 | teeth 1-4 | Nov 15-16 | Rebuilding the teeth: the live model as stored, levelled, then smoothed and seated with the bite closed; before and after |
 | v6 | Nov 16 | Real tooth shapes and spacing across every finish, setting, charm, view and phone |
+| port 1-2 | Nov 16 | The approved piece inside the real builder (iced; a per-tooth mix); every state next to the prototype is in `docs/redesign/port/screenshots/` |
 
 Only our own work is here. Reference images (competitor sites, games, the
 owner's reference photos) were used during the work but are not kept, as

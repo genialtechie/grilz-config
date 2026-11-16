@@ -52,3 +52,7 @@ The prototype shares the live app's data model on purpose (a design per tooth pl
 so the path is: port the geometry and materials into `src/components/three/`, drive them from
 `RenderSpec`, replace `Configurator.tsx`'s panel with the bench, and keep `server/` as is.
 The AI photo pipeline reads the 3D preview and per-tooth masks, so it needs re-tuning for the new model.
+
+The 3D part is ported: `src/components/three/redesign/` (teeth, holder, materials, caps, finishes,
+stones, glints), drawn by `src/components/three/GrillzModel.tsx` from the builder's own design.
+Screens of the port next to this prototype are in `docs/redesign/port/screenshots/`.
