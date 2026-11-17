@@ -22,6 +22,10 @@
       "destination": "/api/shop-page?domain=1"
     },
     {
+      "source": "/api/describe",
+      "destination": "/api/render?route=describe"
+    },
+    {
       "source": "/api/promo",
       "destination": "/api/leads?route=promo"
     },

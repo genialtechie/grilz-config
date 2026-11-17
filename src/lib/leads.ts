@@ -15,6 +15,7 @@ export type LeadSubmission = {
   /** Whether a studio photo will be requested for this lead. */
   photo: boolean;
   turnstile?: string;
+  phoneToken?: string;
   /** A promo code the builder checked; the server checks it again and counts the use. */
   promo?: string;
   /** Honeypot: always empty for people. */

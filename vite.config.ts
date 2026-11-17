@@ -115,6 +115,21 @@ const devRenderApi = (env: Record<string, string>): Plugin => ({
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(body))
     })
+    server.middlewares.use('/api/describe', async (req, res) => {
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(chunk as Buffer)
+      let payload: unknown = null
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+      } catch {
+        // handled by handleDescribe as an invalid request
+      }
+      const { handleDescribe } = await server.ssrLoadModule('/server/describe.ts')
+      const { status, body } = await handleDescribe(payload, req.socket.remoteAddress ?? 'local', env)
+      res.statusCode = status
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(body))
+    })
     server.middlewares.use('/api/render', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405
