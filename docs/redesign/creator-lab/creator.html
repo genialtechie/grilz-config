@@ -360,25 +360,8 @@ button.mrow:active { transform: scale(.985); }
 .nowshow { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; font-size: 13px; color: var(--s-mut); }
 .nowshow b { width: 6px; height: 6px; border-radius: 50%; background: var(--s-gold); }
 .bar .mark { cursor: pointer; }
-.openA .fine, .keepbar .fine { font-size: 12.5px; color: var(--s-mut); }
+.openA .fine { font-size: 12.5px; color: var(--s-mut); }
 .go2 { display: flex; gap: 10px; }
-.openA .go2 .cta { flex: 0 1 260px; }
-.openA .go2 .cta.second { flex: 0 0 auto; }
-.openA .field input { max-width: 420px; }
-.keepbar { position: absolute; z-index: 5; top: 66px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); padding: 12px 12px 12px 16px; border-radius: 20px; background: var(--s-solid); box-shadow: 0 18px 40px -22px rgba(40,36,24,.5), 0 0 0 1px var(--s-line); display: grid; gap: 10px; }
-.keepbar p { font-size: 14px; line-height: 1.35; }
-.kb-row { display: flex; align-items: center; gap: 10px; }
-.kb-row p { flex: 1; }
-.kb-row .cta { flex: none; min-height: 40px; padding: 0 16px; font-size: 14.5px; }
-.keepbar .x { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(18,18,17,.06); font: 400 18px/1 var(--sans); color: var(--s-fg); flex: none; }
-.kb-form { display: none; gap: 8px; }
-.keepbar.open .kb-form { display: flex; }
-.keepbar.open .kb-open { display: none; }
-.kb-form .field { flex: 1; }
-.kb-form .cta { flex: none; padding: 0 18px; min-height: 46px; font-size: 15px; }
-.kb-fine { display: none; }
-.keepbar.open .kb-fine { display: block; margin-top: -4px; }
-.keepbar .err:empty { display: none; }
 /* the page under the hero */
 .more { background: #f4f3ef; color: var(--s-mut); }
 .app:not([data-home]) .more, .app:not([data-mode="door"]) .more { display: none; }
@@ -413,15 +396,26 @@ button.mrow:active { transform: scale(.985); }
 .pcard p:not(.eyebrow):not(.pbig) { font-size: 15.5px; line-height: 1.5; max-width: 40ch; }
 .pbig { color: var(--s-fg); font: 600 clamp(48px, 7vw, 84px)/.9 var(--sans); letter-spacing: -.06em; }
 .pbig span { font-size: .26em; letter-spacing: -.02em; color: var(--s-mut); font-weight: 500; }
-.free1 { color: var(--s-fg); font: 500 clamp(18px, 2vw, 22px)/1.3 var(--sans); letter-spacing: -.02em; margin-bottom: 28px; }
-.pricing { display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 5vw, 72px); align-items: end; }
-.big { color: var(--s-fg); font: 600 clamp(72px, 13vw, 168px)/.82 var(--sans); letter-spacing: -.07em; margin-top: 12px; }
-.big span { font-size: .22em; letter-spacing: -.02em; color: var(--s-mut); font-weight: 500; }
-.inc { display: grid; margin: 0; padding: 0; list-style: none; }
-.inc li { padding: 13px 0; border-top: 1px solid var(--s-line); font-size: 15.5px; color: var(--s-fg); }
-.btns2 { margin-top: 22px; display: flex; gap: 8px; flex-wrap: wrap; }
 .btn2 { display: inline-flex; border: 1px solid var(--s-line); border-radius: 999px; padding: 15px 22px; font: 600 15px/1 var(--sans); color: var(--s-fg); background: transparent; }
 .btn2.ink { background: var(--ink); color: var(--ink-fg); border-color: var(--ink); }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.pair figure { margin: 0; display: grid; gap: 10px; }
+.pair img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 22px; background: #fff; }
+.pair figcaption { font: 500 14px/1 var(--sans); color: var(--s-mut); }
+.pair figcaption.gold { color: var(--s-gold); }
+.cap2 { margin-top: 18px; font-size: 15px; color: var(--s-mut); }
+.btns2 { display: flex; flex-wrap: wrap; gap: 8px; }
+.pcard .btns2 { margin-top: 2px; }
+a.btn2 { text-decoration: none; align-items: center; }
+.final { background: var(--ink); border-top: 0; text-align: center; }
+.final .in { display: grid; justify-items: center; gap: 14px; }
+.final h2 { color: #fff; margin: 0; max-width: 14ch; }
+.final p { color: rgba(244,243,239,.72); font-size: 16px; max-width: 44ch; }
+.final .btns2 { justify-content: center; margin-top: 8px; }
+.btn2.inv { background: #fff; color: var(--ink); border-color: #fff; }
+.btn2.line { color: #f4f3ef; border-color: rgba(244,243,239,.35); }
+.foot a { color: var(--s-mut); text-decoration: none; }
+.foot .fnote { margin-left: auto; }
 .qtabs { display: none; }
 .qcols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(24px, 4vw, 56px); }
 .qcol h3 { color: var(--s-fg); font: 600 18px/1.2 var(--sans); letter-spacing: -.02em; margin-bottom: 8px; }
@@ -441,16 +435,13 @@ button.mrow:active { transform: scale(.985); }
   .home h1 { font-size: 40px; }
   .home .two p { font-size: 15px; }
   .hcta .btn { padding: 14px 18px; }
-  .keepbar { top: 62px; }
-  .kb-sub { display: none; }
-  .keepbar.open .kb-sub { display: inline; }
-  .kb-form { flex-direction: column; }
-  .kb-form .cta { width: 100%; }
-  .openA .go2 .cta { flex: 1 1 auto; }
   .more .in { padding-inline: 18px; }
-  .split, .pricing, .pcards { grid-template-columns: 1fr; }
+  .split, .pcards { grid-template-columns: 1fr; }
   .gets li { grid-template-columns: 1fr; gap: 2px; }
   .pcard { padding: 22px; }
+  .pair { gap: 8px; }
+  .pair img { border-radius: 16px; }
+  .foot .fnote { margin-left: 0; flex-basis: 100%; }
   .qtabs { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(18,18,17,.06); margin-bottom: 14px; }
   .qtabs button { border: 0; background: transparent; border-radius: 999px; padding: 9px 14px; font: 500 14px/1 var(--sans); color: var(--s-mut); }
   .qtabs button[aria-selected="true"] { background: var(--ink); color: var(--ink-fg); }
@@ -495,7 +486,6 @@ button.mrow:active { transform: scale(.985); }
       <div class="hcta"><button type="button" class="btn ink" data-h="design">Design your grillz</button><button type="button" class="btn" data-t="start">Start free as a jeweler</button></div>
       <p class="fine">Free to design · Shops: 14 days free, then $199/mo</p>
     </div>
-    <div class="keepbar" id="keepbar" hidden></div>
     <div class="openA" id="openA" aria-label="Start your build"></div>
 
     <aside class="tray" id="tray" aria-label="Creator"></aside>
@@ -506,6 +496,7 @@ button.mrow:active { transform: scale(.985); }
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script>
+window.VVS_ASSETS={};
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var app = $('app'), stage = $('stage'), canvas = $('gl'), load = $('load');
@@ -1563,7 +1554,6 @@ button.mrow:active { transform: scale(.985); }
     ui.aiFrom = 'door'; ui.aiStep = 'talk'; ui.aiErr = ''; hideBubble(); setMode('ai'); refresh(); aiAction('go');
   }
   function renderOpenings() {
-    if (ui.trial === 'name') { $('openA').innerHTML = sellPanel(); doorExtras(); return; }   // the jeweler's trial starts in the start panel
     var builds = BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
     if (ui.door === 'v15') {
       var self = '<button type="button" class="build empty" data-build="empty"><span class="pic"><i>+</i></span><b>Build it yourself</b><span>Pick every tooth</span></button>';
@@ -1872,7 +1862,7 @@ button.mrow:active { transform: scale(.985); }
     return '<div class="thead two"><h2>Sent. ' + S + ' will text you.</h2><p class="sub">At ' + esc(fmtPhone(ui.c.phone)) + '.</p></div><div class="tbody flow">' +
       (ui.paid ? row({ cls: 'lead', title: 'Order started', hint: m + ' deposit paid to ' + S + ', counted toward your grill.', thumb: ic('check') }) : row({ cls: 'lead', title: 'Start your order', hint: m + ' now, counted toward your grill. ' + S + ' confirms the rest.', thumb: ic('coin') })) +
       '<section class="sect"><h3 class="sec">While your photo develops</h3><div class="fgroup"><div class="field"><label for="aig">Your Instagram</label><input id="aig" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@" value="' + esc(ui.c.ig) + '"></div><p class="note">' + S + ' sees it as you typed it.</p></div>' +
-      row({ attrs: 'data-x="follow"', title: 'Follow @vvslab', hint: 'Opens Instagram', thumb: ic('insta') }) +
+      row({ attrs: 'data-x="follow"', title: 'Follow @vvslab.ai', hint: 'Opens Instagram', thumb: ic('insta') }) +
       '<div class="field"><label for="aemail">Email me a copy</label><input id="aemail" type="email" inputmode="email" autocomplete="email" value="' + esc(ui.c.email) + '"></div></section>' +
       '<section class="sect"><h3 class="sec">What happens next</h3><ol class="steps">' + steps.map(function (s, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="txt"><b>' + s[0] + '</b>' + (s[1] ? '<span class="ins">' + s[1] + '</span>' : '') + '</span><span class="prev">' + s[2] + '</span></li>'; }).join('') + '</ol></section>' +
       '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div><div class="tfoot">' + foot + '</div>';
@@ -2054,7 +2044,7 @@ button.mrow:active { transform: scale(.985); }
     if (x === 'fill') { ui.code = ui.sms; check(); return; }
     if (x === 'pay') { ui.paying = true; redraw(); setTimeout(function () { ui.paying = false; ui.paid = true; if (ui.after === 3) redraw(); }, 1400); return; }
     if (x === 'skip') { ui.skip = true; redraw(); return; }
-    if (x === 'follow') { toast('This opens Instagram on @vvslab.'); return; }
+    if (x === 'follow') { toast('This opens Instagram on @vvslab.ai.'); return; }
     if (x === 'save') { toast('In the real builder this saves the studio photo to your phone.'); return; }
   }
   function afterInput(e) {
@@ -2122,9 +2112,8 @@ button.mrow:active { transform: scale(.985); }
   }
   function box() {
     var st = stage.getBoundingClientRect(), W = st.width, H = st.height, top = 60;
-    if (ui.mode === 'door') {         // the piece sits above the hero on the front door, or above the start panel, and below the trial bar (if any)
-      var r = (ui.home ? $('home') : $('openA')).getBoundingClientRect(), kb = $('keepbar'), bot = r.top - st.top - 6, tp = top;
-      if (kb && !kb.hidden) tp = Math.max(tp, kb.getBoundingClientRect().bottom - st.top + 8);
+    if (ui.mode === 'door') {         // the piece sits above the hero on the front door, or above the start panel
+      var r = (ui.home ? $('home') : $('openA')).getBoundingClientRect(), bot = r.top - st.top - 6, tp = top;
       G.box = { top: tp, bottom: Math.max(tp + 140, bot), left: 0, right: W }; return;
     }
     if (ui.mode === 'build' || ui.mode === 'after' || ui.mode === 'ai') {
@@ -2232,7 +2221,7 @@ button.mrow:active { transform: scale(.985); }
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['pricev', 'Price section', [['cards', 'Two cards'], ['one', '$199 card + one line']]], ['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v15', 'Builds, or one AI field (v15)'], ['v12', 'Three ways in (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
+  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v15', 'Builds, or one AI field (v15)'], ['v12', 'Three ways in (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
@@ -2254,7 +2243,6 @@ button.mrow:active { transform: scale(.985); }
     setVariant(p, v);
     if (p === 'site') { brand(); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); }
     if (p === 'door') { renderOpenings(); box(); }
-    if (p === 'pricev') { if (!ui.home) goHome(); else renderMore(); setTimeout(function () { var s = document.querySelector('.pcards, .pricing'); if (s) s.scrollIntoView({ block: 'center' }); }, 60); }
     renderProto();
   });
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
@@ -2262,18 +2250,12 @@ button.mrow:active { transform: scale(.985); }
   // ---------- the front door (Nov 17): v6's layout, written for both shoppers and jewelers ----------
   // Home is the hero over the piece and the page below it. "Design your grillz" opens the start page;
   // "Start free as a jeweler" puts the shop's name on the builder before asking for an email.
-  ui.home = true; ui.trial = null; ui.shopLabel = ''; ui.kbOpen = false; ui.pricev = 'cards'; ui.qtab = 'get'; app.setAttribute('data-home', '');
+  ui.home = true; ui.shopLabel = ''; ui.qtab = 'get'; app.setAttribute('data-home', '');
   function initials(s) { var w = String(s).trim().split(/\s+/).filter(Boolean); return ((w[0] || 'V')[0] + (w[1] ? w[1][0] : (w[0] || 'VV')[1] || '')).toUpperCase(); }
   function laneEvent(name) { (ui.laneLog = ui.laneLog || []).push([name, Math.round(performance.now())]); }   // in the real site: one analytics event per choice, the lane test's first signal
-  function sellPanel() {
-    return '<div class="head"><h2>What\'s your shop called?</h2></div>' +
-      '<div class="field"><label class="sr" for="tname">Shop name</label><input id="tname" type="text" autocomplete="organization" autocapitalize="words" placeholder="Your shop\'s name" maxlength="32" value="' + esc(ui.shopLabel) + '"></div>' +
-      '<p class="note">Your builder appears with your name on it. Try it, then keep it.</p>' +
-      '<div class="go2"><button type="button" class="cta ghost second" data-t="back">Back</button><button type="button" class="cta" data-t="see">Show me my builder</button></div>';
-  }
   function doorExtras() {                // the hero, the trial bar and the page below, around the start panel
-    app.toggleAttribute('data-home', !!ui.home && ui.mode === 'door'); app.toggleAttribute('data-trial', !!ui.trial);
-    showcase(!!ui.home && ui.mode === 'door'); renderKeep(); renderMore();
+    app.toggleAttribute('data-home', !!ui.home && ui.mode === 'door');
+    showcase(!!ui.home && ui.mode === 'door'); renderMore();
   }
   // on the front door the piece shows finished work, the popular builds in turn; the visitor's own build comes back after
   var SHOW = ['oneof', 'iced8', 'fangs', 'tone', 'open', 'gold66'];
@@ -2285,15 +2267,6 @@ button.mrow:active { transform: scale(.985); }
     if (ui.mode !== 'door' || !ui.showSnap) return; var b = buildById(SHOW[ui.showI++ % SHOW.length]);
     resetAll(); b[3](); G.sync(); if (G.pop) G.pop(); if (G.glint) G.glint();
     var n = $('nowshow'); if (n) n.textContent = b[1] + (b[0] === 'oneof' ? ' · quoted by the shop' : ' · ' + priceOf(b[0]).toLowerCase());
-  }
-  function renderKeep() {
-    var k = $('keepbar'), name = esc(shopName()), show = ui.trial === 'keep' || ui.trial === 'done'; k.hidden = !show; if (!show) return;
-    if (ui.trial === 'done') { k.innerHTML = '<div class="kb-row"><p><b>' + name + ' is live.</b> We sent a link to ' + esc(ui.trialEmail) + ' to confirm it.</p><button type="button" class="x" data-t="close" aria-label="Close">×</button></div><p class="fine">Prototype: nothing is sent. Next would be your prices and your link.</p>'; return; }
-    k.innerHTML = '<div class="kb-row"><p><b>This is your builder.</b> <span class="kb-sub">Try it as your customer would, then keep it.</span></p>' +
-      '<button type="button" class="cta kb-open" data-t="kbopen" aria-expanded="' + !!ui.kbOpen + '">Keep it</button><button type="button" class="x" data-t="cancel" aria-label="Not now, go back to VVS Lab">×</button></div>' +
-      '<div class="kb-form"><div class="field"><label class="sr" for="temail">Email</label><input id="temail" type="email" inputmode="email" autocomplete="email" placeholder="Email" value="' + esc(ui.trialEmail || '') + '"></div><button type="button" class="cta" data-t="keep">Start 14 days free</button></div>' +
-      '<p class="fine kb-fine">No card. Then $199 a month.</p><p class="err" id="terr" role="alert"></p>';
-    k.classList.toggle('open', !!ui.kbOpen);
   }
   function faqHtml(list) { return '<div class="faq">' + list.map(function (q) { return '<details><summary>' + q[0] + '</summary><p>' + q[1] + '</p></details>'; }).join('') + '</div>'; }
   var Q_GET = [
@@ -2311,52 +2284,38 @@ button.mrow:active { transform: scale(.985); }
     ['Can customers ask for a one-of-one?', 'Yes. They can place charms on any tooth or send their own idea with a photo. Those arrive as a custom request for you to quote.'],
     ['Is there a contract?', 'No. 14 days free with no card, then $199 a month. Cancel any month.']];
   function priceHtml() {
-    if (ui.pricev === 'one') return '<section class="band"><div class="in"><p class="free1">Designing your grillz is always free.</p><div class="pricing"><div><p class="eyebrow">For shops</p><p class="big">$199<span> a month</span></p></div><div><ul class="inc">' +
-      ['14 days free. No card needed to start.', 'Your own builder link for your site and your Instagram bio', 'Your prices and options, set up in minutes', 'A studio photo for every finished design', 'Requests, specs and deposits sent straight to you', 'Month to month. No setup fee.'].map(function (x) { return '<li>' + x + '</li>'; }).join('') +
-      '</ul><p class="btns2"><button type="button" class="btn2 ink" data-t="start">Start free</button><button type="button" class="btn2" data-h="design">Try the builder first</button></p></div></div></div></section>';
     return '<section class="band"><div class="in"><h2>The price</h2><div class="pcards">' +
       '<div class="pcard"><p class="eyebrow">Designing</p><p class="pbig">Free</p><p>You see your price as you build. Sending is free. A deposit starts your order and counts toward your grill.</p><button type="button" class="btn2 ink" data-h="design">Design your grillz</button></div>' +
-      '<div class="pcard"><p class="eyebrow">Shops</p><p class="pbig">$199<span> a month</span></p><p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p><button type="button" class="btn2 ink" data-t="start">Start free</button></div>' +
+      '<div class="pcard"><p class="eyebrow">Shops</p><p class="pbig">$199<span> a month</span></p><p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p><div class="btns2"><button type="button" class="btn2 ink" data-t="start">Start free</button><a class="btn2" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div>' +
       '</div></div></section>';
   }
   function renderMore() {
     var m = $('more'); if (!ui.home) { m.innerHTML = ''; return; }
     var lead = ui.leadImg || '';
-    m.innerHTML = '<section class="band"><div class="in split"><div><h2>What happens when you hit send</h2><p class="lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p><ul class="gets">' +
+    m.innerHTML = '' +
+      '<section class="band"><div class="in split"><div><h2>What happens when you hit send</h2><p class="lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p><ul class="gets">' +
       [['Who it\'s from', 'Name and phone, checked with a text code.'], ['The exact spec', 'Every tooth, metal and stone, with the price shown.'], ['The studio photo', 'The picture that sold it.'], ['The fit', 'A mailed mold kit, their own mold or scan, or in store.'], ['The deposit', 'Paid to the shop, straight to them.']].map(function (g) { return '<li><b>' + g[0] + '</b><span>' + g[1] + '</span></li>'; }).join('') +
       '</ul></div><div class="phone" aria-label="Example of a new request on a jeweler\'s phone"><div class="scr"><div class="clock">9:41<small>Monday, November 17</small></div><div class="leadcard"><div class="top"><i>VV</i><span>VVS Lab · now</span></div><div class="mid">' + (lead ? '<img alt="The customer\'s design" src="' + lead + '">' : '<span class="lph">' + setSvg(6, 6, 'iced') + '</span>') + '<div><b>New request from Dre</b><p>6 × 6 · 14K yellow gold · iced canines</p></div></div><div class="tags"><span>$3,840 quoted</span><span class="paid">$960 deposit paid</span><span>Mold kit by mail</span></div></div><p class="exl">Example request</p></div></div></div></section>' +
       priceHtml() +
       '<section class="band"><div class="in"><h2>Questions</h2><div class="qtabs" role="tablist" aria-label="Questions for"><button type="button" role="tab" data-q2="get" aria-selected="' + (ui.qtab === 'get') + '">Getting grillz</button><button type="button" role="tab" data-q2="sell" aria-selected="' + (ui.qtab === 'sell') + '">Selling grillz</button></div>' +
       '<div class="qcols" data-tab="' + ui.qtab + '"><div class="qcol get"><h3>Getting grillz</h3>' + faqHtml(Q_GET) + '</div><div class="qcol sell"><h3>Selling grillz</h3>' + faqHtml(Q_SELL) + '</div></div>' +
       '<p class="proto-note">For you, before this goes live: how long it takes, returns and any warranty need your answers.</p></div></section>' +
-      '<footer class="foot"><div class="in"><span>VVS Lab</span><span>Prices in the builder are the demo shop\'s example prices.</span></div></footer>';
+      '<section class="band final"><div class="in"><h2>Put it in your bio tonight.</h2><p>14 days free, no card needed. Or DM “BUILD” and we\'ll walk you through it.</p><div class="btns2"><button type="button" class="btn2 inv" data-t="start">Start free trial</button><a class="btn2 line" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div></section>' +
+      '<footer class="foot"><div class="in"><span>VVS Lab</span><a href="https://www.instagram.com/vvslab.ai/" target="_blank" rel="noreferrer">@vvslab.ai</a><span class="fnote">Prices in the builder are the demo shop\'s example prices.</span></div></footer>';
   }
   function goHome() { ui.home = true; ui.selOpen = false; hideBubble(); if (ui.mode !== 'door') { ui.resume = onList().length > 0; setMode('door'); } renderOpenings(); G.sync(); G.goal(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
   function openStart() { laneEvent('design_clicked'); ui.home = false; renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
-  function startTrial() { laneEvent('trial_started'); ui.home = false; ui.trial = 'name'; if (ui.mode !== 'door') goDoor(); renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); setTimeout(function () { var f = $('tname'); if (f) try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 350); }
-  function seeBuilder() {
-    var f = $('tname'), n = (f ? f.value : ui.shopLabel).trim().replace(/\s+/g, ' ');
-    if (n.length < 2) { toast('Add your shop\'s name.'); if (f) f.focus(); return; }
-    ui.shopLabel = n; setVariant('site', 'shop'); brand(); ui.trial = 'keep'; ui.kbOpen = window.innerWidth >= 900; laneEvent('trial_named');
-    renderOpenings(); box(); if (ui.mode === 'after') renderTray();
-  }
-  function leaveTrial() { ui.trial = null; ui.shopLabel = ''; setVariant('site', 'vvs'); brand(); renderOpenings(); box(); }
+  // "Start free" and "Sign in" go straight to the real pages (/signup and /signin); designing those pages is the jeweler's round
+  function startTrial() { laneEvent('signup_clicked'); toast('Opens the sign-up page (/signup). It gets redesigned in the jeweler round.'); }
   setTimeout(function grabLead() { if (!G.ready || !G.shot) { setTimeout(grabLead, 500); return; } if (!ui.home) return; ui.leadImg = G.shot(240, 240); renderMore(); }, 1600);   // the example request carries a real render of the piece
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-t], [data-h], [data-q2], .bar .mark'); if (!t) return;
     if (t.classList.contains('mark')) { if (ui.mode === 'door' && ui.home) return; goHome(); return; }
     var q2 = t.getAttribute('data-q2'); if (q2) { ui.qtab = q2; renderMore(); return; }
-    var h = t.getAttribute('data-h'); if (h === 'design') { openStart(); return; } if (h === 'signin') { toast('Sign in is for shops. Not part of the prototype.'); return; }
+    var h = t.getAttribute('data-h'); if (h === 'design') { openStart(); return; } if (h === 'signin') { laneEvent('signin_clicked'); toast('Opens the sign-in page (/signin). It gets redesigned in the jeweler round.'); return; }
     var a = t.getAttribute('data-t'); if (!a) return; e.preventDefault();
     if (a === 'start') startTrial();
-    else if (a === 'back') { ui.trial = null; ui.home = true; renderOpenings(); box(); }
-    else if (a === 'see') seeBuilder();
-    else if (a === 'kbopen') { ui.kbOpen = !ui.kbOpen; renderKeep(); box(); if (ui.kbOpen) { var em = $('temail'); if (em) em.focus(); } }
-    else if (a === 'keep') { var v = ($('temail') || {}).value || ''; ui.trialEmail = v.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ui.trialEmail)) { var er = $('terr'); if (er) er.textContent = 'Add the email you\'d like to sign in with.'; return; } ui.trial = 'done'; laneEvent('trial_kept'); renderKeep(); box(); }
-    else if (a === 'cancel' || a === 'close') leaveTrial();
   });
-  document.addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'tname') { e.preventDefault(); seeBuilder(); } else if (e.target.id === 'temail') { e.preventDefault(); var b = document.querySelector('[data-t="keep"]'); if (b) b.click(); } });
-  document.addEventListener('input', function (e) { if (e.target.id === 'tname') ui.shopLabel = e.target.value; if (e.target.id === 'temail') { ui.trialEmail = e.target.value; var er = $('terr'); if (er) er.textContent = ''; } });
 
   // ---------- start ----------
   setVariant('site', 'vvs'); setVariant('door', 'v15'); brand();
