@@ -92,10 +92,11 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    three ways in and one-tap popular builds (v11 behind a switch).
    **Waiting on:** the owner's verdict on v12's start page.
 5. **The front door (v14, this chat):** v6's layout with words for both
-   audiences, in front of today's builder (see the Nov 17 "second pass" row
-   in plan.md). **Waiting on:** the owner's pick between the two price
-   versions; answers on delivery time, returns and warranty for the shoppers'
-   questions; and whether "Sign in" and "Start free" stay in the top bar.
+   audiences, the two price cards, the 3D-to-studio-photo pair and the
+   closing band from the live page (see plan.md, Nov 17). Pictures the page
+   shows live in `creator-lab/src/assets/` and are inlined by `build.py`.
+   **Still needed from the owner:** delivery time, returns and warranty
+   answers for the shoppers' questions; a studio photo remade from the new 3D.
 6. **Later rounds:**
    - the shop's brand, and coming back to a design
    - building the approved builder into the real app

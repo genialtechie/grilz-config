@@ -86,7 +86,6 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await p.waitForTimeout(2200); await shot('l1-home'); await full('l2-home-page');
       await c('.home [data-h="design"]'); await shot('l3-start-page');
       await p.click('.bar .mark'); await p.waitForTimeout(600);
-      await proto('pricev', 'one'); await p.evaluate(() => window.scrollTo(0, 0)); await full('l4-home-page-price-one');
       if (await p.isVisible('.qtabs')) { await c('.qtabs [data-q2="sell"]'); await p.evaluate(() => document.querySelector('.qtabs').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500); await p.screenshot({ path: out + '/' + tag + '-l5-questions-sell.png' }); console.log('l5-questions-sell'); }
       await p.evaluate(() => window.scrollTo(0, 0)); await c('.home [data-t="start"]'); await shot('l6-trial-name');
       await p.fill('#tname', 'Crown Gold'); await c('[data-t="see"]'); await shot('l7-trial-builder');

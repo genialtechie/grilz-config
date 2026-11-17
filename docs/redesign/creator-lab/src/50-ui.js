@@ -361,7 +361,7 @@
     return '<div class="thead two"><h2>Sent. ' + S + ' will text you.</h2><p class="sub">At ' + esc(fmtPhone(ui.c.phone)) + '.</p></div><div class="tbody flow">' +
       (ui.paid ? row({ cls: 'lead', title: 'Order started', hint: m + ' deposit paid to ' + S + ', counted toward your grill.', thumb: ic('check') }) : row({ cls: 'lead', title: 'Start your order', hint: m + ' now, counted toward your grill. ' + S + ' confirms the rest.', thumb: ic('coin') })) +
       '<section class="sect"><h3 class="sec">While your photo develops</h3><div class="fgroup"><div class="field"><label for="aig">Your Instagram</label><input id="aig" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@" value="' + esc(ui.c.ig) + '"></div><p class="note">' + S + ' sees it as you typed it.</p></div>' +
-      row({ attrs: 'data-x="follow"', title: 'Follow @vvslab', hint: 'Opens Instagram', thumb: ic('insta') }) +
+      row({ attrs: 'data-x="follow"', title: 'Follow @vvslab.ai', hint: 'Opens Instagram', thumb: ic('insta') }) +
       '<div class="field"><label for="aemail">Email me a copy</label><input id="aemail" type="email" inputmode="email" autocomplete="email" value="' + esc(ui.c.email) + '"></div></section>' +
       '<section class="sect"><h3 class="sec">What happens next</h3><ol class="steps">' + steps.map(function (s, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="txt"><b>' + s[0] + '</b>' + (s[1] ? '<span class="ins">' + s[1] + '</span>' : '') + '</span><span class="prev">' + s[2] + '</span></li>'; }).join('') + '</ol></section>' +
       '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div><div class="tfoot">' + foot + '</div>';
@@ -545,7 +545,7 @@
     if (x === 'fill') { ui.code = ui.sms; check(); return; }
     if (x === 'pay') { ui.paying = true; redraw(); setTimeout(function () { ui.paying = false; ui.paid = true; if (ui.after === 3) redraw(); }, 1400); return; }
     if (x === 'skip') { ui.skip = true; redraw(); return; }
-    if (x === 'follow') { toast('This opens Instagram on @vvslab.'); return; }
+    if (x === 'follow') { toast('This opens Instagram on @vvslab.ai.'); return; }
     if (x === 'save') { toast('In the real builder this saves the studio photo to your phone.'); return; }
   }
   function afterInput(e) {
@@ -716,7 +716,7 @@
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['pricev', 'Price section', [['cards', 'Two cards'], ['one', '$199 card + one line']]], ['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
+  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
@@ -738,7 +738,6 @@
     setVariant(p, v);
     if (p === 'site') { brand(); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); }
     if (p === 'door') { renderOpenings(); box(); }
-    if (p === 'pricev') { if (!ui.home) goHome(); else renderMore(); setTimeout(function () { var s = document.querySelector('.pcards, .pricing'); if (s) s.scrollIntoView({ block: 'center' }); }, 60); }
     renderProto();
   });
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
@@ -746,7 +745,7 @@
   // ---------- the front door (Nov 17): v6's layout, written for both shoppers and jewelers ----------
   // Home is the hero over the piece and the page below it. "Design your grillz" opens the start page;
   // "Start free as a jeweler" puts the shop's name on the builder before asking for an email.
-  ui.home = true; ui.trial = null; ui.shopLabel = ''; ui.kbOpen = false; ui.pricev = 'cards'; ui.qtab = 'get'; app.setAttribute('data-home', '');
+  ui.home = true; ui.trial = null; ui.shopLabel = ''; ui.kbOpen = false; ui.qtab = 'get'; app.setAttribute('data-home', '');
   function initials(s) { var w = String(s).trim().split(/\s+/).filter(Boolean); return ((w[0] || 'V')[0] + (w[1] ? w[1][0] : (w[0] || 'VV')[1] || '')).toUpperCase(); }
   function laneEvent(name) { (ui.laneLog = ui.laneLog || []).push([name, Math.round(performance.now())]); }   // in the real site: one analytics event per choice, the lane test's first signal
   function sellPanel() {
@@ -795,25 +794,27 @@
     ['Can customers ask for a one-of-one?', 'Yes. They can place charms on any tooth or send their own idea with a photo. Those arrive as a custom request for you to quote.'],
     ['Is there a contract?', 'No. 14 days free with no card, then $199 a month. Cancel any month.']];
   function priceHtml() {
-    if (ui.pricev === 'one') return '<section class="band"><div class="in"><p class="free1">Designing your grillz is always free.</p><div class="pricing"><div><p class="eyebrow">For shops</p><p class="big">$199<span> a month</span></p></div><div><ul class="inc">' +
-      ['14 days free. No card needed to start.', 'Your own builder link for your site and your Instagram bio', 'Your prices and options, set up in minutes', 'A studio photo for every finished design', 'Requests, specs and deposits sent straight to you', 'Month to month. No setup fee.'].map(function (x) { return '<li>' + x + '</li>'; }).join('') +
-      '</ul><p class="btns2"><button type="button" class="btn2 ink" data-t="start">Start free</button><button type="button" class="btn2" data-h="design">Try the builder first</button></p></div></div></div></section>';
     return '<section class="band"><div class="in"><h2>The price</h2><div class="pcards">' +
       '<div class="pcard"><p class="eyebrow">Designing</p><p class="pbig">Free</p><p>You see your price as you build. Sending is free. A deposit starts your order and counts toward your grill.</p><button type="button" class="btn2 ink" data-h="design">Design your grillz</button></div>' +
-      '<div class="pcard"><p class="eyebrow">Shops</p><p class="pbig">$199<span> a month</span></p><p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p><button type="button" class="btn2 ink" data-t="start">Start free</button></div>' +
+      '<div class="pcard"><p class="eyebrow">Shops</p><p class="pbig">$199<span> a month</span></p><p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p><div class="btns2"><button type="button" class="btn2 ink" data-t="start">Start free</button><a class="btn2" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div>' +
       '</div></div></section>';
   }
   function renderMore() {
     var m = $('more'); if (!ui.home) { m.innerHTML = ''; return; }
     var lead = ui.leadImg || '';
-    m.innerHTML = '<section class="band"><div class="in split"><div><h2>What happens when you hit send</h2><p class="lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p><ul class="gets">' +
+    var A = window.VVS_ASSETS || {};
+    m.innerHTML = '<section class="band"><div class="in"><h2>Then you see it finished.</h2><p class="lede">Your 3D design turns into a studio photo of that exact piece. Shops: that\'s the moment customers put money down.</p>' +
+      '<div class="pair"><figure><img src="' + (A['pair-3d.jpg'] || '') + '" alt="3D design of a rose gold open-face set with one iced front tooth and fangs" loading="lazy"><figcaption>3D design</figcaption></figure><figure><img src="' + (A['photo-mixed.webp'] || '') + '" alt="Studio photo of the same rose gold set with one iced front tooth" loading="lazy"><figcaption class="gold">Studio photo</figcaption></figure></div>' +
+      '<p class="cap2">Same design, tooth for tooth. One iced front tooth stays one iced front tooth.</p><p class="proto-note">For you: this studio photo is the live site\'s, made from the old 3D. It gets remade from the new 3D once the photo service is re-tuned.</p></div></section>' +
+      '<section class="band"><div class="in split"><div><h2>What happens when you hit send</h2><p class="lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p><ul class="gets">' +
       [['Who it\'s from', 'Name and phone, checked with a text code.'], ['The exact spec', 'Every tooth, metal and stone, with the price shown.'], ['The studio photo', 'The picture that sold it.'], ['The fit', 'A mailed mold kit, their own mold or scan, or in store.'], ['The deposit', 'Paid to the shop, straight to them.']].map(function (g) { return '<li><b>' + g[0] + '</b><span>' + g[1] + '</span></li>'; }).join('') +
       '</ul></div><div class="phone" aria-label="Example of a new request on a jeweler\'s phone"><div class="scr"><div class="clock">9:41<small>Monday, November 17</small></div><div class="leadcard"><div class="top"><i>VV</i><span>VVS Lab · now</span></div><div class="mid">' + (lead ? '<img alt="The customer\'s design" src="' + lead + '">' : '<span class="lph">' + setSvg(6, 6, 'iced') + '</span>') + '<div><b>New request from Dre</b><p>6 × 6 · 14K yellow gold · iced canines</p></div></div><div class="tags"><span>$3,840 quoted</span><span class="paid">$960 deposit paid</span><span>Mold kit by mail</span></div></div><p class="exl">Example request</p></div></div></div></section>' +
       priceHtml() +
       '<section class="band"><div class="in"><h2>Questions</h2><div class="qtabs" role="tablist" aria-label="Questions for"><button type="button" role="tab" data-q2="get" aria-selected="' + (ui.qtab === 'get') + '">Getting grillz</button><button type="button" role="tab" data-q2="sell" aria-selected="' + (ui.qtab === 'sell') + '">Selling grillz</button></div>' +
       '<div class="qcols" data-tab="' + ui.qtab + '"><div class="qcol get"><h3>Getting grillz</h3>' + faqHtml(Q_GET) + '</div><div class="qcol sell"><h3>Selling grillz</h3>' + faqHtml(Q_SELL) + '</div></div>' +
       '<p class="proto-note">For you, before this goes live: how long it takes, returns and any warranty need your answers.</p></div></section>' +
-      '<footer class="foot"><div class="in"><span>VVS Lab</span><span>Prices in the builder are the demo shop\'s example prices.</span></div></footer>';
+      '<section class="band final"><div class="in"><h2>Put it in your bio tonight.</h2><p>14 days free, no card needed. Or DM “BUILD” and we\'ll walk you through it.</p><div class="btns2"><button type="button" class="btn2 inv" data-t="start">Start free trial</button><a class="btn2 line" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div></section>' +
+      '<footer class="foot"><div class="in"><span>VVS Lab</span><a href="https://www.instagram.com/vvslab.ai/" target="_blank" rel="noreferrer">@vvslab.ai</a><span class="fnote">Prices in the builder are the demo shop\'s example prices.</span></div></footer>';
   }
   function goHome() { ui.home = true; ui.selOpen = false; hideBubble(); if (ui.mode !== 'door') { ui.resume = onList().length > 0; setMode('door'); } renderOpenings(); G.sync(); G.goal(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
   function openStart() { laneEvent('design_clicked'); ui.home = false; renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
