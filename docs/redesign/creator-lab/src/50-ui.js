@@ -111,12 +111,22 @@
     var g = $('grabA'); if (g) { g.setAttribute('aria-expanded', big); g.setAttribute('aria-label', big ? 'Show less' : 'Show all builds'); }
     if (!reduce && el.animate) { var h1 = el.offsetHeight; el.animate([{ height: h0 + 'px', overflow: 'hidden' }, { height: h1 + 'px', overflow: 'hidden' }], { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
   }
+  // the builder's panel on a phone grows the same way: drag its handle (or its heading) up for more room, down to give the 3D its room back
+  function trayGrab() { return '<button type="button" class="grab tgrab" aria-label="' + (ui.trayBig ? 'Show less' : 'Show more') + '" aria-expanded="' + !!ui.trayBig + '"><i></i></button>'; }
+  function traySize(big) {
+    var el = $('tray'); if (!!ui.trayBig === big) return; var h0 = el.offsetHeight;
+    ui.trayBig = big; el.classList.toggle('big', big); if (big) hideBubble();
+    var g = el.querySelector('.tgrab'); if (g) { g.setAttribute('aria-expanded', big); g.setAttribute('aria-label', big ? 'Show less' : 'Show more'); }
+    if (!reduce && el.animate) { var h1 = el.offsetHeight; el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+    box();
+  }
   (function () {
-    var y0 = null, moved = false;
-    $('openA').addEventListener('pointerdown', function (e) { if (!e.target.closest('.grab, .head')) return; y0 = e.clientY; moved = false; });
-    window.addEventListener('pointermove', function (e) { if (y0 === null) return; var dy = e.clientY - y0; if (Math.abs(dy) < 28) return; moved = true; doorSize(dy < 0); y0 = null; });
-    window.addEventListener('pointerup', function (e) { if (y0 !== null && !moved && e.target.closest('.grab')) doorSize(!ui.doorBig); y0 = null; });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ui.doorBig) doorSize(false); });
+    var y0 = null, moved = false, which = null;
+    function down(e) { var inDoor = e.target.closest('#openA'); if (!e.target.closest(inDoor ? '.grab, .head' : '.tgrab, .thead')) return; which = inDoor ? 'door' : 'tray'; y0 = e.clientY; moved = false; }
+    $('openA').addEventListener('pointerdown', down); $('tray').addEventListener('pointerdown', down);
+    window.addEventListener('pointermove', function (e) { if (y0 === null) return; var dy = e.clientY - y0; if (Math.abs(dy) < 24) return; moved = true; (which === 'door' ? doorSize : traySize)(dy < 0); y0 = null; });
+    window.addEventListener('pointerup', function (e) { if (y0 !== null && !moved && e.target.closest('.grab')) { if (which === 'door') doorSize(!ui.doorBig); else traySize(!ui.trayBig); } y0 = null; });
+    document.addEventListener('keydown', function (e) { if (e.key !== 'Escape') return; if (ui.doorBig) doorSize(false); if (ui.trayBig) traySize(false); });
   })();
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now(); freshHistory();
@@ -242,10 +252,10 @@
   function renderTray() {
     var view = ui.mode + '|' + ui.cat + '|' + ui.after + '|' + ui.aiStep, keep = view === renderTray.view ? [].map.call(tray.querySelectorAll('.tbody'), function (e) { return e.scrollTop; }) : null;   // keep the scroll only when redrawing the same screen
     renderTray.view = view;
-    if (ui.mode === 'after') { tray.innerHTML = renderAfter(); return; }
-    if (ui.mode === 'ai') { tray.innerHTML = renderAI(); grow($('aitext')); if (!keep && ui.aiStep === 'talk' && ui.ai.msgs.length) { var tb = tray.querySelector('.tbody'); if (tb) tb.scrollTop = tb.scrollHeight; } return; }   // keep talking opens on the latest reply
+    if (ui.mode === 'after') { tray.innerHTML = trayGrab() + renderAfter(); return; }
+    if (ui.mode === 'ai') { tray.innerHTML = trayGrab() + renderAI(); grow($('aitext')); if (!keep && ui.aiStep === 'talk' && ui.ai.msgs.length) { var tb = tray.querySelector('.tbody'); if (tb) tb.scrollTop = tb.scrollHeight; } return; }   // keep talking opens on the latest reply
     if (ui.cat === null) { ui.cat = 'teeth'; ui.visited.teeth = 1; }
-    tray.innerHTML = stripView();
+    tray.innerHTML = trayGrab() + stripView();
     if (keep) [].forEach.call(tray.querySelectorAll('.tbody'), function (e, i) { if (keep[i] !== undefined) e.scrollTop = keep[i]; });
   }
   // ---------- the build strip (chosen Nov 17): the five parts pinned on top, the open part below ----------

@@ -522,6 +522,12 @@ body { background-color: #f8f7f4; }
   .app[data-mode="ai"] .tray, .app[data-mode="after"]:not([data-after="3"]) .tray { max-height: none; top: calc(min(100svh, 1000px) * .38); }
   .bubble { bottom: calc(100svh - min(100svh, 1000px) * .46 + 10px); }
 }
+.tray .tgrab { display: none; }
+@media (max-width: 899px) {
+  .tray .tgrab { display: grid; flex: none; margin: 4px auto -10px; }
+  .tray .thead { touch-action: none; }
+  .tray.big, .app[data-mode] .tray.big { top: 76px; }
+}
 /* the moving strip of grillz words, right under the hero */
 .words { position: relative; overflow: hidden; border-top: 1px solid var(--fd-line); border-bottom: 1px solid var(--fd-line); padding: 22px 0; background: transparent;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }

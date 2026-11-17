@@ -62,6 +62,11 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('#selbtn'); await c('#selpop [data-k="front"]'); await shot('w2-select-picked');
     } else if (plan === 'x') {   // the start panel: roomier spacing; the handle grows it to show every build, and shrinks it again
       await shot('x1-start'); await c('#grabA'); await p.waitForTimeout(600); await shot('x2-start-all-builds'); await p.keyboard.press('Escape'); await shot('x3-start-again');
+    } else if (plan === 'y') {   // the builder's panel on a phone: drag the handle up for more room, Esc to shrink
+      await c('[data-build="tone"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await shot('y1-panel'); const g = await p.locator('#tray .tgrab').boundingBox();
+      await p.mouse.move(g.x + g.width / 2, g.y + g.height / 2); await p.mouse.down(); await p.mouse.move(g.x + g.width / 2, g.y - 80, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(600); await shot('y2-panel-up');
+      await p.keyboard.press('Escape'); await shot('y3-panel-back');
     } else if (plan === 'o') {   // the start page (v12): the doors, one tap into a popular build, and the way back
       await shot('o1-door'); await c('[data-build="tone"]'); await shot('o2-one-tap-builder'); await c('[data-a="sback"]'); await shot('o3-door-waiting');
     } else if (plan === 'i') {   // the AI path: Describe it from the start page, the sign-up, the code, the build and its note; keep talking; the free builds; a picture
