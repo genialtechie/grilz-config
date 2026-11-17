@@ -7,6 +7,7 @@ import { createDb, DbError, hasDb } from './db.js';
 import { latestSpot } from './metalPrices.js';
 import { checkLeadToken, signLeadToken } from './leadTokens.js';
 import { notifyLead, type NotifyEnv } from './notify.js';
+import { verifyPhoneToken, type PhoneEnv, type TokenVerifier } from './phoneAuth.js';
 import { findPromo, type PromoRow } from './promos.js';
 import { PROMO_REASONS, type Promo } from '../src/lib/promo.js';
 import { hashIp, isEmail, LIMITS, looksAutomated, normaliseContact, verifyTurnstile, type SpamEnv } from './spam.js';
@@ -18,7 +19,7 @@ import { configForSession, getPublishedTenant, tenantIdFor } from './tenants.js'
 // its 3D capture, and makes sure the shop is emailed: right after the studio
 // photo finishes, or after FALLBACK_MS without it, whichever comes first.
 
-export type LeadEnv = NotifyEnv & SpamEnv & { LEAD_TOKEN_SECRET?: string; FLUX_API_KEY?: string };
+export type LeadEnv = NotifyEnv & SpamEnv & PhoneEnv & { LEAD_TOKEN_SECRET?: string; FLUX_API_KEY?: string };
 export type LeadResult = { status: number; body: Record<string, unknown> };
 /** Keeps background work (the fallback email) alive after the response is sent. */
 export type Defer = (work: Promise<unknown>) => void;
@@ -74,7 +75,27 @@ export const readSource = (value: unknown) => {
   return source;
 };
 
-export async function handleLead(payload: unknown, ip: string, env: LeadEnv, defer: Defer): Promise<LeadResult> {
+/**
+ * Who to reach: the phone a code proved (redesign flow: first name + verified
+ * phone), or, from older clients, the typed Instagram handle or phone.
+ * `instagram` is a handle sent alongside a verified phone, kept on the lead's event.
+ */
+export async function leadContact(
+  body: Record<string, unknown>,
+  env: LeadEnv,
+  verifier?: TokenVerifier,
+): Promise<{ ok: true; kind: 'instagram' | 'phone'; value: string; verified: boolean; instagram?: string } | { ok: false; result: LeadResult }> {
+  const typed = normaliseContact(text(body.contact, 80));
+  if (body.phoneToken !== undefined && body.phoneToken !== null && body.phoneToken !== '') {
+    const check = await verifyPhoneToken(body.phoneToken, env, verifier);
+    if (!check.ok) return { ok: false, result: fail(401, 'Your phone code expired. Get a new code and send again.', 'unverified') };
+    return { ok: true, kind: 'phone', value: check.phone, verified: true, ...(typed?.kind === 'instagram' ? { instagram: typed.value } : {}) };
+  }
+  if (!typed) return { ok: false, result: fail(400, 'Add your Instagram handle or a US phone number.') };
+  return { ok: true, ...typed, verified: false };
+}
+
+export async function handleLead(payload: unknown, ip: string, env: LeadEnv, defer: Defer, verifier?: TokenVerifier): Promise<LeadResult> {
   if (!payload || typeof payload !== 'object') return fail(400, 'Invalid request.');
   const body = payload as Record<string, unknown>;
 
@@ -92,8 +113,9 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
 
   const name = text(body.name, 80);
   if (name.length < 2) return fail(400, 'Add your name.');
-  const contact = normaliseContact(text(body.contact, 80));
-  if (!contact) return fail(400, 'Add your Instagram handle or a US phone number.');
+  const reach = await leadContact(body, env, verifier);
+  if (!reach.ok) return reach.result;
+  const contact = reach;
   const email = text(body.email, 120).toLowerCase();
   if (email && !isEmail(email)) return fail(400, 'Check your email address.');
   const note = text(body.note, 300);
@@ -164,7 +186,8 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
         source: readSource(body.source),
         ip_hash: ipHash,
         render_status: wantsPhoto ? 'rendering' : 'none',
-        event: { contact_kind: contact.kind },
+        phone_verified: contact.verified,
+        event: { contact_kind: contact.kind, ...(contact.verified ? { phone_verified: true } : {}), ...(contact.instagram ? { instagram: contact.instagram } : {}) },
       },
     });
     if (created !== 'ok') {

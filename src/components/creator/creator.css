@@ -352,3 +352,5 @@
 .creator[data-mode="after"] .tray { display: flex; }
 /* a phone's top bar never sits under a notch */
 .creator .bar { padding-top: max(16px, env(safe-area-inset-top, 0px)); }
+.creator .after-spot { position: absolute; z-index: 3; pointer-events: none; }
+.creator[data-mode="after"] .tray > * { min-height: 0; }

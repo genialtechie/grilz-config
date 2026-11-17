@@ -11,11 +11,12 @@ import { downscaleImage } from '../../lib/downscaleImage';
 import { depositFor, displayTotal } from '../../lib/pricing';
 import { hasDesignHash, saveDesign, startingDesign } from '../../lib/savedDesign';
 import { describeBuild } from '../../lib/describe';
-import { confirmPhoneCode, rememberedPhone, startPhoneCode } from '../../lib/phoneAuth';
+import { confirmPhoneCode, forgetPhone, freshPhoneToken, rememberedPhone, startPhoneCode } from '../../lib/phoneAuth';
 import { METALS, SETTINGS, STYLES, label, type ToothDesign } from '../../lib/renderSpec';
 import type { Frame, ToothCustomization, ViewRequest } from '../../lib/types';
 import type { CreatorDesign } from './contract';
 import { AfterFlow } from './after/AfterFlow';
+import { isDepositReturn, rememberName, rememberedName } from './after/sentRecord';
 import { AiPanel, type AiMessage, type AiStep } from './AiPanel';
 import { BuildPanel, type BuildAct } from './BuildPanel';
 import { JawIcon, SparkIcon, TapIcon, ToothIcon, TurnIcon, UndoIcon } from './icons';
@@ -55,6 +56,9 @@ import {
   type GroupId,
   type PartId,
 } from './model';
+import '@fontsource/geist/400.css';
+import '@fontsource/geist/500.css';
+import '@fontsource/geist/600.css';
 import './creator.css';
 
 const CreatorStage = lazy(() => import('./CreatorStage'));
@@ -189,7 +193,7 @@ export default function CreatorApp() {
   });
   const [verified, setVerified] = useState(() => rememberedPhone());
   const [left, setLeft] = useState<number | null>(() => readLeft(rememberedPhone()?.phone));
-  const [contact, setContact] = useState({ name: '', phone: '' });
+  const [contact, setContact] = useState(() => ({ name: rememberedName(), phone: '' }));
   const [contactErr, setContactErr] = useState<ReturnType<typeof contactError>>(null);
   const [code, setCode] = useState('');
   const [codeErr, setCodeErr] = useState('');
@@ -235,6 +239,17 @@ export default function CreatorApp() {
         // some frames don't allow it
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Back from paying the deposit (?deposit=paid): straight to the after flow, which shows "Order started".
+  useEffect(() => {
+    if (!isDepositReturn()) return;
+    const spec = toSpec(design) ?? { ...setOptions(design), teeth: [] };
+    const total = price(shop, design).total;
+    setAfter({ spec, summary: summary(design), total, deposit: depositFor(config.deposit, total), preview: '' });
+    setWaiting(false);
+    setMode('after');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -659,6 +674,8 @@ export default function CreatorApp() {
         writeLeft(phone, 0);
       }
       if (result.code === 'unverified') {
+        // A stale phone proof: forget it and ask for a new code.
+        forgetPhone();
         setVerified(null);
         setAi((a) => ({ ...a, busy: false, step: 'contact' }));
         return;
@@ -704,7 +721,8 @@ export default function CreatorApp() {
     if (!ai.text.trim() && !ai.picture) return;
     if (verified) {
       if (left === 0) return;
-      void runAI(verified.token, verified.phone, from);
+      const v = verified;
+      void freshPhoneToken().then((token) => runAI(token ?? v.token, v.phone, from));
       return;
     }
     setContactErr(null);
@@ -741,11 +759,7 @@ export default function CreatorApp() {
     const v = { phone: r.phone, token: r.token };
     setVerified(v);
     setLeft(readLeft(r.phone));
-    try {
-      sessionStorage.setItem('vvs-first-name', contact.name.trim());
-    } catch {
-      // the after track asks again
-    }
+    rememberName(contact.name);
     void runAI(r.token, r.phone, ai.from);
   };
   useEffect(() => {
@@ -992,6 +1006,11 @@ export default function CreatorApp() {
               {pk.length > 0 && <b>{selectionWord(design.teeth, pk)}</b>}
             </button>
           </div>
+        )}
+
+        {mode === 'after' && frame && (
+          // Where the studio photo develops (the after flow looks for this): the free part of the stage.
+          <div className="after-spot" data-after-photo style={{ top: 0, left: frame.left, width: frame.right - frame.left, height: frame.bottom }} />
         )}
 
         {bubble && <QuickQuestion ref={bubbleEl} bubble={bubble} onAnswer={answer} onClose={closeBubble} onUndo={undoBubble} />}

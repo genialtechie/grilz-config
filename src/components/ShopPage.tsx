@@ -45,8 +45,7 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
   const [search] = useSearchParams();
   // ?preview=<version>: a signed-in admin or shop member checking an unpublished draft.
   const previewVersion = Number(search.get('preview')) || null;
-  // Back from the shop's Stripe checkout after paying a deposit.
-  const [depositPaid, setDepositPaid] = useState(search.get('deposit') === 'paid');
+  // Back from the shop's Stripe checkout (?deposit=paid): the creator's after flow says so and shows "Order started".
   const posthog = usePostHog();
   // The page arrives with the shop's config in it, so the builder shows at once (drafts are always fetched).
   const [loaded, setLoaded] = useState<LoadedTenant | null>(() => (previewVersion ? null : inlineTenant(slug.toLowerCase())));
@@ -122,12 +121,6 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
   }
   return (
     <>
-    {depositPaid && (
-      <div className="deposit-toast" role="status">
-        <span>Deposit received. {loaded.config.brand.name} will reach out to confirm your design.</span>
-        <button type="button" onClick={() => setDepositPaid(false)} aria-label="Dismiss">×</button>
-      </div>
-    )}
     <TenantProvider slug={loaded.slug} config={loaded.config} demo={loaded.demo} version={loaded.version} preview={loaded.preview} promos={loaded.promos}>
       {loaded.preview && (
         <div className="preview-banner" role="status">

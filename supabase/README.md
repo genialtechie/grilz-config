@@ -40,6 +40,9 @@ It prints `isolation ok`, or fails naming the leak.
 | `LEAD_TOKEN_SECRET` | prod, preview | Signs render tokens |
 | `TURNSTILE_SECRET_KEY`, `VITE_TURNSTILE_SITE_KEY` | prod only | Turnstile can't cover `*.vercel.app` previews |
 | `PUBLIC_ORIGIN` | prod, preview | Logo links in emails |
+| `FIREBASE_SERVICE_ACCOUNT` or `FIREBASE_PROJECT_ID` | prod, preview | Checks shoppers' phone codes (redesign; `docs/redesign/build/backend.md`) |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | prod, preview | Sends the phone codes from the browser |
+| `PHONE_HASH_SECRET` | prod, preview | Salts the phone hash behind the 3 free AI builds |
 
 **Admin.** `/admin`, magic-link sign-in. Platform admins are granted by hand after the person has signed in once (Supabase gives magic-link accounts a random password hash, so an automatic invite can't tell the owner from someone who pre-registered the address):
 
