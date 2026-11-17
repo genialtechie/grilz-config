@@ -75,6 +75,8 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
   (Build it yourself first, one tap into the builder), "or let AI build it",
   then one AI field with a camera inside it. v12 and v11 behind a switch.
 
+- **Ready (Nov 17):** the owner signed off the landing page and the grill flow in the Creator Lab ("everything is ready now"). Final look from the owner's reference: warm off-white with a grain from top to bottom, white cards, glow buttons, rise-in motion and a moving strip of grillz words. A static copy for outside design tools is in `export/`. The 3D VVS mark and the "Lab" lockup are in the lab and the emails (`docs/brand/vvs-3d/`). Next step when the owner says so: build the approved lab into the real app.
+
 ## Next, in order
 
 1. ~~Build the builder fixes picked on Nov 17~~ Done in Creator Lab v6:

@@ -164,7 +164,7 @@
     var bar = $('changebar'), show = ui.mode === 'build' && onList().length > 0 && ui.cat !== 'teeth';
     bar.hidden = !show; app.toggleAttribute('data-change', show); if (!show) { ui.selOpen = false; return; }
     $('selval').textContent = picked().length ? selWord() : ''; $('selbtn').setAttribute('aria-expanded', !!ui.selOpen);
-    var pop = $('selpop'); pop.hidden = !ui.selOpen; if (ui.selOpen) pop.innerHTML = applyRow();
+    var pop = $('selpop'); pop.hidden = !ui.selOpen; if (ui.selOpen) pop.innerHTML = applyRow() + '<p class="selhint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-.5V4.5a1.5 1.5 0 0 1 3 0V10m0-1a1.5 1.5 0 0 1 3 0v4.5a6.5 6.5 0 0 1-6.5 6.5h-.6a6 6 0 0 1-4.6-2.2L4.4 14.6a1.6 1.6 0 0 1 2.4-2.1L9 14.5"/></svg>Or tap any tooth on the 3D to pick it.</p>';
     placeSel();
   }
   function placeSel() {                  // phone: bottom right, in line with the tools; computer: beside Undo, or above the tools when there's no room
