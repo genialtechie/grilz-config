@@ -55,8 +55,13 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
      phone, then the code opens in place, fills itself, and the 6th digit
      sends. An already verified phone skips the code. Instagram, the Follow
      ask and email move to the Sent screen.
-  3. *Sent.* The 3D develops into the studio photo, with an optional deposit
-     and "what happens next". Not yet taken through.
+  3. *Sent.* Designed (Nov 17). Top to bottom: the 3D develops into the
+     studio photo (about 30 s) with "Sent. Gold Lab will text you." and their
+     number; the deposit, "Start your order: $150 now, the rest after your
+     fitting." with [Pay $150 deposit] and "Not now"; one small card, "While
+     your photo develops": Instagram ("Gold Lab sees it as you typed it"),
+     Follow @vvslab, "Email me a copy"; then What happens next: 1 Gold Lab
+     texts you, 2 Fitting, 3 They make it, 4 It's yours.
 - **Sign-up:** Firebase phone codes (about $7 a month per 1,000 sign-ups). No
   WhatsApp. No fake Instagram verification; the owner chose an honest optional
   handle plus a Follow ask.
@@ -66,10 +71,23 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 1. ~~Build the builder fixes picked on Nov 17~~ Done in Creator Lab v6:
    Start empty opens Your build, "Next: Metal" with a smaller Back beside it,
    stages on top, Undo in the quick-question bubble. (Noticed, not changed: an
-   empty build shows a 00 estimate, which is the fitting fee alone.)
-2. **Take screen 3 (Sent) to the owner on slides**, one screen at
-   a time: the order, what each holds, what's required, the exact words.
-   Screens 1 to 3 use the same pattern: a small "Keep editing" beside the main
+   empty build shows a $200 estimate, which is the fitting fee alone.)
+2. **Answer the owner's open question on slides first:** "what happens when
+   they send it to us from our site, not a jeweler's integration?" On VVS
+   Lab's own site the order goes to a partner jeweler already on VVS Lab, and
+   VVS Lab can take a referral fee (decided Nov 16). Still open, one slide
+   each, recommended option first:
+   - whose name the shopper sees on screens 1 to 3 and who texts them (the
+     partner jeweler by name, VVS Lab, or "VVS Lab's partner jeweler, Gold
+     Lab")
+   - where the deposit goes (the partner's own Stripe with the referral fee
+     invoiced later; VVS Lab collecting through Stripe Connect; or no deposit
+     on VVS Lab's own site)
+   - the words under "Start your order": "the rest after your fitting" may
+     not be true for every shop; offer "the rest when Gold Lab confirms the
+     price" next to the owner's chosen words, and keep theirs unless they
+     change it.
+   Screens 1 to 3 share one pattern: a small "Keep editing" beside the main
    button, and stages on top (Your grill · Text me · Sent).
 3. **Build screens 1 to 3** into the Creator Lab, republish it, save
    screenshots to `case-study/`, and update the plan and the notes.
