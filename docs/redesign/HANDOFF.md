@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v5) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
+| Grill Creator Lab (the overhauled builder, v6) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -51,9 +51,10 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
   - several teeth at once: tap to add, or use quick groups
 - **After "Done":** three screens.
   1. *Your grill.* Designed (Nov 17 row in the Decisions table).
-  2. *Where should they text you.* First name, phone and a 6-digit code are
-     required; then an optional Instagram handle with a Follow step; email is
-     optional. Screen not yet taken through with the owner.
+  2. *Where should Gold Lab text you?* Designed (Nov 17): first name and
+     phone, then the code opens in place, fills itself, and the 6th digit
+     sends. An already verified phone skips the code. Instagram, the Follow
+     ask and email move to the Sent screen.
   3. *Sent.* The 3D develops into the studio photo, with an optional deposit
      and "what happens next". Not yet taken through.
 - **Sign-up:** Firebase phone codes (about $7 a month per 1,000 sign-ups). No
@@ -66,7 +67,7 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    Start empty opens Your build, "Next: Metal" with a smaller Back beside it,
    stages on top, Undo in the quick-question bubble. (Noticed, not changed: an
    empty build shows a 00 estimate, which is the fitting fee alone.)
-2. **Take screens 2 and 3 after "Done" to the owner on slides**, one screen at
+2. **Take screen 3 (Sent) to the owner on slides**, one screen at
    a time: the order, what each holds, what's required, the exact words.
    Screens 1 to 3 use the same pattern: a small "Keep editing" beside the main
    button, and stages on top (Your grill · Text me · Sent).
