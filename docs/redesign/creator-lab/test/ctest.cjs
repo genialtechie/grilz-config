@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m g (the screens after Done) or m k (Change bar and Undo)
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m s (the three structures), m g (after Done), m k (Select teeth and Undo)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -77,6 +77,17 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('#changebar [data-k="front"]'); await c('[data-g="metal"][data-k="rose"]'); await shot('k2-front-rose');
       await c('#undobtn'); await shot('k3-undone');
       await c('[data-a="menu"]'); await p.evaluate(() => { window.__vvs.G.tap(7); }); await shot('k4-menu-one-picked');
+    } else if (plan === 's') {
+      const quiet = () => p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-build="tone"]'); await c('#goA'); await quiet(); await shot('s1-sheet-yourbuild');
+      await c('.rows [data-open="metal"]'); await shot('s2-sheet-metal');
+      await c('.psheet .tfoot [data-a="menu"]'); await shot('s3-sheet-upnext');
+      await proto('nextp', 'nextbtn'); await c('.rows [data-open="finish"]'); await shot('s4-sheet-finish-nextbtn');
+      await c('.psheet [data-a="menu"].x');
+      await proto('struct', 'expand'); await proto('nextp', 'upnext'); await c('.rows [data-open="stones"]'); await shot('s5-expand-stones');
+      await proto('nextp', 'nextbtn'); await shot('s6-expand-stones-nextbtn');
+      await proto('struct', 'strip'); await proto('nextp', 'upnext'); await c('.strip5 [data-open="metal"]'); await shot('s7-strip-metal');
+      await proto('nextp', 'nextbtn'); await c('.strip5 [data-open="finish"]'); await shot('s8-strip-finish-nextbtn');
     } else if (plan === 'c') {
       await c('[data-build="iced8"]'); await c('#goA'); await shot('c1-menu-game');
       await c('[data-open="stones"]'); await shot('c2-stones-game');

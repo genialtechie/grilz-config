@@ -195,6 +195,26 @@ button.mrow:active { transform: scale(.985); }
 .prog i { display: block; height: 100%; background: var(--s-gold); transition: width .4s ease; }
 .prog-l { font: 400 12.5px/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--s-mut); }
 .prog-l b { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--s-gold); margin: 0 4px 1px 2px; }
+/* the builder's structures, to compare */
+.mrow .up, .sitem .up { font: 500 11px/1 var(--sans); font-style: normal; color: var(--s-gold); background: rgba(154,109,22,.1); padding: 4px 7px; border-radius: 999px; white-space: nowrap; }
+.mrow.upnext { background: rgba(255,255,255,.95); box-shadow: 0 0 0 1.5px rgba(154,109,22,.5); }
+.mrow[aria-expanded="true"] { background: rgba(255,255,255,.98); border-radius: 18px 18px 0 0; }
+.xpanel { display: grid; gap: 12px; padding: 4px 14px 16px 16px; margin-top: -6px; background: rgba(255,255,255,.98); border-radius: 0 0 18px 18px; }
+.xnext { min-height: 44px; font-size: 14.5px; }
+.psheet { position: absolute; z-index: 2; display: flex; flex-direction: column; min-height: 0; background: var(--s-solid); border-radius: 24px; box-shadow: 0 30px 70px -28px rgba(40,36,24,.55), 0 0 0 1px var(--s-line); animation: sheetIn .26s cubic-bezier(.2,.8,.2,1); }
+@keyframes sheetIn { from { transform: translateY(14px); opacity: 0; } }
+.psheet .shead { display: flex; align-items: center; gap: 10px; padding: 16px 16px 6px 18px; }
+.psheet .shead h2 { flex: 1; font: 600 22px/1.15 var(--sans); letter-spacing: -.03em; }
+.psheet .x { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(18,18,17,.06); font: 400 20px/1 var(--sans); color: var(--s-fg); display: grid; place-items: center; }
+.strip5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 14px 10px 10px; border-bottom: 1px solid var(--s-line); }
+.sitem { border: 0; background: none; display: grid; justify-items: center; align-content: start; gap: 5px; padding: 4px 2px; border-radius: 14px; color: var(--s-fg); min-width: 0; }
+.sitem b { font: 500 12.5px/1.1 var(--sans); display: inline-flex; align-items: center; gap: 4px; }
+.sitem .new { width: 5px; height: 5px; border-radius: 50%; background: var(--s-gold); font-size: 0; }
+.sitem .sv { font: 400 11px/1.2 var(--sans); color: var(--s-mut); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sitem .up { font-size: 10px; padding: 3px 6px; }
+.sitem[aria-selected="true"] .prev { box-shadow: 0 0 0 2px var(--ink); }
+.sitem[aria-selected="true"] b { font-weight: 600; }
+.strip5 + .thead { padding-top: 12px; min-height: 0; }
 /* inside a part: every part in a row on top, a smaller Back beside the main button */
 .stages { display: flex; align-items: center; gap: 7px; padding: 16px 18px 0; overflow-x: auto; scrollbar-width: none; }
 .stages::-webkit-scrollbar { display: none; }
@@ -325,6 +345,8 @@ button.mrow:active { transform: scale(.985); }
 @media (min-width: 900px) {
   .tray { right: 20px; top: 72px; bottom: 20px; width: 392px; border-radius: 28px; }
   .tools { left: 20px; bottom: 20px; }
+  .psheet { right: calc(100% + 12px); top: 0; bottom: 0; width: 360px; }
+  .app[data-sheet] .changebar { max-width: calc(100% - 824px); }
   .changebar { left: 20px; bottom: 64px; max-width: calc(100% - 452px); }
   .selchip, .toast { left: calc((100% - 412px) / 2); }
   .bubble { left: 24px; bottom: 72px; }
@@ -334,6 +356,10 @@ button.mrow:active { transform: scale(.985); }
   .app[data-mode="q"] .tray { max-height: 62svh; }
   .tools { right: max(16px, env(safe-area-inset-right, 0px)); top: 64px; flex-direction: column; align-items: flex-end; }
   .changebar { left: max(16px, env(safe-area-inset-left, 0px)); right: 62px; top: 64px; }
+  .psheet { left: 0; right: 0; top: 58px; bottom: 0; border-radius: 22px 22px 0 0; }
+  .app[data-sheet] .tray { height: 62svh; max-height: 62svh; }
+  .app[data-sheet] .tray > :not(.psheet) { opacity: .42; }
+  .app[data-struct="expand"][data-cat] .tray { max-height: 62svh; }
   .tool span { display: none; }
   .tool { padding: 9px; }
   .openA { left: 0; right: 0; bottom: 0; width: 100%; transform: none; border-radius: 26px 26px 0 0; border-width: 1px 0 0; padding: 20px 18px calc(16px + env(safe-area-inset-bottom, 0px)); }

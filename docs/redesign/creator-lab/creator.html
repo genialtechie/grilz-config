@@ -195,6 +195,26 @@ button.mrow:active { transform: scale(.985); }
 .prog i { display: block; height: 100%; background: var(--s-gold); transition: width .4s ease; }
 .prog-l { font: 400 12.5px/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--s-mut); }
 .prog-l b { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--s-gold); margin: 0 4px 1px 2px; }
+/* the builder's structures, to compare */
+.mrow .up, .sitem .up { font: 500 11px/1 var(--sans); font-style: normal; color: var(--s-gold); background: rgba(154,109,22,.1); padding: 4px 7px; border-radius: 999px; white-space: nowrap; }
+.mrow.upnext { background: rgba(255,255,255,.95); box-shadow: 0 0 0 1.5px rgba(154,109,22,.5); }
+.mrow[aria-expanded="true"] { background: rgba(255,255,255,.98); border-radius: 18px 18px 0 0; }
+.xpanel { display: grid; gap: 12px; padding: 4px 14px 16px 16px; margin-top: -6px; background: rgba(255,255,255,.98); border-radius: 0 0 18px 18px; }
+.xnext { min-height: 44px; font-size: 14.5px; }
+.psheet { position: absolute; z-index: 2; display: flex; flex-direction: column; min-height: 0; background: var(--s-solid); border-radius: 24px; box-shadow: 0 30px 70px -28px rgba(40,36,24,.55), 0 0 0 1px var(--s-line); animation: sheetIn .26s cubic-bezier(.2,.8,.2,1); }
+@keyframes sheetIn { from { transform: translateY(14px); opacity: 0; } }
+.psheet .shead { display: flex; align-items: center; gap: 10px; padding: 16px 16px 6px 18px; }
+.psheet .shead h2 { flex: 1; font: 600 22px/1.15 var(--sans); letter-spacing: -.03em; }
+.psheet .x { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(18,18,17,.06); font: 400 20px/1 var(--sans); color: var(--s-fg); display: grid; place-items: center; }
+.strip5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 14px 10px 10px; border-bottom: 1px solid var(--s-line); }
+.sitem { border: 0; background: none; display: grid; justify-items: center; align-content: start; gap: 5px; padding: 4px 2px; border-radius: 14px; color: var(--s-fg); min-width: 0; }
+.sitem b { font: 500 12.5px/1.1 var(--sans); display: inline-flex; align-items: center; gap: 4px; }
+.sitem .new { width: 5px; height: 5px; border-radius: 50%; background: var(--s-gold); font-size: 0; }
+.sitem .sv { font: 400 11px/1.2 var(--sans); color: var(--s-mut); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sitem .up { font-size: 10px; padding: 3px 6px; }
+.sitem[aria-selected="true"] .prev { box-shadow: 0 0 0 2px var(--ink); }
+.sitem[aria-selected="true"] b { font-weight: 600; }
+.strip5 + .thead { padding-top: 12px; min-height: 0; }
 /* inside a part: every part in a row on top, a smaller Back beside the main button */
 .stages { display: flex; align-items: center; gap: 7px; padding: 16px 18px 0; overflow-x: auto; scrollbar-width: none; }
 .stages::-webkit-scrollbar { display: none; }
@@ -325,6 +345,8 @@ button.mrow:active { transform: scale(.985); }
 @media (min-width: 900px) {
   .tray { right: 20px; top: 72px; bottom: 20px; width: 392px; border-radius: 28px; }
   .tools { left: 20px; bottom: 20px; }
+  .psheet { right: calc(100% + 12px); top: 0; bottom: 0; width: 360px; }
+  .app[data-sheet] .changebar { max-width: calc(100% - 824px); }
   .changebar { left: 20px; bottom: 64px; max-width: calc(100% - 452px); }
   .selchip, .toast { left: calc((100% - 412px) / 2); }
   .bubble { left: 24px; bottom: 72px; }
@@ -334,6 +356,10 @@ button.mrow:active { transform: scale(.985); }
   .app[data-mode="q"] .tray { max-height: 62svh; }
   .tools { right: max(16px, env(safe-area-inset-right, 0px)); top: 64px; flex-direction: column; align-items: flex-end; }
   .changebar { left: max(16px, env(safe-area-inset-left, 0px)); right: 62px; top: 64px; }
+  .psheet { left: 0; right: 0; top: 58px; bottom: 0; border-radius: 22px 22px 0 0; }
+  .app[data-sheet] .tray { height: 62svh; max-height: 62svh; }
+  .app[data-sheet] .tray > :not(.psheet) { opacity: .42; }
+  .app[data-struct="expand"][data-cat] .tray { max-height: 62svh; }
   .tool span { display: none; }
   .tool { padding: 9px; }
   .openA { left: 0; right: 0; bottom: 0; width: 100%; transform: none; border-radius: 26px 26px 0 0; border-width: 1px 0 0; padding: 20px 18px calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -1449,8 +1475,8 @@ button.mrow:active { transform: scale(.985); }
     if (!onList().length) {
       ui.build = 'empty';
       if (ui.guide === 'start') { ui.q = 0; setMode('q'); refresh(); return; }
-      if (ui.layout === 'steps') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
-    } else if (ui.layout === 'steps') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
+      if (ui.layout === 'steps' || ui.struct === 'strip') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
+    } else if (ui.layout === 'steps' || ui.struct === 'strip') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
     setMode('build'); refresh(true);
   }
 
@@ -1560,22 +1586,15 @@ button.mrow:active { transform: scale(.985); }
   }
   function doneBtn() { var b = breakdown(); return '<button type="button" class="cta" data-a="done"' + (onList().length ? '' : ' disabled') + '>Done <small>' + money(b.total) + (b.quote ? ' +' : '') + '</small></button>'; }
   function renderTray() {
-    var view = ui.mode + '|' + ui.layout + '|' + ui.cat + '|' + ui.after, keep = view === renderTray.view ? tray.querySelector('.tbody') : null, top = keep ? keep.scrollTop : 0, h = '';   // keep the scroll only when redrawing the same screen
+    var view = ui.mode + '|' + ui.layout + '|' + ui.struct + '|' + ui.cat + '|' + ui.after, keep = view === renderTray.view ? [].map.call(tray.querySelectorAll('.tbody'), function (e) { return e.scrollTop; }) : null, h = '';   // keep the scroll only when redrawing the same screen
     renderTray.view = view;
+    var sheetOpen = ui.mode === 'build' && ui.layout === 'menu' && ui.struct === 'sheet' && ui.cat !== null;
+    app.toggleAttribute('data-sheet', sheetOpen); app.toggleAttribute('data-cat', ui.mode === 'build' && ui.cat !== null);
     if (ui.mode === 'q') { tray.innerHTML = renderQuestions(); return; }
     if (ui.mode === 'after') { tray.innerHTML = renderAfter(); return; }
     if (ui.layout === 'menu') {
-      if (ui.cat === null) {
-        var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
-        h = '<div class="mhead"><h2>Your build</h2><div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · <b></b>not opened yet') + '</p></div>' +
-          '<div class="tbody"><div class="rows">' + CATS.map(function (c) { var fresh = !ui.visited[c[0]]; return row({ cls: !onList().length && c[0] === 'teeth' ? 'todo' : '', attrs: 'data-open="' + c[0] + '"', title: c[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : ''), value: esc(rowValue(c[0])), hint: INSIDE[c[0]], thumb: preview(c[0]) }); }).join('') +
-          '</div><p class="note tip">Tip: tap teeth on the 3D to style them on their own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
-      } else {
-        var ci = catIndex(ui.cat), lastPart = ci === CATS.length - 1;
-        h = stages(ci) + '<div class="thead"><h2>' + CATS[ci][1] + '</h2></div><div class="tbody"><p class="intro">' + INTRO[ui.cat] + '</p>' + options(ui.cat) + '</div>' +
-          '<div class="tfoot"><button type="button" class="cta ghost second" data-a="menu" aria-label="Back to your build">' + BACK + 'Back</button>' +
-          (lastPart ? doneBtn() : '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + CATS[ci + 1][1] + ' ' + ARROW + '</button>') + '</div>';
-      }
+      if (ui.struct === 'strip') { if (ui.cat === null) { ui.cat = 'teeth'; ui.visited.teeth = 1; } h = stripView(); }
+      else h = menuView(ui.struct === 'expand') + (ui.struct === 'sheet' && ui.cat !== null ? sheetView() : '');
     } else {
       var i = catIndex(ui.cat), last = i === CATS.length - 1;
       h = '<nav class="cats" aria-label="Steps">' + CATS.map(function (c, k) { return '<button type="button" data-open="' + c[0] + '"' + (k === i ? ' aria-current="step"' : '') + (ui.visited[c[0]] && k !== i ? ' class="done"' : '') + '>' + c[1] + '</button>'; }).join('') + '</nav>' +
@@ -1583,7 +1602,45 @@ button.mrow:active { transform: scale(.985); }
         (last ? doneBtn() : '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + CATS[i + 1][1] + ' ' + ARROW + '</button>') + '</div>';
     }
     tray.innerHTML = h;
-    var nb = tray.querySelector('.tbody'); if (nb && keep) nb.scrollTop = top;
+    if (keep) [].forEach.call(tray.querySelectorAll('.tbody'), function (e, i) { if (keep[i] !== undefined) e.scrollTop = keep[i]; });
+    else if (ui.struct === 'expand' && ui.cat) { var op = tray.querySelector('.mrow[aria-expanded="true"]'), tb = tray.querySelector('.tbody'); if (op && tb) tb.scrollTop = Math.max(0, tb.scrollTop + op.getBoundingClientRect().top - tb.getBoundingClientRect().top - 8); }
+  }
+  // ---------- the builder's structures, to compare: a stacked sheet, expand in place, a build strip ----------
+  function upNext() {                    // the next part a first-timer hasn't opened
+    if (ui.nextp !== 'upnext') return null; if (!onList().length) return 'teeth';
+    for (var k = 0; k < CATS.length; k++) if (!ui.visited[CATS[k][0]] && CATS[k][0] !== ui.cat) return CATS[k][0];
+    return null;
+  }
+  function partBody(c) { return '<p class="intro">' + INTRO[c] + '</p>' + options(c); }
+  function nextOf(c) { var i = catIndex(c); return i < CATS.length - 1 ? CATS[i + 1] : null; }
+  function menuRows(expand) {
+    var nx = upNext();
+    return '<div class="rows">' + CATS.map(function (c) {
+      var fresh = !ui.visited[c[0]], open = expand && ui.cat === c[0], up = nx === c[0] && !open;
+      return row({ cls: (!onList().length && c[0] === 'teeth' ? 'todo' : '') + (up ? ' upnext' : ''), attrs: 'data-open="' + c[0] + '"' + (expand ? ' aria-expanded="' + open + '"' : ''), title: c[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : '') + (up ? '<em class="up">Up next</em>' : ''), value: esc(rowValue(c[0])), hint: open ? '' : INSIDE[c[0]], thumb: preview(c[0]) }) +
+        (open ? '<div class="xpanel">' + partBody(c[0]) + (ui.nextp === 'nextbtn' && nextOf(c[0]) ? '<button type="button" class="cta ghost xnext" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + nextOf(c[0])[1] + ' ' + ARROW + '</button>' : '') + '</div>' : '');
+    }).join('') + '</div>';
+  }
+  function menuView(expand) {
+    var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
+    return '<div class="mhead"><h2>Your build</h2><div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · <b></b>not opened yet') + '</p></div>' +
+      '<div class="tbody">' + menuRows(expand) + '<p class="note tip">Tip: tap teeth on the 3D to style them on their own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
+  }
+  function sheetView() {
+    var c = ui.cat, nx = nextOf(c), foot;
+    if (ui.nextp === 'nextbtn') foot = '<button type="button" class="cta ghost second" data-a="menu">' + BACK + 'Your build</button>' + (nx ? '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + nx[1] + ' ' + ARROW + '</button>' : '<button type="button" class="cta" data-a="menu">Done</button>');
+    else foot = '<button type="button" class="cta" data-a="menu">Done</button>';
+    return '<div class="psheet" role="dialog" aria-label="' + CATS[catIndex(c)][1] + '"><div class="shead"><h2>' + CATS[catIndex(c)][1] + '</h2><button type="button" class="x" data-a="menu" aria-label="Close and go back to your build">×</button></div><div class="tbody">' + partBody(c) + '</div><div class="tfoot">' + foot + '</div></div>';
+  }
+  function stripView() {
+    var c = ui.cat, nx = nextOf(c), up = upNext(), foot;
+    var strip = '<div class="strip5" role="tablist" aria-label="Your build">' + CATS.map(function (k) {
+      var on = c === k[0], fresh = !ui.visited[k[0]];
+      return '<button type="button" class="sitem" role="tab" aria-selected="' + on + '" data-open="' + k[0] + '"><span class="prev">' + preview(k[0]) + '</span><b>' + k[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : '') + '</b><span class="sv">' + (up === k[0] ? '<em class="up">Up next</em>' : esc(rowValue(k[0]))) + '</span></button>';
+    }).join('') + '</div>';
+    if (ui.nextp === 'nextbtn' && nx) foot = '<button type="button" class="cta ghost second" data-a="done"' + (onList().length ? '' : ' disabled') + '>Done</button><button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + nx[1] + ' ' + ARROW + '</button>';
+    else foot = doneBtn();
+    return strip + '<div class="thead"><h2>' + CATS[catIndex(c)][1] + '</h2></div><div class="tbody">' + partBody(c) + '</div><div class="tfoot">' + foot + '</div>';
   }
 
   // ---------- questions at the start (the other way of guiding) ----------
@@ -1830,7 +1887,10 @@ button.mrow:active { transform: scale(.985); }
 
   // ---------- moving around ----------
   function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { clearPicks(); hideBubble(); } box(); setTimeout(box, 450); }
-  function openCat(c) { ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') clearPicks(); refresh(); }
+  function openCat(c) {
+    if (ui.layout === 'menu' && ui.struct === 'expand' && ui.cat === c) { ui.cat = null; ui.extra = null; refresh(); return; }
+    ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') clearPicks(); refresh();
+  }
   function stepOf() { if (ui.mode === 'q') return ui.q === 2 ? 1 : 0; if (ui.mode === 'after') return 5; return ui.cat === null ? 5 : catIndex(ui.cat); }
   var shown = 0, anim = 0;
   function meta() {
@@ -1843,7 +1903,8 @@ button.mrow:active { transform: scale(.985); }
     if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
-      var ch = ui.mode === 'build' && !$('changebar').hidden;   // keep the piece clear of the Change bar
+      var ch = ui.mode === 'build' && !$('changebar').hidden, ps = tray.querySelector('.psheet');   // keep the piece clear of the Select teeth bar and the sheet
+      if (ps && W >= 900) t = { left: ps.getBoundingClientRect().left, top: t.top };
       G.box = W >= 900 ? { top: top, bottom: H - (ch ? 112 : 24), left: 0, right: t.left - st.left - 8 } : { top: ch ? 110 : top, bottom: Math.max(top + 110, limit - st.top - 6), left: 0, right: W };
       if (ui.mode === 'after' && typeof placePhoto === 'function') placePhoto();
       return;
@@ -1939,13 +2000,13 @@ button.mrow:active { transform: scale(.985); }
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]]];
+  var PAIRS = [['struct', 'Structure', [['sheet', 'Stacked sheet'], ['expand', 'Expand in place'], ['strip', 'Build strip']]], ['nextp', 'Finding the next part', [['upnext', 'Up next on Your build'], ['nextbtn', 'Next button']]], ['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
       '<div class="stat"><p>This run</p><b id="pclock">' + mmss(elapsed()) + ' · ' + ui.taps + ' taps</b></div>' +
       '<div class="pair"><p>Holder</p><input type="range" id="psolid" min="30" max="100" step="5" value="' + (ui.solid || 70) + '" aria-label="How solid the clear holder is"></div>' +
-      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. After Done: one screen to send it, the code, then Sent. Send a second design to see a returning shopper skip the code.</p>';
+      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. Compare three structures for the builder with the switches above; each works with either way of finding the next part. After Done: one screen to send it, the code, then Sent. Send a second design to see a returning shopper skip the code.</p>';
   }
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
   function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? 'GL' : 'VV'; m.querySelector('span').textContent = shopName(); }
@@ -1957,6 +2018,7 @@ button.mrow:active { transform: scale(.985); }
     if (p === 'forget') { ui.verified = null; saveVerified(null); if (ui.mode === 'after') renderTray(); renderProto(); return; }
     setVariant(p, v);
     if (p === 'site') { brand(); if (ui.mode === 'after') renderTray(); }
+    if ((p === 'struct' || p === 'nextp') && ui.mode === 'build') { if (p === 'struct' && v !== 'strip' && ui.struct !== 'strip') {} refresh(); }
     if (p === 'open') restart();
     if (p === 'layout' && ui.mode === 'build') { if (v === 'steps' && ui.cat === null) ui.cat = 'teeth'; refresh(); }
     if (p === 'guide') { hideBubble(); if (v === 'start') restart(); }
@@ -1965,7 +2027,7 @@ button.mrow:active { transform: scale(.985); }
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm'); setVariant('site', 'vvs'); brand();
+  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm'); setVariant('site', 'vvs'); setVariant('struct', 'sheet'); setVariant('nextp', 'upnext'); brand();
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

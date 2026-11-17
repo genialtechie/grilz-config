@@ -61,3 +61,12 @@ secondary button beside the main one), chips, fields and the stage tools.
 After Done is now one screen to send (price, fitting, first name and phone),
 then the code, then Sent; no stages on those screens. On the stage: Undo next
 to Turn (any change), and the Change chips beside the mouth tools.
+
+v9 (Nov 17): the owner felt Your build, the best part of the UX, was barely
+seen once people went step by step. Three structures to compare, all with
+the stages row and the Next-through-parts flow removed: **Stacked sheet** (a
+part opens as a sheet over Your build; on a computer, as a second panel beside
+it), **Expand in place** (a part opens inside its own row), **Build strip**
+(the five round pictures pinned on top, the part below). Each pairs with
+**Up next on Your build** or **a Next button**. Switch them in the prototype
+panel (top right).
