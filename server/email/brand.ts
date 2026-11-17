@@ -52,13 +52,13 @@ const vvsLinks = (origin: string) => [
   { label: 'Privacy', href: at(origin, '/privacy') },
 ];
 
-/** VVS Lab's own mail (Nov 2026 redesign): one stone surface (ink in dark mode), the gold
+/** VVS Lab's own mail (Nov 2026 redesign): one stone surface (ink in dark mode), the 3D gold
  * "VVS" mark + "Lab", ink buttons, gold for the one highlighted headline word. Gold is the
  * metal, so it stays out of small text: on stone it is 4.1:1, fine for large type only. */
 export function vvsBrand(origin: string): Brand {
   return {
     name: 'VVS Lab',
-    logo: { src: at(origin, '/assets/email/vvs-mark.png'), alt: 'VVS', height: 22, word: 'Lab' },
+    logo: { src: at(origin, '/assets/email/vvs-mark-3d.png'), alt: 'VVS', height: 22, word: 'Lab' },
     signOff: '— The VVS Lab team',
     footerMark: { none: true },
     // Contrast on the page: text 16.9:1, muted 5.3:1, highlight 4.1:1 (large text), button text 18.7:1; dark: muted 8.8:1, highlight 10.1:1.

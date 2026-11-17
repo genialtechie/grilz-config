@@ -35,7 +35,9 @@ h1, h2, h3, p { margin: 0; }
 .mark img.vvs { height: 24px; width: auto; display: none; }
 .mark.own img.vvs { display: block; }
 .mark.own i { display: none; }
-.mark.own { gap: 7px; }
+/* VVS Lab's lockup (Nov 17): the 3D mark at 24px; "Lab" sits on the mark's baseline with its capitals
+   at 3/4 of the mark's height (Geist caps are .71em: 24 x .75 / .71 = 25px) */
+.mark.own { gap: 5px; align-items: baseline; font-size: 25px; letter-spacing: -.035em; }
 .bar-r { display: flex; gap: 6px; align-items: center; }
 .pill { border: 1px solid var(--s-line); background: var(--s-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 999px; padding: 10px 14px; font: 500 13px/1 var(--sans); color: var(--s-fg); display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
 .pill.icon { padding: 9px; }

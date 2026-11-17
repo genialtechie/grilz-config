@@ -82,9 +82,10 @@ export function EmailFrame({ brand, title, preheader, footer, children }: WithBr
     'src' in L
       ? h(
           Text,
-          { className: 'em-text', style: { margin: 0, fontFamily: brand.fonts.display, fontSize: '17px', fontWeight: 600, lineHeight: `${L.height}px`, letterSpacing: '-0.02em', color: c.text } },
-          h(Img, { src: L.src, alt: L.alt, height: L.height, style: { display: 'inline-block', height: `${L.height}px`, width: 'auto', maxWidth: '220px', verticalAlign: 'middle' } }),
-          L.word ? h('span', { style: { verticalAlign: 'middle', paddingLeft: '6px' } }, L.word) : null,
+          // The word sits on the mark's baseline, its capitals 3/4 of the mark's height (sans caps are ~.71em).
+          { className: 'em-text', style: { margin: 0, fontFamily: brand.fonts.display, fontSize: `${Math.round((L.height * 0.75) / 0.71)}px`, fontWeight: 600, lineHeight: `${L.height + 4}px`, letterSpacing: '-0.035em', color: c.text } },
+          h(Img, { src: L.src, alt: L.alt, height: L.height, style: { display: 'inline-block', height: `${L.height}px`, width: 'auto', maxWidth: '220px', verticalAlign: 'baseline' } }),
+          L.word ? h('span', { style: { paddingLeft: '5px' } }, L.word) : null,
         )
       : h(Text, { className: 'em-text', style: { margin: 0, fontFamily: brand.fonts.display, fontSize: '22px', fontWeight: 600, lineHeight: '1', letterSpacing: '-0.03em', color: c.text } }, L.wordmark);
   return h(
