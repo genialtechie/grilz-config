@@ -20,6 +20,8 @@
     "@supabase/supabase-js": "2.117.2",
     "@tippyjs/react": "^4.2.6",
     "@vercel/functions": "3.9.9",
+    "firebase": "13.4.0",
+    "firebase-admin": "14.5.1",
     "lucide-react": "^0.468.0",
     "posthog-js": "1.417.0",
     "qrcode": "^1.5.4",
