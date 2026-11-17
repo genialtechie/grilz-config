@@ -147,7 +147,7 @@ export function YourGrill(props: YourGrillProps) {
             </div>
           )}
           {props.verified ? (
-            <>
+            <div className="fgroup">
               <Row
                 title={knownName ? `${props.name.trim()} · ${formatPhone(props.verified.phone)}` : formatPhone(props.verified.phone)}
                 hint="Verified on this device, so no code this time."
@@ -156,7 +156,7 @@ export function YourGrill(props: YourGrillProps) {
               <button type="button" className="link" onClick={props.onChangePhone}>
                 Change
               </button>
-            </>
+            </div>
           ) : (
             <>
               <div className="field">

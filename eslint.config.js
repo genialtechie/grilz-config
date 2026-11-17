@@ -5,8 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  // The redesign prototype's sources are fragments of one script (build.py joins them), not modules to lint.
-  { ignores: ['dist', 'docs/redesign/prototype'] },
+  // The redesign prototype's and the Creator Lab's sources are fragments of one script (build.py joins them), not modules to lint.
+  { ignores: ['dist', 'docs/redesign/prototype', 'docs/redesign/creator-lab/src'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
