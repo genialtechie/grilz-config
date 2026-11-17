@@ -163,7 +163,7 @@ const builderPreload = (): Plugin => ({
       if (entry) collect(entry.fileName, loaded)
       const wanted = new Set<string>()
       chunks
-        .filter((chunk) => /\/src\/components\/(Configurator|ShopPage)\.tsx$/.test(chunk.facadeModuleId ?? ''))
+        .filter((chunk) => /\/src\/components\/(Configurator|ShopPage|creator\/CreatorApp|creator\/CreatorStage)\.tsx$/.test(chunk.facadeModuleId ?? ''))
         .forEach((chunk) => collect(chunk.fileName, wanted))
       const files = [...wanted].map((fileName) => `/${fileName}`)
       const script = `(function(){try{var d=document,p=location.pathname,m=p.match(/^\\/b\\/([^/]+)/),c=d.querySelector('meta[name="vvs-shop"]'),s=m?decodeURIComponent(m[1]).toLowerCase():(c&&p==='/'?c.content:null);if(!s&&p!=='/configurator')return;var a=function(r,h){var l=d.createElement('link');l.rel=r;l.href=h;d.head.appendChild(l)};${JSON.stringify(files)}.forEach(function(h){a('modulepreload',h)});if(s&&!/[?&]preview=/.test(location.search))window.__vvsTenant={slug:s,response:fetch('/api/tenant/'+encodeURIComponent(s),{headers:{accept:'application/json'}})}}catch(e){}})();`

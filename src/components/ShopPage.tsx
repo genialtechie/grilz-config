@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
-import { BuilderShell } from './builder/BuilderShell';
+import { CreatorShell } from './creator/CreatorShell';
 import { loadable } from '../lib/loadable';
-import { openingDesign, startingDesign, startingPoster } from '../lib/savedDesign';
-import { fontPairClass, themeStyle } from '../lib/tenant/theme';
-import { useTenant } from '../lib/tenant/useTenant';
 import { TenantProvider } from '../lib/tenant/context';
 import { inlineTenant, loadTenant, type LoadedTenant } from '../lib/tenant/loadTenant';
 
-const Configurator = loadable(() => import('./Configurator'));
+// The shopper's builder: the Grill Creator Lab (creator/). Configurator.tsx stays in the repo, unused.
+const CreatorApp = loadable(() => import('./creator/CreatorApp'));
 // The builder's code starts loading with this page, not after the shop's config arrives.
-void Configurator.preload();
+void CreatorApp.preload();
 
 // /b/<slug>: a shop's own builder. Loads the shop's published config, then
 // renders the shared builder inside that shop's brand.
@@ -38,20 +36,6 @@ function Loading() {
       <span />
       Loading the builder
     </div>
-  );
-}
-
-/** The builder's frame in the shop's theme, with the still of its opening set, while the builder's code downloads. */
-function ShopShell() {
-  const tenant = useTenant();
-  const brand = tenant.config.brand;
-  return (
-    <BuilderShell
-      // The still of the set the builder will open on: none when it opens on a saved or shared design.
-      poster={startingPoster(startingDesign(tenant)?.snapshot ?? null, openingDesign(tenant))}
-      className={tenant.demo ? undefined : `configurator-shell shop-shell ${fontPairClass(brand)}`}
-      style={tenant.demo ? undefined : themeStyle(brand)}
-    />
   );
 }
 
@@ -150,7 +134,7 @@ export default function ShopPage({ slug: slugProp }: { slug?: string } = {}) {
           Draft preview · v{loaded.version} · customers can&apos;t see this yet
         </div>
       )}
-      <Configurator fallback={<ShopShell />} />
+      <CreatorApp fallback={<CreatorShell />} />
     </TenantProvider>
     </>
   );
