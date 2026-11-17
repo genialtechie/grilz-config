@@ -27,6 +27,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 17 (lead): landing, after-Done and backend merged into `redesign` and pushed; build, lint and 1,756 tests pass. After-Done now accepts the backend's `unverified` error (forgets the phone, asks for a new code) and refreshes a remembered phone's proof before sending. Builder still in progress. Owner to-dos: Firebase keys + `PHONE_HASH_SECRET` (names in `backend.md`), apply migration `20261117000001` to production when going live, new title/share text for `index.html`.
 - Nov 17: Landing: `/` rebuilt as the signed-off front door (live 3D hero cycling five builds with real demo prices, words strip, send, price, questions, closing card); Geist added; screenshots in `case-study/2026-11-17-build-landing-*`. See `landing.md`.
 - Nov 17: After Done built: `AfterFlow` (Your grill, the code, Sent) with tests and a dev page at `/lab/after`; `phoneToken` and `addToLead()` added to `src/lib/leads.ts`; backend asks and builder hooks in `after.md`. Lint now skips the Creator Lab's script fragments.
 - Nov 17: backend: Firebase phone codes (browser + server), leads take a verified phone, `POST /api/describe`
