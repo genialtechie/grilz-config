@@ -512,6 +512,8 @@ a.btn2 { text-decoration: none; align-items: center; }
 .more .final .btn2.line { color: var(--fd-fg); border-color: var(--fd-line); background: rgba(255,255,255,.8); }
 .shopline { margin-top: 6px; border: 0; background: none; padding: 8px 4px; font: 500 15px/1.3 var(--sans); color: var(--fd-fg); text-decoration: underline; text-decoration-color: var(--fd-gold); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 .app[data-mode="door"] .stage { background-color: #f8f7f4; background-image: radial-gradient(rgba(0,0,0,.03) 1px, transparent 1px); background-size: 4px 4px; }   /* the front door: one background from the top bar to the footer */
+.app[data-mode="door"]:not([data-home]) .stage { height: max(640px, 100svh); }   /* the start page fills any screen: no strip of page colour under it on tall displays */
+body { background-color: #f8f7f4; }
 /* the moving strip of grillz words, right under the hero */
 .words { position: relative; overflow: hidden; border-top: 1px solid var(--fd-line); border-bottom: 1px solid var(--fd-line); padding: 22px 0; background: transparent;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
