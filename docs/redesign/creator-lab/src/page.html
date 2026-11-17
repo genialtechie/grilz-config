@@ -32,6 +32,10 @@ h1, h2, h3, p { margin: 0; }
 .bar > * { pointer-events: auto; }
 .mark { display: flex; align-items: center; gap: 10px; font: 600 17px/1 var(--sans); letter-spacing: -.03em; }
 .mark i { width: 28px; height: 28px; border-radius: 9px; background: var(--ink); color: var(--ink-fg); display: grid; place-items: center; font: 600 11px/1 var(--mono); font-style: normal; }
+.mark img.vvs { height: 24px; width: auto; display: none; }
+.mark.own img.vvs { display: block; }
+.mark.own i { display: none; }
+.mark.own { gap: 7px; }
 .bar-r { display: flex; gap: 6px; align-items: center; }
 .pill { border: 1px solid var(--s-line); background: var(--s-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 999px; padding: 10px 14px; font: 500 13px/1 var(--sans); color: var(--s-fg); display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
 .pill.icon { padding: 9px; }
@@ -458,7 +462,7 @@ a.btn2 { text-decoration: none; align-items: center; }
     <div class="load" id="load">Setting the stage…</div>
 
     <header class="bar gut">
-      <div class="mark"><i>VV</i><span>VVS Lab</span></div>
+      <div class="mark own"><img class="vvs" alt=""><i></i><span>Lab</span></div>
       <div class="bar-r">
         <button type="button" class="pill only-home" data-h="signin">Sign in</button>
         <button type="button" class="pill ink only-home" data-t="start">Start free</button>
