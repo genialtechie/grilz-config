@@ -1,0 +1,29 @@
+/* Direction 3: streetwear drop. White and black, huge tall narrow headlines, hard edges, gold only on the grill and the price. */
+:root { --s-fg: #000; --s-mut: #555; --s-line: #000; --s-glass: #fff; --s-solid: #fff; --s-tile: #f2f2f2; --s-gold: #b8860b; --ink: #000; --ink-fg: #fff; --bg: #fff; }
+body { background: #fff; }
+.stage { background: #fff; }
+h1, h2, .thead h2, .pbig, .more h2, .home h1, .final h2 { font-family: 'Anton', 'Archivo Narrow', Impact, sans-serif !important; font-weight: 400 !important; text-transform: uppercase; letter-spacing: 0 !important; }
+.home h1 { font-size: clamp(64px, 11vw, 160px); line-height: .88; max-width: 9ch; }
+.thead h2 { font-size: 30px; }
+.more h2 { font-size: clamp(48px, 8vw, 112px); line-height: .9; }
+.btn, .btn2, .cta, .pill, .chip, .tool, .composer, .field input, .field textarea, .build .pic, .tile .pic, .mrow, .pcard, .openA, .tray, .bubble, .phone, .phone .scr, .leadcard { border-radius: 0 !important; }
+.btn, .btn2, .cta { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; font-size: 14px; }
+.btn, .btn2, .cta.ghost, .pill, .tool, .chip { background: #fff; color: #000; border: 2px solid #000; box-shadow: none; backdrop-filter: none; }
+.btn.ink, .btn2.ink, .cta, .pill.ink { background: #000; color: #fff; border: 2px solid #000; }
+.openA, .tray { background: #fff !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border: 0 !important; border-top: 2px solid #000 !important; box-shadow: none !important; }
+.build .pic, .tile .pic { background: #f2f2f2 !important; box-shadow: none !important; }
+.build[aria-pressed="true"] .pic, .tile[aria-pressed="true"] .pic { box-shadow: inset 0 0 0 3px #000 !important; }
+.composer { box-shadow: inset 0 0 0 2px #000; }
+.field input, .field textarea { border: 2px solid #000; background: #fff; }
+.mrow { background: #fff; border: 2px solid #000; }
+.bubble { background: #000; }
+.sitem .prev::before { background: #000 !important; }
+.sitem.fresh .prev::before { background: #b8860b !important; }
+.price, .pbig { color: #b8860b; }
+.more { background: #fff; color: #333; }
+.band { border-top: 2px solid #000; }
+.pcard { background: #fff; border: 2px solid #000; }
+.final { background: #000; }
+.final h2 { color: #fff; }
+.btn2.inv { background: #fff; color: #000; border-color: #fff; }
+.nowshow { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: #000; }

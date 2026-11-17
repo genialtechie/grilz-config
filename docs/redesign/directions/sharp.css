@@ -1,0 +1,28 @@
+/* Direction 2: today's light look, sharper. Same stone and gold; bigger type set left, fewer boxes, square-ish corners, more gold. */
+:root { --s-gold: #9a6d16; }
+.btn, .btn2, .cta, .pill, .chip, .tool { border-radius: 12px !important; }
+.openA, .tray { border-radius: 22px 22px 0 0 !important; background: #f7f6f2 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: 0 -1px 0 rgba(18,18,17,.08) !important; border: 0 !important; }
+.build .pic, .tile .pic { border-radius: 10px; background: #efede7 !important; box-shadow: none !important; }
+.build[aria-pressed="true"] .pic, .tile[aria-pressed="true"] .pic { box-shadow: inset 0 0 0 2px #121211 !important; }
+.mrow { background: transparent; border-radius: 0; border-top: 1px solid rgba(18,18,17,.1); }
+.composer { border-radius: 14px; box-shadow: inset 0 0 0 1.5px #121211; }
+.field input, .field textarea { border-radius: 10px; background: #fff; }
+.thead h2 { font-size: 26px; letter-spacing: -.04em; }
+.home { justify-items: start; text-align: left; padding-left: max(20px, calc((100% - 1180px) / 2)); padding-right: 20px; }
+.home h1 { font-size: clamp(52px, 8.4vw, 120px); line-height: .9; max-width: 11ch; letter-spacing: -.06em; }
+.home .two { justify-items: start; }
+.home .two p { text-wrap: pretty; }
+.hcta { justify-content: flex-start; }
+.nowshow { color: #9a6d16; font-weight: 500; }
+.more { background: #f4f3ef; }
+.more h2 { font-size: clamp(36px, 6vw, 80px); max-width: 14ch; }
+.more .eyebrow { color: #9a6d16; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+.pcard { background: transparent; border-radius: 0; padding: 22px 0 0; border-top: 2px solid #121211; }
+.pbig { font-size: clamp(64px, 10vw, 128px); }
+.band { border-top: 0; }
+.final { background: #121211; text-align: left; }
+.final .in { justify-items: start; }
+.final h2 { font-size: clamp(44px, 8vw, 104px); color: #e3b95c; }
+.final .btns2 { justify-content: flex-start; }
+.price { color: #9a6d16; }
+.sitem.fresh .prev::before { background: linear-gradient(135deg, #f6d37a, #c68a1c 55%, #8f6210); padding: 2.5px; }
