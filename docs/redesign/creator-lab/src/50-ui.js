@@ -56,10 +56,23 @@
   }
 
   // ---------- the openings ----------
+  // The start page (v12, Nov 17; the owner asked for the best way, "even if it means redesigning the start empty screen"):
+  // three equal ways in, then the popular builds, which open the builder in one tap. v11 (chips beside Start empty) stays behind a switch to compare.
+  var SPARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.2l1.3 3.4 3.4 1.3-3.4 1.3L7 11.6 5.7 8.2 2.3 6.9l3.4-1.3zM12.6 10.4l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+  var CAMERA = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 4 6.6 2.4h2.8L10.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8.6" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+  function door(k, icon, title, sub) { return '<button type="button" class="door" data-door="' + k + '"><span class="prev">' + ic(icon) + '</span><b>' + title + '</b><span>' + sub + '</span></button>'; }
   function renderOpenings() {
-    var empty = '<button type="button" class="build empty" data-build="empty" aria-pressed="' + (ui.build === 'empty') + '"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth</span></button>';
-    $('buildsA').innerHTML = empty + BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
-    $('goA').innerHTML = ui.resume ? 'Continue your build' : ui.build && ui.build !== 'empty' ? 'Customise this build' : 'Start empty';
+    var builds = BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
+    if (ui.door === 'v11') {
+      $('openA').innerHTML = '<div class="head"><h2>Start your build</h2><span>Start empty, or from a build you can change.</span></div>' +
+        '<div class="builds" role="group" aria-label="Starting builds"><button type="button" class="build empty" data-build="empty" aria-pressed="' + (ui.build === 'empty') + '"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth</span></button>' + builds + '</div>' +
+        '<div class="go"><div class="chips" role="group" aria-label="Let AI build it"><button type="button" class="chip" data-ai="describe">' + SPARK + 'Describe it</button><button type="button" class="chip" data-ai="picture">' + CAMERA + 'From a picture</button></div><button type="button" class="cta" id="goA" style="flex:0 1 280px">' + (ui.resume ? 'Continue your build' : ui.build && ui.build !== 'empty' ? 'Customise this build' : 'Start empty') + '</button></div>';
+      return;
+    }
+    $('openA').innerHTML = '<div class="head"><h2>' + (ui.resume ? 'Your build is waiting' : 'Start your build') + '</h2><span>' + (ui.resume ? esc(receipt()) : '<span class="wide">Three ways in. Change anything after.</span><span class="narrow">Three ways in, or a popular build below.</span>') + '</span></div>' +
+      (ui.resume ? '<button type="button" class="cta" id="goA">Continue your build</button>' : '') +
+      '<div class="doors" role="group" aria-label="Ways to start">' + door('describe', 'spark', 'Describe it', 'AI builds it from your words') + door('picture', 'cam', 'From a picture', 'A photo or a screenshot') + door('empty', 'plus', 'Build it yourself', 'Pick every tooth') + '</div>' +
+      '<p class="orlab">' + (ui.resume ? 'Or start again from a popular build' : 'Or tap a popular build') + '</p><div class="builds" role="group" aria-label="Popular builds">' + builds + '</div>';
   }
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now(); freshHistory();
@@ -284,7 +297,10 @@
     bubble: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
     coin: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
     check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-    insta: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>'
+    insta: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>',
+    spark: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',
+    cam: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>'
   };
   function ic(k) { return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">' + IC[k] + '</svg>'; }
 
@@ -594,7 +610,7 @@
   }
   function box() {
     var st = stage.getBoundingClientRect(), W = st.width, H = st.height, top = 60;
-    if (ui.mode === 'door') { var el = ui.open === 'a' ? $('openA') : null, r = el ? el.getBoundingClientRect() : null; G.box = { top: top, bottom: r ? Math.max(top + 160, r.top - st.top - 6) : H * .55, left: 0, right: W }; return; }
+    if (ui.mode === 'door') { var el = $('openA'), r = el.getBoundingClientRect(); G.box = { top: top, bottom: r ? Math.max(top + 160, r.top - st.top - 6) : H * .55, left: 0, right: W }; return; }
     if (ui.mode === 'build' || ui.mode === 'after' || ui.mode === 'ai') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
@@ -637,7 +653,8 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, label'); if (!t || t.closest('#proto')) return;
     if (t.closest('.stage')) { ui.taps++; ui.lastTouch = performance.now(); }
-    var bd = t.getAttribute('data-build'); if (bd) { applyBuild(bd); renderOpenings(); return; }
+    var bd = t.getAttribute('data-build'); if (bd) { applyBuild(bd); if (ui.door === 'v11') renderOpenings(); else startCreator(); return; }   // v12: a popular build opens the builder in one tap
+    var dr = t.getAttribute('data-door'); if (dr) { if (dr === 'empty') { applyBuild('empty'); startCreator(); } else openAI('door', dr === 'picture'); return; }
     var aiv = t.getAttribute('data-ai'); if (aiv) { openAI(ui.mode === 'build' ? 'build' : 'door', aiv === 'picture'); return; }
     if (t.id === 'goA') { if (ui.resume) { ui.resume = false; setMode('build'); if (!ui.cat) ui.cat = 'teeth'; refresh(true); return; } if (!ui.build) applyBuild('empty'); startCreator(); return; }
     if (t.id === 'selbtn') { ui.selOpen = !ui.selOpen; changeBar(); return; }
@@ -692,7 +709,7 @@
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]]];
+  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
@@ -713,12 +730,13 @@
     if (p === 'aireset') { try { localStorage.removeItem(aiKey()); } catch (e) {} ui.aiMem = 0; if (ui.mode === 'ai') renderTray(); renderProto(); return; }
     setVariant(p, v);
     if (p === 'site') { brand(); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); }
+    if (p === 'door') { renderOpenings(); box(); }
     renderProto();
   });
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('site', 'vvs'); brand();
+  setVariant('site', 'vvs'); setVariant('door', 'v12'); brand();
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

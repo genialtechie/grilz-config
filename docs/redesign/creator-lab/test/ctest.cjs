@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: o (the start page), v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -25,7 +25,7 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
     if (plan === 'g') {
       await p.evaluate(() => { try { localStorage.removeItem('vvs-verified'); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await shot('g0-door');
-      await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await shot('g1-your-build');
+      await c('[data-build="tone"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await shot('g1-your-build');
       await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g2-your-grill');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 230; }); await shot('g3-your-grill-mid');
       await c('[data-x="go"]'); await shot('g4-your-grill-error');
@@ -38,11 +38,11 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 9999; }); await shot('g10-sent-bottom');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 0; }); await c('[data-x="pay"]'); await p.waitForTimeout(1900); await shot('g11-paid');
       await c('#protobtn'); await c('[data-p="site"][data-v="shop"]'); await c('[data-p="restart"]'); await c('#protobtn');
-      await c('[data-build="iced8"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g12-jeweler-returning');
+      await c('[data-build="iced8"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g12-jeweler-returning');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 9999; }); await shot('g13-jeweler-returning-bottom');
     } else if (plan === 'v') {
       const quiet = () => p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
-      await c('[data-build="tone"]'); await c('#goA'); await quiet(); await shot('v1-strip-teeth');
+      await c('[data-build="tone"]'); await quiet(); await shot('v1-strip-teeth');
       await c('[data-a="next"]'); await shot('v2-strip-metal');
       await c('#selbtn'); await shot('v3-select-open');
       await c('#selpop [data-k="front"]'); await shot('v4-front-picked');
@@ -56,13 +56,15 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await p.click('#bubble .chip:not(.more)'); await shot('v9-answered-undo');
       await p.click('#bubble [data-b="undo"]'); await shot('v10-question-back');
     } else if (plan === 'w') {
-      await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-build="tone"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await c('[data-a="next"]'); await shot('w1-select-label');
       await c('#selbtn'); await c('#selpop [data-k="front"]'); await shot('w2-select-picked');
+    } else if (plan === 'o') {   // the start page (v12): the doors, one tap into a popular build, and the way back
+      await shot('o1-door'); await c('[data-build="tone"]'); await shot('o2-one-tap-builder'); await c('[data-a="sback"]'); await shot('o3-door-waiting');
     } else if (plan === 'i') {   // the AI path: Describe it from the start page, the sign-up, the code, the build and its note; keep talking; the free builds; a picture
       await p.evaluate(() => { try { localStorage.clear(); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; window.__vvs.ui.undoMs = 9e6; });
-      await shot('i0-door-ai-chips');
-      await c('.openA [data-ai="describe"]'); await shot('i1-describe');
+      await shot('i0-door');
+      await c('.openA [data-door="describe"]'); await shot('i1-describe');
       await p.fill('#aitext', 'iced out bottom 8 in white gold with fangs and rubies'); await c('[data-x="go"]'); await shot('i2-ai-contact');
       await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('[data-x="go"]'); await p.waitForTimeout(2600); await shot('i3-ai-code');
       await c('[data-x="fill"]'); await p.waitForTimeout(1500); await shot('i4-built-note');
@@ -74,8 +76,8 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('#aibtn'); await shot('i8-out-of-builds');
       await c('[data-x="hand"]'); await c('.strip5 [data-open="extras"]'); await shot('i9-extras-idea');
       await c('#protobtn'); await c('[data-p="aireset"]'); await c('[data-p="restart"]'); await c('#protobtn');
-      const [fc] = await Promise.all([p.waitForEvent('filechooser'), c('.openA [data-ai="picture"]')]);
-      await fc.setFiles(out + '/' + tag + '-i0-door-ai-chips.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
+      const [fc] = await Promise.all([p.waitForEvent('filechooser'), c('.openA [data-door="picture"]')]);
+      await fc.setFiles(out + '/' + tag + '-i0-door.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
       await c('[data-x="go"]'); await p.waitForTimeout(900); await shot('i11-built-from-picture');
       await p.click('#bubble [data-b="x"]').catch(() => {}); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('i12-done-verified');
     }

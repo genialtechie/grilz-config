@@ -96,3 +96,12 @@ note sits on the stage with Undo, and the Undo tool steps back over the build
 too. Their words and picture go to the jeweler as "their idea". In this
 prototype `wish()` in `50-ui.js`, a word matcher over the shop's own options,
 stands in for the AI, and the page says so.
+
+v12 (Nov 17): the owner approved the v11 words and, on where the AI entries
+sit, asked for the best answer "even if it means redesigning the start empty
+screen". The start page is now three equal ways in (Describe it, From a
+picture, Build it yourself: the shared Thumb with two lines on a computer, an
+icon and a name on a phone), then the popular builds, which open the builder
+in one tap. The "Start empty" button is gone; "Continue your build" appears on
+top only when a build is waiting. The v11 start page stays behind the
+"Start page" switch in the prototype panel, to compare.

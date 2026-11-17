@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v11) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
+| Grill Creator Lab (the overhauled builder, v12) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -71,6 +71,8 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
   per verified phone, every reply counts; a photo or screenshot, no Instagram
   links; the closest match with a note on what's different, plus Undo. A word
   matcher stands in for the AI in the prototype (`wish()` in `50-ui.js`).
+- **The start page (v12, Nov 17):** three ways in as doors, then the popular
+  builds, which open the builder in one tap. No "Start empty" button.
 
 ## Next, in order
 
@@ -84,10 +86,11 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 3. ~~Pick the builder's structure~~ The build strip (v10), and the gold rings
    for progress confirmed. The unused sheet, expand, stages, steps, opening-B
    and start-questions code was deleted in v11.
-4. ~~The AI paths~~ Decided on Nov 17 over eight slides and built in v11.
-   **Waiting on:** the owner's verdict on v11 and on the words written without
-   a slide (listed first under "Open questions" in plan.md); bring those as
-   slides.
+4. ~~The AI paths~~ Decided on Nov 17 over eight slides and built in v11; the
+   words confirmed on slides the same day. The owner then asked for the best
+   start page "even if it means redesigning the start empty screen": v12 has
+   three ways in and one-tap popular builds (v11 behind a switch).
+   **Waiting on:** the owner's verdict on v12's start page.
 5. **Later rounds:**
    - the hybrid front door
    - the shop's brand, and coming back to a design
