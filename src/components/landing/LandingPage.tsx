@@ -1,314 +1,331 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePostHog } from '@posthog/react';
-import { ArrowRight } from 'lucide-react';
+import '@fontsource/geist/400.css';
+import '@fontsource/geist/500.css';
+import '@fontsource/geist/600.css';
+import { useTenant } from '../../lib/tenant/useTenant';
+import { GETS, Q_GET, Q_SELL, WORDS } from './content';
+import { showcaseBuilds } from './showcase';
 import './style.css';
 
+// VVS Lab's front door: the page the owner signed off in the Creator Lab
+// (docs/redesign/creator-lab, "the front door, final look", Nov 17). The hero sits
+// over the live 3D piece, which turns through popular builds; below it, the strip
+// of grillz words, what the jeweler receives, the price, questions and the close.
+
+const HeroPiece = lazy(() => import('./HeroPiece'));
+
+const BUILDER = '/configurator';
+const SIGN_UP = '/signup';
+const SIGN_IN = '/dashboard';
 const INSTAGRAM_DM = 'https://ig.me/m/vvslab.ai';
 const INSTAGRAM_PROFILE = 'https://www.instagram.com/vvslab.ai/';
+/** How long each build stays on the piece (the prototype's pace). */
+const SHOW_MS = 3800;
+const PAGE_BG = '#f8f7f4';
 
-const PROBLEMS = [
-  { title: 'They can’t picture it.', note: 'So they ask for photos of pieces you haven’t made yet.' },
-  { title: 'The quote takes days.', note: 'Metal, karat, stones, teeth. Interest cools while you calculate.' },
-  { title: 'No deposit, no commitment.', note: 'The order never makes it to the bench.' },
-];
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const STEPS = [
-  {
-    title: 'They build it in 3D.',
-    copy: 'Tap the teeth, pick the metal, style, setting and stones. Every tooth can be different. The price updates with every choice.',
-    image: '/assets/vvs/phone-metal.webp',
-    alt: 'The builder on a phone, showing metal and karat options',
-  },
-  {
-    title: 'They leave their info.',
-    copy: 'Name and Instagram or phone go in before the studio photo unlocks. Every finished design is a lead with contact details.',
-    image: '/assets/vvs/phone-photo.webp',
-    alt: 'The builder’s last step with a price breakdown and a contact form',
-  },
-];
+/** Text rises in as it scrolls into view. Without motion (or an observer) it is simply there. */
+function useReveal(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el || reducedMotion() || !('IntersectionObserver' in window)) return;
+    const items = el.querySelectorAll<HTMLElement>('.vl-band h2, .vl-lede, .vl-gets li, .vl-phone, .vl-pcard, .vl-qcol, .vl-final > .vl-in > *');
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('vl-risen');
+          io.unobserve(entry.target);
+        }),
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    let last: Element | null = null;
+    let k = 0;
+    items.forEach((item) => {
+      // Siblings follow each other in, a beat apart.
+      k = item.parentElement === last ? k + 1 : 0;
+      last = item.parentElement;
+      item.style.setProperty('--d', `${Math.min(k, 5) * 0.07}s`);
+      item.classList.add('vl-rv');
+      io.observe(item);
+    });
+    return () => {
+      io.disconnect();
+      items.forEach((item) => item.classList.remove('vl-rv', 'vl-risen'));
+    };
+  }, [root]);
+}
 
-const OPTIONS = [
-  { label: 'Iced out', image: '/assets/vvs/options/type-iced.webp' },
-  { label: 'Open face', image: '/assets/vvs/options/style-open-face.webp' },
-  { label: 'Diamond cut', image: '/assets/vvs/options/style-diamond-cut.webp' },
-  { label: 'Fangs', image: '/assets/vvs/options/fangs-yes.webp' },
-  { label: 'Honeycomb', image: '/assets/vvs/options/setting-honeycomb.webp' },
-  { label: 'Moissanite', image: '/assets/vvs/options/stone-moissanite.webp' },
-  { label: 'Rose gold', image: '/assets/vvs/options/metal-rose.webp' },
-  { label: 'Photo grillz', image: '/assets/vvs/options/type-photo.webp' },
-];
-
-const OPTION_LIST =
-  'Yellow, white and rose gold from 10K to 18K, silver and platinum. Plain, iced out or photo grillz. Solid, open face, diamond cut, diamond dust, engraving or opals. Honeycomb, mosaic or prong settings. Moissanite, lab or natural stones. Fangs, deep cut or permanent look, initials on a tooth, and an inspiration photo upload.';
-
-const DELIVERABLES = [
-  { title: 'The lead', note: 'Name plus Instagram or phone, captured before the photo unlocks.' },
-  { title: 'The exact spec', note: 'Every tooth, metal, stone and setting, with the price they saw.' },
-  { title: 'The studio photo', note: 'The same image your customer fell for.' },
-  { title: 'The mold choice', note: 'In-store fitting, a mailed kit, or their own mold or scan.' },
-  { title: 'The deposit', note: 'Through your own Stripe or Shopify checkout. Your money, direct.' },
-];
-
-const INCLUDED = [
-  'Your own builder link for your site and IG bio',
-  'Your prices and options, set up in minutes',
-  'AI studio photo for every finished design',
-  'Leads, specs and deposits sent to you',
-];
-
-const FAQS = [
-  {
-    q: 'Do I need a website?',
-    a: 'No. The builder is its own link, so it works straight from your Instagram bio, your stories or a DM. If you have a site, it can live there too.',
-  },
-  {
-    q: 'Whose prices does it show?',
-    a: 'Yours. You set your metal, stone and per-tooth prices in your dashboard, so the live total matches what you’d quote.',
-  },
-  {
-    q: 'Where does the deposit go?',
-    a: 'Through your own Stripe or Shopify checkout, straight to you.',
-  },
-  {
-    q: 'Is the studio photo the final piece?',
-    a: 'It’s a photo-real render of the design they built, so they can see it before they pay. The 3D build and the spec you receive are the source of truth for the bench.',
-  },
-  {
-    q: 'Is there a contract?',
-    a: 'No. 14 days free with no card needed, then $199 a month. No setup fee, cancel any month.',
-  },
-];
+function Faq({ list }: { list: [string, string][] }) {
+  return (
+    <div className="vl-faq">
+      {list.map(([q, a]) => (
+        <details key={q}>
+          <summary>{q}</summary>
+          <p>{a}</p>
+        </details>
+      ))}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const posthog = usePostHog();
-  const hasCapturedView = useRef(false);
+  const tenant = useTenant();
+  const builds = useMemo(() => showcaseBuilds(tenant), [tenant]);
+  const [shown, setShown] = useState(0);
+  const [pieceOn, setPieceOn] = useState(false);
+  const [pieceReady, setPieceReady] = useState(false);
+  const [qtab, setQtab] = useState<'get' | 'sell'>('get');
+  const hero = useRef<HTMLElement>(null);
+  const page = useRef<HTMLDivElement>(null);
+  const viewed = useRef(false);
+  useReveal(page);
 
   useEffect(() => {
-    if (hasCapturedView.current) return;
-    hasCapturedView.current = true;
-    posthog.capture('commerce_landing_viewed', {
-      page_path: window.location.pathname,
-      landing_version: 'vvs_lab_v1',
-    });
+    if (viewed.current) return;
+    viewed.current = true;
+    posthog.capture('commerce_landing_viewed', { page_path: window.location.pathname, landing_version: 'vvs_lab_front_door' });
   }, [posthog]);
 
-  const captureBuilderClick = (placement: string) => {
-    posthog.capture('sample_configurator_cta_clicked', { placement });
-  };
+  // One background from the top bar to the footer, overscroll included.
+  useEffect(() => {
+    const html = document.documentElement;
+    const before = html.style.backgroundColor;
+    html.style.backgroundColor = PAGE_BG;
+    return () => {
+      html.style.backgroundColor = before;
+    };
+  }, []);
 
-  const captureDmClick = (placement: string) => {
-    posthog.capture('contact_clicked', { placement, channel: 'instagram_dm' });
-  };
+  // The 3D loads once the words have painted, so first paint never waits on three.js.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 200));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => setPieceOn(true), { timeout: 1200 });
+    return () => cancel(id);
+  }, []);
 
-  const TrialButton = ({ placement }: { placement: string }) => (
-    <Link className="vvs-btn vvs-btn-gold" to="/signup" onClick={() => posthog.capture('signup_cta_clicked', { placement })}>
-      Start free trial <ArrowRight size={18} strokeWidth={1.8} />
-    </Link>
-  );
+  // The piece turns through the builds while the hero is on screen and the tab is visible.
+  useEffect(() => {
+    if (!pieceReady || builds.length < 2) return;
+    let visible = true;
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+    });
+    if (hero.current) io.observe(hero.current);
+    const timer = window.setInterval(() => {
+      if (visible && !document.hidden) setShown((i) => (i + 1) % builds.length);
+    }, SHOW_MS);
+    return () => {
+      window.clearInterval(timer);
+      io.disconnect();
+    };
+  }, [pieceReady, builds.length]);
 
-  const BuilderButton = ({ placement, label = 'Try the builder' }: { placement: string; label?: string }) => (
-    <Link className="vvs-btn vvs-btn-line" to="/configurator" onClick={() => captureBuilderClick(placement)}>
-      {label} <ArrowRight size={18} strokeWidth={1.8} />
-    </Link>
-  );
+  const onPieceReady = useCallback(() => setPieceReady(true), []);
+  const build = builds[shown];
 
-  const DmButton = ({ placement }: { placement: string }) => (
-    <a
-      className="vvs-btn vvs-btn-line"
-      href={INSTAGRAM_DM}
-      target="_blank"
-      rel="noreferrer"
-      onClick={() => captureDmClick(placement)}
-    >
-      DM “BUILD” for a demo
-    </a>
-  );
+  const signup = (placement: string) => () => posthog.capture('signup_cta_clicked', { placement });
+  const design = (placement: string) => () => posthog.capture('sample_configurator_cta_clicked', { placement });
+  const dm = (placement: string) => () => posthog.capture('contact_clicked', { placement, channel: 'instagram_dm' });
 
   return (
-    <div className="vvs-page">
-      <header className="vvs-header">
-        <Link className="vvs-wordmark" to="/" aria-label="VVS Lab home">
-          <img src="/assets/vvs/logo-mark.png" alt="VVS" width="640" height="281" />
-          <span>LAB</span>
+    <div className="vl" ref={page}>
+      <header className="vl-bar vl-gut">
+        <Link to="/" className="vl-mark" aria-label="VVS Lab home">
+          <img src="/assets/email/vvs-mark-3d.png" alt="" width={54} height={24} />
+          <span>Lab</span>
         </Link>
-        <nav className="vvs-nav" aria-label="Page navigation">
-          <a href="#how">How it works</a>
-          <a href="#pricing">Pricing</a>
-          <Link className="vvs-nav-cta" to="/signup" onClick={() => posthog.capture('signup_cta_clicked', { placement: 'header' })}>
-            Start free trial
+        <nav className="vl-bar-r" aria-label="Account">
+          <Link className="vl-pill" to={SIGN_IN} onClick={() => posthog.capture('sign_in_clicked', { placement: 'header' })}>
+            Sign in
+          </Link>
+          <Link className="vl-pill vl-ink" to={SIGN_UP} onClick={signup('header')}>
+            Start free
           </Link>
         </nav>
       </header>
 
       <main>
-        <section className="vvs-hero">
-          <div className="vvs-hero-photo" role="img" aria-label="Studio photo of gold grillz with fangs, designed in the builder" />
-          <div className="vvs-hero-copy">
-            <h1 className="vvs-serif">
-              Your DMs are losing <em>custom</em> orders.
-            </h1>
-            <p className="vvs-lede">
-              A live 3D grillz builder for your site and IG link. Customers design the piece, see the price,
-              and get a studio photo of it. You get the lead, the spec and the deposit.
-            </p>
-            <div className="vvs-actions">
-              <TrialButton placement="hero" />
-              <BuilderButton placement="hero" />
+        <section className="vl-hero" ref={hero} aria-labelledby="vl-h1">
+          <div className={pieceReady ? 'vl-piece vl-piece--on' : 'vl-piece'} aria-hidden="true">
+            {pieceOn && build && (
+              <Suspense fallback={null}>
+                <HeroPiece design={build.design} onReady={onPieceReady} />
+              </Suspense>
+            )}
+          </div>
+          <div className="vl-home vl-gut">
+            {build && (
+              <p className="vl-nowshow">
+                <b aria-hidden="true" />
+                <span>{build.caption}</span>
+              </p>
+            )}
+            <h1 id="vl-h1">Design your grillz in 3D.</h1>
+            <div className="vl-two">
+              <p>
+                See the price as you build.
+                <br />
+                Jewelers get orders with a deposit.
+              </p>
             </div>
-            <p className="vvs-price-line">14 days free · then $199/mo · Month to month</p>
+            <div className="vl-hcta">
+              <Link className="vl-btn vl-ink" to={BUILDER} onClick={design('hero')}>
+                Design your grillz
+              </Link>
+              <Link className="vl-btn" to={SIGN_UP} onClick={signup('hero')}>
+                Start free as a jeweler
+              </Link>
+            </div>
+            <p className="vl-fine">Free to design · Shops: 14 days free, then $199/mo</p>
           </div>
         </section>
 
-        <section className="vvs-problem" aria-labelledby="problem-title">
-          <div className="vvs-quote">
-            <span className="vvs-mark" aria-hidden="true">“</span>
-            <h2 id="problem-title" className="vvs-serif">How much for 6 bottom?</h2>
-            <p>The most expensive message in your inbox. Then the photos, the back-and-forth, the ghosting.</p>
-          </div>
-          <ol className="vvs-rows">
-            {PROBLEMS.map(({ title, note }, index) => (
-              <li key={title}>
-                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
-                <div>
-                  <p>{title}</p>
-                  <small>{note}</small>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="vvs-how" id="how" aria-labelledby="how-title">
-          <h2 id="how-title" className="vvs-serif vvs-section-title">
-            Let them <em>build it</em> themselves.
-          </h2>
-          <div className="vvs-steps">
-            {STEPS.map(({ title, copy, image, alt }, index) => (
-              <article className="vvs-step" key={title}>
-                <div className="vvs-device">
-                  <img src={image} alt={alt} loading="lazy" />
-                </div>
-                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
-                <h3 className="vvs-serif">{title}</h3>
-                <p>{copy}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="vvs-reveal" aria-labelledby="reveal-title">
-          <h2 id="reveal-title" className="vvs-serif vvs-section-title">
-            Then they see it <em>finished</em>.
-          </h2>
-          <p className="vvs-reveal-copy">
-            <span className="vvs-num">03</span>
-            The 3D design turns into a studio photo of their exact piece. That’s the moment they put money down.
-          </p>
-          <div className="vvs-pair">
-            <figure>
-              <img src="/assets/vvs/preview-mixed.webp" alt="3D preview of a rose gold open-face set with one iced front tooth" loading="lazy" />
-              <figcaption>3D preview</figcaption>
-            </figure>
-            <figure>
-              <img src="/assets/vvs/photo-mixed.webp" alt="Studio photo of the same rose gold set with one iced front tooth" loading="lazy" />
-              <figcaption className="vvs-gold-text">AI studio photo</figcaption>
-            </figure>
-          </div>
-          <p className="vvs-caption">Same design, tooth for tooth. One iced front tooth stays one iced front tooth.</p>
-        </section>
-
-        <section className="vvs-options" aria-labelledby="options-title">
-          <div className="vvs-options-head">
-            <h2 id="options-title" className="vvs-serif vvs-section-title">
-              Every option you <em>actually</em> sell.
-            </h2>
-            <p>{OPTION_LIST}</p>
-          </div>
-          <div className="vvs-option-grid">
-            {OPTIONS.map(({ label, image }) => (
-              <figure key={label}>
-                <img src={image} alt={label} loading="lazy" />
-                <figcaption>{label}</figcaption>
-              </figure>
-            ))}
-          </div>
-        </section>
-
-        <section className="vvs-get" aria-labelledby="get-title">
-          <h2 id="get-title" className="vvs-serif vvs-section-title">
-            A lead you can <em>close</em>.
-          </h2>
-          <ol className="vvs-rows">
-            {DELIVERABLES.map(({ title, note }, index) => (
-              <li key={title}>
-                <span className="vvs-num">{String(index + 1).padStart(2, '0')}</span>
-                <div>
-                  <p>{title}</p>
-                  <small>{note}</small>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="vvs-pricing" id="pricing" aria-labelledby="pricing-title">
-          <div className="vvs-price-card">
-            <h2 id="pricing-title" className="vvs-serif">
-              $199<span>/mo</span>
-            </h2>
-            <p className="vvs-price-sub">14 days free, no card needed. Then month to month, no setup fee.</p>
-            <ul>
-              {INCLUDED.map((item) => (
-                <li key={item}>{item}</li>
+        <div className="vl-more">
+          <div className="vl-words">
+            <ul className="vl-sr" aria-label="Options in the builder">
+              {WORDS.map((word) => (
+                <li key={word}>{word}</li>
               ))}
             </ul>
-            <div className="vvs-actions vvs-actions-center">
-              <TrialButton placement="pricing" />
-              <DmButton placement="pricing" />
+            <div className="vl-track" aria-hidden="true">
+              {[...WORDS, ...WORDS].map((word, i) => (
+                <span key={i}>{word}</span>
+              ))}
             </div>
           </div>
-        </section>
 
-        <section className="vvs-faq" aria-labelledby="faq-title">
-          <h2 id="faq-title" className="vvs-serif vvs-section-title">Questions.</h2>
-          <div className="vvs-faq-list">
-            {FAQS.map(({ q, a }) => (
-              <details key={q}>
-                <summary>{q}</summary>
-                <p>{a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
+          <section className="vl-band" aria-labelledby="vl-send">
+            <div className="vl-in vl-split">
+              <div>
+                <h2 id="vl-send">What happens when you hit send</h2>
+                <p className="vl-lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p>
+                <ul className="vl-gets">
+                  {GETS.map(([title, note]) => (
+                    <li key={title}>
+                      <b>{title}</b>
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <figure className="vl-phone" aria-label="Example of a new request on a jeweler’s phone">
+                <div className="vl-scr">
+                  <div className="vl-clock">
+                    9:41<small>Monday, November 17</small>
+                  </div>
+                  <div className="vl-leadcard">
+                    <div className="vl-top">
+                      <i aria-hidden="true">VV</i>
+                      <span>VVS Lab · now</span>
+                    </div>
+                    <div className="vl-mid">
+                      <img src="/assets/options/grillz/look-iced-fangs.webp" alt="The customer’s design" width={84} height={84} loading="lazy" decoding="async" />
+                      <div>
+                        <b>New request from Dre</b>
+                        <p>6 × 6 · 14K yellow gold · iced canines</p>
+                      </div>
+                    </div>
+                    <div className="vl-tags">
+                      <span>$3,840 quoted</span>
+                      <span className="vl-paid">$960 deposit paid</span>
+                      <span>Mold kit by mail</span>
+                    </div>
+                  </div>
+                  <figcaption className="vl-exl">Example request</figcaption>
+                </div>
+              </figure>
+            </div>
+          </section>
 
-        <section className="vvs-final">
-          <img className="vvs-logo" src="/assets/vvs/logo-mark.png" alt="" width="640" height="281" />
-          <h2 className="vvs-serif">
-            Put it in your bio <em>tonight</em>.
-          </h2>
-          <p>14 days free, no card needed. Or DM “BUILD” and we’ll walk you through it.</p>
-          <div className="vvs-actions vvs-actions-center">
-            <TrialButton placement="final" />
-            <DmButton placement="final" />
-          </div>
-        </section>
+          <section className="vl-band" aria-labelledby="vl-price">
+            <div className="vl-in">
+              <h2 id="vl-price">The price</h2>
+              <div className="vl-pcards">
+                <div className="vl-pcard">
+                  <p className="vl-eyebrow">Designing</p>
+                  <p className="vl-pbig">Free</p>
+                  <p>You see your price as you build. Sending is free. A deposit starts your order and counts toward your grill.</p>
+                  <Link className="vl-btn2 vl-ink" to={BUILDER} onClick={design('price_card')}>
+                    Design your grillz
+                  </Link>
+                </div>
+                <div className="vl-pcard">
+                  <p className="vl-eyebrow">Shops</p>
+                  <p className="vl-pbig">
+                    $199<span> a month</span>
+                  </p>
+                  <p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p>
+                  <div className="vl-btns2">
+                    <Link className="vl-btn2 vl-ink" to={SIGN_UP} onClick={signup('price_card')}>
+                      Start free
+                    </Link>
+                    <a className="vl-btn2" href={INSTAGRAM_DM} target="_blank" rel="noreferrer" onClick={dm('price_card')}>
+                      DM “BUILD” for a demo
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="vl-band" aria-labelledby="vl-questions">
+            <div className="vl-in">
+              <h2 id="vl-questions">Questions</h2>
+              <div className="vl-qtabs" role="tablist" aria-label="Questions for">
+                <button type="button" role="tab" id="vl-tab-get" aria-controls="vl-q-get" aria-selected={qtab === 'get'} onClick={() => setQtab('get')}>
+                  Getting grillz
+                </button>
+                <button type="button" role="tab" id="vl-tab-sell" aria-controls="vl-q-sell" aria-selected={qtab === 'sell'} onClick={() => setQtab('sell')}>
+                  Selling grillz
+                </button>
+              </div>
+              <div className="vl-qcols" data-tab={qtab}>
+                <div className="vl-qcol vl-get" id="vl-q-get" role="tabpanel" aria-labelledby="vl-h3-get">
+                  <h3 id="vl-h3-get">Getting grillz</h3>
+                  <Faq list={Q_GET} />
+                </div>
+                <div className="vl-qcol vl-sell" id="vl-q-sell" role="tabpanel" aria-labelledby="vl-h3-sell">
+                  <h3 id="vl-h3-sell">Selling grillz</h3>
+                  <Faq list={Q_SELL} />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="vl-band vl-final" aria-labelledby="vl-close">
+            <div className="vl-in">
+              <h2 id="vl-close">Put it in your bio tonight.</h2>
+              <p>14 days free, no card needed. Or DM “BUILD” and we’ll walk you through it.</p>
+              <div className="vl-btns2">
+                <Link className="vl-btn2 vl-ink" to={SIGN_UP} onClick={signup('final_cta')}>
+                  Start free trial
+                </Link>
+                <a className="vl-btn2" href={INSTAGRAM_DM} target="_blank" rel="noreferrer" onClick={dm('final_cta')}>
+                  DM “BUILD” for a demo
+                </a>
+              </div>
+              <Link className="vl-shopline" to={BUILDER} onClick={design('final_cta')}>
+                Or design your own grillz, free
+              </Link>
+            </div>
+          </section>
+        </div>
       </main>
 
-      <footer className="vvs-footer">
-        <span>
-          <b>VVS</b> LAB · by Magpollo
-        </span>
-        <span className="vvs-footer-links">
-          <a href={INSTAGRAM_PROFILE} target="_blank" rel="noreferrer" onClick={() => captureDmClick('footer_profile')}>
+      <footer className="vl-foot">
+        <div className="vl-in">
+          <span>VVS Lab</span>
+          <a href={INSTAGRAM_PROFILE} target="_blank" rel="noreferrer" onClick={dm('footer_profile')}>
             @vvslab.ai
           </a>
-          <a href="mailto:salesteam@magpollo.com" onClick={() => posthog.capture('contact_clicked', { placement: 'footer', channel: 'email' })}>
-            salesteam@magpollo.com
-          </a>
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
-        </span>
+          <span className="vl-fnote">Prices in the builder are the demo shop’s example prices.</span>
+        </div>
       </footer>
     </div>
   );
