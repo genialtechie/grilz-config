@@ -27,4 +27,6 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 17: backend: Firebase phone codes (browser + server), leads take a verified phone, `POST /api/describe`
+  (3 free AI builds per phone, the shop's catalogue only), migration `20261117000001`. See `backend.md`.
 - Nov 17: tracks set up; contract and stand-ins committed.
