@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: l (the front door: the hero, the page below, the jeweler's trial), o (the start page), v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: l (the front door: the hero, the page below, Start free goes to sign-up), o (the start page), v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -87,10 +87,7 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('.home [data-h="design"]'); await shot('l3-start-page');
       await p.click('.bar .mark'); await p.waitForTimeout(600);
       if (await p.isVisible('.qtabs')) { await c('.qtabs [data-q2="sell"]'); await p.evaluate(() => document.querySelector('.qtabs').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500); await p.screenshot({ path: out + '/' + tag + '-l5-questions-sell.png' }); console.log('l5-questions-sell'); }
-      await p.evaluate(() => window.scrollTo(0, 0)); await c('.home [data-t="start"]'); await shot('l6-trial-name');
-      await p.fill('#tname', 'Crown Gold'); await c('[data-t="see"]'); await shot('l7-trial-builder');
-      if (await p.isVisible('[data-t="kbopen"]')) await c('[data-t="kbopen"]');
-      await p.fill('#temail', 'shop@example.com'); await c('[data-t="keep"]'); await shot('l8-kept');
+      await p.evaluate(() => window.scrollTo(0, 0)); await c('.home [data-t="start"]'); await shot('l6-start-free');
     }
   } catch (e) { console.log('STEP FAIL', e.message.split('\n')[0]); }
   console.log(errs.slice(0, 8).join('\n') || 'no errors');

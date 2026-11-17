@@ -113,8 +113,7 @@ v14 (Nov 17): **the front door** is v6's layout in front of today's builder.
 The piece cycles through the popular builds, its name and price above
 "Design your grillz in 3D."; one line for "Getting grillz?" and one for
 "Making grillz?"; "Design your grillz" opens the start page and "Start free as
-a jeweler" starts the trial (the shop's name on the builder, then "Keep it"
-with an email). Below: "What happens when you hit send" with the example
+a jeweler" goes to the sign-up page. Below: "What happens when you hit send" with the example
 request on a phone, the price (two versions behind the "Price section"
 switch), and two question lists, Getting grillz and Selling grillz. The logo
 returns home. The code is one block in `50-ui.js` ("the front door") plus the

@@ -95,6 +95,7 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    audiences, the two price cards, the 3D-to-studio-photo pair and the
    closing band from the live page (see plan.md, Nov 17). Pictures the page
    shows live in `creator-lab/src/assets/` and are inlined by `build.py`.
+   Start free goes straight to sign-up and Sign in to sign-in (no trial preview).
    **Still needed from the owner:** delivery time, returns and warranty
    answers for the shoppers' questions; a studio photo remade from the new 3D.
 6. **Later rounds:**
