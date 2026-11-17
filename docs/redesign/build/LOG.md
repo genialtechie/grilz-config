@@ -27,4 +27,5 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 17: After Done built: `AfterFlow` (Your grill, the code, Sent) with tests and a dev page at `/lab/after`; `phoneToken` and `addToLead()` added to `src/lib/leads.ts`; backend asks and builder hooks in `after.md`. Lint now skips the Creator Lab's script fragments.
 - Nov 17: tracks set up; contract and stand-ins committed.

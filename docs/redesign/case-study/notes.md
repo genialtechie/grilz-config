@@ -83,6 +83,8 @@ The redesign started Nov 14, 2026. The owner leads on taste and UX; Claude works
 - **The AI's stand-in.** In the prototype a word matcher reads the shopper's sentence against the shop's own options: counts and rows, metals and karats, finishes, stones and settings, fangs, letters, two-tone. Anything outside the catalogue (rubies, black gold, 24K, charms, a chain) becomes the closest match plus a line saying so, which is the behaviour the real model will be asked for.
 - **A glow that sits above the gums.** A picked tooth gets a soft amber shell that pulses. The first version sank into the clear holder ("it kinda phases into the gums"), so it is now drawn in its own pass after the scene: the holder is ignored, but other teeth still hide it, so it reads as a layer on top of the gums.
 
+- **After Done, in the real app (Nov 17, build).** The three signed-off screens ported from the lab into React as one component the builder mounts in its panel. The code box is one real input under six drawn boxes, so the phone's own code suggestion (iPhone) and WebOTP (Android) fill it and the 6th digit sends. The photo develops on the stage when the builder leaves it a place, otherwise at the top of Sent; with reduced motion it simply swaps. Paying the deposit opens Stripe in a new tab, and the tab that comes back tells the first one, so both say "Order started". Screens: `2026-11-17-app-after-done-phone.jpg`, `2026-11-17-app-after-done-desktop.jpg`.
+
 ## Process and working agreements
 
 - The owner leads taste and UX. Plans are shown and approved before building.
