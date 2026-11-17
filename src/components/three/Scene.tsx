@@ -4,7 +4,8 @@ import { OrbitControls, PerformanceMonitor, PerspectiveCamera, Stats } from '@re
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import GrillzModel from './GrillzModel';
-import type { CloseUp, SceneProps, ViewRequest } from '../../lib/types';
+import { GlowPass } from './GlowPass';
+import type { CloseUp, Frame, SceneProps, ViewRequest } from '../../lib/types';
 import { CAMERA_FOV, fitDistance, FRONT_DEPTH, MODEL_CENTRE, MODEL_SIZE, VIEW_FRACTION } from '../../lib/framing';
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -16,6 +17,8 @@ const SWING_SECONDS = 7;
  */
 const overlays = () =>
   typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches ? { top: 0.12, bottom: 0.2 } : { top: 0.08, bottom: 0.08 };
+/** With a frame (the creator), the share of the free area the piece fills, as in the Grill Creator Lab. */
+const FRAME_FILL = 0.84;
 /** Front, left and right: how far round the side views turn (radians from the front). */
 const SIDE_TURN = 1.05;
 /** Waits for the opening still to fade before the camera moves in on the teeth, so the two never disagree on screen. */
@@ -65,12 +68,14 @@ function Rig({
   closeUp,
   view,
   onUserControl,
+  frame,
 }: {
   focus: THREE.Vector3 | null;
   started: boolean;
   closeUp?: CloseUp | null;
   view?: ViewRequest | null;
   onUserControl?: () => void;
+  frame?: Frame | null;
 }) {
   const controls = useRef<OrbitControlsImpl | null>(null);
   const { camera, size, invalidate, scene } = useThree();
@@ -86,8 +91,28 @@ function Rig({
     const timer = window.setTimeout(() => setSettled(true), POSTER_FADE_MS);
     return () => window.clearTimeout(timer);
   }, [started]);
+  const frameTop = frame?.top;
+  const frameBottom = frame?.bottom;
+  const frameLeft = frame?.left;
+  const frameRight = frame?.right;
   const home = useMemo<Goal>(() => {
     if (!settled) return { target: MODEL_CENTRE.clone(), distance: rest };
+    if (frameTop !== undefined && frameBottom !== undefined && frameLeft !== undefined && frameRight !== undefined) {
+      // The creator: fill the free area (above the panel on a phone, beside it on a computer). Its
+      // height sets the distance with the canvas's; sideways, the view is shifted (see the frame below).
+      const tan = Math.tan(THREE.MathUtils.degToRad(perspective.fov / 2));
+      const aspect = size.width / Math.max(1, size.height);
+      const H = Math.max(1, size.height);
+      const W = Math.max(1, size.width);
+      const top = Math.max(0, frameTop / H);
+      const bottom = Math.max(0, 1 - frameBottom / H);
+      const clearH = Math.max(0.15, 1 - top - bottom);
+      const clearW = Math.max(0.2, (frameRight - frameLeft) / W);
+      const span = Math.max(MODEL_SIZE.height / (2 * tan * clearH * FRAME_FILL), MODEL_SIZE.width / (2 * tan * aspect * clearW * FRAME_FILL));
+      const target = MODEL_CENTRE.clone();
+      target.y -= (bottom - top) * span * tan;
+      return { target, distance: span + FRONT_DEPTH };
+    }
     // Fit the whole piece to the clear band between the controls (its height, the canvas's full width)...
     const { top, bottom } = overlays();
     const clear = 1 - top - bottom;
@@ -98,7 +123,11 @@ function Rig({
     const target = MODEL_CENTRE.clone();
     target.y -= (bottom - top) * span * tan;
     return { target, distance: span + FRONT_DEPTH };
-  }, [settled, rest, perspective, size.width, size.height]);
+  }, [settled, rest, perspective, size.width, size.height, frameTop, frameBottom, frameLeft, frameRight]);
+
+  // Sideways, the piece is centred in the free area by shifting the view, so it still turns about its middle.
+  const shift = useRef(0);
+  const shiftGoal = frameLeft !== undefined && frameRight !== undefined ? size.width / 2 - (frameLeft + frameRight) / 2 : 0;
 
   // The opening framing, on load and whenever the canvas changes size, before the model is drawn.
   useEffect(() => {
@@ -210,6 +239,17 @@ function Rig({
       moving = true;
     }
 
+    if (Math.abs(shiftGoal - shift.current) > 0.5 || (shift.current !== 0 && !perspective.view)) {
+      shift.current = reducedMotion() ? shiftGoal : shift.current + (shiftGoal - shift.current) * Math.min(1, delta * 9);
+      if (Math.abs(shiftGoal - shift.current) <= 0.5) shift.current = shiftGoal;
+      if (Math.abs(shift.current) < 0.5) perspective.clearViewOffset();
+      else perspective.setViewOffset(size.width, size.height, Math.round(shift.current), 0, size.width, size.height);
+      moving = true;
+    } else if (perspective.view && (perspective.view.fullWidth !== size.width || perspective.view.fullHeight !== size.height)) {
+      perspective.setViewOffset(size.width, size.height, Math.round(shift.current), 0, size.width, size.height);
+      moving = true;
+    }
+
     if (moving) {
       orbit.update();
       invalidate();
@@ -261,6 +301,9 @@ function Scene({
   view,
   onUserControl,
   onReady,
+  frame,
+  onMissTap,
+  jawOpen,
 }: Props) {
   const [focus, setFocus] = useState<THREE.Vector3 | null>(null);
   const [drawn, setDrawn] = useState(false);
@@ -281,14 +324,19 @@ function Scene({
         dpr={[1, dpr]}
         gl={{ antialias: true, alpha: true }}
         onCreated={onReady}
-        onPointerMissed={() => setFocus(null)}
+        onPointerMissed={(event) => {
+          setFocus(null);
+          // A tap (not the end of a drag) on no tooth.
+          if (event.type === 'click') onMissTap?.();
+        }}
         role="img"
         aria-label="Interactive 3D model of your grillz. Drag to rotate, tap a tooth to look closer."
       >
         <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.75)} />
         {showFps && <Stats />}
         <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={CAMERA_FOV} />
-        <Rig focus={focus} started={drawn} closeUp={closeUp} view={view} onUserControl={onUserControl} />
+        <Rig focus={focus} started={drawn} closeUp={closeUp} view={view} onUserControl={onUserControl} frame={frame} />
+        {selectionLook === 'glow' && isSelectionMode && selectedTeeth.length > 0 && <GlowPass />}
         {/* No lamps: the piece is lit by the rooms its materials reflect (redesign/look.ts), with its own soft shadow. */}
         <GrillzModel
           customizations={customizations}
@@ -300,6 +348,7 @@ function Scene({
           photoImage={photoImage}
           onFocusTooth={(point) => setFocus((current) => (current && current.distanceTo(point) < 0.3 ? null : point))}
           onDrawn={() => setDrawn(true)}
+          jawOpen={jawOpen}
         />
       </Canvas>
       {/* The still the builder opens on; the live model, drawn in the same place, fades in over it. */}

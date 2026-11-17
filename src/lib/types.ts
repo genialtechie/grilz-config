@@ -31,14 +31,23 @@ export type ToothCustomization = {
 export type CloseUp = { teeth: number[]; fill: number; turn?: boolean };
 /** A fixed view the customer asked for; a new object each time, so asking twice glides twice. */
 export type ViewRequest = { side: 'front' | 'left' | 'right' };
+/**
+ * The free part of the canvas, in CSS pixels from its top-left corner: the piece is framed to fill it
+ * (the creator's panel covers the rest). Without one the viewer frames between its own overlays.
+ */
+export type Frame = { top: number; bottom: number; left: number; right: number };
 
 export interface SceneProps {
   customizations: ToothCustomization[];
   selectedTeeth: number[];
   isSelectionMode: boolean;
   toggleToothSelection: (index: number) => void;
-  /** How selected teeth show: filled in the accent (choosing the set), or their design with an outline (styling single teeth). */
-  selectionLook?: 'fill' | 'outline' | 'none';
+  /**
+   * How selected teeth show: filled in the accent (choosing the set), their design with an outline
+   * (styling single teeth), or their design with an amber glow drawn above the holder, lifted a little
+   * out of the arch (the creator's picked teeth).
+   */
+  selectionLook?: 'fill' | 'outline' | 'none' | 'glow';
   /** Letters drawn on the set. */
   inscriptions?: Inscription[];
   /** The customer's picture for photo teeth (a data URL); a stand-in mark shows without one. */
@@ -49,6 +58,12 @@ export interface SceneProps {
   view?: ViewRequest | null;
   /** The customer dragged or pinched the model. */
   onUserControl?: () => void;
+  /** Frame the piece in this part of the canvas (see Frame). */
+  frame?: Frame | null;
+  /** A tap that lands on no tooth. */
+  onMissTap?: () => void;
+  /** Open the mouth (the lower half swings down a little). */
+  jawOpen?: boolean;
 }
 
 export type GrillzModelProps = SceneProps;

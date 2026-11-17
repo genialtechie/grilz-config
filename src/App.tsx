@@ -1,12 +1,14 @@
 import { lazy, Suspense } from 'react';
 import { loadable } from './lib/loadable';
 import { Route, Routes } from 'react-router-dom';
-import { BuilderShell } from './components/builder/BuilderShell';
+import { CreatorShell } from './components/creator/CreatorShell';
 import LandingPage from './components/landing/LandingPage';
 import './App.css';
 
 // The builder routes swap in the moment their code arrives (see loadable); the rest are plain lazy routes.
-const Configurator = loadable(() => import('./components/Configurator'));
+// The shopper's builder is the Grill Creator Lab (creator/, Nov 17). The old five-step Configurator stays in
+// the repo, unused, to compare and to roll back to.
+const CreatorApp = loadable(() => import('./components/creator/CreatorApp'));
 const ShopPage = loadable<{ slug?: string }>(() => import('./components/ShopPage'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 const DashboardApp = lazy(() => import('./dashboard/DashboardApp'));
@@ -37,7 +39,7 @@ function App() {
         path="/"
         element={
           customDomainShop ? (
-            <ShopPage slug={customDomainShop} fallback={<BuilderShell />} />
+            <ShopPage slug={customDomainShop} fallback={<CreatorShell />} />
           ) : (
             <LandingPage />
           )
@@ -45,11 +47,11 @@ function App() {
       />
       <Route
         path="/configurator"
-        element={<Configurator fallback={<BuilderShell />} />}
+        element={<CreatorApp fallback={<CreatorShell />} />}
       />
       <Route
         path="/b/:slug/*"
-        element={<ShopPage fallback={<BuilderShell />} />}
+        element={<ShopPage fallback={<CreatorShell />} />}
       />
       {LabPage && <Route path="/lab" element={<Suspense fallback={null}><LabPage /></Suspense>} />}
       {AfterLab && <Route path="/lab/after" element={<Suspense fallback={null}><AfterLab /></Suspense>} />}
