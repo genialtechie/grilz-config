@@ -1769,7 +1769,7 @@ button.mrow:active { transform: scale(.985); }
 
   // ---------- after "Done": one screen to send it (the price, the fitting, where to text), the code, then Sent ----------
   ui.after = 0; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; ui.verified = loadVerified();
-  function shopName() { return ui.site === 'shop' ? (ui.shopLabel || 'Gold Lab') : 'VVS Lab'; }
+  function shopName() { return ui.site === 'shop' ? (ui.shopLabel || 'Your shop') : 'VVS Lab'; }
   function fits() { return ui.site === 'shop' ? ['kit', 'own', 'store'] : ['kit', 'own']; }          // VVS Lab has no store yet
   var FIT_WORDS = { kit: ['Mold kit by mail', 'They post you a kit. You bite, then mail it back.', 'kit'], own: ['Own mold or scan', 'You already have one.', 'scan'], store: ['In-store fitting', '', 'store'] };
   var DEV = 9000;
@@ -2211,7 +2211,7 @@ button.mrow:active { transform: scale(.985); }
   function laneEvent(name) { (ui.laneLog = ui.laneLog || []).push([name, Math.round(performance.now())]); }   // in the real site: one analytics event per choice, the lane test's first signal
   function sellPanel() {
     return '<div class="head"><h2>What\'s your shop called?</h2></div>' +
-      '<div class="field"><label class="sr" for="tname">Shop name</label><input id="tname" type="text" autocomplete="organization" autocapitalize="words" placeholder="Gold Lab" maxlength="32" value="' + esc(ui.shopLabel) + '"></div>' +
+      '<div class="field"><label class="sr" for="tname">Shop name</label><input id="tname" type="text" autocomplete="organization" autocapitalize="words" placeholder="Your shop\'s name" maxlength="32" value="' + esc(ui.shopLabel) + '"></div>' +
       '<p class="note">Your builder appears with your name on it. Try it, then keep it.</p>' +
       '<div class="go2"><button type="button" class="cta ghost second" data-t="back">Back</button><button type="button" class="cta" data-t="see">Show me my builder</button></div>';
   }
