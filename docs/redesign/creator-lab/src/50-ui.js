@@ -62,17 +62,20 @@
   var CAMERA = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 4 6.6 2.4h2.8L10.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8.6" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
   function door(k, icon, title, sub) { return '<button type="button" class="door" data-door="' + k + '"><span class="prev">' + ic(icon) + '</span><b>' + title + '</b><span>' + sub + '</span></button>'; }
   function renderOpenings() {
+    if (sellView()) { $('openA').innerHTML = sellPanel(); doorExtras(); return; }   // the jeweler's lane and the trial's first step share the start panel
     var builds = BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
     if (ui.door === 'v11') {
       $('openA').innerHTML = '<div class="head"><h2>Start your build</h2><span>Start empty, or from a build you can change.</span></div>' +
         '<div class="builds" role="group" aria-label="Starting builds"><button type="button" class="build empty" data-build="empty" aria-pressed="' + (ui.build === 'empty') + '"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth</span></button>' + builds + '</div>' +
         '<div class="go"><div class="chips" role="group" aria-label="Let AI build it"><button type="button" class="chip" data-ai="describe">' + SPARK + 'Describe it</button><button type="button" class="chip" data-ai="picture">' + CAMERA + 'From a picture</button></div><button type="button" class="cta" id="goA" style="flex:0 1 280px">' + (ui.resume ? 'Continue your build' : ui.build && ui.build !== 'empty' ? 'Customise this build' : 'Start empty') + '</button></div>';
+      doorExtras();
       return;
     }
     $('openA').innerHTML = '<div class="head"><h2>' + (ui.resume ? 'Your build is waiting' : 'Start your build') + '</h2><span>' + (ui.resume ? esc(receipt()) : '<span class="wide">Three ways in. Change anything after.</span><span class="narrow">Three ways in, or a popular build below.</span>') + '</span></div>' +
       (ui.resume ? '<button type="button" class="cta" id="goA">Continue your build</button>' : '') +
       '<div class="doors" role="group" aria-label="Ways to start">' + door('describe', 'spark', 'Describe it', 'AI builds it from your words') + door('picture', 'cam', 'From a picture', 'A photo or a screenshot') + door('empty', 'plus', 'Build it yourself', 'Pick every tooth') + '</div>' +
       '<p class="orlab">' + (ui.resume ? 'Or start again from a popular build' : 'Or tap a popular build') + '</p><div class="builds" role="group" aria-label="Popular builds">' + builds + '</div>';
+    doorExtras();
   }
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now(); freshHistory();
@@ -306,7 +309,7 @@
 
   // ---------- after "Done": one screen to send it (the price, the fitting, where to text), the code, then Sent ----------
   ui.after = 0; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; ui.verified = loadVerified();
-  function shopName() { return ui.site === 'shop' ? 'Gold Lab' : 'VVS Lab'; }
+  function shopName() { return ui.site === 'shop' ? (ui.shopLabel || 'Gold Lab') : 'VVS Lab'; }
   function fits() { return ui.site === 'shop' ? ['kit', 'own', 'store'] : ['kit', 'own']; }          // VVS Lab has no store yet
   var FIT_WORDS = { kit: ['Mold kit by mail', 'They post you a kit. You bite, then mail it back.', 'kit'], own: ['Own mold or scan', 'You already have one.', 'scan'], store: ['In-store fitting', '', 'store'] };
   var DEV = 9000;
@@ -610,7 +613,12 @@
   }
   function box() {
     var st = stage.getBoundingClientRect(), W = st.width, H = st.height, top = 60;
-    if (ui.mode === 'door') { var el = $('openA'), r = el.getBoundingClientRect(); G.box = { top: top, bottom: r ? Math.max(top + 160, r.top - st.top - 6) : H * .55, left: 0, right: W }; return; }
+    if (ui.mode === 'door') {         // the piece sits between the trial bar (if any) and the promise line above the start panel
+      var r = $('openA').getBoundingClientRect(), pr = $('promise'), kb = $('keepbar'), bot = r.top - st.top - 6, tp = top;
+      if (pr && !pr.hidden) { pr.style.bottom = Math.round(st.bottom - r.top + 14) + 'px'; bot = Math.min(bot, pr.getBoundingClientRect().top - st.top - 6); }
+      if (kb && !kb.hidden) tp = Math.max(tp, kb.getBoundingClientRect().bottom - st.top + 8);
+      G.box = { top: tp, bottom: Math.max(tp + 140, bot), left: 0, right: W }; return;
+    }
     if (ui.mode === 'build' || ui.mode === 'after' || ui.mode === 'ai') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
@@ -709,7 +717,7 @@
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
+  var PAIRS = [['lanes', 'Two lanes', [['switch', 'Get | Sell switch'], ['door', 'For jewelers door']]], ['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
@@ -720,7 +728,7 @@
   }
   function goDoor() { hideBubble(); ui.selOpen = false; ui.resume = onList().length > 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }   // the furthest Back: the start screen, with the build kept
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
-  function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? 'GL' : 'VV'; m.querySelector('span').textContent = shopName(); }
+  function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? initials(shopName()) : 'VV'; m.querySelector('span').textContent = shopName(); }
   function restart() { ui.resume = false; ui.navHist = []; hidePhoto(); ui.ai = { msgs: [], text: '', pic: null }; ui.aiStep = 'talk'; ui.after = 0; ui.sent = false; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; SET.promo = ''; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
   $('protobtn').addEventListener('click', function () { var open = proto.hidden; proto.hidden = !open; this.setAttribute('aria-expanded', open); clearInterval(protoTimer); if (open) { renderProto(); protoTimer = setInterval(function () { var c = $('pclock'); if (c) c.textContent = mmss(elapsed()) + ' · ' + ui.taps + ' taps'; }, 500); } });
   proto.addEventListener('click', function (e) {
@@ -731,9 +739,107 @@
     setVariant(p, v);
     if (p === 'site') { brand(); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); }
     if (p === 'door') { renderOpenings(); box(); }
+    if (p === 'lanes') { ui.trial = null; ui.lane = 'get'; if (ui.mode !== 'door') goDoor(); renderOpenings(); box(); }
     renderProto();
   });
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
+
+  // ---------- the front door: one site for shoppers and jewelers (Nov 17) ----------
+  // Two versions to compare (prototype switch "Two lanes"): a Get grillz | Sell grillz switch in the top bar,
+  // or shopper first with a "For jewelers" door. Each tap on a lane is the lane test's first signal.
+  ui.lanes = 'switch'; ui.lane = 'get'; ui.trial = null; ui.shopLabel = ''; ui.kbOpen = false; app.setAttribute('data-lanes', 'switch'); app.setAttribute('data-lane', 'get');
+  try { var qs = new URLSearchParams(location.search); if (qs.get('lane') === 'sell') { ui.lane = 'sell'; app.setAttribute('data-lane', 'sell'); } } catch (e) {}
+  function initials(s) { var w = String(s).trim().split(/\s+/).filter(Boolean); return ((w[0] || 'V')[0] + (w[1] ? w[1][0] : (w[0] || 'VV')[1] || '')).toUpperCase(); }
+  function laneEvent(name) { (ui.laneLog = ui.laneLog || []).push([name, Math.round(performance.now())]); }   // in the real site: one analytics event per lane choice
+  function sellView() { return ui.trial === 'name' || (ui.lanes === 'switch' && ui.lane === 'sell'); }
+  function sellPanel() {
+    if (ui.trial === 'name') return '<div class="head"><h2>What\'s your shop called?</h2></div>' +
+      '<div class="field"><label class="sr" for="tname">Shop name</label><input id="tname" type="text" autocomplete="organization" autocapitalize="words" placeholder="Gold Lab" maxlength="32" value="' + esc(ui.shopLabel) + '"></div>' +
+      '<p class="note">Your builder appears with your name on it. Try it, then keep it.</p>' +
+      '<div class="go2"><button type="button" class="cta ghost second" data-t="back">Back</button><button type="button" class="cta" data-t="see">Show me my builder</button></div>';
+    return '<div class="head"><h2>Put this on your Instagram</h2></div><p class="lede">Customers design it, you get the order with a deposit.</p>' +
+      '<div class="go2"><button type="button" class="cta" data-t="start">Start free trial</button></div><p class="fine">14 days free, then $199/mo</p>';
+  }
+  function doorExtras() {                // everything around the start panel: the promise, the lane switch, the trial bar, the page below
+    var sell = sellView();
+    app.setAttribute('data-lane', sell ? 'sell' : 'get'); app.toggleAttribute('data-trial', !!ui.trial);
+    [].forEach.call(document.querySelectorAll('.lane [data-lane]'), function (b) { b.setAttribute('aria-selected', String((b.getAttribute('data-lane') === 'sell') === sell)); });
+    $('promise').hidden = sell; showcase(sell && ui.mode === 'door'); renderKeep(); renderMore();
+  }
+  // on the jeweler's side the piece shows finished work: the popular builds in turn; the shopper's own build comes back on leaving
+  var SHOW = ['iced8', 'fangs', 'tone', 'oneof', 'open', 'gold66'];
+  function showcase(on) {
+    if (on && !ui.showSnap) { ui.showSnap = designSnap(); ui.showI = 0; showNext(); clearInterval(ui.showT); ui.showT = setInterval(showNext, 3600); }
+    else if (!on && ui.showSnap) { clearInterval(ui.showT); var o = JSON.parse(ui.showSnap); ui.showSnap = null; T = o.T; DEF = o.D; SET.fangs = o.S.fangs; SET.cut = o.S.cut; SET.ins = o.S.ins; SET.mold = o.S.mold; SET.idea = o.S.idea; if (window.__vvs) window.__vvs.T = T; G.sync(); meta(); }
+  }
+  function showNext() { if (ui.mode !== 'door' || !ui.showSnap) return; resetAll(); buildById(SHOW[ui.showI++ % SHOW.length])[3](); G.sync(); if (G.pop) G.pop(); if (G.glint) G.glint(); }
+  function renderKeep() {
+    var k = $('keepbar'), name = esc(shopName()), show = ui.trial === 'keep' || ui.trial === 'done'; k.hidden = !show; if (!show) return;
+    if (ui.trial === 'done') { k.innerHTML = '<div class="kb-row"><p><b>' + name + ' is live.</b> We sent a link to ' + esc(ui.trialEmail) + ' to confirm it.</p><button type="button" class="x" data-t="close" aria-label="Close">×</button></div><p class="fine">Prototype: nothing is sent. Next would be your prices and your link.</p>'; return; }
+    k.innerHTML = '<div class="kb-row"><p><b>This is your builder.</b> <span class="kb-sub">Try it as your customer would, then keep it.</span></p>' +
+      '<button type="button" class="cta kb-open" data-t="kbopen" aria-expanded="' + !!ui.kbOpen + '">Keep it</button><button type="button" class="x" data-t="cancel" aria-label="Not now, go back to VVS Lab">×</button></div>' +
+      '<div class="kb-form"><div class="field"><label class="sr" for="temail">Email</label><input id="temail" type="email" inputmode="email" autocomplete="email" placeholder="Email" value="' + esc(ui.trialEmail || '') + '"></div><button type="button" class="cta" data-t="keep">Start 14 days free</button></div>' +
+      '<p class="fine kb-fine">No card. Then $199 a month.</p><p class="err" id="terr" role="alert"></p>';
+    k.classList.toggle('open', !!ui.kbOpen);
+  }
+  function stepsHtml(list) { return '<ol class="msteps">' + list.map(function (s, i) { return '<li><span class="prev">' + s[0] + '</span><span class="n">' + (i + 1) + '</span><b>' + s[1] + '</b><p>' + s[2] + '</p></li>'; }).join('') + '</ol>'; }
+  function faqHtml(list) { return '<div class="faq">' + list.map(function (q) { return '<details><summary>' + q[0] + '</summary><p>' + q[1] + '</p></details>'; }).join('') + '</div>'; }
+  function shopperMore() {
+    var S = esc(shopName()), ex = ['gold6', 'gold66', 'iced8'].map(function (id) { var b = buildById(id); return '<button type="button" class="ex" data-build-go="' + id + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(id) + '</span></button>'; }).join('');
+    return '<section class="msec" aria-labelledby="h-how"><h2 id="h-how">How it works</h2>' +
+      stepsHtml([[setSvg(6, 6, 'gold'), 'Design it', 'In 3D, with the price as you go. Start from a popular build or from nothing.'], [ic('bubble'), S + ' texts you', 'Send it free. ' + S + ' texts you about your grill, only that.'], [ic('kit'), 'Get fitted', fits().length > 2 ? 'A mold kit by mail, your own mold or scan, or in store.' : 'A mold kit by mail, or your own mold or scan.'], [ic('check'), 'It\'s yours', 'Made to fit your teeth.']]) + '</section>' +
+      '<section class="msec price-sec" aria-labelledby="h-price"><div><h2 id="h-price">The price, plainly</h2><p class="mlede">You see your price as you build, from the real prices. Sending your design is free. A deposit starts your order and counts toward your grill. ' + S + ' confirms the exact price after your fitting.</p></div><div class="exs" role="group" aria-label="Popular builds and their prices">' + ex + '</div></section>' +
+      '<section class="msec" aria-labelledby="h-q"><h2 id="h-q">Questions</h2>' + faqHtml([
+        ['What metals can I choose?', 'Yellow, white or rose gold in 10K, 14K or 18K, sterling silver, or platinum. You pick in the builder and watch the price change.'],
+        ['How do you get the shape of my teeth?', fits().length > 2 ? 'A mold kit by mail (you bite, then mail it back), your own mold or a scan, or a fitting in store.' : 'We post you a mold kit: you bite, then mail it back. Or send your own mold or a scan.'],
+        ['Is the price I see final?', 'It\'s an estimate from the real prices. ' + S + ' confirms the exact price after your fitting.'],
+        ['What does sending my design cost?', 'Nothing. You send it free and ' + S + ' texts you.'],
+        ['What\'s the deposit?', 'An optional payment that starts your order. You see the amount before you pay, and it counts toward your grill.'],
+        ['Do I need an account?', 'No. Building is free. We only ask for your phone when you send a design or use AI, and we text you a code.']]) +
+      '<p class="proto-note">For you, before this goes live: how long it takes, returns and any warranty need your answers.</p></section>';
+  }
+  function jewelerMore(band) {
+    var get = [[ic('bubble'), 'Their name and phone', 'Checked with a text code before they can send.'], [setSvg(6, 6, 'gold'), 'The exact spec', 'Every tooth, metal, stone and setting, with the price they saw.'], [ic('cam'), 'The studio photo', 'The same picture they fell for.'], [ic('kit'), 'The fitting they chose', 'A mailed kit, their own mold or scan, or in store.'], [ic('coin'), 'The deposit', 'Through your own Stripe, straight to you.']];
+    return (band ? '<section class="msec jband" id="forj" aria-labelledby="h-forj"><p class="eyebrow">For jewelers</p><h2 id="h-forj">Put this on your Instagram</h2><p class="mlede">Customers design it, you get the order with a deposit.</p><div class="go2"><button type="button" class="cta" data-t="start">Start free trial</button></div><p class="fine">14 days free, then $199/mo</p></section>' : '') +
+      '<section class="msec" aria-labelledby="h-get"><h2 id="h-get">What you get with every order</h2>' + stepsHtml(get).replace('<ol class="msteps">', '<ol class="msteps five">') + '</section>' +
+      '<section class="msec price-sec j" aria-labelledby="h-jp"><div><h2 id="h-jp">$199 a month</h2><p class="mlede">14 days free, no card needed. Then month to month, no setup fee. Your prices, your link, your deposits.</p></div><div class="go2"><button type="button" class="cta" data-t="start">Start free trial</button></div></section>' +
+      '<section class="msec" aria-labelledby="h-jq"><h2 id="h-jq">Questions from jewelers</h2>' + faqHtml([
+        ['Do I need a website?', 'No. The builder is its own link, so it works straight from your Instagram bio, your stories or a DM. If you have a site, it can live there too.'],
+        ['Whose prices does it show?', 'Yours. You set your metal, stone and per-tooth prices, so the live total matches what you\'d quote.'],
+        ['Where does the deposit go?', 'Through your own Stripe, straight to you.'],
+        ['Is the studio photo the final piece?', 'It\'s a photo-real picture of the design they built, so they can see it before they pay. The 3D build and the spec you receive are what the bench works from.'],
+        ['Is there a contract?', 'No. 14 days free with no card, then $199 a month. No setup fee, cancel any month.']]) + '</section>';
+  }
+  function renderMore() {
+    var m = $('more'), sell = sellView() && ui.trial !== 'name';
+    var body = ui.lanes === 'switch' ? (sell ? jewelerMore(false) : shopperMore()) : shopperMore() + jewelerMore(true);
+    m.innerHTML = '<div class="min">' + body + '<footer class="mfoot"><span>VVS Lab</span><a href="#" data-t="noop">Instagram</a><a href="#" data-t="noop">Privacy</a><a href="#" data-t="noop">Terms</a></footer></div>';
+  }
+  function setLane(l) { if (ui.lane === l && !ui.trial) return; ui.lane = l; ui.trial = null; laneEvent('lane_' + l); renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
+  function startTrial() { laneEvent('trial_started'); ui.trial = 'name'; if (ui.mode !== 'door') goDoor(); renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); setTimeout(function () { var f = $('tname'); if (f) try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 350); }
+  function seeBuilder() {
+    var f = $('tname'), n = (f ? f.value : ui.shopLabel).trim().replace(/\s+/g, ' ');
+    if (n.length < 2) { toast('Add your shop\'s name.'); if (f) f.focus(); return; }
+    ui.shopLabel = n; ui.lane = 'get'; setVariant('site', 'shop'); brand(); ui.trial = 'keep'; ui.kbOpen = window.innerWidth >= 900; laneEvent('trial_named');
+    renderOpenings(); box(); if (ui.mode === 'after') renderTray();
+  }
+  function leaveTrial() { ui.trial = null; ui.shopLabel = ''; setVariant('site', 'vvs'); brand(); renderOpenings(); box(); }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-lane], [data-t], #forjbtn, [data-build-go]'); if (!t) return;
+    if (t.hasAttribute('data-lane')) { setLane(t.getAttribute('data-lane')); return; }
+    if (t.id === 'forjbtn') { e.preventDefault(); laneEvent('for_jewelers'); var j = $('forj'); if (ui.mode !== 'door') goDoor(); renderOpenings(); setTimeout(function () { var j2 = $('forj'); if (j2) j2.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }, 30); return; }
+    var bg = t.getAttribute('data-build-go'); if (bg) { applyBuild(bg); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); startCreator(); return; }
+    var a = t.getAttribute('data-t'); e.preventDefault();
+    if (a === 'start') startTrial();
+    else if (a === 'back') { ui.trial = null; renderOpenings(); box(); }
+    else if (a === 'see') seeBuilder();
+    else if (a === 'kbopen') { ui.kbOpen = !ui.kbOpen; renderKeep(); box(); if (ui.kbOpen) { var em = $('temail'); if (em) em.focus(); } }
+    else if (a === 'keep') { var v = ($('temail') || {}).value || ''; ui.trialEmail = v.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ui.trialEmail)) { var er = $('terr'); if (er) er.textContent = 'Add the email you\'d like to sign in with.'; return; } ui.trial = 'done'; laneEvent('trial_kept'); renderKeep(); box(); }
+    else if (a === 'cancel' || a === 'close') leaveTrial();
+    else if (a === 'noop') toast('Not part of the prototype.');
+  });
+  document.addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'tname') { e.preventDefault(); seeBuilder(); } else if (e.target.id === 'temail') { e.preventDefault(); var b = document.querySelector('[data-t="keep"]'); if (b) b.click(); } });
+  document.addEventListener('input', function (e) { if (e.target.id === 'tname') ui.shopLabel = e.target.value; if (e.target.id === 'temail') { ui.trialEmail = e.target.value; var er = $('terr'); if (er) er.textContent = ''; } });
 
   // ---------- start ----------
   setVariant('site', 'vvs'); setVariant('door', 'v12'); brand();

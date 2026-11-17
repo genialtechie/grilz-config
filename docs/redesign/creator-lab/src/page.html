@@ -317,6 +317,98 @@ button.mrow:active { transform: scale(.985); }
   .thead h2, .mhead h2 { font-size: 21px; }
   .app[data-mode="after"]:not([data-after="3"]) .tray { max-height: 62svh; }
 }
+/* ===== the front door: one site for shoppers and jewelers ===== */
+.lane { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--s-glass); border: 1px solid var(--s-line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.lane button { border: 0; background: transparent; border-radius: 999px; padding: 8px 14px; font: 500 13.5px/1 var(--sans); color: var(--s-mut); white-space: nowrap; transition: background .2s ease, color .2s ease; }
+.lane button[aria-selected="true"] { background: var(--ink); color: var(--ink-fg); }
+.forj { text-decoration: none; }
+.app:not([data-mode="door"]) .lane, .app:not([data-mode="door"]) .forj, .app[data-lanes="door"] .lane, .app[data-lanes="switch"] .forj, .app[data-trial] .lane, .app[data-trial] .forj { display: none; }
+.promise { position: absolute; z-index: 3; left: 0; right: 0; text-align: center; padding: 0 20px; font: 600 30px/1.1 var(--sans); letter-spacing: -.035em; color: var(--s-fg); text-wrap: balance; pointer-events: none; }
+.app:not([data-mode="door"]) .promise { display: none; }
+.openA .lede { font-size: 15px; line-height: 1.45; color: var(--s-fg); opacity: .8; max-width: 46ch; }
+.openA .fine, .keepbar .fine, .more .fine { font-size: 12.5px; color: var(--s-mut); }
+.go2 { display: flex; gap: 10px; }
+.openA .go2 .cta { flex: 0 1 260px; }
+.openA .go2 .cta.second { flex: 0 0 auto; }
+.openA .field input { max-width: 420px; }
+.keepbar { position: absolute; z-index: 5; top: 66px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); padding: 12px 12px 12px 16px; border-radius: 20px; background: var(--s-solid); box-shadow: 0 18px 40px -22px rgba(40,36,24,.5), 0 0 0 1px var(--s-line); display: grid; gap: 10px; }
+.keepbar p { font-size: 14px; line-height: 1.35; }
+.kb-row { display: flex; align-items: center; gap: 10px; }
+.kb-row p { flex: 1; }
+.kb-row .cta { flex: none; min-height: 40px; padding: 0 16px; font-size: 14.5px; }
+.keepbar .x { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(18,18,17,.06); font: 400 18px/1 var(--sans); color: var(--s-fg); flex: none; }
+.kb-form { display: none; gap: 8px; }
+.keepbar.open .kb-form { display: flex; }
+.keepbar.open .kb-open { display: none; }
+.kb-form .field { flex: 1; }
+.kb-form .cta { flex: none; padding: 0 18px; min-height: 46px; font-size: 15px; }
+.kb-fine { display: none; }
+.keepbar.open .kb-fine { display: block; margin-top: -4px; }
+.keepbar .err:empty { display: none; }
+/* the page under the first screen */
+.more { background: #f4f3ef; color: var(--s-fg); }
+.app:not([data-mode="door"]) .more { display: none; }
+.min { max-width: 980px; margin: 0 auto; padding: 72px 24px 40px; display: grid; gap: 72px; }
+.msec { display: grid; gap: 20px; }
+.msec h2 { font: 600 32px/1.12 var(--sans); letter-spacing: -.035em; text-wrap: balance; }
+.mlede { font-size: 16px; line-height: 1.5; color: var(--s-fg); opacity: .78; max-width: 52ch; }
+.msteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.msteps.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.msteps li { display: grid; gap: 6px; align-content: start; padding: 18px 16px; border-radius: 20px; background: rgba(255,255,255,.7); position: relative; }
+.msteps li .prev { margin-bottom: 8px; }
+.msteps li .n { position: absolute; top: 18px; right: 16px; font: 500 13px/1 var(--sans); color: var(--s-faint); font-variant-numeric: tabular-nums; }
+.msteps.five .n { display: none; }
+.msteps b { font: 600 16px/1.25 var(--sans); letter-spacing: -.015em; }
+.msteps p { font-size: 14px; line-height: 1.45; color: var(--s-mut); }
+.price-sec { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 28px; padding: 28px; border-radius: 24px; background: rgba(255,255,255,.7); }
+.price-sec > div:first-child { display: grid; gap: 10px; }
+.price-sec.j .go2 .cta { min-width: 220px; }
+.exs { display: flex; gap: 10px; }
+.ex { border: 0; background: transparent; padding: 0; width: 128px; display: grid; gap: 4px; text-align: left; color: var(--s-fg); }
+.ex .pic { height: 86px; border-radius: 16px; background: radial-gradient(90% 90% at 50% 30%, #f8f7f3, var(--s-tile)); display: grid; place-items: center; transition: box-shadow .15s ease; }
+.ex:hover .pic { box-shadow: 0 0 0 1.5px var(--ink); }
+.ex .pic svg { width: 84%; height: 84%; }
+.ex b { font: 500 13.5px/1.2 var(--sans); padding: 2px 4px 0; }
+.ex span:last-child { font-size: 12.5px; color: var(--s-mut); padding: 0 4px; }
+.faq { border-top: 1px solid var(--s-line); }
+.faq details { border-bottom: 1px solid var(--s-line); }
+.faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; padding: 18px 2px; font: 500 16.5px/1.3 var(--sans); letter-spacing: -.01em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 300 22px/1 var(--sans); color: var(--s-mut); transition: transform .2s ease; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { padding: 0 2px 20px; font-size: 15px; line-height: 1.55; color: var(--s-mut); max-width: 62ch; }
+.jband { padding: 40px 32px; border-radius: 28px; background: var(--ink); color: #f4f3ef; justify-items: start; gap: 14px; }
+.jband h2 { color: #fff; font-size: 36px; }
+.jband .mlede { color: #f4f3ef; opacity: .78; }
+.jband .eyebrow { font-size: 14px; color: #e3b95c; }
+.jband .cta { background: #fff; color: var(--ink); min-width: 220px; }
+.jband .fine { color: rgba(244,243,239,.62); }
+.mfoot { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; padding-top: 28px; border-top: 1px solid var(--s-line); font-size: 13.5px; color: var(--s-mut); }
+.mfoot span { margin-right: auto; font-weight: 600; color: var(--s-fg); }
+.mfoot a { color: var(--s-mut); text-decoration: none; }
+@media (max-width: 899px) {
+  .lane button { padding: 7px 11px; font-size: 13px; }
+  .promise { font-size: 22px; }
+  .keepbar { top: 62px; }
+  .kb-sub { display: none; }
+  .keepbar.open .kb-sub { display: inline; }
+  .kb-form { flex-direction: column; }
+  .kb-form .cta { width: 100%; }
+  .openA .go2 .cta { flex: 1 1 auto; }
+  .min { padding: 52px 18px 32px; gap: 56px; }
+  .msec h2 { font-size: 26px; }
+  .msteps, .msteps.five { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .msteps li { grid-template-columns: 44px minmax(0, 1fr); column-gap: 14px; padding: 14px 16px; align-items: center; }
+  .msteps li .prev { grid-row: span 2; margin: 0; }
+  .msteps li .n { display: none; }
+  .price-sec { grid-template-columns: minmax(0, 1fr); padding: 22px 18px; }
+  .exs { overflow-x: auto; margin-inline: -18px; padding-inline: 18px; scrollbar-width: none; }
+  .ex { flex: none; width: 120px; }
+  .jband { padding: 30px 22px; }
+  .jband h2 { font-size: 28px; }
+  .jband .cta, .price-sec .go2 .cta { width: 100%; }
+}
+@media (min-width: 900px) { .bar .lane { position: absolute; left: 50%; transform: translateX(-50%); top: 14px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -327,7 +419,9 @@ button.mrow:active { transform: scale(.985); }
 
     <header class="bar gut">
       <div class="mark"><i>VV</i><span>VVS Lab</span></div>
+      <div class="lane" role="tablist" aria-label="Who it's for"><button type="button" role="tab" data-lane="get" aria-selected="true">Get grillz</button><button type="button" role="tab" data-lane="sell" aria-selected="false">Sell grillz</button></div>
       <div class="bar-r">
+        <a class="pill forj" id="forjbtn" href="#forj">For jewelers</a>
         <div class="pill price only-build" aria-live="polite"><span id="price">$0</span><small>est.</small></div>
         <button type="button" class="pill icon" id="protobtn" aria-label="Prototype switches" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="4.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="11.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
       </div>
@@ -345,9 +439,12 @@ button.mrow:active { transform: scale(.985); }
     <div class="bubble" id="bubble" hidden></div>
     <div class="photo" id="photo" hidden><div class="frame"><img alt="Your studio photo" id="photoimg"></div><p class="cap" id="photocap"></p></div>
 
+    <p class="promise" id="promise">Design your grillz. See the price. We text you.</p>
+    <div class="keepbar" id="keepbar" hidden></div>
     <div class="openA" id="openA" aria-label="Start your build"></div>
 
     <aside class="tray" id="tray" aria-label="Creator"></aside>
     <div class="proto" id="proto" hidden></div>
   </section>
+  <main class="more" id="more" aria-label="More about VVS Lab"></main>
 </div>
