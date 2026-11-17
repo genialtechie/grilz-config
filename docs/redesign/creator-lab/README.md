@@ -106,7 +106,21 @@ in one tap. The "Start empty" button is gone; "Continue your build" appears on
 top only when a build is waiting. The v11 start page stays behind the
 "Start page" switch in the prototype panel, to compare.
 
-v13 (Nov 17): the owner wasn't set on v12 and pointed the way: AI users
+v13 (Nov 17) tried two ways to split the lanes; the owner preferred v6's
+front door instead and asked for words that appeal to both audiences.
+
+v14 (Nov 17): **the front door** is v6's layout in front of today's builder.
+The piece cycles through the popular builds, its name and price above
+"Design your grillz in 3D."; one line for "Getting grillz?" and one for
+"Making grillz?"; "Design your grillz" opens the start page and "Start free as
+a jeweler" starts the trial (the shop's name on the builder, then "Keep it"
+with an email). Below: "What happens when you hit send" with the example
+request on a phone, the price (two versions behind the "Price section"
+switch), and two question lists, Getting grillz and Selling grillz. The logo
+returns home. The code is one block in `50-ui.js` ("the front door") plus the
+front-door styles in `page.html`; test plan `l` walks it.
+
+v15 (Nov 17, the AI chat): the owner wasn't set on v12 and pointed the way: AI users
 expect a text field, so "Start your build" with its builds, OR one AI field
 with a camera inside it, "Describe your grillz or upload inspiration". The
 **composer** is a new shared piece: text on top, a camera and a sparkle send
