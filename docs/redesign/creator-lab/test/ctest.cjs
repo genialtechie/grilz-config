@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: l (the front door: Get | Sell, the page below, the jeweler's trial), o (the start page), v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: l (the front door: the hero, the page below, the jeweler's trial), o (the start page), v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -80,18 +80,18 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await fc.setFiles(out + '/' + tag + '-i0-door.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
       await c('[data-x="go"]'); await p.waitForTimeout(900); await shot('i11-built-from-picture');
       await p.click('#bubble [data-b="x"]').catch(() => {}); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('i12-done-verified');
-    } else if (plan === 'l') {   // the front door: Get | Sell switch, the page below, the jeweler's trial; then the For jewelers door
+    } else if (plan === 'l') {   // the front door: v6's layout with words for both audiences; Design your grillz; the price versions; the questions; the jeweler's trial
       const full = async n => { await p.waitForTimeout(700); await p.screenshot({ path: out + '/' + tag + '-' + n + '.png', fullPage: true }); console.log(n, Date.now() - t0); };
       await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
-      await shot('l1-get'); await full('l2-get-page');
-      await c('.lane [data-lane="sell"]'); await shot('l3-sell'); await full('l4-sell-page');
-      await c('#openA [data-t="start"]'); await shot('l5-trial-name');
-      await p.fill('#tname', 'Crown Gold'); await c('[data-t="see"]'); await shot('l6-trial-builder');
-      if (await p.isVisible('[data-t="kbopen"]')) { await c('[data-t="kbopen"]'); await shot('l7-keep-open'); }
+      await p.waitForTimeout(2200); await shot('l1-home'); await full('l2-home-page');
+      await c('.home [data-h="design"]'); await shot('l3-start-page');
+      await p.click('.bar .mark'); await p.waitForTimeout(600);
+      await proto('pricev', 'one'); await p.evaluate(() => window.scrollTo(0, 0)); await full('l4-home-page-price-one');
+      if (await p.isVisible('.qtabs')) { await c('.qtabs [data-q2="sell"]'); await p.evaluate(() => document.querySelector('.qtabs').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500); await p.screenshot({ path: out + '/' + tag + '-l5-questions-sell.png' }); console.log('l5-questions-sell'); }
+      await p.evaluate(() => window.scrollTo(0, 0)); await c('.home [data-t="start"]'); await shot('l6-trial-name');
+      await p.fill('#tname', 'Crown Gold'); await c('[data-t="see"]'); await shot('l7-trial-builder');
+      if (await p.isVisible('[data-t="kbopen"]')) await c('[data-t="kbopen"]');
       await p.fill('#temail', 'shop@example.com'); await c('[data-t="keep"]'); await shot('l8-kept');
-      await c('#keepbar [data-t="close"]');
-      await proto('lanes', 'door'); await p.evaluate(() => window.scrollTo(0, 0)); await shot('l9-door-get'); await full('l10-door-page');
-      await c('#forjbtn'); await p.waitForTimeout(900); await p.screenshot({ path: out + '/' + tag + '-l11-forj-scrolled.png' }); console.log('l11-forj-scrolled');
     }
   } catch (e) { console.log('STEP FAIL', e.message.split('\n')[0]); }
   console.log(errs.slice(0, 8).join('\n') || 'no errors');

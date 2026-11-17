@@ -20,7 +20,7 @@ private Claude artifact.
 | creator 8 | Nov 17 | After the owner's hierarchy review: one shared Row (picture on the right) for the menu, fitting and next steps; gold icons; one screen to send; footers on every screen; Undo next to Turn; Change chips on the stage |
 | creator 9 | Nov 17 | Three structures for the builder to compare, so Your build stays seen: a stacked sheet over it, expand in place, a build strip; each with Up next or a Next button |
 | creator 10 | Nov 17 | The chosen structure: the build strip with Back and Next, gold rings on parts not opened yet, the Select teeth toggle on the stage, a quick question that returns after Undo (phone, laptop, tablet) |
-| creator 13 | Nov 17 | The front door: Get grillz | Sell grillz switch or a For jewelers door; the shopper's start page with one line of promise; the page below for shoppers and for jewelers; the jeweler's trial with their name on the builder (phone, laptop, full pages) |
+| creator 14 | Nov 17 | The front door: v6's layout with words for shoppers and jewelers, the page below (what happens when you hit send, the price in two versions, two question lists), the jeweler's trial (phone, laptop, full pages) |
 | port 1-2 | Nov 16 | The approved piece inside the real builder (iced; a per-tooth mix); every state next to the prototype is in `docs/redesign/port/screenshots/` |
 
 Only our own work is here. Reference images (competitor sites, games, the

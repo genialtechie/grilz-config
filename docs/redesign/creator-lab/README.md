@@ -106,18 +106,16 @@ in one tap. The "Start empty" button is gone; "Continue your build" appears on
 top only when a build is waiting. The v11 start page stays behind the
 "Start page" switch in the prototype panel, to compare.
 
-v13 (Nov 17): **the front door**, the hybrid landing page, on top of v12's
-start page. Two versions behind the "Two lanes" switch: a **Get grillz | Sell
-grillz** switch in the top bar (a `?lane=sell` link opens Sell), or **shopper
-first with a "For jewelers" door** that scrolls to a dark jeweler band. The
-shopper's first screen is the start page with one line above it ("Design your
-grillz. See the price. We text you."); the page below holds How it works, the
-price plainly and Questions. On the Sell side the panel pitches jewelers and
-the piece cycles through the popular builds; below: what you get with every
-order, $199 a month, and jewelers' questions (the live site's facts, without
-its Shopify promise). "Start free trial" asks for the shop's name, re-dresses
-the builder with it (name, monogram, "Send to Crown Gold"), and a bar on top
-offers "Keep it": email and "Start 14 days free". Lane choices are logged in
-`ui.laneLog` as the lane test's first signal. The code is one block in
-`50-ui.js` ("the front door") plus the `.lane`, `.promise`, `.keepbar` and
-`.more` styles in `page.html`. Test plan `l` walks it.
+v13 (Nov 17) tried two ways to split the lanes; the owner preferred v6's
+front door instead and asked for words that appeal to both audiences.
+
+v14 (Nov 17): **the front door** is v6's layout in front of today's builder.
+The piece cycles through the popular builds, its name and price above
+"Design your grillz in 3D."; one line for "Getting grillz?" and one for
+"Making grillz?"; "Design your grillz" opens the start page and "Start free as
+a jeweler" starts the trial (the shop's name on the builder, then "Keep it"
+with an email). Below: "What happens when you hit send" with the example
+request on a phone, the price (two versions behind the "Price section"
+switch), and two question lists, Getting grillz and Selling grillz. The logo
+returns home. The code is one block in `50-ui.js` ("the front door") plus the
+front-door styles in `page.html`; test plan `l` walks it.

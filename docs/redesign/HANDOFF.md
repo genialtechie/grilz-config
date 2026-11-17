@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder and the front door, v13) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
+| Grill Creator Lab (the overhauled builder and the front door, v14) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -91,11 +91,11 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    start page "even if it means redesigning the start empty screen": v12 has
    three ways in and one-tap popular builds (v11 behind a switch).
    **Waiting on:** the owner's verdict on v12's start page.
-5. **The front door (v13, this chat):** both lane versions built behind the
-   "Two lanes" switch. **Waiting on:** the owner's pick (switch or door), and
-   a verdict on my two calls (the Sell side cycles the popular builds; the
-   jeweler page reuses the live site's facts). Shoppers' questions still need
-   the owner's answers on delivery time, returns and warranty.
+5. **The front door (v14, this chat):** v6's layout with words for both
+   audiences, in front of today's builder (see the Nov 17 "second pass" row
+   in plan.md). **Waiting on:** the owner's pick between the two price
+   versions; answers on delivery time, returns and warranty for the shoppers'
+   questions; and whether "Sign in" and "Start free" stay in the top bar.
 6. **Later rounds:**
    - the shop's brand, and coming back to a design
    - building the approved builder into the real app
