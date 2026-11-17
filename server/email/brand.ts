@@ -11,7 +11,7 @@ export type Palette = {
   text: string;
   muted: string;
   line: string;
-  /** The italic headline word (large text: needs 3:1 against the page). */
+  /** The highlighted headline word (large text: needs 3:1 against the page). */
   highlight: string;
   /** Inline links in body text (needs 4.5:1 against the page). */
   link: string;
@@ -21,16 +21,17 @@ export type Palette = {
 
 export type Brand = {
   name: string;
-  /** Top of the email: an image logo, or the name set in the serif. */
-  logo: { src: string; alt: string; height: number } | { wordmark: string };
+  /** Top of the email: an image logo (with an optional word set beside it, as in "VVS" mark + "Lab"), or the name set in type. */
+  logo: { src: string; alt: string; height: number; word?: string } | { wordmark: string };
   /** Sign-off line under the body, e.g. "— The VVS Lab team". */
   signOff: string;
-  /** Mark closing the footer (VVS Lab: Karat), or a "Powered by" line for white-label mail. */
-  footerMark: { src: string; alt: string; height: number } | { poweredBy: { label: string; href: string } };
+  /** What closes the footer: nothing, an image, or a "Powered by" line for white-label mail. */
+  footerMark: { none: true } | { src: string; alt: string; height: number } | { poweredBy: { label: string; href: string } };
   light: Palette;
   /** Applied by clients that support prefers-color-scheme (Apple Mail, iOS Mail, Outlook apps). */
   dark: Palette;
-  fonts: { serif: string; sans: string; webFontCss?: string };
+  /** `display` sets headlines and quotes; `sans` everything else. */
+  fonts: { display: string; sans: string; webFontCss?: string };
   /** Legal sender line (CAN-SPAM: name and physical address). */
   company: string;
   links: { label: string; href: string }[];
@@ -38,9 +39,9 @@ export type Brand = {
   socials: { label: string; href: string; icon: string }[];
 };
 
-const SERIF = `'Instrument Serif',Georgia,'Times New Roman',serif`;
-const SANS = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-const INSTRUMENT_SERIF = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap';
+// The redesign's one family, Geist (Apple Mail and iOS load it; Gmail and Outlook fall back to the system sans).
+const SANS = `Geist,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const GEIST = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap';
 const MAGPOLLO = 'Magpollo Corp · 2655 Daniel Park Run, Dacula, GA 30019';
 
 const at = (origin: string, path: string) => (path.startsWith('http') ? path : `${origin.replace(/\/$/, '')}${path.startsWith('/') ? '' : '/'}${path}`);
@@ -51,18 +52,19 @@ const vvsLinks = (origin: string) => [
   { label: 'Privacy', href: at(origin, '/privacy') },
 ];
 
-/** VVS Lab writing to jewelers: one cream surface (ink in dark mode), the gold
- * mark, and the product's red accent (#ce4257, as in src/App.css). */
+/** VVS Lab's own mail (Nov 2026 redesign): one stone surface (ink in dark mode), the gold
+ * "VVS" mark + "Lab", ink buttons, gold for the one highlighted headline word. Gold is the
+ * metal, so it stays out of small text: on stone it is 4.1:1, fine for large type only. */
 export function vvsBrand(origin: string): Brand {
   return {
     name: 'VVS Lab',
-    logo: { src: at(origin, '/assets/email/vvs-mark.png'), alt: 'VVS Lab', height: 44 },
+    logo: { src: at(origin, '/assets/email/vvs-mark.png'), alt: 'VVS', height: 22, word: 'Lab' },
     signOff: '— The VVS Lab team',
-    footerMark: { src: at(origin, '/assets/mascot/karat-cool.png'), alt: 'Karat, the VVS Lab mascot', height: 64 },
-    // Contrast on the page: highlight 4.3:1 (large text), link 5.9:1, button text 4.6:1; dark 6.2:1.
-    light: { page: '#fbf7f0', text: '#1b1714', muted: '#6f655a', line: '#e7ddcd', highlight: '#ce4257', link: '#b02f45', button: '#ce4257', buttonText: '#ffffff' },
-    dark: { page: '#1b1714', text: '#f3ede4', muted: '#b5a995', line: '#3b332b', highlight: '#ec7385', link: '#ec7385', button: '#ec7385', buttonText: '#1b1714' },
-    fonts: { serif: SERIF, sans: SANS, webFontCss: INSTRUMENT_SERIF },
+    footerMark: { none: true },
+    // Contrast on the page: text 16.9:1, muted 5.3:1, highlight 4.1:1 (large text), button text 18.7:1; dark: muted 8.8:1, highlight 10.1:1.
+    light: { page: '#f4f3ef', text: '#121211', muted: '#66645e', line: '#dcdad3', highlight: '#9a6d16', link: '#121211', button: '#121211', buttonText: '#ffffff' },
+    dark: { page: '#121211', text: '#f4f3ef', muted: '#b5b2a9', line: '#2e2d2a', highlight: '#e3b95c', link: '#f4f3ef', button: '#f4f3ef', buttonText: '#121211' },
+    fonts: { display: SANS, sans: SANS, webFontCss: GEIST },
     company: MAGPOLLO,
     links: vvsLinks(origin),
     socials: [{ label: 'Instagram', href: 'https://instagram.com/vvslab.ai', icon: at(origin, '/assets/email/instagram-tile.png') }],
@@ -77,9 +79,9 @@ export function shopBrand(brand: TenantConfig['brand'], origin: string): Brand {
     logo: brand.logo ? { src: at(origin, brand.logo), alt: brand.name, height: 36 } : { wordmark: brand.name },
     signOff: `— ${brand.name}`,
     footerMark: { poweredBy: { label: 'VVS Lab', href: 'https://vvslab.magpollo.com/?utm_source=email&utm_medium=powered_by' } },
-    light: { page: '#ffffff', text: '#1b1714', muted: '#6f655a', line: '#ece5da', highlight: accent, link: accent, button: accent, buttonText: '#ffffff' },
-    dark: { page: '#1b1714', text: '#f3ede4', muted: '#b5a995', line: '#3b332b', highlight: '#f3ede4', link: '#f3ede4', button: accent, buttonText: '#ffffff' },
-    fonts: { serif: SERIF, sans: SANS, webFontCss: INSTRUMENT_SERIF },
+    light: { page: '#ffffff', text: '#121211', muted: '#66645e', line: '#e6e5e0', highlight: accent, link: accent, button: accent, buttonText: '#ffffff' },
+    dark: { page: '#121211', text: '#f4f3ef', muted: '#b5b2a9', line: '#2e2d2a', highlight: '#f4f3ef', link: '#f4f3ef', button: accent, buttonText: '#ffffff' },
+    fonts: { display: SANS, sans: SANS, webFontCss: GEIST },
     company: MAGPOLLO,
     links: [],
     socials: brand.instagram ? [{ label: 'Instagram', href: `https://instagram.com/${encodeURIComponent(brand.instagram.replace(/^@/, ''))}`, icon: at(origin, '/assets/email/instagram-tile-ink.png') }] : [],

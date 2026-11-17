@@ -63,7 +63,7 @@ async function main() {
   mkdirSync(out, { recursive: true });
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '-d', 'public', '--bind', '127.0.0.1'], { stdio: 'ignore' });
   await new Promise((resolve) => setTimeout(resolve, 800));
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
   try {
     for (const [name, html] of Object.entries(emails)) {
       writeFileSync(`${out}/${name}.html`, html);

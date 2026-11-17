@@ -131,11 +131,11 @@ describe('lead emails', () => {
   it('makes paying the deposit the customer’s one action when there is a pay link', async () => {
     const withLink = await customerEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: false }, depositHref: 'https://pay.test/deposit' });
     expect(withLink.html).toContain('href="https://pay.test/deposit"');
-    expect(withLink.html).toContain('Pay $500 deposit');
+    expect(withLink.html).toContain('Start your order · $500 deposit');
     expect(withLink.text).toContain('https://pay.test/deposit');
     const without = await customerEmail({ lead: lead(), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: false } });
-    expect(without.html).not.toContain('Pay $500 deposit');
-    expect(without.html).toContain('will tell you how to pay');
+    expect(without.html).not.toContain('Start your order · $500 deposit');
+    expect(without.html).toContain('tell you how to pay');
   });
 
   it('tells the shop when a deposit is paid and what is left', async () => {

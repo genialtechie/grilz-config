@@ -4,7 +4,7 @@ import { displayContact } from '../src/lib/contact.js';
 import { displayTotal, type PriceBreakdown } from '../src/lib/pricing.js';
 import type { TenantConfig } from '../src/lib/tenant/schema.js';
 import { shopBrand, vvsBrand, type Brand } from './email/brand.js';
-import { CTA, EmailFrame, Headline, Illustration, InlineLink, Paragraph, Photo, Quote, SectionLabel, SignOff, Steps } from './email/components.js';
+import { CTA, Details, EmailFrame, Headline, Illustration, InlineLink, Paragraph, Photo, Quote, SectionLabel, SignOff, Steps } from './email/components.js';
 
 // Every email we send, built from the kit in server/email/ (React Email,
 // written with createElement so Vercel bundles it). Design photos are inline
@@ -51,20 +51,26 @@ const html = (element: ReactElement) => render(element);
 const codeBlock = (brand: Brand, code: string) =>
   h(Paragraph, { brand, margin: '0 0 16px' }, 'Or enter this code: ', h('strong', { style: { fontSize: '22px', letterSpacing: '0.18em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' } }, code));
 
+/** VVS Lab's own shop: it takes its own orders, so its customer mail is VVS Lab's, in the first person. */
+const isVvs = (config: TenantConfig) => config.brand.name === 'VVS Lab';
+/** "Fit: Mold kit by mail" → "Mold kit by mail" (the summary carries the fitting as its own line). */
+const fitOf = (summary: string[]) => summary.find((line) => /^fit:/i.test(line))?.replace(/^fit:\s*/i, '') ?? null;
+const designRows = (summary: string[]): [string, string][] => summary.filter((line) => !/^fit:/i.test(line)).map((line, index) => [index === 0 ? 'Designed' : '', line]);
+/** The reference rows under the one action: how to reach them, what they designed, the fitting. */
+function leadRows(brand: Brand, lead: LeadForEmail, reach: ReturnType<typeof contactLink>, extra: [string, string][] = []): [ReturnType<typeof h> | string, ReturnType<typeof h> | string][] {
+  const fit = fitOf(lead.summary);
+  return [
+    [reach.channel === 'instagram' ? 'Instagram' : 'Phone', h(InlineLink, { brand, href: reach.href }, reach.label)],
+    ...(lead.email ? [['Email', h(InlineLink, { brand, href: `mailto:${lead.email}` }, lead.email)] as [string, ReturnType<typeof h>]] : []),
+    ...designRows(lead.summary),
+    ...(fit ? [['Fitting', fit] as [string, string]] : []),
+    ...extra,
+  ];
+}
+
 function designPhoto(brand: Brand, images: EmailImages, caption: string) {
   const cid = images.photo ? 'photo' : images.preview ? 'preview' : null;
   return cid ? h(Photo, { brand, src: `cid:${cid}`, alt: caption, caption }) : null;
-}
-
-/** What the customer designed, one line per choice. */
-function specList(brand: Brand, label: string, summary: string[]) {
-  if (!summary.length) return null;
-  return h(
-    Fragment,
-    null,
-    h(SectionLabel, { brand }, label),
-    ...summary.map((line, index) => h(Paragraph, { key: index, brand, size: 16, margin: '0 0 4px' }, line)),
-  );
 }
 
 export type ShopEmailInput = {
@@ -95,7 +101,6 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     ? ` Metal at the market price of ${new Date(lead.price.market.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })} (gold ${usd(Math.round(lead.price.market.gold))}/oz, silver ${usd(Math.round(lead.price.market.silver * 100) / 100)}/oz, platinum ${usd(Math.round(lead.price.market.platinum))}/oz).`
     : '';
   const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' The customer saw it as a "from" price.' : ' The customer saw "price on request".';
-  const contacts = [h(InlineLink, { key: 'reach', brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])];
   // "Service fee $60 + Metal $900 − Set discount $45": a discount is subtracted, not added as a negative.
   const breakdown = lead.price.lines.map((line, i) => `${i ? (line.amount < 0 ? ' − ' : ' + ') : ''}${line.label} ${usd(Math.abs(line.amount))}`).join('');
   const element = h(
@@ -112,10 +117,9 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     designPhoto(brand, images, images.photo ? 'AI studio photo of the customer’s design' : '3D design the customer built'),
     photoPending && h(Paragraph, { brand, muted: true, size: 13, margin: '6px 0 0' }, 'The studio photo is still rendering. It will follow in this thread.'),
     lead.note && h(Quote, { brand }, lead.note),
-    h(CTA, { brand, href: reach.href, margin: '26px 0 10px' }, reachCta(reach, first)),
-    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, ...contacts),
+    h(CTA, { brand, href: reach.href, margin: '26px 0 28px' }, reachCta(reach, first)),
+    h(Details, { brand, rows: leadRows(brand, lead, reach) }),
     depositOffer && h(Paragraph, { brand, size: 15, margin: '20px 0 0' }, 'Take a deposit on orders like this? ', h(InlineLink, { brand, href: depositOffer }, 'Set it up in 2 minutes')),
-    specList(brand, 'What they designed', lead.summary),
     h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${market}${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
   );
   const text = [
@@ -183,18 +187,15 @@ export async function depositPaidEmail({ lead, config, origin, amount }: { lead:
       preheader: balance,
       footer: { reason: `You're getting this because design requests for ${config.brand.name} go to this address. Lead ${lead.id.slice(0, 8)}.` },
     },
-    h(Illustration, { src: `${origin.replace(/\/$/, '')}/assets/mascot/karat-hype.png`, width: 132, align: 'left', alt: 'Karat celebrating' }),
     h(Headline, { brand, text: `*${first}* paid a ${usd(amount)} deposit` }),
-    h(Paragraph, { brand, margin: '20px 0 0' }, `It's in your Stripe account and their spot is held. Reach out to book the next step.`),
-    h(CTA, { brand, href: reach.href, margin: '24px 0 10px' }, reachCta(reach, first)),
-    h(Paragraph, { brand, muted: true, size: 15, margin: '0' }, `${lead.name} · `, h(InlineLink, { brand, href: reach.href }, reach.label), ...(lead.email ? [' · ', h(InlineLink, { key: 'email', brand, href: `mailto:${lead.email}` }, lead.email)] : [])),
-    specList(brand, 'What they designed', lead.summary),
-    h(Paragraph, { brand, size: 16, margin: '16px 0 0' }, balance),
+    h(Paragraph, { brand, margin: '18px 0 0' }, `It's in your Stripe account. Their order has started.`),
+    h(CTA, { brand, href: reach.href, margin: '22px 0 28px' }, reachCta(reach, first)),
+    h(Details, { brand, rows: leadRows(brand, lead, reach, [['Left to pay', left > 0 ? `${usd(left)} on the ${usd(lead.total)} estimate` : 'Nothing: it covers the estimate']]) }),
     h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, 'Paid by card through Stripe Checkout on your account. Refunds and payouts are in your Stripe dashboard.'),
   );
   const text = [
     `${lead.name} paid a ${usd(amount)} deposit.`,
-    "It's in your Stripe account and their spot is held. Reach out to book the next step.",
+    "It's in your Stripe account. Their order has started.",
     '',
     `${reachCta(reach, first)}: ${reach.label} (${reach.href})`,
     lead.email ? `Email: ${lead.email}` : '',
@@ -217,49 +218,58 @@ export async function depositPaidEmail({ lead, config, origin, amount }: { lead:
  */
 export async function customerEmail({ lead, config, origin, images, depositHref = null }: { lead: LeadForEmail; config: TenantConfig; origin: string; images: EmailImages; depositHref?: string | null }): Promise<RenderedEmail> {
   const shop = config.brand;
-  const brand = shopBrand(shop, origin);
+  const own = isVvs(config);
+  const brand = own ? vvsBrand(origin) : shopBrand(shop, origin);
   const price = displayTotal(config.pricing, lead.total, usd).text;
   const hidden = config.pricing.display === 'hidden';
   const reach = contactLink(lead.contact);
   const ig = shop.instagram ? `https://instagram.com/${encodeURIComponent(shop.instagram.replace(/^@/, ''))}` : null;
   const deposit = lead.deposit !== null && lead.deposit > 0 ? usd(lead.deposit) : null;
-  // With a pay link, the deposit is the one action; otherwise it's messaging the shop.
-  const pay = deposit && depositHref ? { href: depositHref, label: `Pay ${deposit} deposit` } : null;
-  const contactStep = `${shop.name} contacts you at ${reach.label} to go over your design${hidden ? ' and give you a price' : ' and confirm the final price'}.`;
-  const steps = pay
-    ? [`Hold your spot with a ${deposit} deposit.`, contactStep]
-    : [contactStep, ...(deposit ? [`A ${deposit} deposit holds your spot. ${shop.name} will tell you how to pay.`] : [])];
+  const pay = deposit && depositHref ? { href: depositHref, label: `Start your order · ${deposit} deposit` } : null;
+  const who = own ? 'We' : shop.name;
+  const verb = reach.channel === 'instagram' ? 'message' : 'text';
+  const fit = fitOf(lead.summary);
+  const steps = [
+    `${who} ${verb} you at ${reach.label}`,
+    fit ? `Fitting: ${fit.charAt(0).toLowerCase()}${fit.slice(1)}` : 'Your fitting',
+    `${own ? 'We make' : 'They make'} it`,
+    'It’s yours',
+    ...(deposit && !pay ? [`A ${deposit} deposit starts your order. ${own ? 'We’ll' : `${shop.name} will`} tell you how to pay.`] : []),
+  ];
   const questions = [
     'Questions? Reply to this email',
     ...(shop.phone ? [`, call ${displayContact(shop.phone)}`] : []),
-    ...(pay && ig ? [', or ', h(InlineLink, { key: 'ig', brand, href: ig }, 'message them on Instagram')] : []),
+    ...(ig ? [', or ', h(InlineLink, { key: 'ig', brand, href: ig }, `message ${own ? 'us' : 'them'} on Instagram`)] : []),
     '.',
   ];
+  const subject = `Your grillz design is with ${shop.name}`;
   const element = h(
     EmailFrame,
     {
       brand,
-      title: `${shop.name} has your design`,
-      preheader: reach.channel === 'instagram' ? `Next: they'll message you on Instagram at ${reach.label}.` : `Next: they'll text you at ${reach.label}.`,
-      footer: { reason: `You're getting this because you sent a design to ${shop.name} with the VVS Lab builder. This is a one-time confirmation.` },
+      title: subject,
+      preheader: `${own ? 'We’ll' : `${shop.name} will`} ${verb} you at ${reach.label}.`,
+      footer: { reason: `You're getting this because you sent a design to ${shop.name}${own ? '' : ' with the VVS Lab builder'}. This is a one-time confirmation.` },
     },
-    h(Headline, { brand, text: `${shop.name.replace(/\*/g, '')} has your *design*` }),
-    h(Paragraph, { brand, margin: '18px 0 0' }, `Thanks, ${firstName(lead.name)}. `, hidden ? 'They’ll price it for you.' : h(Fragment, null, 'Your estimate is ', h('strong', null, price), '.')),
+    h(Headline, { brand, text: own ? `Sent. We’ll *${verb} you*.` : `Sent. ${shop.name.replace(/\*/g, '')} will *${verb} you*.` }),
+    h(Paragraph, { brand, margin: '18px 0 0' }, `Thanks, ${firstName(lead.name)}. `, hidden ? `${own ? 'We’ll' : 'They’ll'} price it for you.` : h(Fragment, null, 'Your estimate is about ', h('strong', null, price), `; ${own ? 'we confirm' : `${shop.name} confirms`} the exact price after your fitting.`)),
     designPhoto(brand, images, images.photo ? AI_DISCLOSURE : 'Your 3D design'),
+    pay && h(CTA, { brand, href: pay.href, margin: '24px 0 10px' }, pay.label),
+    pay && h(Paragraph, { brand, muted: true, size: 15, margin: '0 0 6px' }, 'Optional. It counts toward your grill. The link works for 30 days.'),
     h(SectionLabel, { brand }, 'What happens next'),
     h(Steps, { brand, steps }),
-    pay ? h(CTA, { brand, href: pay.href, margin: '18px 0 0' }, pay.label) : ig && h(CTA, { brand, href: ig, margin: '18px 0 0' }, `Message ${shop.name}`),
-    specList(brand, 'Your design', lead.summary),
+    !pay && ig && h(CTA, { brand, href: ig, margin: '22px 0 0' }, `Message ${own ? 'us' : shop.name}`),
+    h(Details, { brand, rows: designRows(lead.summary).map(([label, value], index): [string, string] => [index === 0 ? 'Your design' : label, value]) }),
     h(Paragraph, { brand, muted: true, size: 14, margin: '24px 0 0' }, ...questions),
     h(SignOff, { brand }),
   );
   const text = [
-    `${shop.name} has your design. Thanks, ${firstName(lead.name)}.`,
-    hidden ? 'They’ll price it for you.' : `Your estimate is ${price}.`,
+    `Sent. ${own ? 'We’ll' : `${shop.name} will`} ${verb} you at ${reach.label}. Thanks, ${firstName(lead.name)}.`,
+    hidden ? 'They’ll price it for you.' : `Your estimate is about ${price}; the exact price is confirmed after your fitting.`,
+    pay ? `\n${pay.label}: ${pay.href}\nOptional. It counts toward your grill. The link works for 30 days.` : '',
     '',
     'What happens next:',
     ...steps.map((step, index) => `${index + 1}. ${step}`),
-    pay ? `\n${pay.label}: ${pay.href}` : '',
     '',
     'Your design:',
     ...lead.summary.map((line) => `- ${line}`),
@@ -268,7 +278,7 @@ export async function customerEmail({ lead, config, origin, images, depositHref 
   ]
     .filter((line) => line !== '')
     .join('\n');
-  return { subject: `${shop.name} has your grillz design`, html: await html(element), text };
+  return { subject, html: await html(element), text };
 }
 
 /** Self-serve signup: the one-time link that signs the new owner in. */
