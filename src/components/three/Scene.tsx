@@ -18,7 +18,7 @@ const SWING_SECONDS = 7;
 const overlays = () =>
   typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches ? { top: 0.12, bottom: 0.2 } : { top: 0.08, bottom: 0.08 };
 /** With a frame (the creator), the share of the free area the piece fills, as in the Grill Creator Lab. */
-const FRAME_FILL = 0.9;
+const FRAME_FILL = 0.84;
 /** Front, left and right: how far round the side views turn (radians from the front). */
 const SIDE_TURN = 1.05;
 /** Waits for the opening still to fade before the camera moves in on the teeth, so the two never disagree on screen. */

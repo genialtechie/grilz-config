@@ -7,7 +7,6 @@ import { fontPairClass, themeStyle } from '../../lib/tenant/theme';
 import { monogram } from '../../lib/tenant/monogram';
 import { baseToothState } from '../../lib/hooks/useGrillzCustomization';
 import { toothCustomization } from '../../lib/toothCustomization';
-import { capturePreview } from '../../lib/capturePreview';
 import { downscaleImage } from '../../lib/downscaleImage';
 import { depositFor, displayTotal } from '../../lib/pricing';
 import { hasDesignHash, saveDesign, startingDesign } from '../../lib/savedDesign';
@@ -311,11 +310,13 @@ export default function CreatorApp() {
     if (b.to === 'teeth') setPicks([]);
   };
 
-  const done = () => {
+  const done = async () => {
     const spec = toSpec(design);
     if (!spec) return;
     let preview = '';
     try {
+      // The capture code comes with three.js, so it loads with the 3D, not with the panel.
+      const { capturePreview } = await import('../../lib/capturePreview');
       if (three.current) preview = capturePreview(three.current, spec.teeth.map((t) => t.index));
     } catch {
       // no 3D (WebGL off): the design still goes on without a still
@@ -355,7 +356,7 @@ export default function CreatorApp() {
         return;
       }
       case 'done':
-        done();
+        void done();
         return;
       case 'choice':
         buzz();
@@ -600,7 +601,7 @@ export default function CreatorApp() {
     }
     if (q === 'happy') {
       if (v === 'done') {
-        done();
+        void done();
         return;
       }
       quietUntil.current = performance.now() + QUIET_AFTER_KEEP_MS;
@@ -1018,7 +1019,6 @@ export default function CreatorApp() {
             onEmpty={() => startCreator(blankDesign(shop), null)}
             onContinue={() => {
               setWaiting(false);
-              setHistory(freshHistory());
               setVisited((v) => ({ teeth: true, ...v }));
               setMode('build');
             }}
