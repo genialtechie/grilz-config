@@ -51,3 +51,13 @@ After Done (v7, Nov 17), each screen taken through with the owner first:
 The prototype switch "Opened from" flips between VVS Lab's own site (VVS Lab
 texts; no in-store fitting yet) and a jeweler's builder (Gold Lab). Nothing is
 sent: the code, the deposit and the AI photo are simulated, and say so.
+
+v8 (Nov 17, after the owner's review: "a design system should be slowly built
+and components reused"). Shared pieces now: the **Row** (words left, round
+picture right; the menu, the fitting choices, the steps after sending), the
+**Thumb** (a 3D render, a swatch, a diagram or one of the gold icons), the
+**section** (one title, then rows or fields), the **footer** (a smaller
+secondary button beside the main one), chips, fields and the stage tools.
+After Done is now one screen to send (price, fitting, first name and phone),
+then the code, then Sent; no stages on those screens. On the stage: Undo next
+to Turn (any change), and the Change chips beside the mouth tools.

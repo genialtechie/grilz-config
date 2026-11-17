@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v7) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
+| Grill Creator Lab (the overhauled builder, v8) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -75,16 +75,16 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 2. ~~The own-site question~~ Decided Nov 17: on VVS Lab's own site the
    shopper sees VVS Lab and VVS Lab texts them (no partners yet). Deposit
    words: "$150 now, counted toward your grill. [Shop] confirms the rest."
-3. ~~Build screens 1 to 3~~ Done in Creator Lab v7 (see
-   `creator-lab/README.md`). Next: the owner reviews v7. Choices made while
-   building that the owner hasn't seen yet, to raise on slides:
-   - Sent has no bottom button (the deposit is the main action there).
-   - On VVS Lab's own site, In-store fitting is left out (VVS Lab has no store).
-   - The "usually within a day" line was left out of the Sent headline,
-     because it depends on the shop.
-4. **Later rounds:**
-   - the AI paths (describe it, or start from a picture; a free sign-up is
-     needed because AI costs per use)
+3. ~~Build screens 1 to 3~~ Done, then reworked in v8 after the owner's
+   review (see the Nov 17 "design system and hierarchy" row in plan.md and
+   `creator-lab/README.md`). Reuse the shared pieces for every new screen.
+   Open: the owner said "no need for stages tab at the top" while reviewing
+   the screens after Done; they're removed there. Ask whether the builder's
+   own stages (Teeth · Metal · Finish · Stones · Extras) should go too.
+4. **Next round: the AI paths** (the owner's pick): "Describe it" and "Start
+   from a picture", behind the free phone sign-up. Take it screen by screen
+   on slides first.
+5. **Later rounds:**
    - the hybrid front door
    - the shop's brand, and coming back to a design
    - building the approved builder into the real app
@@ -92,7 +92,7 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    - VVS Lab's brand and the 17 emails
    - the 3D follow-ups: posters, speed on real phones, studio photo prompts,
      the mouth open and close toggle
-5. **Go-live** only when the owner says.
+6. **Go-live** only when the owner says.
 
 ## Building and checking the Creator Lab
 

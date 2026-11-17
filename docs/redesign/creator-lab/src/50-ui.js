@@ -64,7 +64,7 @@
       BUILDS.map(function (b) { return '<button type="button" class="card" data-pick="' + b[0] + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><em>' + priceOf(b[0]) + '</em></button>'; }).join('');
   }
   function startCreator() {
-    if (!ui.t0) ui.t0 = performance.now();
+    if (!ui.t0) ui.t0 = performance.now(); freshHistory();
     ui.cat = null; clearPicks(); ui.visited = {}; ui.extra = null;
     if (!onList().length) {
       ui.build = 'empty';
@@ -94,10 +94,16 @@
     var out = []; [on.filter(function (k) { return k < 16; }), on.filter(function (k) { return k >= 16; })].forEach(function (row) { row.forEach(function (k, i) { if (i % 2 === 0) out.push(k); }); }); return out;
   }
   function sameSet(a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) >= 0; }); }
-  function applyRow() {                  // which teeth the choices below go to
+  function changeBar() {                 // on the stage, beside the mouth tools: which teeth the next choice goes to
+    var bar = $('changebar'), show = ui.mode === 'build' && onList().length > 0 && ui.cat !== 'teeth' && ui.layout === 'menu';
+    bar.hidden = !show; app.toggleAttribute('data-change', show); if (!show) return;
+    bar.innerHTML = applyRow();
+    var on = bar.querySelector('.chip[aria-pressed="true"]'); if (on && (on.offsetLeft + on.offsetWidth > bar.scrollLeft + bar.clientWidth || on.offsetLeft < bar.scrollLeft)) bar.scrollLeft = Math.max(0, on.offsetLeft - 70);
+  }
+  function applyRow() {                  // which teeth the choices go to
     var on = onList(), pk = picked(), mine = pk.length > 0;
     var chips = GROUPS.map(function (g) { var tg = groupTeeth(g[0]); if (!tg.length || tg.length === on.length) return ''; var hit = mine && sameSet(pk, tg); if (hit) mine = false; return chip('pick', g[0], g[1], hit); }).join('');
-    return '<div class="apply"><p class="lab">Change</p><div class="chips">' + chip('pick', 'all', 'Whole set', !pk.length) + chips + (mine ? chip('pick', 'mine', pk.length + (pk.length === 1 ? ' tooth' : ' teeth') + ' picked', true) : '') + '</div></div>';
+    return '<span class="lab">Change</span><div class="chips">' + chip('pick', 'all', 'Whole set', !pk.length) + chips + (mine ? chip('pick', 'mine', pk.length + (pk.length === 1 ? ' tooth' : ' teeth') + ' picked', true) : '') + '</div>';
   }
   var INTRO = {
     teeth: 'Pick a set, or tap teeth on the 3D to add or remove them one by one.',
@@ -182,11 +188,11 @@
       if (ui.cat === null) {
         var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
         h = '<div class="mhead"><h2>Your build</h2><div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · <b></b>not opened yet') + '</p></div>' +
-          '<div class="tbody"><div class="rows">' + CATS.map(function (c) { var v = rowValue(c[0]), fresh = !ui.visited[c[0]]; return '<button type="button" class="mrow' + (!onList().length && c[0] === 'teeth' ? ' todo' : '') + '" data-open="' + c[0] + '"><span class="prev">' + preview(c[0]) + '</span><span class="txt"><b>' + c[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : '') + '</b><span class="cur">' + esc(v) + '</span><span class="ins">' + INSIDE[c[0]] + '</span></span></button>'; }).join('') +
+          '<div class="tbody"><div class="rows">' + CATS.map(function (c) { var fresh = !ui.visited[c[0]]; return row({ cls: !onList().length && c[0] === 'teeth' ? 'todo' : '', attrs: 'data-open="' + c[0] + '"', title: c[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : ''), value: esc(rowValue(c[0])), hint: INSIDE[c[0]], thumb: preview(c[0]) }); }).join('') +
           '</div><p class="note tip">Tip: tap teeth on the 3D to style them on their own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
       } else {
         var ci = catIndex(ui.cat), lastPart = ci === CATS.length - 1;
-        h = stages(ci) + '<div class="thead"><h2>' + CATS[ci][1] + '</h2></div><div class="tbody"><p class="intro">' + INTRO[ui.cat] + '</p>' + (onList().length && ['metal', 'finish', 'stones'].indexOf(ui.cat) >= 0 ? applyRow() : '') + options(ui.cat) + '</div>' +
+        h = stages(ci) + '<div class="thead"><h2>' + CATS[ci][1] + '</h2></div><div class="tbody"><p class="intro">' + INTRO[ui.cat] + '</p>' + options(ui.cat) + '</div>' +
           '<div class="tfoot"><button type="button" class="cta ghost second" data-a="menu" aria-label="Back to your build">' + BACK + 'Back</button>' +
           (lastPart ? doneBtn() : '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + CATS[ci + 1][1] + ' ' + ARROW + '</button>') + '</div>';
       }
@@ -283,95 +289,115 @@
     if (msg) showUndo(msg, before);
   });
 
-  // ---------- after "Done": Your grill · Text me · Sent (each screen as the owner picked it, Nov 17) ----------
+  // ---------- shared pieces: the Row (words on the left, a round picture on the right) and its icons ----------
+  // The menu, the fitting choices and the steps after sending are all the same Row, so a new screen reuses it.
+  function row(o) {
+    var tag = o.attrs ? 'button' : 'div';
+    return '<' + tag + (tag === 'button' ? ' type="button"' : '') + ' class="mrow' + (o.cls ? ' ' + o.cls : '') + '"' + (o.attrs ? ' ' + o.attrs : '') + '><span class="txt"><b>' + o.title + '</b>' + (o.value ? '<span class="cur">' + o.value + '</span>' : '') + (o.hint ? '<span class="ins">' + o.hint + '</span>' : '') + '</span><span class="prev">' + o.thumb + '</span></' + tag + '>';
+  }
+  // small gold objects for the round pictures, drawn to sit beside the build's own previews
+  var INK = '#2a2620', TOOTH = 'M22 14.2c-1.9-1.5-6.3-1.6-7.1 2.2-.6 2.9.7 4.7 1.2 7.6.5 2.7.6 6.4 2.3 6.4 1.9 0 1.6-4.2 3.6-4.2s1.7 4.2 3.6 4.2c1.7 0 1.8-3.7 2.3-6.4.5-2.9 1.8-4.7 1.2-7.6-.8-3.8-5.2-3.7-7.1-2.2z';
+  var IC = {
+    kit: '<ellipse cx="22" cy="36.4" rx="9.5" ry="1.7" fill="rgba(40,36,24,.13)"/><path d="M12.5 11.5v9a9.5 9.5 0 0 0 19 0v-9" fill="none" stroke="url(#gd)" stroke-width="8" stroke-linecap="round"/><path d="M12.5 11.5v9a9.5 9.5 0 0 0 19 0v-9" fill="none" stroke="#fbf6ea" stroke-width="3" stroke-linecap="round"/><path d="M22 30.4v3.4" stroke="url(#gd)" stroke-width="4.6" stroke-linecap="round"/>',
+    scan: '<path d="' + TOOTH + '" fill="url(#gd)"/><path d="M10 15.5V10h5.5M28.5 10H34v5.5M34 28.5V34h-5.5M15.5 34H10v-5.5" fill="none" stroke="' + INK + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 22h23" stroke="' + INK + '" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>',
+    store: '<path d="M11 16.2l2.2-5.4h17.6l2.2 5.4v1.6a2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0z" fill="url(#gd)"/><path d="M13.6 22.4V33h16.8V22.4" fill="#fbf6ea" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/><path d="M19.4 33v-5.6h5.2V33" fill="none" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/>',
+    bubble: '<path d="M10.5 14a4.6 4.6 0 0 1 4.6-4.6h13.8a4.6 4.6 0 0 1 4.6 4.6v8.6a4.6 4.6 0 0 1-4.6 4.6h-7.3l-5.7 5v-5h-.8a4.6 4.6 0 0 1-4.6-4.6z" fill="url(#gd)"/><circle cx="17" cy="18.3" r="1.5" fill="' + INK + '"/><circle cx="22" cy="18.3" r="1.5" fill="' + INK + '"/><circle cx="27" cy="18.3" r="1.5" fill="' + INK + '"/>',
+    coin: '<circle cx="22" cy="22" r="12" fill="url(#gd)"/><circle cx="22" cy="22" r="8.8" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.1"/><text x="22" y="26.9" text-anchor="middle" font-family="Geist, system-ui, sans-serif" font-weight="600" font-size="13.5" fill="' + INK + '">$</text>',
+    check: '<circle cx="22" cy="22" r="12" fill="url(#gd)"/><path d="M16.4 22.4l3.8 3.8 7.4-8.2" fill="none" stroke="' + INK + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    insta: '<rect x="11" y="11" width="22" height="22" rx="7" fill="url(#gd)"/><circle cx="22" cy="22" r="5" fill="none" stroke="' + INK + '" stroke-width="1.8"/><circle cx="28.2" cy="15.8" r="1.3" fill="' + INK + '"/>'
+  };
+  function ic(k) { return '<svg class="ico" viewBox="0 0 44 44" aria-hidden="true">' + IC[k] + '</svg>'; }
+
+  // ---------- after "Done": one screen to send it (the price, the fitting, where to text), the code, then Sent ----------
   ui.after = 0; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; ui.verified = loadVerified();
   function shopName() { return ui.site === 'shop' ? 'Gold Lab' : 'VVS Lab'; }
   function fits() { return ui.site === 'shop' ? ['kit', 'own', 'store'] : ['kit', 'own']; }          // VVS Lab has no store yet
-  var FIT_WORDS = { kit: ['Mold kit by mail', 'They post you a kit. You bite, then mail it back.'], own: ['Own mold or scan', 'You already have one.'], store: ['In-store fitting', ''] };
-  var AFTER = ['Your grill', 'Text me', 'Sent'], DEV = 9000;
+  var FIT_WORDS = { kit: ['Mold kit by mail', 'They post you a kit. You bite, then mail it back.', 'kit'], own: ['Own mold or scan', 'You already have one.', 'scan'], store: ['In-store fitting', '', 'store'] };
+  var DEV = 9000;
   function loadVerified() { try { return JSON.parse(localStorage.getItem('vvs-verified') || 'null'); } catch (e) { return null; } }
   function saveVerified(v) { try { if (v) localStorage.setItem('vvs-verified', JSON.stringify(v)); else localStorage.removeItem('vvs-verified'); } catch (e) {} }
   function digits(s) { var d = String(s || '').replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; }
   function fmtPhone(s) { var d = digits(s).slice(0, 10); if (d.length < 4) return d; if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3); return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6); }
-  function contactOk() { return ui.c.name.trim().length >= 2 && digits(ui.c.phone).length === 10; }
-  function afterStages() {
-    return '<nav class="stages" aria-label="Sending your grill">' + AFTER.map(function (n, k) {
-      var i = k + 1, here = i === ui.after, can = !ui.sent && i < ui.after, tick = ui.sent || i < ui.after;
-      return (k ? '<i aria-hidden="true">·</i>' : '') + '<button type="button"' + (can ? ' data-af="' + i + '"' : ' disabled') + (here ? ' aria-current="step"' : '') + '>' + n + (tick ? '<span class="tick" aria-label="done">✓</span>' : '') + '</button>';
-    }).join('') + '</nav>';
-  }
+  function contactErr() { return ui.c.name.trim().length < 2 ? ['aname', 'Add your first name.'] : digits(ui.c.phone).length !== 10 ? ['aphone', 'Add your 10-digit phone number.'] : null; }
+  function known() { return !!ui.verified && !ui.changing; }
   function sumHtml() {
     var b = breakdown(), S = esc(shopName());
     return '<p class="big">About ' + money(b.total) + (b.quote ? ' <small>+ a quote for your charm</small>' : '') + '</p><p class="note">' + S + ' confirms the exact price after your fitting.</p>' +
       '<details class="why"' + (ui.why ? ' open' : '') + '><summary>What\'s in the price</summary><ul>' + b.lines.map(function (l) { return '<li><span>' + esc(l[0]) + '</span><span>' + money(l[1]) + '</span></li>'; }).join('') + (b.quote ? '<li><span>One-of-one charm</span><span>Quoted</span></li>' : '') + '</ul></details>';
   }
   function promoMsg() { var c = (SET.promo || '').toUpperCase(); if (!c) return ''; return PRICE.promo[c] ? c + ': ' + PRICE.promo[c] + '% off' : (c.length >= 4 ? 'That code doesn\'t work.' : ''); }
+  function contactHtml() {
+    var S = esc(shopName()), v = ui.verified;
+    if (known()) return row({ title: esc(v.name) + ' · ' + esc(fmtPhone(v.phone)), hint: 'Verified on this device, so no code this time.', thumb: ic('check') }) + '<button type="button" class="link" data-x="change">Change</button>';
+    return '<div class="field"><label for="aname">First name</label><input id="aname" type="text" autocomplete="given-name" autocapitalize="words" value="' + esc(ui.c.name) + '"></div>' +
+      '<div class="field"><label for="aphone">Phone</label><input id="aphone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(555) 012-3456" value="' + esc(ui.c.phone) + '"></div>' +
+      '<p class="err" id="aerr" role="alert">' + (ui.err || '') + '</p><p class="note">' + S + ' texts you about this grill only. We\'ll send a code first; msg &amp; data rates may apply.</p>';
+  }
   function afterOne() {
     var S = esc(shopName()), f = fits(); if (f.indexOf(SET.mold) < 0) SET.mold = f[0];
-    return afterStages() + '<div class="thead"><h2>This is your grill</h2></div><div class="tbody">' +
+    return '<div class="thead"><h2>This is your grill</h2></div><div class="tbody flow">' +
       '<div class="sum" id="asum">' + sumHtml() + '</div>' +
-      '<div class="q"><h3>How will they get the shape of your teeth?</h3><div class="fits" role="radiogroup" aria-label="Fitting">' + f.map(function (k) { var w = FIT_WORDS[k]; return '<button type="button" class="fit" role="radio" aria-checked="' + (SET.mold === k) + '" data-fit="' + k + '"><i></i><span><b>' + w[0] + '</b><span>' + (k === 'store' ? 'Visit ' + S + '.' : w[1]) + '</span></span></button>'; }).join('') + '</div></div>' +
-      (ui.more ? '<div class="more"><div class="field"><label for="anote">Note to ' + S + '</label><textarea id="anote" maxlength="200" placeholder="Anything they should know">' + esc(ui.c.note) + '</textarea></div><div class="field"><label for="apromo">Promo code</label><input id="apromo" type="text" autocomplete="off" autocapitalize="characters" value="' + esc(SET.promo || '') + '"></div><p class="note" id="pmsg">' + promoMsg() + '</p></div>'
+      '<section class="sect"><h3 class="sec">How will they get the shape of your teeth?</h3><div class="rows" role="radiogroup" aria-label="Fitting">' + f.map(function (k) { var w = FIT_WORDS[k]; return row({ attrs: 'role="radio" aria-checked="' + (SET.mold === k) + '" data-fit="' + k + '"', title: w[0], hint: k === 'store' ? 'Visit ' + S + '.' : w[1], thumb: ic(w[2]) }); }).join('') + '</div></section>' +
+      '<section class="sect"><h3 class="sec">Where should ' + S + ' text you?</h3>' + contactHtml() + '</section>' +
+      (ui.more ? '<section class="sect"><div class="field"><label for="anote">Note to ' + S + '</label><textarea id="anote" maxlength="200" placeholder="Anything they should know">' + esc(ui.c.note) + '</textarea></div><div class="field"><label for="apromo">Promo code</label><input id="apromo" type="text" autocomplete="off" autocapitalize="characters" value="' + esc(SET.promo || '') + '"></div><p class="note" id="pmsg">' + promoMsg() + '</p></section>'
         : '<button type="button" class="link" data-x="more">+ Add a note or promo code</button>') +
-      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="keep">' + BACK + 'Keep editing</button><button type="button" class="cta" data-x="send1">Send to ' + S + '</button></div><p class="free">Free. Nothing to pay yet.</p></div>';
+      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="keep">' + BACK + 'Keep editing</button><button type="button" class="cta" data-x="go">Send to ' + S + '</button></div><p class="free">Free. Nothing to pay yet.</p></div>';
   }
   function resendWords() { var s = Math.ceil((ui.resendAt - performance.now()) / 1000); return s > 0 ? 'Send a new code in ' + mmss(s) : '<button type="button" class="link" data-x="resend">Send a new code</button>'; }
   function otpBoxes() { return [0, 1, 2, 3, 4, 5].map(function (i) { return '<i' + (i === Math.min(ui.code.length, 5) && !ui.checking ? ' class="at"' : '') + '>' + (ui.code[i] || '') + '</i>'; }).join(''); }
-  function afterTwo() {
-    var S = esc(shopName()), v = ui.verified, h = afterStages() + '<div class="thead"><h2>Where should ' + S + ' text you?</h2></div><div class="tbody">', foot = '';
-    if (v && !ui.changing) {
-      h += '<div class="known"><span><b>' + esc(v.name) + '</b> · ' + esc(fmtPhone(v.phone)) + ' <em aria-label="verified">✓</em></span><button type="button" class="link" data-x="change">Change</button></div><p class="note">Verified on this device, so no code this time.</p>';
-      foot = '<button type="button" class="cta" data-x="send">Send to ' + S + '</button>';
-    } else if (!ui.codeSent) {
-      h += '<div class="field"><label for="aname">First name</label><input id="aname" type="text" autocomplete="given-name" autocapitalize="words" value="' + esc(ui.c.name) + '"></div>' +
-        '<div class="field"><label for="aphone">Phone</label><input id="aphone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(555) 012-3456" value="' + esc(ui.c.phone) + '"></div>' +
-        '<p class="note">' + S + ' texts you about this grill only. We\'ll send a code first; msg &amp; data rates may apply.</p>';
-      foot = '<button type="button" class="cta" data-x="code"' + (contactOk() ? '' : ' disabled') + '>Text me a code</button>';
-    } else {
-      h += '<p class="intro">We texted a code to <b>' + esc(fmtPhone(ui.c.phone)) + '</b>. <button type="button" class="link" data-x="wrong">Wrong number? Change it</button></p>' +
-        (ui.sms && !ui.code && !ui.checking ? '<button type="button" class="sms" data-x="fill"><span>From Messages</span><b>' + ui.sms + '</b></button>' : '') +
-        '<label class="otp"><span class="sr">6-digit code</span><input id="aotp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="' + ui.code + '"' + (ui.checking ? ' disabled' : '') + '><span class="boxes" aria-hidden="true">' + otpBoxes() + '</span></label>' +
-        '<p class="note" id="otpnote">' + (ui.checking ? 'Checking…' : resendWords()) + '</p><p class="proto-note">Prototype: no text is sent. Tap the code above (your phone offers it the same way) or type any 6 digits.</p>';
-    }
-    return h + '</div><div class="tfoot"><button type="button" class="cta ghost second" data-x="back2">' + BACK + 'Back</button>' + foot + '</div>';
+  function afterCode() {
+    var S = esc(shopName());
+    return '<div class="thead"><h2>Enter the 6-digit code</h2></div><div class="tbody flow"><p class="intro">We texted it to <b>' + esc(fmtPhone(ui.c.phone)) + '</b>. <button type="button" class="link" data-x="wrong">Wrong number? Change it</button></p>' +
+      '<section class="sect">' + (ui.sms && !ui.code && !ui.checking ? '<button type="button" class="sms" data-x="fill"><span>From Messages</span><b>' + ui.sms + '</b></button>' : '') +
+      '<label class="otp"><span class="sr">6-digit code</span><input id="aotp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="' + ui.code + '"' + (ui.checking ? ' disabled' : '') + '><span class="boxes" aria-hidden="true">' + otpBoxes() + '</span></label>' +
+      '<p class="note" id="otpnote">' + (ui.checking ? 'Checking…' : resendWords()) + '</p></section><p class="proto-note">Prototype: no text is sent. Tap the code above (your phone offers it the same way) or type any 6 digits.</p>' +
+      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="back2">' + BACK + 'Back</button><button type="button" class="cta" disabled>' + (ui.checking ? 'Sending…' : 'Send to ' + S) + '</button></div><p class="free">It sends as soon as the code is in.</p></div>';
   }
-  function afterThree() {
-    var S = esc(shopName()), dep = breakdown().deposit, h = afterStages() + '<div class="thead"><h2>Sent. ' + S + ' will text you.</h2></div><div class="tbody"><p class="intro">At ' + esc(fmtPhone(ui.c.phone)) + '.</p>';
-    if (ui.paid) h += '<div class="dep paid"><b>Order started</b><p class="note">' + money(dep) + ' deposit paid to ' + S + ', counted toward your grill.</p></div>';
-    else if (ui.skip) h += '<p class="note">No deposit for now. <button type="button" class="link" data-x="unskip">Pay the ' + money(dep) + ' deposit</button></p>';
-    else h += '<div class="dep"><h3>Start your order</h3><p class="note">' + money(dep) + ' now, counted toward your grill. ' + S + ' confirms the rest.</p><div class="btns"><button type="button" class="cta" data-x="pay"' + (ui.paying ? ' disabled' : '') + '>' + (ui.paying ? 'Opening secure checkout…' : 'Pay ' + money(dep) + ' deposit') + '</button><button type="button" class="link" data-x="skip">Not now</button></div></div>';
-    h += '<div class="xcard"><h3>While your photo develops</h3><div class="field"><label for="aig">Your Instagram</label><input id="aig" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@" value="' + esc(ui.c.ig) + '"></div><p class="note">' + S + ' sees it as you typed it.</p>' +
-      '<button type="button" class="cta ghost" data-x="follow">Follow @vvslab on Instagram</button><div class="field"><label for="aemail">Email me a copy</label><input id="aemail" type="email" inputmode="email" autocomplete="email" value="' + esc(ui.c.email) + '"></div></div>';
-    h += '<div class="next"><h3>What happens next</h3><ol><li><b>' + S + ' texts you</b></li><li><b>Fitting</b><span>' + FIT_WORDS[SET.mold][0] + '</span></li><li><b>They make it</b></li><li><b>It\'s yours</b></li></ol></div>';
-    return h + '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div>';
+  function afterSent() {
+    var S = esc(shopName()), m = money(breakdown().deposit), fit = FIT_WORDS[SET.mold], ready = ui.devAt && performance.now() - ui.devAt >= DEV;
+    var steps = [[S + ' texts you', '', ic('bubble')], ['Fitting', fit[0], ic(fit[2])], ['They make it', '', preview('finish')], ['It\'s yours', '', '<img alt="" src="' + ui.photo + '">']];
+    var save = '<button type="button" class="cta" data-x="save"' + (ready ? '' : ' disabled') + '>Save my photo</button>';
+    var foot = ui.paid ? save : ui.skip ? '<button type="button" class="cta ghost second" data-x="pay"' + (ui.paying ? ' disabled' : '') + '>' + (ui.paying ? 'Opening…' : 'Pay deposit') + '</button>' + save
+      : '<button type="button" class="cta ghost second" data-x="skip">Not now</button><button type="button" class="cta" data-x="pay"' + (ui.paying ? ' disabled' : '') + '>' + (ui.paying ? 'Opening secure checkout…' : 'Pay ' + m + ' deposit') + '</button>';
+    return '<div class="thead two"><h2>Sent. ' + S + ' will text you.</h2><p class="sub">At ' + esc(fmtPhone(ui.c.phone)) + '.</p></div><div class="tbody flow">' +
+      (ui.paid ? row({ cls: 'lead', title: 'Order started', hint: m + ' deposit paid to ' + S + ', counted toward your grill.', thumb: ic('check') }) : row({ cls: 'lead', title: 'Start your order', hint: m + ' now, counted toward your grill. ' + S + ' confirms the rest.', thumb: ic('coin') })) +
+      '<section class="sect"><h3 class="sec">While your photo develops</h3><div class="fgroup"><div class="field"><label for="aig">Your Instagram</label><input id="aig" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@" value="' + esc(ui.c.ig) + '"></div><p class="note">' + S + ' sees it as you typed it.</p></div>' +
+      row({ attrs: 'data-x="follow"', title: 'Follow @vvslab', hint: 'Opens Instagram', thumb: ic('insta') }) +
+      '<div class="field"><label for="aemail">Email me a copy</label><input id="aemail" type="email" inputmode="email" autocomplete="email" value="' + esc(ui.c.email) + '"></div></section>' +
+      '<section class="sect"><h3 class="sec">What happens next</h3><ol class="steps">' + steps.map(function (s, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="txt"><b>' + s[0] + '</b>' + (s[1] ? '<span class="ins">' + s[1] + '</span>' : '') + '</span><span class="prev">' + s[2] + '</span></li>'; }).join('') + '</ol></section>' +
+      '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div><div class="tfoot">' + foot + '</div>';
   }
-  function renderAfter() { return ui.after === 1 ? afterOne() : ui.after === 2 ? afterTwo() : afterThree(); }
+  function renderAfter() { return ui.after === 1 ? afterOne() : ui.after === 2 ? afterCode() : afterSent(); }
   function focusId(id) { var el = $(id); if (el) try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
-  function goAfter(n) { ui.after = n; refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; if (n === 2 && !ui.verified) focusId(ui.codeSent ? 'aotp' : 'aname'); }
-  function smsLater() { clearTimeout(ui.smsT); ui.smsT = setTimeout(function () { if (ui.after === 2 && ui.codeSent && !ui.code && !ui.checking) { ui.sms = String(100000 + Math.floor(Math.random() * 900000)); renderTray(); focusId('aotp'); } }, 1800); }
+  function redraw() { var a = document.activeElement, id = a && tray.contains(a) ? a.id : ''; renderTray(); if (id) focusId(id); }   // redraw without losing the field being typed in
+  function goAfter(n) { ui.after = n; app.setAttribute('data-after', n); refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; if (n === 2) focusId('aotp'); }
+  function smsLater() { clearTimeout(ui.smsT); ui.smsT = setTimeout(function () { if (ui.after === 2 && !ui.code && !ui.checking) { ui.sms = String(100000 + Math.floor(Math.random() * 900000)); renderTray(); focusId('aotp'); } }, 1800); }
+  function sendCode(again) { ui.code = ''; ui.sms = null; ui.checking = false; ui.resendAt = performance.now() + 30000; goAfter(2); smsLater(); if (again) toast('A new code is on its way.'); }
   function check() {
     ui.checking = true; renderTray();
     setTimeout(function () { ui.checking = false; ui.verified = { name: ui.c.name.trim(), phone: digits(ui.c.phone) }; saveVerified(ui.verified); ui.changing = false; sendIt(); }, 900);
   }
   function sendIt() {
-    if (ui.verified && !ui.changing) { ui.c.name = ui.verified.name; ui.c.phone = ui.verified.phone; }
+    if (known()) { ui.c.name = ui.verified.name; ui.c.phone = ui.verified.phone; }
     ui.sent = true; ui.tSent = performance.now(); ui.photo = G.shot(960, 720) || ''; ui.devAt = performance.now();
-    ui.after = 3; refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; showPhoto();
+    goAfter(3); showPhoto();
   }
   function afterAction(x) {
     if (x === 'keep') { ui.tDone = 0; hidePhoto(); setMode('build'); ui.cat = null; refresh(true); return; }
     if (x === 'more') { ui.more = true; renderTray(); focusId('anote'); return; }
-    if (x === 'send1') { goAfter(2); return; }
-    if (x === 'back2') { clearTimeout(ui.smsT); ui.codeSent = false; ui.code = ''; ui.sms = null; goAfter(1); return; }
+    if (x === 'go') {
+      if (known()) { sendIt(); return; }
+      var e = contactErr(); if (e) { ui.err = e[1]; var p = $('aerr'); if (p) p.textContent = e[1]; var el = $(e[0]); if (el) { el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); focusId(e[0]); } return; }
+      ui.err = ''; sendCode(); return;
+    }
+    if (x === 'back2' || x === 'wrong') { clearTimeout(ui.smsT); ui.code = ''; ui.sms = null; goAfter(1); if (x === 'wrong') focusId('aphone'); return; }
     if (x === 'change') { ui.changing = true; ui.c.name = ui.verified.name; ui.c.phone = fmtPhone(ui.verified.phone); renderTray(); focusId('aname'); return; }
-    if (x === 'code' || x === 'resend') { if (!contactOk()) return; ui.codeSent = true; ui.code = ''; ui.sms = null; ui.resendAt = performance.now() + 30000; renderTray(); focusId('aotp'); smsLater(); if (x === 'resend') toast('A new code is on its way.'); return; }
-    if (x === 'wrong') { clearTimeout(ui.smsT); ui.codeSent = false; ui.code = ''; ui.sms = null; renderTray(); focusId('aphone'); return; }
+    if (x === 'resend') { sendCode(true); return; }
     if (x === 'fill') { ui.code = ui.sms; check(); return; }
-    if (x === 'send') { sendIt(); return; }
-    if (x === 'pay') { ui.paying = true; renderTray(); setTimeout(function () { ui.paying = false; ui.paid = true; if (ui.after === 3) renderTray(); }, 1400); return; }
-    if (x === 'skip') { ui.skip = true; renderTray(); return; }
-    if (x === 'unskip') { ui.skip = false; renderTray(); return; }
+    if (x === 'pay') { ui.paying = true; redraw(); setTimeout(function () { ui.paying = false; ui.paid = true; if (ui.after === 3) redraw(); }, 1400); return; }
+    if (x === 'skip') { ui.skip = true; redraw(); return; }
     if (x === 'follow') { toast('This opens Instagram on @vvslab.'); return; }
+    if (x === 'save') { toast('In the real builder this saves the studio photo to your phone.'); return; }
   }
   function afterInput(e) {
     var el = e.target, id = el.id, v = el.value;
@@ -382,9 +408,9 @@
     else if (id === 'apromo') { SET.promo = v.trim(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
     else if (id === 'aig') ui.c.ig = v.slice(0, 31);
     else if (id === 'aemail') ui.c.email = v.slice(0, 120);
-    var cb = tray.querySelector('[data-x="code"]'); if (cb) cb.disabled = !contactOk();
+    if ((id === 'aname' || id === 'aphone') && ui.err && !contactErr()) { ui.err = ''; var p = $('aerr'); if (p) p.textContent = ''; }
   }
-  tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'aname' || e.target.id === 'aphone') && contactOk()) { e.preventDefault(); afterAction('code'); } });
+  tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'aname' || e.target.id === 'aphone')) { e.preventDefault(); afterAction('go'); } });
   tray.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('why')) ui.why = e.target.open; }, true);
   // the studio photo: the 3D develops into it, in the space where the piece was
   var photo = $('photo');
@@ -400,12 +426,28 @@
     st.setProperty('--b', (16 * (1 - e)).toFixed(2) + 'px'); st.setProperty('--br', (1 + .9 * (1 - e)).toFixed(3)); st.setProperty('--sa', (.15 + .85 * e).toFixed(3)); st.setProperty('--co', (.55 + .45 * e).toFixed(3)); st.setProperty('--in', Math.min(1, p * 6).toFixed(3));
     $('photocap').textContent = p < 1 ? 'Developing your studio photo… ' + mmss(Math.ceil((1 - p) * 30)) : 'Your studio photo · ' + lookLabel();
     photo.classList.toggle('done', p >= 1);
+    var sb = tray.querySelector('[data-x="save"]'); if (sb) sb.disabled = p < 1;
   }
   setInterval(function () {
     if (ui.mode !== 'after') return;
-    var n = $('otpnote'); if (n && ui.after === 2 && ui.codeSent && !ui.checking) { var w = resendWords(); if (n.getAttribute('data-w') !== w) { n.setAttribute('data-w', w); n.innerHTML = w; } }
+    var n = $('otpnote'); if (n && ui.after === 2 && !ui.checking) { var w = resendWords(); if (n.getAttribute('data-w') !== w) { n.setAttribute('data-w', w); n.innerHTML = w; } }
     if (ui.after === 3 && ui.devAt && !photo.hidden) paintPhoto();
   }, 250);
+
+  // ---------- Undo: steps back through any change to the design ----------
+  ui.hist = []; ui.lastSnap = null;
+  function designSnap() { return JSON.stringify({ T: T, D: DEF, S: { fangs: SET.fangs, cut: SET.cut, ins: SET.ins, mold: SET.mold, idea: SET.idea } }); }
+  function track() {
+    if (ui.mode === 'build') { var s = designSnap(); if (ui.lastSnap !== null && s !== ui.lastSnap) { ui.hist.push(ui.lastSnap); if (ui.hist.length > 60) ui.hist.shift(); } ui.lastSnap = s; }
+    $('undobtn').disabled = !ui.hist.length;
+  }
+  function undo() {
+    if (!ui.hist.length) return; var s = ui.hist.pop(), o = JSON.parse(s);
+    T = o.T; DEF = o.D; SET.fangs = o.S.fangs; SET.cut = o.S.cut; SET.ins = o.S.ins; SET.mold = o.S.mold; SET.idea = o.S.idea; if (window.__vvs) window.__vvs.T = T;
+    ui.picks = (ui.picks || []).filter(function (k) { return T[k].on; }); ui.sel = ui.picks.length ? ui.picks[ui.picks.length - 1] : null;
+    ui.lastSnap = s; ui.build = null; hideBubble(); G.sync(); refresh(true); toast('Undone');
+  }
+  function freshHistory() { ui.hist = []; ui.lastSnap = null; }
 
   // ---------- moving around ----------
   function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { clearPicks(); hideBubble(); } box(); setTimeout(box, 450); }
@@ -422,7 +464,8 @@
     if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
-      G.box = W >= 900 ? { top: top, bottom: H - 24, left: 0, right: t.left - st.left - 8 } : { top: top, bottom: Math.max(top + 110, limit - st.top - 6), left: 0, right: W };
+      var ch = ui.mode === 'build' && !$('changebar').hidden;   // keep the piece clear of the Change bar
+      G.box = W >= 900 ? { top: top, bottom: H - (ch ? 112 : 24), left: 0, right: t.left - st.left - 8 } : { top: ch ? 110 : top, bottom: Math.max(top + 110, limit - st.top - 6), left: 0, right: W };
       if (ui.mode === 'after' && typeof placePhoto === 'function') placePhoto();
       return;
     }
@@ -432,14 +475,15 @@
   function refresh(glint) {
     ui.step = stepOf();
     if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') renderTray();
-    var sc = $('selchip'), show = ui.mode === 'build' && hasSel();
+    changeBar(); track();
+    var sc = $('selchip'), show = ui.mode === 'build' && hasSel() && $('changebar').hidden;
     var pk = picked(); sc.hidden = !show; if (show) sc.innerHTML = (pk.length === 1 ? 'Editing the <b>' + esc(toothName(pk[0]).toLowerCase()) + '</b> only' : 'Editing <b>' + pk.length + ' teeth</b>') + ' <span class="x">Whole set</span>';
     meta(); box(); requestAnimationFrame(box); G.sync(); G.goal(); if (glint) G.glint(); if (!bubble.hidden) placeBubble();
     if (!proto.hidden) renderProto();
   }
   function firstFront() { var p = [7, 8, 6, 9, 23, 24].filter(function (x) { return T[x].on; })[0]; return p === undefined ? (onList()[0] === undefined ? null : onList()[0]) : p; }
   function done() {
-    ui.tDone = performance.now(); ui.after = 1; ui.sent = false; ui.more = false; ui.why = false; ui.codeSent = false; ui.code = ''; ui.sms = null; ui.checking = false; ui.changing = false; ui.paid = false; ui.skip = false; ui.paying = false;
+    ui.tDone = performance.now(); ui.after = 1; app.setAttribute('data-after', 1); ui.err = ''; ui.sent = false; ui.more = false; ui.why = false; ui.codeSent = false; ui.code = ''; ui.sms = null; ui.checking = false; ui.changing = false; ui.paid = false; ui.skip = false; ui.paying = false;
     setMode('after'); refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0;
   }
 
@@ -462,8 +506,7 @@
     if (t.id === 'goA') { if (!ui.build) applyBuild('empty'); startCreator(); return; }
     if (t.id === 'selchip') { clearPicks(); refresh(); return; }
     var x = t.getAttribute('data-x'); if (x) { afterAction(x); return; }
-    var af = t.getAttribute('data-af'); if (af) { goAfter(+af); return; }
-    var ft = t.getAttribute('data-fit'); if (ft) { SET.mold = ft; renderTray(); return; }
+    var ft = t.getAttribute('data-fit'); if (ft) { SET.mold = ft; redraw(); return; }
     var q = t.getAttribute('data-q'); if (q) { answerQ(q); return; }
     var op = t.getAttribute('data-open'); if (op) { if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble(); openCat(op); return; }
     var s = t.getAttribute('data-s'); if (s === 'keep') { sheet.hidden = true; ui.tDone = 0; setMode('build'); refresh(); return; } if (s === 'photo') { toast('Next comes the phone sign-up, the studio photo and sending it. That part is in the flow lab.'); return; }
@@ -474,7 +517,7 @@
     if (a === 'done') { done(); return; }
     if (a === 'qskip') { ui.cat = 'teeth'; setMode('build'); refresh(); return; }
     if (a === 'qback') { if (ui.q > 0) { ui.q--; refresh(); } else { resetAll(); ui.build = null; setMode('door'); renderOpenings(); G.sync(); G.goal(); } return; }
-    if (!t.closest('#tray')) return;
+    if (!t.closest('#tray') && !t.closest('#changebar')) return;
     var g = t.getAttribute('data-g'), k = t.getAttribute('data-k'); if (!g) return;
     if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble();
     var tg = targets(), all = !hasSel(), n = counts(); buzz();
@@ -514,6 +557,7 @@
   });
   $('jawbtn').addEventListener('click', function () { var o = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', o); $('jawlabel').textContent = o ? 'Close mouth' : 'Open mouth'; G.jaw(o); });
   $('turnbtn').addEventListener('click', function () { if (G.turn) G.turn(); });
+  $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
   var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]]];
@@ -522,7 +566,7 @@
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
       '<div class="stat"><p>This run</p><b id="pclock">' + mmss(elapsed()) + ' · ' + ui.taps + ' taps</b></div>' +
       '<div class="pair"><p>Holder</p><input type="range" id="psolid" min="30" max="100" step="5" value="' + (ui.solid || 70) + '" aria-label="How solid the clear holder is"></div>' +
-      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. After Done: Your grill, Text me, Sent. Send a second design to see a returning shopper skip the code.</p>';
+      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. After Done: one screen to send it, the code, then Sent. Send a second design to see a returning shopper skip the code.</p>';
   }
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
   function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? 'GL' : 'VV'; m.querySelector('span').textContent = shopName(); }
