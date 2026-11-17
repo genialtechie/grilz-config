@@ -1,0 +1,153 @@
+/* After Done: Your grill → the code → Sent. Ported from the Grill Creator Lab (docs/redesign/creator-lab/src/page.html:
+   .tray, .thead, .tbody.flow, .mrow, .prev, .field, .otp, .steps, .sum, .why, .tfoot). The panel sits on the lit stage,
+   which is light in both themes, so its colours are fixed. Everything is scoped to .after. */
+.after,
+.after-photo-portal {
+  --a-fg: #121211;
+  --a-mut: #66645e;
+  --a-faint: #8d8b84;
+  --a-line: rgba(18, 18, 17, 0.13);
+  --a-tile: #e9e7e1;
+  --a-ink: #121211;
+  --a-ink-fg: #ffffff;
+  --a-err: #a23a1e;
+  --a-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.after {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--a-fg);
+  font: 400 16px/1.5 var(--a-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.after *,
+.after *::before,
+.after *::after { box-sizing: border-box; }
+.after h2,
+.after h3,
+.after p,
+.after ol,
+.after ul { margin: 0; }
+.after button,
+.after input,
+.after textarea { font: inherit; color: inherit; }
+.after button { cursor: pointer; }
+.after :focus-visible { outline: 2px solid var(--a-fg); outline-offset: 2px; border-radius: 6px; }
+.after .sr,
+.after-photo-portal .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* the title stays put above the scrolling body, so nothing slides under it */
+.after-head { flex: none; display: grid; gap: 4px; align-content: center; padding: 18px 20px 8px; min-height: 60px; }
+.after-head h2 { font: 600 22px/1.15 var(--a-sans); letter-spacing: -0.03em; }
+.after-head .sub { font-size: 14px; color: var(--a-mut); }
+.after-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 20px 20px; display: grid; gap: 24px; align-content: start; scrollbar-width: thin; }
+.after-foot { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--a-line); }
+.after-foot .btns { display: flex; gap: 10px; }
+.after-foot .free { text-align: center; font-size: 12.5px; color: var(--a-mut); }
+
+.after .sect { display: grid; gap: 10px; }
+.after .sec { font: 600 15px/1.3 var(--a-sans); letter-spacing: -0.01em; }
+.after .note { font-size: 13px; color: var(--a-mut); line-height: 1.4; }
+.after .intro { font-size: 14px; line-height: 1.45; color: var(--a-fg); opacity: 0.85; }
+.after .err { font-size: 13px; line-height: 1.35; color: var(--a-err); }
+.after .err:empty { display: none; }
+.after .ok { font-size: 13px; color: var(--a-mut); }
+
+/* buttons: the main one, a quieter one beside it, and a plain link */
+.after .cta { flex: 1; min-height: 52px; border: 0; border-radius: 999px; background: var(--a-ink); color: var(--a-ink-fg); font: 600 16px/1 var(--a-sans); display: inline-flex; gap: 10px; align-items: center; justify-content: center; padding: 0 22px; transition: transform 0.14s ease, opacity 0.2s ease; }
+.after .cta:active:not([disabled]) { transform: scale(0.985); }
+.after .cta.ghost { flex: 0 0 auto; padding: 0 18px; font-weight: 500; font-size: 15px; background: rgba(255, 255, 255, 0.6); color: var(--a-fg); box-shadow: inset 0 0 0 1px var(--a-line); }
+.after .cta[disabled] { opacity: 0.35; cursor: default; }
+.after .cta[aria-busy='true'] { opacity: 0.7; cursor: progress; }
+.after .link { border: 0; background: none; padding: 0; min-height: 44px; font: 500 14px/1.3 var(--a-sans); color: var(--a-fg); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--a-faint); justify-self: start; display: inline-flex; align-items: center; }
+.after .link.inline { min-height: 0; display: inline; }
+
+/* Thumb: the round picture. Row: words on the left, the Thumb on the right. */
+.after .prev { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; background: radial-gradient(90% 90% at 50% 30%, #f8f7f3, var(--a-tile)); box-shadow: inset 0 0 0 1px rgba(18, 18, 17, 0.05); }
+.after .prev > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.after .prev > svg { width: 22px; height: 22px; color: #2a2620; stroke-width: 1.6; }
+.after .rows { display: grid; gap: 6px; }
+.after .mrow { position: relative; width: 100%; min-height: 64px; border: 0; text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 14px; align-items: center; padding: 12px 14px 12px 16px; border-radius: 18px; color: var(--a-fg); background: rgba(255, 255, 255, 0.55); text-decoration: none; transition: background 0.18s ease, transform 0.14s ease, box-shadow 0.18s ease; }
+.after button.mrow:hover,
+.after a.mrow:hover { background: rgba(255, 255, 255, 0.95); }
+.after button.mrow:active,
+.after a.mrow:active { transform: scale(0.985); }
+.after .mrow .txt { display: grid; gap: 1px; min-width: 0; }
+.after .mrow b { font: 500 15.5px/1.25 var(--a-sans); letter-spacing: -0.015em; }
+.after .mrow .ins { font: 400 12.5px/1.35 var(--a-sans); color: var(--a-mut); }
+.after .mrow[aria-checked='true'] { background: rgba(255, 255, 255, 0.98); box-shadow: 0 0 0 1.5px var(--a-ink); }
+.after .mrow[aria-checked='true'] .prev::after { content: ''; position: absolute; right: -3px; top: -3px; width: 17px; height: 17px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; background: var(--a-ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.3 8.3l2.4 2.4 5-5.2' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; }
+.after .mrow.lead { background: rgba(255, 255, 255, 0.95); }
+.after .mrow.lead .ins { font-size: 13.5px; line-height: 1.4; color: var(--a-fg); opacity: 0.78; }
+
+/* fields */
+.after .field { display: grid; gap: 6px; }
+.after .field label { font: 500 13px/1.2 var(--a-sans); color: var(--a-mut); }
+.after .field input,
+.after .field textarea { width: 100%; min-height: 48px; border: 1px solid var(--a-line); background: rgba(255, 255, 255, 0.8); border-radius: 14px; padding: 12px 14px; font: 500 16px/1.3 var(--a-sans); color: var(--a-fg); }
+.after .field textarea { min-height: 76px; resize: vertical; }
+.after .field input[aria-invalid='true'] { border-color: var(--a-err); box-shadow: 0 0 0 1px var(--a-err); }
+.after .field input::placeholder,
+.after .field textarea::placeholder { color: var(--a-faint); }
+.after .inrow { display: flex; gap: 8px; }
+.after .inrow input { flex: 1; min-width: 0; }
+.after .inrow .small { flex: none; min-height: 48px; border: 0; border-radius: 14px; padding: 0 16px; background: var(--a-ink); color: var(--a-ink-fg); font: 600 14px/1 var(--a-sans); }
+.after .inrow .small[disabled] { opacity: 0.35; cursor: default; }
+.after .card { display: grid; gap: 14px; padding: 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 0 1px rgba(18, 18, 17, 0.06); }
+.after .card .mrow { background: rgba(255, 255, 255, 0.75); }
+
+/* the shop's add-ons: small switches */
+.after .xrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px 10px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.55); }
+.after .xrow b { display: block; font: 500 15px/1.25 var(--a-sans); }
+.after .xrow span { font-size: 12.5px; color: var(--a-mut); }
+.after .sw { position: relative; width: 46px; height: 28px; border-radius: 999px; border: 0; background: rgba(18, 18, 17, 0.18); flex: 0 0 auto; transition: background 0.2s ease; }
+.after .sw::before { content: ''; position: absolute; inset: -8px -2px; }
+.after .sw::after { content: ''; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.2s ease; }
+.after .sw[aria-checked='true'] { background: var(--a-ink); }
+.after .sw[aria-checked='true']::after { transform: translateX(18px); }
+
+/* the price */
+.after .sum { display: grid; gap: 4px; }
+.after .why summary { cursor: pointer; min-height: 44px; font: 500 14px/1.3 var(--a-sans); color: var(--a-fg); list-style: none; display: inline-flex; gap: 8px; align-items: center; }
+.after .why summary::-webkit-details-marker { display: none; }
+.after .why summary::after { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s ease; }
+.after .why[open] summary::after { transform: translateY(1px) rotate(225deg); }
+.after .why ul { list-style: none; display: grid; gap: 6px; padding: 2px 0 2px; }
+.after .why li { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--a-mut); font-variant-numeric: tabular-nums; }
+.after .why li span:last-child { color: var(--a-fg); }
+.after .why li.total { border-top: 1px solid var(--a-line); padding-top: 6px; color: var(--a-fg); font-weight: 500; }
+
+/* the code: one real input under six boxes, so the phone's suggestion and paste fill it */
+.after .otp { position: relative; display: block; }
+.after .otp input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: text; border: 0; }
+.after .otp .boxes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.after .otp .boxes i { font-style: normal; height: 56px; border-radius: 14px; background: rgba(255, 255, 255, 0.88); box-shadow: inset 0 0 0 1px var(--a-line); display: grid; place-items: center; font: 600 24px/1 var(--a-sans); font-variant-numeric: tabular-nums; }
+.after .otp:focus-within .boxes i.at { box-shadow: inset 0 0 0 2px var(--a-ink); }
+.after .otp[data-bad] .boxes i { box-shadow: inset 0 0 0 1px var(--a-err); }
+
+/* Sent: the photo, what happens next */
+.after-photo { display: grid; gap: 10px; justify-items: center; }
+.after-photo .frame { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; background: #1b1913; box-shadow: 0 30px 60px -28px rgba(30, 26, 18, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.5); }
+.after-photo img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.after-photo .still { filter: blur(var(--b, 16px)) brightness(var(--br, 1.9)) saturate(var(--sa, 0.15)) contrast(var(--co, 0.55)); transform: scale(1.04); transition: filter 0.3s linear; }
+.after-photo .final { opacity: 0; transition: opacity 1.4s ease; }
+.after-photo[data-ready] .final { opacity: 1; }
+.after-photo .cap { font: 500 12.5px/1.3 var(--a-sans); color: var(--a-fg); background: rgba(250, 249, 246, 0.78); padding: 7px 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--a-line); font-variant-numeric: tabular-nums; }
+/* on the stage (when the builder offers one): the photo develops where the piece was */
+.after-photo-portal { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 72px 24px 24px; pointer-events: none; }
+.after-photo-portal .after-photo { width: min(640px, 100%); }
+.after .steps { list-style: none; border-radius: 18px; background: rgba(255, 255, 255, 0.55); padding: 2px 14px 2px 16px; }
+.after .steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr) 44px; gap: 10px; align-items: center; padding: 9px 0; min-height: 56px; }
+.after .steps li + li { border-top: 1px solid rgba(18, 18, 17, 0.07); }
+.after .steps .n { font: 500 13px/1 var(--a-sans); color: var(--a-faint); font-variant-numeric: tabular-nums; }
+.after .steps b { display: block; font: 500 15px/1.3 var(--a-sans); letter-spacing: -0.01em; }
+.after .steps .ins { font-size: 12.5px; color: var(--a-mut); }
+.after .turnstile:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .after *,
+  .after-photo-portal * { transition: none !important; animation: none !important; }
+  .after-photo .still { filter: none; transform: none; }
+}
