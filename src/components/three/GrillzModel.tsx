@@ -7,8 +7,9 @@ import { capShape, dressTooth, toothLook, type ToothLook } from './redesign/dres
 import { Glints } from './redesign/glints';
 import { lookFor } from './redesign/look';
 import { clearOverlay, layLetters, layPhoto, type Shaped } from './redesign/overlays';
-import { buildPiece, noRaycast, SCENE_SCALE, type ToothSlot } from './redesign/piece';
-import { capGeo, SIDE, toothGeo } from './redesign/sculpt';
+import { buildPiece, noRaycast, SCENE_SCALE, setJaw, type ToothSlot } from './redesign/piece';
+import { capGeo, MM, SIDE, toothGeo } from './redesign/sculpt';
+import { CAP_LAYER, GLOW_LAYER, glowMaterial, LIFT } from './redesign/glow';
 import type { GrillzModelProps } from '../../lib/types';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
@@ -54,7 +55,8 @@ function GrillzModel({
   photoImage,
   onFocusTooth,
   onDrawn,
-}: Omit<GrillzModelProps, 'poster'> & { onFocusTooth?: (point: THREE.Vector3) => void; onDrawn?: () => void }) {
+  jawOpen = false,
+}: Omit<GrillzModelProps, 'poster' | 'frame' | 'onMissTap'> & { onFocusTooth?: (point: THREE.Vector3) => void; onDrawn?: () => void }) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   // The canvas draws on demand: changes made here ask for a frame.
@@ -94,6 +96,11 @@ function GrillzModel({
     [marks],
   );
 
+  // The creator's picked teeth: an amber glow above the holder (redesign/glow.ts, drawn by GlowPass).
+  const glowMat = useMemo(() => glowMaterial(), []);
+  useEffect(() => () => glowMat.dispose(), [glowMat]);
+  const glowing = selectionLook === 'glow' && isSelectionMode;
+
   const looks = useMemo(() => Array.from({ length: 32 }, (_, index) => toothLook(customizations[index])), [customizations]);
   const selectedToothSet = useMemo(() => new Set(selectedTeeth), [selectedTeeth]);
 
@@ -105,6 +112,7 @@ function GrillzModel({
       dressTooth(slot, look, t);
       const selected = isSelectionMode && selectedToothSet.has(index);
       showSelection(slot, t, selected && selectionLook === 'fill', selected && selectionLook === 'outline', marks);
+      showGlow(slot, glowing && selected && slot.cap.visible, glowMat);
     });
     glints.collect(
       piece.teeth
@@ -113,7 +121,35 @@ function GrillzModel({
     );
     invalidate();
     dressed.current = true;
-  }, [piece, look, looks, glints, isSelectionMode, selectedToothSet, selectionLook, marks, invalidate]);
+  }, [piece, look, looks, glints, isSelectionMode, selectedToothSet, selectionLook, marks, invalidate, glowing, glowMat]);
+
+  // Picked teeth lift a little out of the arch, the glow breathes, and the mouth opens and closes.
+  const jaw = useRef(0);
+  useFrame(() => {
+    const still = reducedMotion();
+    let moving = false;
+    piece.teeth.forEach((slot) => {
+      const data = slot.group.userData as { base?: THREE.Vector3; lift?: number };
+      const want = glowing && selectedToothSet.has(slot.index) && slot.cap.visible ? 1 : 0;
+      const now = data.lift ?? 0;
+      if (Math.abs(want - now) < 0.002) return;
+      data.base ??= slot.group.position.clone();
+      data.lift = still ? want : now + (want - now) * 0.16;
+      slot.group.position.copy(data.base).addScaledVector(slot.out, data.lift * LIFT * MM);
+      moving = true;
+    });
+    const goal = jawOpen ? 1 : 0;
+    if (Math.abs(goal - jaw.current) > 0.002) {
+      jaw.current = still ? goal : jaw.current + (goal - jaw.current) * 0.12;
+      setJaw(piece, jaw.current);
+      moving = true;
+    }
+    if (glowing && selectedToothSet.size && !still) {
+      glowMat.uniforms.t.value = performance.now();
+      moving = true;
+    }
+    if (moving) invalidate();
+  });
 
   // The glints follow the camera.
   useFrame(({ camera }) => {
@@ -228,6 +264,24 @@ function GrillzModel({
       <primitive object={glints.points} />
     </>
   );
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+/** The glow shell round a picked tooth's cap: made the first time it is needed, on the glow layer, never tapped. */
+function showGlow(slot: ToothSlot, on: boolean, material: THREE.Material) {
+  slot.cap.layers.enable(CAP_LAYER);
+  let shell = slot.group.getObjectByName('tooth_glow') as THREE.Mesh | undefined;
+  if (!on && !shell) return;
+  if (!shell) {
+    shell = new THREE.Mesh(slot.cap.geometry, material);
+    shell.name = 'tooth_glow';
+    shell.layers.set(GLOW_LAYER);
+    shell.raycast = noRaycast;
+    slot.group.add(shell);
+  }
+  shell.geometry = slot.cap.geometry;
+  shell.visible = on;
 }
 
 /**
