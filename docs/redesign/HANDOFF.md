@@ -33,6 +33,13 @@ Claude session should read, in this order:
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
 
+**Opening the latest Grill Creator Lab from another account (no shared link needed):** the file is
+`docs/redesign/creator-lab/creator.html` on the `redesign` branch, always the latest published version
+(Nov 17: version 27, the signed-off landing page and grill flow). Either download it from GitHub and
+open it in a browser (it's one self-contained page; the 3D loads three.js from a CDN), or in a Claude
+session on that account ask Claude to publish that file as a private artifact. A static copy of the
+landing page alone, for design tools like Variant, is in `docs/redesign/export/`.
+
 If the plan page can't be opened, make a new one from `plan.md`, or keep
 `plan.md` itself up to date and commit it after every round.
 
