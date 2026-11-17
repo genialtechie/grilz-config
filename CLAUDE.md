@@ -21,7 +21,9 @@
   Never push it to `main`, merge it, or change anything the live site
   (vvslab.magpollo.com) depends on until the owner says so.
 - The living plan and the prototype are private Claude artifacts; their
-  sources and a README are in `docs/redesign/`.
+  sources and a README are in `docs/redesign/`. Starting fresh (another
+  session or account)? Read `docs/redesign/HANDOFF.md` first; `plan.md`
+  there is a snapshot of the plan page, kept up to date after each round.
 - The redesign goes into the owner's portfolio. After each round, add to the
   "Case study notes" tab of the plan page (what was made, the owner's verdict,
   the decision and why, craft details, numbers) and save dated screenshots of
