@@ -3,7 +3,7 @@
   // 3D. Everything on the stage is generated here: nothing is loaded from a file.
   // =====================================================================
   var THREE = window.THREE, renderer = null;
-  if (THREE) { try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, powerPreference: 'high-performance' }); } catch (err) { renderer = null; } }
+  if (THREE) { try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch (err) { renderer = null; } }
   if (!renderer) { load.textContent = '3D is not available here. The controls below still work.'; }
   else (function () {
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -22,7 +22,7 @@
     x.fillStyle = g; x.fillRect(-2, -2, 4, 4);
     var tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; return tex;
   }
-  scene.background = roomTexture('#f6f5f2', '#e3e2dd', '#cfcec8');
+  scene.background = null;   // transparent: the stage's CSS paints the room (the same gradient in the builder; the page's own background on the front door)
 
   // ---------- lighting: four rooms, each reflected by different things ----------
   function sceneEnv(room, panels) {

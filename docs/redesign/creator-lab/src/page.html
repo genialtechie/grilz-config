@@ -348,6 +348,40 @@ button.mrow:active { transform: scale(.985); }
   .thead h2, .mhead h2 { font-size: 21px; }
   .app[data-mode="after"]:not([data-after="3"]) .tray { max-height: 62svh; }
 }
+
+/* the start panel (Nov 17, owner: "too cramped… senior product designer spacing… extend it by swiping up"):
+   roomier padding and gaps, and a grab handle — swipe it up (or tap it) and the panel rises to show every build */
+.openA { padding: 14px 32px 26px; gap: 22px; }
+.openA .head { display: grid; gap: 6px; justify-content: start; }
+.openA h2 { font-size: 26px; letter-spacing: -.035em; }
+.openA .head span { font-size: 15px; line-height: 1.45; }
+.builds { gap: 16px; padding: 4px 32px 6px; margin: 0 -32px; scroll-padding-inline: 32px; }
+.build { width: 156px; gap: 0; }
+.build .pic { height: 108px; border-radius: 20px; margin-bottom: 12px; }
+.build b { font-size: 15px; padding: 0 2px; }
+.build span:not(.pic) { font-size: 13px; padding: 4px 2px 0; }
+.or { margin: 4px 0 0; font-size: 13px; gap: 16px; }
+.composer { padding: 8px 10px 10px; border-radius: 26px; }
+.composer textarea { padding: 12px 12px 8px; }
+.cnote { margin-top: -8px; text-align: center; font-size: 13px; }
+.openA .head { touch-action: none; }
+.grab { justify-self: center; width: 72px; height: 22px; margin-bottom: -8px; border: 0; background: none; padding: 0; display: grid; place-items: center; cursor: grab; touch-action: none; }
+.grab i { display: block; width: 40px; height: 5px; border-radius: 3px; background: rgba(18,18,17,.18); transition: background .2s ease, width .2s ease; }
+.grab:hover i { background: rgba(18,18,17,.32); width: 46px; }
+.openA.big { top: 84px; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+.openA.big .builds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 24px 16px; overflow: visible; margin: 0; padding: 4px 0; }
+.openA.big .build { width: auto; }
+.openA.big .build .pic { height: 120px; }
+@media (max-width: 899px) {
+  .openA { padding: 10px 22px calc(22px + env(safe-area-inset-bottom, 0px)); gap: 20px; }
+  .openA h2 { font-size: 24px; }
+  .builds { padding-inline: 22px; margin-inline: -22px; scroll-padding-inline: 22px; gap: 14px; }
+  .build { width: 132px; }
+  .build .pic { height: 92px; margin-bottom: 10px; }
+  .openA.big { top: 72px; }
+  .openA.big .builds { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 4px 0; }
+  .openA.big .build .pic { height: 108px; }
+}
 /* ===== the front door (Nov 17): v6's layout, words for shoppers and jewelers ===== */
 .pill.ink { background: var(--ink); color: var(--ink-fg); border-color: var(--ink); }
 .app:not([data-home]) .only-home, .app:not([data-mode="door"]) .only-home { display: none; }
@@ -477,8 +511,9 @@ a.btn2 { text-decoration: none; align-items: center; }
 .more .final .btn2.inv { background: linear-gradient(180deg, #1c1a18, #070504); color: #fff; border-color: transparent; box-shadow: 0 14px 34px -16px rgba(17,15,13,.55); }
 .more .final .btn2.line { color: var(--fd-fg); border-color: var(--fd-line); background: rgba(255,255,255,.8); }
 .shopline { margin-top: 6px; border: 0; background: none; padding: 8px 4px; font: 500 15px/1.3 var(--sans); color: var(--fd-fg); text-decoration: underline; text-decoration-color: var(--fd-gold); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+.app[data-mode="door"] .stage { background-color: #f8f7f4; background-image: radial-gradient(rgba(0,0,0,.03) 1px, transparent 1px); background-size: 4px 4px; }   /* the front door: one background from the top bar to the footer */
 /* the moving strip of grillz words, right under the hero */
-.words { position: relative; overflow: hidden; border-bottom: 1px solid var(--fd-line); padding: 22px 0; background: var(--fd-bg);
+.words { position: relative; overflow: hidden; border-top: 1px solid var(--fd-line); border-bottom: 1px solid var(--fd-line); padding: 22px 0; background: transparent;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .words .track { display: flex; width: max-content; gap: 48px; white-space: nowrap; animation: marquee 30s linear infinite; }
 .words:hover .track { animation-play-state: paused; }

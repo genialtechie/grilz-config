@@ -60,6 +60,8 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('[data-build="tone"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await c('[data-a="next"]'); await shot('w1-select-label');
       await c('#selbtn'); await c('#selpop [data-k="front"]'); await shot('w2-select-picked');
+    } else if (plan === 'x') {   // the start panel: roomier spacing; the handle grows it to show every build, and shrinks it again
+      await shot('x1-start'); await c('#grabA'); await p.waitForTimeout(600); await shot('x2-start-all-builds'); await p.keyboard.press('Escape'); await shot('x3-start-again');
     } else if (plan === 'o') {   // the start page (v12): the doors, one tap into a popular build, and the way back
       await shot('o1-door'); await c('[data-build="tone"]'); await shot('o2-one-tap-builder'); await c('[data-a="sback"]'); await shot('o3-door-waiting');
     } else if (plan === 'i') {   // the AI path: Describe it from the start page, the sign-up, the code, the build and its note; keep talking; the free builds; a picture

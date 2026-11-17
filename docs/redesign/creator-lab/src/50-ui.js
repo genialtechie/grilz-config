@@ -81,11 +81,13 @@
     var builds = BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
     if (ui.door === 'v15') {
       var self = '<button type="button" class="build empty" data-build="empty"><span class="pic"><i>+</i></span><b>Build it yourself</b><span>Pick every tooth</span></button>';
-      $('openA').innerHTML = '<div class="head"><h2>' + (ui.resume ? 'Your build is waiting' : 'Start your build') + '</h2><span>' + (ui.resume ? esc(receipt()) : 'Tap a build and change anything, or build it yourself.') + '</span></div>' +
+      $('openA').innerHTML = '<button type="button" class="grab" id="grabA" aria-label="' + (ui.doorBig ? 'Show less' : 'Show all builds') + '" aria-expanded="' + !!ui.doorBig + '"><i></i></button>' +
+        '<div class="head"><h2>' + (ui.resume ? 'Your build is waiting' : 'Start your build') + '</h2><span>' + (ui.resume ? esc(receipt()) : 'Tap a build and change anything, or build it yourself.') + '</span></div>' +
         (ui.resume ? '<button type="button" class="cta" id="goA">Continue your build</button>' : '') +
         '<div class="builds" role="group" aria-label="Starting builds">' + self + builds + '</div>' +
         '<p class="or">or let AI build it</p>' + composer('doortext', 'Describe your grillz or upload inspiration') +
         '<p class="cnote">' + AI_FREE + ' free AI builds per phone. We text you a code first.</p>';
+      $('openA').classList.toggle('big', !!ui.doorBig);
       doorExtras(); grow($('doortext'));
       return;
     }
@@ -102,6 +104,20 @@
       '<p class="orlab">' + (ui.resume ? 'Or start again from a popular build' : 'Or tap a popular build') + '</p><div class="builds" role="group" aria-label="Popular builds">' + builds + '</div>';
     doorExtras();
   }
+  // the start panel grows: swipe the handle (or the panel's head) up to show every build, down to shrink; a tap toggles; Esc shrinks
+  function doorSize(big) {
+    var el = $('openA'); if (!!ui.doorBig === big) return; var h0 = el.offsetHeight;
+    ui.doorBig = big; el.classList.toggle('big', big); el.scrollTop = 0;
+    var g = $('grabA'); if (g) { g.setAttribute('aria-expanded', big); g.setAttribute('aria-label', big ? 'Show less' : 'Show all builds'); }
+    if (!reduce && el.animate) { var h1 = el.offsetHeight; el.animate([{ height: h0 + 'px', overflow: 'hidden' }, { height: h1 + 'px', overflow: 'hidden' }], { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+  }
+  (function () {
+    var y0 = null, moved = false;
+    $('openA').addEventListener('pointerdown', function (e) { if (!e.target.closest('.grab, .head')) return; y0 = e.clientY; moved = false; });
+    window.addEventListener('pointermove', function (e) { if (y0 === null) return; var dy = e.clientY - y0; if (Math.abs(dy) < 28) return; moved = true; doorSize(dy < 0); y0 = null; });
+    window.addEventListener('pointerup', function (e) { if (y0 !== null && !moved && e.target.closest('.grab')) doorSize(!ui.doorBig); y0 = null; });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ui.doorBig) doorSize(false); });
+  })();
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now(); freshHistory();
     ui.cat = 'teeth'; clearPicks(); ui.visited = { teeth: 1 }; ui.extra = null; ui.navHist = [];
