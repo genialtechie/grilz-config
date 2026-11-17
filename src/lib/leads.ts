@@ -15,12 +15,13 @@ export type LeadSubmission = {
   /** Whether a studio photo will be requested for this lead. */
   photo: boolean;
   turnstile?: string;
-  phoneToken?: string;
   /** A promo code the builder checked; the server checks it again and counts the use. */
   promo?: string;
   /** Honeypot: always empty for people. */
   website?: string;
   elapsedMs: number;
+  /** Proof the contact phone was verified with a text code (lib/phoneAuth); the server checks it. */
+  phoneToken?: string;
 };
 
 export type LeadReceipt = { leadId: string; token: string };
@@ -74,5 +75,24 @@ export async function checkPromo(tenant: string, code: string): Promise<{ ok: tr
     return { ok: false, error: body.error ?? "Couldn't check that code. Try again." };
   } catch {
     return { ok: false, error: "Couldn't check that code. Check your connection and try again." };
+  }
+}
+
+/**
+ * Adds what the shopper gives on the Sent screen, after the design went: their Instagram (shown to the
+ * shop as typed) or an email for a copy. POST /api/lead-extra { leadId, token, instagram?, email? }.
+ */
+export async function addToLead(receipt: LeadReceipt, extra: { instagram?: string; email?: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const response = await fetch('/api/lead-extra', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId: receipt.leadId, token: receipt.token, ...extra }),
+    });
+    if (response.ok) return { ok: true };
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    return { ok: false, error: body.error ?? "Couldn't add that. Try again." };
+  } catch {
+    return { ok: false, error: "Couldn't add that. Check your connection and try again." };
   }
 }
