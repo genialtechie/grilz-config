@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v9) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
+| Grill Creator Lab (the overhauled builder, v10) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -75,9 +75,10 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 2. ~~The own-site question~~ Decided Nov 17: on VVS Lab's own site the
    shopper sees VVS Lab and VVS Lab texts them (no partners yet). Deposit
    words: "$150 now, counted toward your grill. [Shop] confirms the rest."
-3. **Waiting on the owner: pick the builder's structure** in Creator Lab v9
-   (prototype panel: Structure x Finding the next part). Then remove the
-   losers and the old stages and steps code.
+3. ~~Pick the builder's structure~~ The owner chose the build strip with
+   Next and Back (v10; see `creator-lab/README.md` and the Nov 17 "build
+   strip" row in plan.md). Waiting on their verdict on the gold rings for
+   progress; then delete the unused sheet, expand, stages and steps code.
 4. **Then the AI paths**, already decided on Nov 17 (see plan.md): "Describe
    it" and "Start from a picture" on the start page and in Your build; the
    phone sign-up after they describe it; the AI builds the closest version in
@@ -100,7 +101,7 @@ cd docs/redesign/creator-lab/src && python3 build.py
 ```
 
 ```bash
-cd docs/redesign/creator-lab/test && node ctest.cjs 390 780 m g
+cd docs/redesign/creator-lab/test && node ctest.cjs 390 780 m v
 ```
 
 `ctest.cjs` drives headless Chromium with Playwright and software WebGL (slow:

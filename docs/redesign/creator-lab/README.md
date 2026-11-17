@@ -70,3 +70,15 @@ it), **Expand in place** (a part opens inside its own row), **Build strip**
 (the five round pictures pinned on top, the part below). Each pairs with
 **Up next on Your build** or **a Next button**. Switch them in the prototype
 panel (top right).
+
+v10 (Nov 17): the owner chose the **build strip**. The five round pictures
+stay pinned on top; the open part sits below. The main button says "Next"
+("Done" on the last part); the smaller "Back" returns to the screen you were
+on, and from the first screen to Start your build, where the button becomes
+"Continue your build". No arrows inside buttons. Progress lives in the strip:
+a part not opened yet wears a gold ring, like an unseen story, and the count
+sits under the buttons. "Select teeth" is a toggle on the stage (bottom right
+on phones, beside Undo on computers, above the tools when there is no room).
+Undoing a quick-question answer brings the question back. The stacked-sheet
+and expand-in-place code is still in `50-ui.js` behind `ui.struct`; remove it
+once the owner confirms the strip.

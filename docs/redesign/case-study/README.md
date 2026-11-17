@@ -19,6 +19,7 @@ private Claude artifact.
 | creator 7 | Nov 17 | The three screens after Done: Your grill, Where should VVS Lab text you (code step, returning shopper), Sent (the studio photo develops from the 3D, deposit, extras, what happens next) |
 | creator 8 | Nov 17 | After the owner's hierarchy review: one shared Row (picture on the right) for the menu, fitting and next steps; gold icons; one screen to send; footers on every screen; Undo next to Turn; Change chips on the stage |
 | creator 9 | Nov 17 | Three structures for the builder to compare, so Your build stays seen: a stacked sheet over it, expand in place, a build strip; each with Up next or a Next button |
+| creator 10 | Nov 17 | The chosen structure: the build strip with Back and Next, gold rings on parts not opened yet, the Select teeth toggle on the stage, a quick question that returns after Undo (phone, laptop, tablet) |
 | port 1-2 | Nov 16 | The approved piece inside the real builder (iced; a per-tooth mix); every state next to the prototype is in `docs/redesign/port/screenshots/` |
 
 Only our own work is here. Reference images (competitor sites, games, the

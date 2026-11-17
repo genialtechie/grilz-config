@@ -1,7 +1,8 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m s (the three structures), m g (after Done), m k (Select teeth and Undo)
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m v (the build strip: Next, Back, Select teeth, quick-question Undo) or m g (after Done)
+// Plans a to f, k and s exercise earlier versions and may no longer pass.
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -88,6 +89,25 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await proto('nextp', 'nextbtn'); await shot('s6-expand-stones-nextbtn');
       await proto('struct', 'strip'); await proto('nextp', 'upnext'); await c('.strip5 [data-open="metal"]'); await shot('s7-strip-metal');
       await proto('nextp', 'nextbtn'); await c('.strip5 [data-open="finish"]'); await shot('s8-strip-finish-nextbtn');
+    } else if (plan === 'v') {
+      const quiet = () => p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-build="tone"]'); await c('#goA'); await quiet(); await shot('v1-strip-teeth');
+      await c('[data-a="next"]'); await shot('v2-strip-metal');
+      await c('#selbtn'); await shot('v3-select-open');
+      await c('#selpop [data-k="front"]'); await shot('v4-front-picked');
+      await c('.strip5 [data-open="extras"]'); await shot('v5-extras-done');
+      await c('[data-a="sback"]'); await shot('v6-back-to-metal');
+      await c('[data-a="sback"]'); await c('[data-a="sback"]'); await shot('v7-back-to-start');
+      await c('#goA'); await quiet(); await c('[data-a="next"]');
+      await p.evaluate(() => { const u = window.__vvs.ui; u.quietUntil = 0; u.lastTouch = 0; window.__vvs.G.touched = 0; }); await p.waitForTimeout(1600);
+      const k = await p.evaluate(() => window.__vvs.ui.bub); console.log('bubble', k); await shot('v8-question');
+      await p.evaluate(() => { window.__vvs.ui.undoMs = 9e6; });
+      await p.click('#bubble .chip:not(.more)'); await shot('v9-answered-undo');
+      await p.click('#bubble [data-b="undo"]'); await shot('v10-question-back');
+    } else if (plan === 'w') {
+      await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-a="next"]'); await shot('w1-select-label');
+      await c('#selbtn'); await c('#selpop [data-k="front"]'); await shot('w2-select-picked');
     } else if (plan === 'c') {
       await c('[data-build="iced8"]'); await c('#goA'); await shot('c1-menu-game');
       await c('[data-open="stones"]'); await shot('c2-stones-game');
