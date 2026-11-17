@@ -10,7 +10,7 @@ const port = 8700 + Math.floor(Math.random() * 90);
 const srv = http.createServer((q, r) => { fs.readFile(path.join(dir, q.url.split('?')[0]), (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': 'text/html' }); r.end(d); }); }).listen(port);
 const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 800), process.argv[4] || 'd', process.argv[5] || 'a'];
 (async () => {
-  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const b = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });   // PW_CHROMIUM=/opt/pw-browsers/chromium when the repo's Playwright has no browser
   const p = await b.newPage({ viewport: { width: vw, height: vh } });
   await p.route('**/three.min.js', r => r.fulfill({ path: __dirname + '/three.min.js', contentType: 'text/javascript' }));
   const errs = []; p.on('pageerror', e => errs.push('PAGEERR ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 300)); });
