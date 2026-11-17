@@ -61,8 +61,34 @@
   var SPARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.2l1.3 3.4 3.4 1.3-3.4 1.3L7 11.6 5.7 8.2 2.3 6.9l3.4-1.3zM12.6 10.4l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
   var CAMERA = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 4 6.6 2.4h2.8L10.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8.6" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
   function door(k, icon, title, sub) { return '<button type="button" class="door" data-door="' + k + '"><span class="prev">' + ic(icon) + '</span><b>' + title + '</b><span>' + sub + '</span></button>'; }
+  // v13 (Nov 17, the owner: "people are more used to a text field when they know they are talking to ai… Didn't have to be split. It should be
+  // start your build and those selections ORRRR using the ai builds"): the builds, then "or", then one AI field with a camera inside it.
+  // The same composer closes the AI conversation, so the start page and Keep talking feel like one product.
+  function composer(id, ph) {
+    var pic = ui.ai.pic, has = !!(ui.ai.text.trim() || pic);
+    return '<div class="composer">' + (pic ? '<span class="cpic"><img alt="Your picture" src="' + pic + '"><button type="button" class="cx" data-x="unpic" aria-label="Remove the picture">×</button></span>' : '') +
+      '<textarea id="' + id + '" rows="1" maxlength="300" placeholder="' + ph + '" aria-label="' + ph + '">' + esc(ui.ai.text) + '</textarea>' +
+      '<div class="crow"><label class="cam" title="Add a photo or a screenshot">' + ic('cam') + '<span class="sr">Add a photo or a screenshot</span><input type="file" accept="image/*" data-up="ai"></label>' +
+      '<button type="button" class="send" data-x="go"' + (has ? '' : ' disabled') + ' aria-label="Build it with AI">' + ic('spark') + '</button></div></div>';
+  }
+  function grow(el) { if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 132) + 'px'; }
+  function syncSend(scope) { var b = scope.querySelector('.send'); if (b) b.disabled = !(ui.ai.text.trim() || ui.ai.pic); }
+  function doorGo() {
+    if (!ui.ai.text.trim() && !ui.ai.pic) { focusId('doortext'); return; }
+    ui.aiFrom = 'door'; ui.aiStep = 'talk'; ui.aiErr = ''; hideBubble(); setMode('ai'); refresh(); aiAction('go');
+  }
   function renderOpenings() {
     var builds = BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
+    if (ui.door === 'v13') {
+      var self = '<button type="button" class="build empty" data-build="empty"><span class="pic"><i>+</i></span><b>Build it yourself</b><span>Pick every tooth</span></button>';
+      $('openA').innerHTML = '<div class="head"><h2>' + (ui.resume ? 'Your build is waiting' : 'Start your build') + '</h2><span>' + (ui.resume ? esc(receipt()) : 'Tap a build and change anything, or build it yourself.') + '</span></div>' +
+        (ui.resume ? '<button type="button" class="cta" id="goA">Continue your build</button>' : '') +
+        '<div class="builds" role="group" aria-label="Starting builds">' + self + builds + '</div>' +
+        '<p class="or">or let AI build it</p>' + composer('doortext', 'Describe your grillz or upload inspiration') +
+        '<p class="cnote">' + AI_FREE + ' free AI builds per phone. We text you a code first.</p>';
+      grow($('doortext'));
+      return;
+    }
     if (ui.door === 'v11') {
       $('openA').innerHTML = '<div class="head"><h2>Start your build</h2><span>Start empty, or from a build you can change.</span></div>' +
         '<div class="builds" role="group" aria-label="Starting builds"><button type="button" class="build empty" data-build="empty" aria-pressed="' + (ui.build === 'empty') + '"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth</span></button>' + builds + '</div>' +
@@ -199,7 +225,7 @@
     var view = ui.mode + '|' + ui.cat + '|' + ui.after + '|' + ui.aiStep, keep = view === renderTray.view ? [].map.call(tray.querySelectorAll('.tbody'), function (e) { return e.scrollTop; }) : null;   // keep the scroll only when redrawing the same screen
     renderTray.view = view;
     if (ui.mode === 'after') { tray.innerHTML = renderAfter(); return; }
-    if (ui.mode === 'ai') { tray.innerHTML = renderAI(); if (!keep && ui.aiStep === 'talk' && ui.ai.msgs.length) { var tb = tray.querySelector('.tbody'); if (tb) tb.scrollTop = tb.scrollHeight; } return; }   // keep talking opens on the latest reply
+    if (ui.mode === 'ai') { tray.innerHTML = renderAI(); grow($('aitext')); if (!keep && ui.aiStep === 'talk' && ui.ai.msgs.length) { var tb = tray.querySelector('.tbody'); if (tb) tb.scrollTop = tb.scrollHeight; } return; }   // keep talking opens on the latest reply
     if (ui.cat === null) { ui.cat = 'teeth'; ui.visited.teeth = 1; }
     tray.innerHTML = stripView();
     if (keep) [].forEach.call(tray.querySelectorAll('.tbody'), function (e, i) { if (keep[i] !== undefined) e.scrollTop = keep[i]; });
@@ -395,29 +421,27 @@
     var h = '<div class="thead"><h2>' + (first ? 'Describe your grill' : 'Keep talking') + '</h2></div><div class="tbody flow">' +
       (first ? '<p class="intro">Say it the way you\'d say it to a jeweler. AI builds the closest version in the 3D, tells you what\'s different, and you can change anything after.</p>' : '<div class="chat">' + ui.ai.msgs.map(aiMsg).join('') + '</div>');
     if (out) h += row({ cls: 'lead', title: 'Keep going by hand', hint: 'Everything on your grill is still yours to change: tap a part on top, or tap teeth on the 3D.', thumb: ic('check') });
-    else h += '<section class="sect"><div class="field"><textarea id="aitext" maxlength="300" placeholder="' + (first ? 'Iced out bottom 8 in white gold, with fangs' : 'Make the front two rose gold') + '" aria-label="Describe your grill">' + esc(ui.ai.text) + '</textarea></div>' +
-      '<label class="up">' + (ui.ai.pic ? '<img alt="" src="' + ui.ai.pic + '">' : '') + '<span>' + (ui.ai.pic ? 'Change the picture' : 'Or add a picture: a photo or a screenshot') + '</span><input type="file" accept="image/*" data-up="ai"></label>' +
-      '<p class="err" id="aierr" role="alert">' + (ui.aiErr || '') + '</p></section>';
     h += '<p class="proto-note">Prototype: a simple word matcher stands in for the AI. It knows teeth counts, metals, karats, finishes, stones, fangs and letters, and can\'t see pictures yet; the real AI will.</p></div>';
-    var main = out ? '<button type="button" class="cta" data-x="hand">Keep editing by hand</button>' : '<button type="button" class="cta" data-x="go">' + (known() ? 'Build it' : 'Text me a code to build it') + '</button>';
-    return h + '<div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="aiback">Back</button>' + main + '</div><p class="free">' + freeWords() + '</p></div>';
+    var main = out ? '<button type="button" class="cta" data-x="hand">Keep editing by hand</button>' : composer('aitext', first ? 'Iced out bottom 8 in white gold, with fangs' : 'Make the front two rose gold');
+    return h + '<div class="tfoot col"><div class="btns end"><button type="button" class="cta ghost second" data-x="aiback">Back</button>' + main + '</div><p class="free">' + freeWords() + '</p></div>';
   }
   function aiContact() {
     var S = esc(shopName());
     return '<div class="thead"><h2>Where should we text your code?</h2></div><div class="tbody flow">' +
+      ((ui.ai.text.trim() || ui.ai.pic) ? '<div class="chat"><div class="me">' + esc(ui.ai.text.trim() || 'A picture') + (ui.ai.pic ? '<img alt="Your picture" src="' + ui.ai.pic + '">' : '') + '</div></div>' : '') +
       '<p class="intro">Every AI build costs us money, so we ask for your phone first. Each phone gets ' + AI_FREE + ' free builds, and it\'s the number ' + S + ' texts about your grill.</p>' +
       '<section class="sect">' + contactHtml() + '</section></div>' +
       '<div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="aiback">Back</button><button type="button" class="cta" data-x="go">Text me a code</button></div><p class="free">Free. Nothing to pay.</p></div>';
   }
   function aiAction(x) {
-    if (x === 'aiback') { if (ui.aiStep === 'talk') leaveAI(); else { ui.aiStep = 'talk'; renderTray(); focusId('aitext'); } return; }
+    if (x === 'aiback') { if (ui.aiStep === 'talk' || (ui.aiFrom === 'door' && ui.aiStep === 'contact')) leaveAI(); else { ui.aiStep = 'talk'; renderTray(); focusId('aitext'); } return; }
     if (x === 'hand') { setMode('build'); refresh(true); return; }
     if (x === 'back2' || x === 'wrong') { clearTimeout(ui.smsT); ui.code = ''; ui.sms = null; ui.aiStep = 'contact'; renderTray(); if (x === 'wrong') focusId('aphone'); return; }
     if (x === 'resend') { sendCode(true); return; }
     if (x === 'fill') { ui.code = ui.sms; check(); return; }
     if (x !== 'go') return;
     if (ui.aiStep === 'talk') {
-      if (!ui.ai.text.trim() && !ui.ai.pic) { ui.aiErr = 'Say what you want, or add a picture.'; var p = $('aierr'); if (p) p.textContent = ui.aiErr; focusId('aitext'); return; }
+      if (!ui.ai.text.trim() && !ui.ai.pic) { focusId('aitext'); return; }
       ui.aiErr = '';
       if (known()) { if (aiLeft()) runAI(); else renderTray(); return; }
       ui.aiStep = 'contact'; renderTray(); focusId('aname'); return;
@@ -554,7 +578,7 @@
     else if (id === 'apromo') { SET.promo = v.trim(); meta(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
     else if (id === 'aig') ui.c.ig = v.slice(0, 31);
     else if (id === 'aemail') ui.c.email = v.slice(0, 120);
-    else if (id === 'aitext') { ui.ai.text = v.slice(0, 300); if (ui.aiErr) { ui.aiErr = ''; var q = $('aierr'); if (q) q.textContent = ''; } }
+    else if (id === 'aitext') { ui.ai.text = v.slice(0, 300); grow(el); syncSend(tray); }
     if ((id === 'aname' || id === 'aphone') && ui.err && !contactErr()) { ui.err = ''; var p = $('aerr'); if (p) p.textContent = ''; }
   }
   tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && (e.target.id === 'aname' || e.target.id === 'aphone' || e.target.id === 'aitext')) { e.preventDefault(); afterAction('go'); } });
@@ -659,7 +683,10 @@
     if (t.id === 'goA') { if (ui.resume) { ui.resume = false; setMode('build'); if (!ui.cat) ui.cat = 'teeth'; refresh(true); return; } if (!ui.build) applyBuild('empty'); startCreator(); return; }
     if (t.id === 'selbtn') { ui.selOpen = !ui.selOpen; changeBar(); return; }
     if (t.id === 'selchip') { clearPicks(); refresh(); return; }
-    var x = t.getAttribute('data-x'); if (x) { afterAction(x); return; }
+    var x = t.getAttribute('data-x');
+    if (x === 'unpic') { ui.ai.pic = null; if (ui.mode === 'door') { renderOpenings(); box(); focusId('doortext'); } else { renderTray(); focusId('aitext'); } return; }
+    if (x === 'go' && ui.mode === 'door') { doorGo(); return; }
+    if (x) { afterAction(x); return; }
     var ft = t.getAttribute('data-fit'); if (ft) { SET.mold = ft; redraw(); return; }
     var op = t.getAttribute('data-open'); if (op) { if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble(); openCat(op); return; }
     var a = t.getAttribute('data-a');
@@ -698,10 +725,14 @@
     if (e.target.id === 'idea') SET.idea = e.target.value.slice(0, 400);
     if (ui.mode === 'after' || ui.mode === 'ai') afterInput(e);
   });
-  tray.addEventListener('change', function (e) {
+  document.addEventListener('input', function (e) {   // the start page's AI field
+    if (e.target.id !== 'doortext') return; ui.ai.text = e.target.value.slice(0, 300); grow(e.target); syncSend($('openA')); box();
+  });
+  document.addEventListener('keydown', function (e) { if (e.target.id === 'doortext' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doorGo(); } });
+  document.addEventListener('change', function (e) {
     var kind = e.target.getAttribute && e.target.getAttribute('data-up'); if (!kind) return;
     var f = e.target.files[0]; if (!f) return; var fr = new FileReader();
-    fr.onload = function () { var im = new Image(); im.onload = function () { var c = document.createElement('canvas'), s = Math.min(1, 900 / Math.max(im.width, im.height)); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); var url = c.toDataURL('image/jpeg', .8); if (kind === 'ai') { ui.ai.pic = url; ui.aiErr = ''; renderTray(); focusId('aitext'); return; } if (kind === 'photo') { SET.photo = url; if (G.photo) G.photo(im); } else SET.inspo = url; refresh(true); }; im.src = fr.result; };
+    fr.onload = function () { var im = new Image(); im.onload = function () { var c = document.createElement('canvas'), s = Math.min(1, 900 / Math.max(im.width, im.height)); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); var url = c.toDataURL('image/jpeg', .8); if (kind === 'ai') { ui.ai.pic = url; ui.aiErr = ''; if (ui.mode === 'door') { renderOpenings(); box(); focusId('doortext'); } else { renderTray(); focusId('aitext'); } return; } if (kind === 'photo') { SET.photo = url; if (G.photo) G.photo(im); } else SET.inspo = url; refresh(true); }; im.src = fr.result; };
     fr.readAsDataURL(f);
   });
   $('jawbtn').addEventListener('click', function () { var o = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', o); $('jawlabel').textContent = o ? 'Close mouth' : 'Open mouth'; G.jaw(o); });
@@ -709,7 +740,7 @@
   $('undobtn').addEventListener('click', function () { ui.lastTouch = performance.now(); buzz(); undo(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v12', 'Three ways in, one-tap builds (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
+  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]], ['door', 'Start page', [['v13', 'Builds, or one AI field (v13)'], ['v12', 'Three ways in (v12)'], ['v11', 'Chips beside Start empty (v11)']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
@@ -736,7 +767,7 @@
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('site', 'vvs'); setVariant('door', 'v12'); brand();
+  setVariant('site', 'vvs'); setVariant('door', 'v13'); brand();
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

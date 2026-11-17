@@ -105,3 +105,13 @@ icon and a name on a phone), then the popular builds, which open the builder
 in one tap. The "Start empty" button is gone; "Continue your build" appears on
 top only when a build is waiting. The v11 start page stays behind the
 "Start page" switch in the prototype panel, to compare.
+
+v13 (Nov 17): the owner wasn't set on v12 and pointed the way: AI users
+expect a text field, so "Start your build" with its builds, OR one AI field
+with a camera inside it, "Describe your grillz or upload inspiration". The
+**composer** is a new shared piece: text on top, a camera and a sparkle send
+button below (no arrow, per the no-arrows rule), a picture as a thumbnail
+with ×, Enter to send, the field growing to five lines. It sits at the foot
+of the start page and at the foot of the AI conversation, with Back beside
+it there. Sending from the start page skips the describe screen. v12 and v11
+stay behind the "Start page" switch.

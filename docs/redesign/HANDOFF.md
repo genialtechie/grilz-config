@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v12) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
+| Grill Creator Lab (the overhauled builder, v13) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -71,8 +71,9 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
   per verified phone, every reply counts; a photo or screenshot, no Instagram
   links; the closest match with a note on what's different, plus Undo. A word
   matcher stands in for the AI in the prototype (`wish()` in `50-ui.js`).
-- **The start page (v12, Nov 17):** three ways in as doors, then the popular
-  builds, which open the builder in one tap. No "Start empty" button.
+- **The start page (v13, Nov 17):** "Start your build", the builds row
+  (Build it yourself first, one tap into the builder), "or let AI build it",
+  then one AI field with a camera inside it. v12 and v11 behind a switch.
 
 ## Next, in order
 
@@ -90,7 +91,10 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
    words confirmed on slides the same day. The owner then asked for the best
    start page "even if it means redesigning the start empty screen": v12 has
    three ways in and one-tap popular builds (v11 behind a switch).
-   **Waiting on:** the owner's verdict on v12's start page.
+   The owner wasn't set on v12 and gave the direction for v13: the builds,
+   OR one AI field with a camera inside it ("Describe your grillz or upload
+   inspiration"), the same field that ends the AI conversation.
+   **Waiting on:** the owner's verdict on v13 (choices listed in plan.md).
 5. **Later rounds:**
    - the hybrid front door
    - the shop's brand, and coming back to a design

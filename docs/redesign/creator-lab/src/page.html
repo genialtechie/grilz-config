@@ -75,6 +75,31 @@ h1, h2, h3, p { margin: 0; }
 .openA .go { display: flex; justify-content: space-between; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
 /* AI (Nov 17): "Describe it" as chips on the start page and a tool on the stage; the conversation in the panel */
 .openA .go .chips { gap: 8px; }
+/* the composer (v13): one field for talking to the AI, a camera inside it, a send button that wakes up when there's something to send.
+   The same piece on the start page and at the foot of the AI conversation. */
+.or { display: flex; align-items: center; gap: 12px; font: 400 12.5px/1 var(--sans); color: var(--s-mut); margin: 2px 0 -4px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--s-line); }
+.composer { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 6px 6px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--s-line), 0 12px 30px -20px rgba(40,36,24,.5); transition: box-shadow .2s ease; min-width: 0; }
+.composer:focus-within { box-shadow: 0 0 0 1.5px var(--ink), 0 16px 36px -20px rgba(40,36,24,.55); }
+.crow { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
+.composer textarea { width: 100%; min-width: 0; border: 0; background: transparent; resize: none; padding: 10px 10px 4px; font: 400 16px/1.35 var(--sans); color: var(--s-fg); max-height: 132px; outline: none; user-select: text; -webkit-user-select: text; }
+.composer textarea:focus-visible { outline: none; }
+.composer textarea::placeholder { color: var(--s-faint); }
+.cam { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; cursor: pointer; color: var(--s-fg); transition: background .15s ease; }
+.cam:hover { background: rgba(18,18,17,.06); }
+.cam input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.composer svg.ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.send { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--ink); color: var(--ink-fg); display: grid; place-items: center; flex: none; transition: background .2s ease, color .2s ease, transform .15s ease; }
+.send svg.ico { width: 18px; height: 18px; }
+.send[disabled] { background: rgba(18,18,17,.08); color: var(--s-faint); cursor: default; }
+.send:not([disabled]):active { transform: scale(.93); }
+.cpic { position: relative; width: 60px; height: 60px; margin: 8px 0 0 8px; }
+.cpic img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; box-shadow: 0 0 0 1px var(--s-line); }
+.cx { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; background: var(--ink); color: #fff; font: 500 13px/1 var(--sans); display: grid; place-items: center; padding: 0; }
+.cnote { font: 400 12px/1.3 var(--sans); color: var(--s-mut); text-align: center; margin-top: -6px; }
+.tfoot .btns.end { align-items: flex-end; }
+.tfoot .btns .composer { flex: 1; }
+.tfoot .btns.end .cta.second { min-height: 52px; }
 /* the start page (v12): three ways in as doors, each a Thumb and two lines, then the popular builds */
 .openA .doors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .door { border: 0; text-align: left; display: grid; gap: 8px 12px; align-content: start; padding: 12px; border-radius: 18px; background: rgba(255,255,255,.62); color: var(--s-fg); transition: background .18s ease, transform .14s ease; }
@@ -263,7 +288,7 @@ button.mrow:active { transform: scale(.985); }
 .proto { position: absolute; z-index: 10; right: max(16px, env(safe-area-inset-right, 0px)); top: 62px; width: min(350px, calc(100% - 32px)); max-height: calc(100% - 80px); overflow-y: auto; background: #1b1b1a; color: #ecebe6; border-radius: 18px; padding: 16px; display: grid; gap: 14px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.5); font-size: 13px; }
 .proto h3 { font: 500 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #9a988f; }
 .proto .pair { display: grid; gap: 6px; }
-.proto .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: rgba(255,255,255,.07); border-radius: 12px; padding: 4px; }
+.proto .seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 4px; background: rgba(255,255,255,.07); border-radius: 12px; padding: 4px; }
 .proto .seg button { border: 0; background: transparent; color: #b8b6ae; border-radius: 9px; padding: 9px 8px; font: 600 12px/1.25 var(--sans); text-align: left; }
 .proto .seg button[aria-pressed="true"] { background: #ecebe6; color: #121211; }
 .proto p { color: #9a988f; }

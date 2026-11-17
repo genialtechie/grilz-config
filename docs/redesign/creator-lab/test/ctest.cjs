@@ -18,8 +18,8 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
   await p.goto('http://localhost:' + port + '/_p.html', { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.__vvs && window.__vvs.G.ready, null, { timeout: 120000 });
   const st = p.locator('#stage'); const t0 = Date.now();
-  const shot = async n => { await p.waitForTimeout(700); await st.screenshot({ path: out + '/' + tag + '-' + n + '.png' }); console.log(n, Date.now() - t0); };
-  const c = async s => { if (await p.isVisible('#bubble')) await p.click('#bubble [data-b="x"]').catch(() => {}); await p.click(s, { timeout: 20000 }); };
+  const shot = async n => { await p.waitForTimeout(700); await st.screenshot({ path: out + '/' + tag + '-' + n + '.png', timeout: 60000 }); console.log(n, Date.now() - t0); };
+  const c = async s => { if (await p.isVisible('#bubble')) await p.click('#bubble [data-b="x"]').catch(() => {}); await p.click(s, { timeout: 60000 }); };
   const proto = async (k, v) => { await c('#protobtn'); await c('[data-p="' + k + '"][data-v="' + v + '"]'); await c('#protobtn'); };
   try {
     if (plan === 'g') {
@@ -28,9 +28,9 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('[data-build="tone"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await shot('g1-your-build');
       await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g2-your-grill');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 230; }); await shot('g3-your-grill-mid');
-      await c('[data-x="go"]'); await shot('g4-your-grill-error');
+      await c('#tray [data-x="go"]'); await shot('g4-your-grill-error');
       await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('[data-fit="own"]'); await shot('g5-your-grill-filled');
-      await c('[data-x="go"]'); await p.waitForTimeout(2600); await shot('g6-code');
+      await c('#tray [data-x="go"]'); await p.waitForTimeout(2600); await shot('g6-code');
       await c('[data-x="fill"]'); await p.waitForTimeout(1500);
       await p.evaluate(() => { window.__vvs.ui.devAt = performance.now() - 4000; }); await shot('g7-sent-developing');
       await p.evaluate(() => { window.__vvs.ui.devAt = performance.now() - 20000; }); await p.waitForTimeout(500); await shot('g8-sent');
@@ -64,21 +64,20 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
     } else if (plan === 'i') {   // the AI path: Describe it from the start page, the sign-up, the code, the build and its note; keep talking; the free builds; a picture
       await p.evaluate(() => { try { localStorage.clear(); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; window.__vvs.ui.undoMs = 9e6; });
       await shot('i0-door');
-      await c('.openA [data-door="describe"]'); await shot('i1-describe');
-      await p.fill('#aitext', 'iced out bottom 8 in white gold with fangs and rubies'); await c('[data-x="go"]'); await shot('i2-ai-contact');
-      await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('[data-x="go"]'); await p.waitForTimeout(2600); await shot('i3-ai-code');
+      await p.fill('#doortext', 'iced out bottom 8 in white gold with fangs and rubies'); await shot('i1-door-typed');
+      await c('.openA [data-x="go"]'); await shot('i2-ai-contact');
+      await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('#tray [data-x="go"]'); await p.waitForTimeout(2600); await shot('i3-ai-code');
       await c('[data-x="fill"]'); await p.waitForTimeout(1500); await shot('i4-built-note');
       await p.click('#bubble [data-b="x"]').catch(() => {});
       await c('#aibtn'); await shot('i5-keep-talking');
-      await p.fill('#aitext', 'make it 18k rose gold with my initials MJ'); await c('[data-x="go"]'); await p.waitForTimeout(700); await shot('i6-rose-built');
+      await p.fill('#aitext', 'make it 18k rose gold with my initials MJ'); await c('#tray [data-x="go"]'); await p.waitForTimeout(700); await shot('i6-rose-built');
       await p.click('#bubble [data-b="undo"]'); await p.waitForTimeout(500); await shot('i7-undone');
-      await c('#aibtn'); await p.fill('#aitext', 'two tone open face on a cuban link'); await c('[data-x="go"]'); await p.waitForTimeout(700); await p.click('#bubble [data-b="x"]').catch(() => {});
+      await c('#aibtn'); await p.fill('#aitext', 'two tone open face on a cuban link'); await c('#tray [data-x="go"]'); await p.waitForTimeout(700); await p.click('#bubble [data-b="x"]').catch(() => {});
       await c('#aibtn'); await shot('i8-out-of-builds');
       await c('[data-x="hand"]'); await c('.strip5 [data-open="extras"]'); await shot('i9-extras-idea');
       await c('#protobtn'); await c('[data-p="aireset"]'); await c('[data-p="restart"]'); await c('#protobtn');
-      const [fc] = await Promise.all([p.waitForEvent('filechooser'), c('.openA [data-door="picture"]')]);
-      await fc.setFiles(out + '/' + tag + '-i0-door.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
-      await c('[data-x="go"]'); await p.waitForTimeout(900); await shot('i11-built-from-picture');
+      await p.setInputFiles('.openA input[data-up="ai"]', out + '/' + tag + '-i0-door.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
+      await c('.openA [data-x="go"]'); await p.waitForTimeout(900); await shot('i11-built-from-picture');
       await p.click('#bubble [data-b="x"]').catch(() => {}); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('i12-done-verified');
     }
   } catch (e) { console.log('STEP FAIL', e.message.split('\n')[0]); }
