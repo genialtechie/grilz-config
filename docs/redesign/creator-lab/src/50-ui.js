@@ -103,7 +103,7 @@
   function applyRow() {                  // which teeth the choices go to
     var on = onList(), pk = picked(), mine = pk.length > 0;
     var chips = GROUPS.map(function (g) { var tg = groupTeeth(g[0]); if (!tg.length || tg.length === on.length) return ''; var hit = mine && sameSet(pk, tg); if (hit) mine = false; return chip('pick', g[0], g[1], hit); }).join('');
-    return '<span class="lab">Change</span><div class="chips">' + chip('pick', 'all', 'Whole set', !pk.length) + chips + (mine ? chip('pick', 'mine', pk.length + (pk.length === 1 ? ' tooth' : ' teeth') + ' picked', true) : '') + '</div>';
+    return '<span class="lab">Select teeth</span><div class="chips">' + chip('pick', 'all', 'Whole set', !pk.length) + chips + (mine ? chip('pick', 'mine', pk.length + (pk.length === 1 ? ' tooth' : ' teeth') + ' picked', true) : '') + '</div>';
   }
   var INTRO = {
     teeth: 'Pick a set, or tap teeth on the 3D to add or remove them one by one.',
@@ -295,18 +295,17 @@
     var tag = o.attrs ? 'button' : 'div';
     return '<' + tag + (tag === 'button' ? ' type="button"' : '') + ' class="mrow' + (o.cls ? ' ' + o.cls : '') + '"' + (o.attrs ? ' ' + o.attrs : '') + '><span class="txt"><b>' + o.title + '</b>' + (o.value ? '<span class="cur">' + o.value + '</span>' : '') + (o.hint ? '<span class="ins">' + o.hint + '</span>' : '') + '</span><span class="prev">' + o.thumb + '</span></' + tag + '>';
   }
-  // small gold objects for the round pictures, drawn to sit beside the build's own previews
-  var INK = '#2a2620', TOOTH = 'M22 14.2c-1.9-1.5-6.3-1.6-7.1 2.2-.6 2.9.7 4.7 1.2 7.6.5 2.7.6 6.4 2.3 6.4 1.9 0 1.6-4.2 3.6-4.2s1.7 4.2 3.6 4.2c1.7 0 1.8-3.7 2.3-6.4.5-2.9 1.8-4.7 1.2-7.6-.8-3.8-5.2-3.7-7.1-2.2z';
+  // line icons, the same set the live builder uses (lucide), drawn in ink inside the round picture
   var IC = {
-    kit: '<ellipse cx="22" cy="36.4" rx="9.5" ry="1.7" fill="rgba(40,36,24,.13)"/><path d="M12.5 11.5v9a9.5 9.5 0 0 0 19 0v-9" fill="none" stroke="url(#gd)" stroke-width="8" stroke-linecap="round"/><path d="M12.5 11.5v9a9.5 9.5 0 0 0 19 0v-9" fill="none" stroke="#fbf6ea" stroke-width="3" stroke-linecap="round"/><path d="M22 30.4v3.4" stroke="url(#gd)" stroke-width="4.6" stroke-linecap="round"/>',
-    scan: '<path d="' + TOOTH + '" fill="url(#gd)"/><path d="M10 15.5V10h5.5M28.5 10H34v5.5M34 28.5V34h-5.5M15.5 34H10v-5.5" fill="none" stroke="' + INK + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 22h23" stroke="' + INK + '" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>',
-    store: '<path d="M11 16.2l2.2-5.4h17.6l2.2 5.4v1.6a2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0 2.75 2.75 0 0 1-5.5 0z" fill="url(#gd)"/><path d="M13.6 22.4V33h16.8V22.4" fill="#fbf6ea" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/><path d="M19.4 33v-5.6h5.2V33" fill="none" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/>',
-    bubble: '<path d="M10.5 14a4.6 4.6 0 0 1 4.6-4.6h13.8a4.6 4.6 0 0 1 4.6 4.6v8.6a4.6 4.6 0 0 1-4.6 4.6h-7.3l-5.7 5v-5h-.8a4.6 4.6 0 0 1-4.6-4.6z" fill="url(#gd)"/><circle cx="17" cy="18.3" r="1.5" fill="' + INK + '"/><circle cx="22" cy="18.3" r="1.5" fill="' + INK + '"/><circle cx="27" cy="18.3" r="1.5" fill="' + INK + '"/>',
-    coin: '<circle cx="22" cy="22" r="12" fill="url(#gd)"/><circle cx="22" cy="22" r="8.8" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.1"/><text x="22" y="26.9" text-anchor="middle" font-family="Geist, system-ui, sans-serif" font-weight="600" font-size="13.5" fill="' + INK + '">$</text>',
-    check: '<circle cx="22" cy="22" r="12" fill="url(#gd)"/><path d="M16.4 22.4l3.8 3.8 7.4-8.2" fill="none" stroke="' + INK + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
-    insta: '<rect x="11" y="11" width="22" height="22" rx="7" fill="url(#gd)"/><circle cx="22" cy="22" r="5" fill="none" stroke="' + INK + '" stroke-width="1.8"/><circle cx="28.2" cy="15.8" r="1.3" fill="' + INK + '"/>'
+    kit: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/>',
+    scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+    store: '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/>',
+    bubble: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    coin: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    insta: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>'
   };
-  function ic(k) { return '<svg class="ico" viewBox="0 0 44 44" aria-hidden="true">' + IC[k] + '</svg>'; }
+  function ic(k) { return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">' + IC[k] + '</svg>'; }
 
   // ---------- after "Done": one screen to send it (the price, the fitting, where to text), the code, then Sent ----------
   ui.after = 0; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; ui.verified = loadVerified();
@@ -322,7 +321,7 @@
   function known() { return !!ui.verified && !ui.changing; }
   function sumHtml() {
     var b = breakdown(), S = esc(shopName());
-    return '<p class="big">About ' + money(b.total) + (b.quote ? ' <small>+ a quote for your charm</small>' : '') + '</p><p class="note">' + S + ' confirms the exact price after your fitting.</p>' +
+    return '<p class="note">' + (b.quote ? 'Your charm is quoted on top of the estimate. ' : '') + S + ' confirms the exact price after your fitting.</p>' +
       '<details class="why"' + (ui.why ? ' open' : '') + '><summary>What\'s in the price</summary><ul>' + b.lines.map(function (l) { return '<li><span>' + esc(l[0]) + '</span><span>' + money(l[1]) + '</span></li>'; }).join('') + (b.quote ? '<li><span>One-of-one charm</span><span>Quoted</span></li>' : '') + '</ul></details>';
   }
   function promoMsg() { var c = (SET.promo || '').toUpperCase(); if (!c) return ''; return PRICE.promo[c] ? c + ': ' + PRICE.promo[c] + '% off' : (c.length >= 4 ? 'That code doesn\'t work.' : ''); }
@@ -335,7 +334,7 @@
   }
   function afterOne() {
     var S = esc(shopName()), f = fits(); if (f.indexOf(SET.mold) < 0) SET.mold = f[0];
-    return '<div class="thead"><h2>This is your grill</h2></div><div class="tbody flow">' +
+    return '<div class="thead"><h2>Here are your grillz</h2></div><div class="tbody flow">' +
       '<div class="sum" id="asum">' + sumHtml() + '</div>' +
       '<section class="sect"><h3 class="sec">How will they get the shape of your teeth?</h3><div class="rows" role="radiogroup" aria-label="Fitting">' + f.map(function (k) { var w = FIT_WORDS[k]; return row({ attrs: 'role="radio" aria-checked="' + (SET.mold === k) + '" data-fit="' + k + '"', title: w[0], hint: k === 'store' ? 'Visit ' + S + '.' : w[1], thumb: ic(w[2]) }); }).join('') + '</div></section>' +
       '<section class="sect"><h3 class="sec">Where should ' + S + ' text you?</h3>' + contactHtml() + '</section>' +
@@ -405,7 +404,7 @@
     else if (id === 'aphone') { var f = fmtPhone(v); if (digits(v).length >= 4 && f !== v && digits(v).length <= 10) el.value = f; ui.c.phone = el.value; }
     else if (id === 'aotp') { var d = v.replace(/\D/g, '').slice(0, 6); el.value = d; ui.code = d; var bx = tray.querySelector('.otp .boxes'); if (bx) bx.innerHTML = otpBoxes(); if (d.length === 6) check(); return; }
     else if (id === 'anote') ui.c.note = v.slice(0, 200);
-    else if (id === 'apromo') { SET.promo = v.trim(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
+    else if (id === 'apromo') { SET.promo = v.trim(); meta(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
     else if (id === 'aig') ui.c.ig = v.slice(0, 31);
     else if (id === 'aemail') ui.c.email = v.slice(0, 120);
     if ((id === 'aname' || id === 'aphone') && ui.err && !contactErr()) { ui.err = ''; var p = $('aerr'); if (p) p.textContent = ''; }

@@ -164,7 +164,7 @@ h1, h2, h3, p { margin: 0; }
 .prev { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; background: radial-gradient(90% 90% at 50% 30%, #f8f7f3, var(--s-tile)); box-shadow: inset 0 0 0 1px rgba(18,18,17,.05); }
 .prev > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .prev > svg { width: 80%; height: 80%; }
-.prev > svg.ico { width: 100%; height: 100%; }
+.prev > svg.ico { width: 22px; height: 22px; fill: none; stroke: #2a2620; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .prev .swatch { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 -5px 8px rgba(0,0,0,.18), inset 0 3px 5px rgba(255,255,255,.55); }
 .prev .dash { font: 500 11px/1 var(--sans); color: var(--s-mut); }
 .rows { gap: 6px; }
@@ -320,7 +320,7 @@ button.mrow:active { transform: scale(.985); }
 /* which parts show in which mode */
 .app:not([data-mode="door"]) .openA, .app:not([data-mode="door"]) .openB { display: none; }
 .app[data-open="a"] .openB, .app[data-open="b"] .openA { display: none; }
-.app:not([data-mode="build"]):not([data-mode="q"]):not([data-mode="after"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .changebar, .app:not([data-mode="build"]) .only-build { display: none; }
+.app:not([data-mode="build"]):not([data-mode="q"]):not([data-mode="after"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .changebar, .app:not([data-mode="build"]):not([data-mode="after"]) .only-build { display: none; }
 
 @media (min-width: 900px) {
   .tray { right: 20px; top: 72px; bottom: 20px; width: 392px; border-radius: 28px; }
@@ -359,7 +359,6 @@ button.mrow:active { transform: scale(.985); }
   <section class="stage" id="stage" aria-label="Grill creator">
     <canvas id="gl" aria-label="Live 3D grill on a clear holder. Drag to turn it. Tap a tooth to choose it."></canvas>
     <div class="load" id="load">Setting the stage…</div>
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gd" gradientUnits="userSpaceOnUse" x1="9" y1="7" x2="35" y2="37"><stop offset="0" stop-color="#f8e1a0"/><stop offset=".48" stop-color="#dcae47"/><stop offset="1" stop-color="#a6741a"/></linearGradient></defs></svg>
 
     <header class="bar gut">
       <div class="mark"><i>VV</i><span>VVS Lab</span></div>
@@ -375,7 +374,7 @@ button.mrow:active { transform: scale(.985); }
       <button type="button" class="tool" id="turnbtn" aria-label="Turn the piece"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.8v2.6h-2.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Turn</span></button>
       <button type="button" class="tool" id="undobtn" disabled aria-label="Undo the last change"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.6 3.8 2.8 6.6l2.8 2.8M3 6.6h6.4a3.8 3.8 0 0 1 0 7.6H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Undo</span></button>
     </div>
-    <div class="changebar" id="changebar" hidden role="group" aria-label="Which teeth your next choice changes"></div>
+    <div class="changebar" id="changebar" hidden role="group" aria-label="Select teeth: which teeth your next choice changes"></div>
     <button type="button" class="selchip" id="selchip" hidden></button>
     <div class="bubble" id="bubble" hidden></div>
     <div class="photo" id="photo" hidden><div class="frame"><img alt="Your studio photo" id="photoimg"></div><p class="cap" id="photocap"></p></div>
