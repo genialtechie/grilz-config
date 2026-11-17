@@ -813,10 +813,19 @@
       '<div class="pcard"><p class="eyebrow">Shops</p><p class="pbig">$199<span> a month</span></p><p>14 days free, no card. Your builder link, your prices, and requests and deposits sent straight to you.</p><div class="btns2"><button type="button" class="btn2 ink" data-t="start">Start free</button><a class="btn2" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div>' +
       '</div></div></section>';
   }
+  var WORDS = ['14K Yellow', 'Rose Gold', 'White Gold', 'Platinum', 'VVS Diamonds', 'Moissanite', 'Iced Out', 'Diamond Cut', 'Open Face', 'Fangs', 'Two-Tone', 'One-of-One'];   // only options the builder really sells
+  function wordsHtml() { var w = WORDS.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return '<div class="words" aria-label="' + WORDS.join(', ') + '"><div class="track" aria-hidden="true">' + w + w + '</div></div>'; }
+  ui.rv = {};
+  function reveal(m) {   // the page rises in as it scrolls into view; anything already seen stays put when the page re-renders
+    var els = m.querySelectorAll('.band h2, .band .lede, .gets li, .phone, .pcard, .qcol, .final > .in > *'), io = (!reduce && 'IntersectionObserver' in window) ? new IntersectionObserver(function (es) { es.forEach(function (e) { if (!e.isIntersecting) return; e.target.classList.add('risen'); ui.rv[e.target.getAttribute('data-r')] = 1; io.unobserve(e.target); }); }, { rootMargin: '0px 0px -8% 0px' }) : null;
+    var last = null, k = 0;
+    els.forEach(function (el, i) { el.classList.add('rv'); el.setAttribute('data-r', i); var par = el.parentElement; k = par === last ? k + 1 : 0; last = par; el.style.setProperty('--d', Math.min(k, 5) * 0.07 + 's');
+      if (!io || ui.rv[i]) { el.classList.add('risen'); if (ui.rv[i]) el.classList.add('now'); } else io.observe(el); });
+  }
   function renderMore() {
     var m = $('more'); if (!ui.home) { m.innerHTML = ''; return; }
     var lead = ui.leadImg || '';
-    m.innerHTML = '' +
+    m.innerHTML = wordsHtml() +
       '<section class="band"><div class="in split"><div><h2>What happens when you hit send</h2><p class="lede">Your design reaches the jeweler exactly as you built it. Shops: this is every request.</p><ul class="gets">' +
       [['Who it\'s from', 'Name and phone, checked with a text code.'], ['The exact spec', 'Every tooth, metal and stone, with the price shown.'], ['The studio photo', 'The picture that sold it.'], ['The fit', 'A mailed mold kit, their own mold or scan, or in store.'], ['The deposit', 'Paid to the shop, straight to them.']].map(function (g) { return '<li><b>' + g[0] + '</b><span>' + g[1] + '</span></li>'; }).join('') +
       '</ul></div><div class="phone" aria-label="Example of a new request on a jeweler\'s phone"><div class="scr"><div class="clock">9:41<small>Monday, November 17</small></div><div class="leadcard"><div class="top"><i>VV</i><span>VVS Lab · now</span></div><div class="mid">' + (lead ? '<img alt="The customer\'s design" src="' + lead + '">' : '<span class="lph">' + setSvg(6, 6, 'iced') + '</span>') + '<div><b>New request from Dre</b><p>6 × 6 · 14K yellow gold · iced canines</p></div></div><div class="tags"><span>$3,840 quoted</span><span class="paid">$960 deposit paid</span><span>Mold kit by mail</span></div></div><p class="exl">Example request</p></div></div></div></section>' +
@@ -824,8 +833,9 @@
       '<section class="band"><div class="in"><h2>Questions</h2><div class="qtabs" role="tablist" aria-label="Questions for"><button type="button" role="tab" data-q2="get" aria-selected="' + (ui.qtab === 'get') + '">Getting grillz</button><button type="button" role="tab" data-q2="sell" aria-selected="' + (ui.qtab === 'sell') + '">Selling grillz</button></div>' +
       '<div class="qcols" data-tab="' + ui.qtab + '"><div class="qcol get"><h3>Getting grillz</h3>' + faqHtml(Q_GET) + '</div><div class="qcol sell"><h3>Selling grillz</h3>' + faqHtml(Q_SELL) + '</div></div>' +
       '<p class="proto-note">For you, before this goes live: how long it takes, returns and any warranty need your answers.</p></div></section>' +
-      '<section class="band final"><div class="in"><h2>Put it in your bio tonight.</h2><p>14 days free, no card needed. Or DM “BUILD” and we\'ll walk you through it.</p><div class="btns2"><button type="button" class="btn2 inv" data-t="start">Start free trial</button><a class="btn2 line" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div></div></section>' +
+      '<section class="band final"><div class="in"><h2>Put it in your bio tonight.</h2><p>14 days free, no card needed. Or DM “BUILD” and we\'ll walk you through it.</p><div class="btns2"><button type="button" class="btn2 inv" data-t="start">Start free trial</button><a class="btn2 line" href="https://ig.me/m/vvslab.ai" target="_blank" rel="noreferrer">DM “BUILD” for a demo</a></div><button type="button" class="shopline" data-h="design">Or design your own grillz, free</button></div></section>' +
       '<footer class="foot"><div class="in"><span>VVS Lab</span><a href="https://www.instagram.com/vvslab.ai/" target="_blank" rel="noreferrer">@vvslab.ai</a><span class="fnote">Prices in the builder are the demo shop\'s example prices.</span></div></footer>';
+    reveal(m);
   }
   function goHome() { ui.home = true; ui.selOpen = false; hideBubble(); if (ui.mode !== 'door') { ui.resume = onList().length > 0; setMode('door'); } renderOpenings(); G.sync(); G.goal(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
   function openStart() { laneEvent('design_clicked'); ui.home = false; renderOpenings(); box(); window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }

@@ -455,6 +455,43 @@ a.btn2 { text-decoration: none; align-items: center; }
   .qcol h3 { display: none; }
   .qcols[data-tab="get"] .qcol.sell, .qcols[data-tab="sell"] .qcol.get { display: none; }
 }
+
+/* the front door, final look (Nov 17): the owner's reference — warm off-white with a fine grain, white cards on
+   hairlines, ink buttons with a soft glow, gold as the one accent; text rises in; a strip of grillz words moves */
+.more { --fd-bg: #f8f7f4; --fd-fg: #110f0d; --fd-mut: #67625d; --fd-line: rgba(17,15,13,.11); --fd-gold: #b47825; --fd-ember: #e0b771; --fd-glow: 0 24px 60px -30px rgba(17,15,13,.35);
+  background-color: var(--fd-bg); background-image: radial-gradient(rgba(0,0,0,.03) 1px, transparent 1px); background-size: 4px 4px; color: var(--fd-mut); }
+.more h2, .more .gets li b, .more .qcol h3, .more .faq summary, .more .pbig, .foot span:first-child { color: var(--fd-fg); }
+.more .band { border-top-color: var(--fd-line); }
+.more .gets li, .more .faq details, .foot { border-top-color: var(--fd-line); }
+.more .faq summary::after { color: var(--fd-gold); }
+.pcard { background: #fff; border: 1px solid var(--fd-line); border-radius: 20px; box-shadow: var(--fd-glow); }
+.btn.ink, .btn2.ink, .bar .pill.ink { background: linear-gradient(180deg, #1c1a18, #070504); border-color: transparent; color: #fff; box-shadow: 0 14px 34px -16px rgba(17,15,13,.55); transition: transform .2s ease, box-shadow .2s ease; }
+.btn.ink:hover, .btn2.ink:hover, .bar .pill.ink:hover { transform: translateY(-1px); box-shadow: 0 20px 40px -16px rgba(17,15,13,.6); }
+.btn2:not(.ink):not(.inv):not(.line) { background: rgba(255,255,255,.8); border-color: var(--fd-line); }
+.nowshow b { background: var(--fd-gold, #b47825); box-shadow: 0 0 0 4px rgba(180,120,37,.16); }
+/* the closing band becomes a white card with an ember glow, like the reference */
+.more .final { background: transparent; border-top: 0; padding-top: 0; }
+.more .final > .in { position: relative; overflow: hidden; background: #fff radial-gradient(60% 90% at 100% 0%, rgba(224,183,113,.35), transparent 70%); border: 1px solid var(--fd-line); border-radius: 28px; padding: clamp(40px, 7vw, 88px) clamp(24px, 5vw, 64px); box-shadow: var(--fd-glow); }
+.more .final h2 { color: var(--fd-fg); }
+.more .final p { color: var(--fd-mut); }
+.more .final .btn2.inv { background: linear-gradient(180deg, #1c1a18, #070504); color: #fff; border-color: transparent; box-shadow: 0 14px 34px -16px rgba(17,15,13,.55); }
+.more .final .btn2.line { color: var(--fd-fg); border-color: var(--fd-line); background: rgba(255,255,255,.8); }
+.shopline { margin-top: 6px; border: 0; background: none; padding: 8px 4px; font: 500 15px/1.3 var(--sans); color: var(--fd-fg); text-decoration: underline; text-decoration-color: var(--fd-gold); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+/* the moving strip of grillz words, right under the hero */
+.words { position: relative; overflow: hidden; border-bottom: 1px solid var(--fd-line); padding: 22px 0; background: var(--fd-bg);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.words .track { display: flex; width: max-content; gap: 48px; white-space: nowrap; animation: marquee 30s linear infinite; }
+.words:hover .track { animation-play-state: paused; }
+.words span { font: 600 clamp(22px, 2.6vw, 30px)/1 var(--sans); letter-spacing: -.04em; color: var(--fd-mut); display: inline-flex; align-items: center; gap: 48px; }
+.words span::after { content: "✦"; font-size: .6em; color: var(--fd-gold); }
+@keyframes marquee { to { transform: translateX(-50%); } }
+/* text rises in: the hero on load, the page as it scrolls into view */
+@keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.app[data-home] .home > * { animation: rise 1s cubic-bezier(.2,.7,.2,1) both; }
+.app[data-home] .home > :nth-child(2) { animation-delay: .08s; } .app[data-home] .home > :nth-child(3) { animation-delay: .16s; } .app[data-home] .home > :nth-child(4) { animation-delay: .24s; } .app[data-home] .home > :nth-child(5) { animation-delay: .32s; }
+.rv { opacity: 0; }
+.rv.risen { opacity: 1; animation: rise 1s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--d, 0s); }
+.rv.risen.now { animation: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
