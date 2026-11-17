@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 1100 800 d e   or   node ctest.cjs 390 780 m e
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 1100 800 d f   or   node ctest.cjs 390 780 m f
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -42,6 +42,17 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('[data-g="pick"][data-k="front"]'); await c('[data-g="style"][data-k="engr"]');
       await c('[data-g="pick"][data-k="all"]'); await c('[data-a="menu"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 600000; }); await c('#bubble [data-b="x"]').catch(() => {});
       await shot('e1-menu-whole-mixed');
+    } else if (plan === 'f') {
+      await p.evaluate(() => { window.__vvs.ui.undoMs = 600000; }); await p.click('[data-build="empty"]'); await p.click('#goA'); await p.waitForTimeout(1500); await shot('f1-empty-menu');
+      await p.click('#bubble [data-b="top"]'); await p.click('#bubble [data-b="6"]'); await shot('f2-undo');
+      await p.click('#bubble [data-b="undo"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 600000; }); await p.click('#bubble [data-b="x"]').catch(() => {}); await shot('f3-after-undo');
+      await c('.rows [data-open="teeth"]'); await shot('f4-teeth-empty');
+      await c('[data-g="set"]'); await shot('f5-teeth-picked');
+      await c('[data-a="next"]'); await shot('f6-metal');
+      await c('.stages [data-open="extras"]'); await shot('f7-extras');
+      await p.evaluate(() => { const u = window.__vvs.ui; u.quietUntil = 0; u.lastTouch = 0; window.__vvs.G.touched = 0; }); await p.waitForTimeout(1600);
+      const k = await p.evaluate(() => window.__vvs.ui.bub); console.log('bubble now', k);
+      if (k === 'metal' || k === 'finish' || k === 'stones') { await p.click('#bubble .chip:not(.more)'); await shot('f8-undo-' + k); }
     } else if (plan === 'c') {
       await c('[data-build="iced8"]'); await c('#goA'); await shot('c1-menu-game');
       await c('[data-open="stones"]'); await shot('c2-stones-game');

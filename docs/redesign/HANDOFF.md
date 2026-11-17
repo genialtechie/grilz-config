@@ -62,14 +62,10 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 
 ## Next, in order
 
-1. **Build the builder fixes picked on Nov 17** into the Creator Lab:
-   - Start empty opens "Your build".
-   - Inside each part, the main button says "Next: Metal" and so on, with
-     "Done" on the last part.
-   - A smaller Back button sits beside the main button.
-   - Stages run along the top: Teeth · Metal · Finish · Stones · Extras. The
-     current part is bold, visited parts are ticked, and tapping one jumps to it.
-   - Undo in the quick-question bubble, for about 6 seconds.
+1. ~~Build the builder fixes picked on Nov 17~~ Done in Creator Lab v6:
+   Start empty opens Your build, "Next: Metal" with a smaller Back beside it,
+   stages on top, Undo in the quick-question bubble. (Noticed, not changed: an
+   empty build shows a 00 estimate, which is the fitting fee alone.)
 2. **Take screens 2 and 3 after "Done" to the owner on slides**, one screen at
    a time: the order, what each holds, what's required, the exact words.
    Screens 1 to 3 use the same pattern: a small "Keep editing" beside the main
@@ -95,7 +91,7 @@ cd docs/redesign/creator-lab/src && python3 build.py
 ```
 
 ```bash
-cd docs/redesign/creator-lab/test && node ctest.cjs 1100 800 d e
+cd docs/redesign/creator-lab/test && node ctest.cjs 1100 800 d f
 ```
 
 `ctest.cjs` drives headless Chromium with Playwright and software WebGL (slow:

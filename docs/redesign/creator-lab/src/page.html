@@ -172,6 +172,21 @@ h1, h2, h3, p { margin: 0; }
 .mrow .prev .swatch { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 -5px 8px rgba(0,0,0,.18), inset 0 3px 5px rgba(255,255,255,.55); }
 .mrow .prev .dash { font: 500 11px/1 var(--sans); color: var(--s-mut); }
 .mrow.todo .cur { color: var(--s-gold); opacity: 1; font-weight: 500; }
+/* inside a part: every part in a row on top, a smaller Back beside the main button */
+.stages { display: flex; align-items: center; gap: 7px; padding: 16px 20px 0; overflow-x: auto; scrollbar-width: none; }
+.stages::-webkit-scrollbar { display: none; }
+.stages i { font-style: normal; color: var(--s-faint); font-size: 12px; }
+.stages button { border: 0; background: none; padding: 3px 0 6px; font: 400 13.5px/1 var(--sans); color: var(--s-mut); white-space: nowrap; border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 3px; }
+.stages button:hover { color: var(--s-fg); }
+.stages button[aria-current="step"] { color: var(--s-fg); font-weight: 600; border-bottom-color: var(--s-gold); }
+.stages .tick { color: var(--s-gold); font-size: 11.5px; }
+.stages + .thead { padding-top: 8px; min-height: 0; }
+.cta.second { flex: 0 0 auto; padding: 0 18px 0 14px; gap: 7px; font-weight: 500; font-size: 15px; }
+.cta.second svg { width: 15px; height: 15px; }
+/* the guide's Undo: what changed, and a way back, for a few seconds */
+.bubble .undo { display: flex; align-items: center; gap: 12px; }
+.bubble .undo p { flex: 1; font: 500 15.5px/1.3 var(--sans); letter-spacing: -.01em; }
+.bubble .undo .chip { flex: none; background: #f4f3ef; color: var(--ink); border-color: transparent; font-weight: 600; }
 /* different choices on different teeth: the round pictures overlap like coins, with the count in the row */
 .stack { position: relative; width: 44px; height: 44px; display: block; }
 .stack > span { position: absolute; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: radial-gradient(90% 90% at 50% 30%, #f6f5f1, var(--s-tile)); box-shadow: 0 0 0 2px rgba(251,250,247,.95), 0 3px 8px -3px rgba(40,36,24,.4); display: grid; place-items: center; }

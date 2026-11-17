@@ -25,6 +25,11 @@ every other). When teeth differ, the menu stacks their pictures with a count.
 Third pass (owner: zoom out and simplify): round pictures like the earlier rows,
 no arrow and no grey border on the rows (they read as tappable without them),
 one type family throughout, and a small gold dot instead of "Not opened yet".
+Nov 17 (owner's notes on the dead end after Start empty): Start empty opens Your
+build with Teeth marked "Start here"; inside each part the main button leads on
+("Next: Metal", and "Done" on Extras) with a smaller Back beside it; stages along
+the top (current part bold, visited ticked, tap to jump); and the guide's quick
+question shows what changed with an Undo for about 6 seconds.
 
 `creator.html` is the built page. `src/` holds its parts; run `python3 build.py`
 inside `src/` to rebuild (it writes `creator.html` and `engine.js` there).
