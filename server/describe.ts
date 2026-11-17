@@ -176,6 +176,7 @@ export async function handleDescribe(payload: unknown, ip: string, env: Describe
   let usedBefore: number;
   if (db) {
     const tenantId = await tenantIdFor(tenant, env);
+    if (!tenantId) return fail(503, BUSY, 'failed');
     try {
       const [row] = await db.rpc<{ build: number | null; used_before: number; refused: 'builds' | 'allowance' | 'daily' | null }[]>('use_describe_build', {
         phone: hash,
