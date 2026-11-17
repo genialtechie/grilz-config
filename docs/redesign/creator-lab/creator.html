@@ -72,50 +72,23 @@ h1, h2, h3, p { margin: 0; }
 .build span { font: 400 12px/1.2 var(--sans); color: var(--s-mut); padding: 0 4px; }
 .build.empty .pic { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(18,18,17,.22); }
 .build.empty .pic i { font: 300 34px/1 var(--sans); font-style: normal; color: var(--s-mut); }
-.openA .go { display: flex; justify-content: flex-end; }
-
-/* ===== opening B: a full screen of starting builds ===== */
-.openB { position: absolute; inset: 0; z-index: 4; background: rgba(233,232,227,.86); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); overflow-y: auto; padding-block: 76px 32px; }
-.openB .in { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
-.openB h1 { font: 600 clamp(32px, 4.6vw, 52px)/1 var(--sans); letter-spacing: -.045em; }
-.openB .sub { color: var(--s-mut); font-size: 16px; max-width: 46ch; }
-.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.card { border: 0; background: var(--s-solid); border-radius: 22px; box-shadow: 0 0 0 1px var(--s-line); padding: 12px; text-align: left; display: grid; gap: 8px; transition: transform .15s ease, box-shadow .15s ease; }
-.card:hover { box-shadow: 0 0 0 1.5px var(--ink); }
-.card:active { transform: scale(.98); }
-.card .pic { aspect-ratio: 4 / 3; border-radius: 14px; background: radial-gradient(90% 90% at 50% 30%, #f6f5f1, var(--s-tile)); display: grid; place-items: center; }
-.card .pic svg { width: 84%; height: 84%; }
-.card b { font: 600 16px/1.15 var(--sans); letter-spacing: -.02em; }
-.card span { font-size: 13px; color: var(--s-mut); }
-.card em { font: 600 13px/1 var(--mono); font-style: normal; color: var(--s-fg); font-variant-numeric: tabular-nums; }
-.card.empty { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(18,18,17,.25); }
-.card.empty .pic { background: transparent; }
-.card.empty .pic i { font: 300 46px/1 var(--sans); font-style: normal; color: var(--s-mut); }
+.openA .go { display: flex; justify-content: space-between; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+/* AI (Nov 17): "Describe it" as chips on the start page and a tool on the stage; the conversation in the panel */
+.openA .go .chips { gap: 8px; }
+.chip svg, .tool svg.ai { width: 14px; height: 14px; flex: none; }
+.chat { display: grid; gap: 8px; }
+.chat .me { justify-self: end; max-width: 86%; background: var(--ink); color: var(--ink-fg); border-radius: 18px 18px 6px 18px; padding: 10px 14px; font: 400 14.5px/1.35 var(--sans); white-space: pre-line; }
+.chat .me img { display: block; width: 112px; height: 84px; object-fit: cover; border-radius: 10px; margin-top: 8px; }
+.chat .mrow.lead .ins { white-space: normal; }
 
 /* ===== the creator panel ===== */
 .tray { position: absolute; z-index: 4; background: var(--s-glass); backdrop-filter: blur(26px) saturate(1.35); -webkit-backdrop-filter: blur(26px) saturate(1.35); border: 1px solid rgba(255,255,255,.6); box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 24px 60px -24px rgba(40,36,24,.35), 0 0 0 1px var(--s-line); display: flex; flex-direction: column; min-height: 0; }
 .thead { display: flex; align-items: center; gap: 10px; padding: 16px 18px 6px; min-height: 58px; }
 .thead h2 { font: 600 22px/1.15 var(--sans); letter-spacing: -.03em; flex: 1; }
-.thead .bk { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--s-line); background: rgba(255,255,255,.55); display: grid; place-items: center; flex: 0 0 auto; }
-.thead .bk svg { width: 15px; height: 15px; }
-.cats { display: flex; gap: 4px; padding: 14px 16px 0; }
-.cats button { flex: 1; border: 0; background: transparent; padding: 0 0 9px; font: 600 12px/1 var(--sans); color: var(--s-faint); display: grid; gap: 7px; justify-items: start; white-space: nowrap; }
-.cats button::before { content: ""; width: 100%; height: 3px; border-radius: 3px; background: rgba(18,18,17,.1); }
-.cats button.done { color: var(--s-mut); }
-.cats button.done::before { background: rgba(18,18,17,.42); }
-.cats button[aria-current="step"] { color: var(--s-fg); }
-.cats button[aria-current="step"]::before { background: var(--ink); }
 .tbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 18px 12px; display: grid; gap: 12px; align-content: start; scrollbar-width: thin; }
 .note { font-size: 13px; color: var(--s-mut); line-height: 1.4; }
 .lab { font: 500 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--s-faint); }
 .rows { display: grid; gap: 6px; }
-.row { border: 0; background: rgba(255,255,255,.62); box-shadow: 0 0 0 1px var(--s-line); border-radius: 16px; padding: 14px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; text-align: left; transition: transform .12s ease, box-shadow .15s ease; }
-.row:hover { box-shadow: 0 0 0 1.5px var(--ink); }
-.row:active { transform: scale(.99); }
-.row b { font: 600 15.5px/1.2 var(--sans); letter-spacing: -.01em; }
-.row span { grid-column: 1; font-size: 13px; color: var(--s-mut); }
-.row i { grid-row: 1 / span 2; grid-column: 2; font-style: normal; color: var(--s-mut); font-size: 18px; }
-.row.todo span { color: var(--s-gold); }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
 .tile { border: 0; background: transparent; padding: 0; display: grid; gap: 6px; text-align: left; align-content: start; transition: transform .14s ease; }
 .tile:active { transform: scale(.96); }
@@ -153,8 +126,6 @@ h1, h2, h3, p { margin: 0; }
 .up input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .up img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
 .tfoot { display: flex; gap: 10px; align-items: center; padding: 10px 14px 14px; border-top: 1px solid var(--s-line); }
-.back { flex: 0 0 auto; width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--s-line); background: rgba(255,255,255,.55); display: grid; place-items: center; }
-.back svg { width: 16px; height: 16px; }
 .cta { flex: 1; min-height: 52px; border: 0; border-radius: 999px; background: var(--ink); color: var(--ink-fg); font: 600 16px/1 var(--sans); display: inline-flex; gap: 10px; align-items: center; justify-content: center; padding: 0 22px; }
 .cta small { font: 500 12.5px/1 var(--mono); opacity: .72; font-variant-numeric: tabular-nums; }
 .cta.ghost { background: rgba(255,255,255,.6); color: var(--s-fg); box-shadow: inset 0 0 0 1px var(--s-line); }
@@ -191,26 +162,6 @@ button.mrow:active { transform: scale(.985); }
 .fgroup { display: grid; gap: 6px; }
 .thead.two { display: grid; gap: 4px; align-items: start; }
 .thead .sub { font-size: 14px; color: var(--s-mut); }
-/* the menu */
-.mhead { display: grid; gap: 10px; padding: 18px 18px 10px; }
-.mhead h2 { font: 600 22px/1.15 var(--sans); letter-spacing: -.03em; }
-.prog { height: 2px; border-radius: 2px; background: rgba(18,18,17,.08); overflow: hidden; }
-.prog i { display: block; height: 100%; background: var(--s-gold); transition: width .4s ease; }
-.prog-l { font: 400 12.5px/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--s-mut); }
-.prog-l b { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--s-gold); margin: 0 4px 1px 2px; }
-/* the builder: the build strip (chosen Nov 17); the sheet and expand-in-place styles stay for reference */
-.mhead.slim { padding: 14px 18px 0; gap: 8px; }
-.mhead.slim + .strip5 { padding-top: 8px; }
-.mrow .up, .sitem .up { font: 500 11px/1 var(--sans); font-style: normal; color: var(--s-gold); background: rgba(154,109,22,.1); padding: 4px 7px; border-radius: 999px; white-space: nowrap; }
-.mrow.upnext { background: rgba(255,255,255,.95); box-shadow: 0 0 0 1.5px rgba(154,109,22,.5); }
-.mrow[aria-expanded="true"] { background: rgba(255,255,255,.98); border-radius: 18px 18px 0 0; }
-.xpanel { display: grid; gap: 12px; padding: 4px 14px 16px 16px; margin-top: -6px; background: rgba(255,255,255,.98); border-radius: 0 0 18px 18px; }
-.xnext { min-height: 44px; font-size: 14.5px; }
-.psheet { position: absolute; z-index: 2; display: flex; flex-direction: column; min-height: 0; background: var(--s-solid); border-radius: 24px; box-shadow: 0 30px 70px -28px rgba(40,36,24,.55), 0 0 0 1px var(--s-line); animation: sheetIn .26s cubic-bezier(.2,.8,.2,1); }
-@keyframes sheetIn { from { transform: translateY(14px); opacity: 0; } }
-.psheet .shead { display: flex; align-items: center; gap: 10px; padding: 16px 16px 6px 18px; }
-.psheet .shead h2 { flex: 1; font: 600 22px/1.15 var(--sans); letter-spacing: -.03em; }
-.psheet .x { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(18,18,17,.06); font: 400 20px/1 var(--sans); color: var(--s-fg); display: grid; place-items: center; }
 .strip5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 18px 10px 10px; border-bottom: 1px solid var(--s-line); }
 .sitem { border: 0; background: none; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 4px 2px; border-radius: 14px; color: var(--s-fg); min-width: 0; }
 .sitem b { margin-top: 5px; }
@@ -223,15 +174,7 @@ button.mrow:active { transform: scale(.985); }
 .sitem[aria-selected="true"] .prev::before { background: var(--ink); }
 .sitem[aria-selected="true"] b { font-weight: 600; }
 .strip5 + .thead { padding-top: 12px; min-height: 0; }
-/* inside a part: every part in a row on top, a smaller Back beside the main button */
-.stages { display: flex; align-items: center; gap: 7px; padding: 16px 18px 0; overflow-x: auto; scrollbar-width: none; }
-.stages::-webkit-scrollbar { display: none; }
-.stages i { font-style: normal; color: var(--s-faint); font-size: 12px; }
-.stages button { border: 0; background: none; padding: 3px 0 6px; font: 400 13.5px/1 var(--sans); color: var(--s-mut); white-space: nowrap; border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 3px; }
-.stages button:hover { color: var(--s-fg); }
-.stages button[aria-current="step"] { color: var(--s-fg); font-weight: 600; border-bottom-color: var(--s-gold); }
-.stages .tick { color: var(--s-gold); font-size: 11.5px; }
-.stages + .thead { padding-top: 8px; min-height: 0; }
+/* the build strip (chosen Nov 17): a smaller Back beside the main button */
 .cta.second { flex: 0 0 auto; padding: 0 18px 0 14px; gap: 7px; font-weight: 500; font-size: 15px; }
 .cta.second svg { width: 15px; height: 15px; }
 /* the guide's Undo: what changed, and a way back, for a few seconds */
@@ -294,16 +237,6 @@ button.mrow:active { transform: scale(.985); }
 .chip[disabled] { opacity: .38; cursor: default; }
 .tip { margin-top: 2px; }
 
-/* questions at the start */
-.qs { display: grid; gap: 14px; }
-.qs .step { font: 500 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--s-faint); }
-.qs h2 { font: 600 28px/1.05 var(--sans); letter-spacing: -.04em; }
-.answers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.ans { border: 0; background: rgba(255,255,255,.7); box-shadow: 0 0 0 1px var(--s-line); border-radius: 18px; padding: 16px 12px; font: 600 16px/1.1 var(--sans); display: grid; gap: 8px; justify-items: center; text-align: center; }
-.ans:active { transform: scale(.97); }
-.ans svg { width: 70px; height: 42px; }
-.ans i { width: 34px; height: 34px; border-radius: 50%; box-shadow: inset 0 -8px 12px rgba(0,0,0,.16), inset 0 5px 8px rgba(255,255,255,.55); }
-.skip { justify-self: center; border: 0; background: none; padding: 6px; font: 600 13px/1 var(--sans); color: var(--s-mut); text-decoration: underline; text-underline-offset: 3px; }
 
 /* the guide, when someone seems stuck */
 .bubble { position: absolute; z-index: 5; width: min(330px, calc(100% - 32px)); background: var(--ink); color: #f4f3ef; border-radius: 20px; padding: 14px 14px 12px; display: grid; gap: 10px; box-shadow: 0 24px 50px -20px rgba(0,0,0,.5); animation: pop .35s cubic-bezier(.2,.9,.3,1.2); }
@@ -315,22 +248,6 @@ button.mrow:active { transform: scale(.985); }
 .bubble .chips .chip { background: rgba(255,255,255,.1); color: #f4f3ef; border-color: rgba(255,255,255,.18); }
 .bubble .chips .chip.more { background: transparent; color: #c9c7bf; }
 
-/* done */
-.sheet { position: absolute; inset: 0; z-index: 7; background: rgba(226,225,220,.8); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); overflow-y: auto; padding-block: 72px 32px; }
-.sheet-in { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-.sheet-in > * { min-width: 0; }
-.print { background: #fff; border-radius: 18px; padding: 12px 12px 16px; box-shadow: 0 40px 80px -30px rgba(40,36,24,.5), 0 0 0 1px var(--s-line); transform: rotate(-1deg); display: grid; gap: 10px; }
-.print img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: #dedcd6; }
-.print .cap { display: flex; justify-content: space-between; padding: 0 4px; font: 600 15px/1.2 var(--sans); }
-.side { display: grid; gap: 16px; }
-.side h2 { font: 600 clamp(28px, 3.4vw, 38px)/1 var(--sans); letter-spacing: -.045em; }
-.box { background: var(--s-solid); border-radius: 18px; box-shadow: 0 0 0 1px var(--s-line); padding: 16px 18px; display: grid; gap: 8px; }
-.box h3 { font: 500 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--s-faint); }
-.box ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14.5px; }
-.box li { padding-left: 14px; position: relative; }
-.box li::before { content: ""; position: absolute; left: 0; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: var(--s-gold); }
-.tot { display: flex; justify-content: space-between; align-items: baseline; font: 600 22px/1.2 var(--sans); letter-spacing: -.02em; }
-.tot span:first-child { font: 500 14px/1.2 var(--sans); color: var(--s-mut); letter-spacing: 0; }
 
 /* prototype switches, not part of the product */
 .proto { position: absolute; z-index: 10; right: max(16px, env(safe-area-inset-right, 0px)); top: 62px; width: min(350px, calc(100% - 32px)); max-height: calc(100% - 80px); overflow-y: auto; background: #1b1b1a; color: #ecebe6; border-radius: 18px; padding: 16px; display: grid; gap: 14px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.5); font-size: 13px; }
@@ -346,20 +263,18 @@ button.mrow:active { transform: scale(.985); }
 .proto input[type="range"] { width: 100%; accent-color: #ecebe6; }
 
 /* which parts show in which mode */
-.app:not([data-mode="door"]) .openA, .app:not([data-mode="door"]) .openB { display: none; }
-.app[data-open="a"] .openB, .app[data-open="b"] .openA { display: none; }
-.app:not([data-mode="build"]):not([data-mode="q"]):not([data-mode="after"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .seltool, .app:not([data-mode="build"]):not([data-mode="after"]) .only-build { display: none; }
+.app:not([data-mode="door"]) .openA { display: none; }
+.app[data-mode="ai"][data-empty] .only-build { display: none; }   /* no price for an empty build while describing it */
+.app:not([data-mode="build"]):not([data-mode="after"]):not([data-mode="ai"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .seltool, .app:not([data-mode="build"]):not([data-mode="after"]):not([data-mode="ai"]) .only-build { display: none; }
 
 @media (min-width: 900px) {
   .tray { right: 20px; top: 72px; bottom: 20px; width: 392px; border-radius: 28px; }
   .tools { left: 20px; bottom: 20px; }
-  .psheet { right: calc(100% + 12px); top: 0; bottom: 0; width: 360px; }
   .selchip, .toast { left: calc((100% - 412px) / 2); }
   .bubble { left: 24px; bottom: 72px; }
 }
 @media (max-width: 899px) {
   .tray { left: 0; right: 0; bottom: 0; border-radius: 26px 26px 0 0; border-width: 1px 0 0; max-height: 54svh; padding-bottom: env(safe-area-inset-bottom, 0px); }
-  .app[data-mode="q"] .tray { max-height: 62svh; }
   .tools { right: max(16px, env(safe-area-inset-right, 0px)); top: 64px; flex-direction: column; align-items: flex-end; }
   .seltool { right: max(16px, env(safe-area-inset-right, 0px)); }
   .tool.selbtn span { display: inline; }
@@ -367,27 +282,22 @@ button.mrow:active { transform: scale(.985); }
   .app[data-bub] .seltool { visibility: hidden; }
   .selpop { left: auto; right: 0; }
   .selpop .chips { flex-direction: column; align-items: flex-end; }
-  .psheet { left: 0; right: 0; top: 58px; bottom: 0; border-radius: 22px 22px 0 0; }
-  .app[data-sheet] .tray { height: 62svh; max-height: 62svh; }
-  .app[data-sheet] .tray > :not(.psheet) { opacity: .42; }
-  .app[data-struct="expand"][data-cat] .tray { max-height: 62svh; }
   .tool span { display: none; }
   .tool { padding: 9px; }
   .openA { left: 0; right: 0; bottom: 0; width: 100%; transform: none; border-radius: 26px 26px 0 0; border-width: 1px 0 0; padding: 20px 18px calc(16px + env(safe-area-inset-bottom, 0px)); }
   .builds { padding-inline: 18px; margin-inline: -18px; scroll-padding-inline: 18px; }
-  .openA .go .cta { flex: 1 1 auto !important; }
+  .openA .go .cta { flex: 1 1 100% !important; }
+  .app[data-mode="ai"] .tray { max-height: 62svh; }
+  .tool.aibtn span { display: inline; }
+  .tool.aibtn { padding: 9px 13px; }
   .openA h2 { font-size: 21px; }
   .build { width: 116px; }
   .build .pic { height: 82px; }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bubble { left: 50%; transform: translateX(-50%); bottom: calc(54svh + 10px); animation: none; padding: 10px 12px; gap: 8px; }
   .bubble p { font-size: 16px; }
   .openA .head { flex-direction: column; align-items: flex-start; gap: 2px; }
-  .sheet-in { grid-template-columns: 1fr; }
-  .print { max-width: 440px; margin: 0 auto; }
   .thead h2, .mhead h2 { font-size: 21px; }
   .app[data-mode="after"]:not([data-after="3"]) .tray { max-height: 62svh; }
-  .answers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -410,6 +320,7 @@ button.mrow:active { transform: scale(.985); }
       <button type="button" class="tool" id="jawbtn" aria-pressed="false" aria-label="Open the mouth"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6.5q5.5-4 11 0M2.5 9.5q5.5 4 11 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="jawlabel">Open mouth</span></button>
       <button type="button" class="tool" id="turnbtn" aria-label="Turn the piece"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.8v2.6h-2.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Turn</span></button>
       <button type="button" class="tool" id="undobtn" disabled aria-label="Undo the last change"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.6 3.8 2.8 6.6l2.8 2.8M3 6.6h6.4a3.8 3.8 0 0 1 0 7.6H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Undo</span></button>
+      <button type="button" class="tool aibtn" id="aibtn" data-ai="describe" aria-label="Describe it: AI builds the closest version"><svg class="ai" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.2l1.3 3.4 3.4 1.3-3.4 1.3L7 11.6 5.7 8.2 2.3 6.9l3.4-1.3zM12.6 10.4l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span>Describe it</span></button>
     </div>
     <div class="seltool" id="changebar" hidden><div class="selpop" id="selpop" hidden role="group" aria-label="Which teeth your next choice changes"></div><button type="button" class="tool selbtn" id="selbtn" aria-expanded="false" aria-controls="selpop"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.3c-.9-.7-3-.8-3.4 1-.3 1.4.3 2.3.6 3.6.2 1.3.3 3.1 1.1 3.1.9 0 .8-2 1.7-2s.8 2 1.7 2c.8 0 .9-1.8 1.1-3.1.3-1.3.9-2.2.6-3.6-.4-1.8-2.5-1.7-3.4-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span>Select teeth</span><b id="selval"></b></button></div>
     <button type="button" class="selchip" id="selchip" hidden></button>
@@ -419,19 +330,10 @@ button.mrow:active { transform: scale(.985); }
     <div class="openA" id="openA">
       <div class="head"><h2>Start your build</h2><span>Start empty, or from a build you can change.</span></div>
       <div class="builds" id="buildsA" role="group" aria-label="Starting builds"></div>
-      <div class="go"><button type="button" class="cta" id="goA" style="flex:0 1 280px">Start empty</button></div>
-    </div>
-
-    <div class="openB gut" id="openB">
-      <div class="in">
-        <h1>Choose your starting build.</h1>
-        <p class="sub">Start empty and pick every tooth, or start from a build and change anything you like.</p>
-        <div class="grid" id="buildsB" role="group" aria-label="Starting builds"></div>
-      </div>
+      <div class="go"><div class="chips" role="group" aria-label="Let AI build it"><button type="button" class="chip" data-ai="describe"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.2l1.3 3.4 3.4 1.3-3.4 1.3L7 11.6 5.7 8.2 2.3 6.9l3.4-1.3zM12.6 10.4l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Describe it</button><button type="button" class="chip" data-ai="picture"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 4 6.6 2.4h2.8L10.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8.6" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>From a picture</button></div><button type="button" class="cta" id="goA" style="flex:0 1 280px">Start empty</button></div>
     </div>
 
     <aside class="tray" id="tray" aria-label="Creator"></aside>
-    <div class="sheet gut" id="sheet" hidden></div>
     <div class="proto" id="proto" hidden></div>
   </section>
 </div>
@@ -1417,12 +1319,12 @@ button.mrow:active { transform: scale(.985); }
   })();
 
   // =====================================================================
-  // The creator: start empty or from a build, then change anything, like building a player in a football game.
-  // Prototype switches compare two openings, two layouts and two ways of guiding.
+  // The creator: start empty, from a build, or by describing it; then change anything, like building a player in a football game.
+  // Chosen Nov 17: the build strip with Next and Back, a guide when you seem stuck, and AI as "Describe it" on the start page and as a tool on the stage.
   // =====================================================================
-  var tray = $('tray'), sheet = $('sheet'), proto = $('proto'), bubble = $('bubble');
+  var tray = $('tray'), proto = $('proto'), bubble = $('bubble');
   var CATS = [['teeth', 'Teeth'], ['metal', 'Metal'], ['finish', 'Finish'], ['stones', 'Stones'], ['extras', 'Extras']];
-  ui.open = 'a'; ui.layout = 'menu'; ui.guide = 'stuck'; ui.cat = null; ui.build = null; ui.visited = {}; ui.q = 0; ui.qWhere = 'both';
+  ui.cat = null; ui.build = null; ui.visited = {}; ui.qWhere = 'both';
   ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.lastTouch = performance.now(); ui.quietUntil = 0; ui.bub = null; ui.extra = null;
   var ARROW = '';   // no arrows inside buttons (owner, Nov 17)
   var BACK = '';
@@ -1477,18 +1379,11 @@ button.mrow:active { transform: scale(.985); }
     var empty = '<button type="button" class="build empty" data-build="empty" aria-pressed="' + (ui.build === 'empty') + '"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth</span></button>';
     $('buildsA').innerHTML = empty + BUILDS.map(function (b) { return '<button type="button" class="build" data-build="' + b[0] + '" aria-pressed="' + (ui.build === b[0]) + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><span>' + priceOf(b[0]) + '</span></button>'; }).join('');
     $('goA').innerHTML = ui.resume ? 'Continue your build' : ui.build && ui.build !== 'empty' ? 'Customise this build' : 'Start empty';
-    $('buildsB').innerHTML = '<button type="button" class="card empty" data-pick="empty"><span class="pic"><i>+</i></span><b>Start empty</b><span>Pick every tooth yourself</span></button>' +
-      BUILDS.map(function (b) { return '<button type="button" class="card" data-pick="' + b[0] + '"><span class="pic">' + setSvg(b[2][0], b[2][1], b[2][2]) + '</span><b>' + b[1] + '</b><em>' + priceOf(b[0]) + '</em></button>'; }).join('');
   }
   function startCreator() {
     if (!ui.t0) ui.t0 = performance.now(); freshHistory();
-    ui.cat = null; clearPicks(); ui.visited = {}; ui.extra = null;
-    ui.navHist = [];
-    if (!onList().length) {
-      ui.build = 'empty';
-      if (ui.guide === 'start') { ui.q = 0; setMode('q'); refresh(); return; }
-      if (ui.layout === 'steps' || ui.struct === 'strip') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
-    } else if (ui.layout === 'steps' || ui.struct === 'strip') { ui.cat = 'teeth'; ui.visited.teeth = 1; }
+    ui.cat = 'teeth'; clearPicks(); ui.visited = { teeth: 1 }; ui.extra = null; ui.navHist = [];
+    if (!onList().length) ui.build = 'empty';
     setMode('build'); refresh(true);
   }
 
@@ -1518,7 +1413,7 @@ button.mrow:active { transform: scale(.985); }
     return pk.length + (pk.length === 1 ? ' tooth' : ' teeth');
   }
   function changeBar() {                 // Select teeth: a toggle on the stage; it opens the groups
-    var bar = $('changebar'), show = ui.mode === 'build' && onList().length > 0 && ui.cat !== 'teeth' && ui.layout === 'menu';
+    var bar = $('changebar'), show = ui.mode === 'build' && onList().length > 0 && ui.cat !== 'teeth';
     bar.hidden = !show; app.toggleAttribute('data-change', show); if (!show) { ui.selOpen = false; return; }
     $('selval').textContent = picked().length ? selWord() : ''; $('selbtn').setAttribute('aria-expanded', !!ui.selOpen);
     var pop = $('selpop'); pop.hidden = !ui.selOpen; if (ui.selOpen) pop.innerHTML = applyRow();
@@ -1528,7 +1423,7 @@ button.mrow:active { transform: scale(.985); }
     var bar = $('changebar'); if (bar.hidden) return;
     var st = stage.getBoundingClientRect();
     if (st.width < 900) { var t = tray.getBoundingClientRect(); bar.style.left = ''; bar.style.right = ''; bar.style.bottom = Math.round(st.bottom - t.top + 12) + 'px'; $('selpop').style.maxWidth = ''; app.removeAttribute('data-selrow'); return; }
-    var tl = $('tools').getBoundingClientRect(), ps = tray.querySelector('.psheet'), edge = (ps || tray).getBoundingClientRect().left, w = $('selbtn').offsetWidth;
+    var tl = $('tools').getBoundingClientRect(), edge = tray.getBoundingClientRect().left, w = $('selbtn').offsetWidth;
     if (tl.right + 6 + w <= edge - 16) { bar.style.left = Math.round(tl.right - st.left + 6) + 'px'; bar.style.bottom = Math.round(st.bottom - tl.bottom) + 'px'; app.setAttribute('data-selrow', ''); }
     else { bar.style.left = Math.round(tl.left - st.left) + 'px'; bar.style.bottom = Math.round(st.bottom - tl.top + 8) + 'px'; app.removeAttribute('data-selrow'); }
     $('selpop').style.maxWidth = Math.max(220, Math.round(edge - bar.getBoundingClientRect().left - 16)) + 'px';   // the groups wrap rather than slide under the panel
@@ -1605,92 +1500,28 @@ button.mrow:active { transform: scale(.985); }
     }
     return h;
   }
-  function stages(ci) {                  // every part in a row: where you are, where you've been, tap to jump
-    return '<nav class="stages" aria-label="Parts of your build">' + CATS.map(function (c, k) {
-      var here = k === ci, been = ui.visited[c[0]] && !here;
-      return (k ? '<i aria-hidden="true">·</i>' : '') + '<button type="button" data-open="' + c[0] + '"' + (here ? ' aria-current="step"' : '') + '>' + c[1] + (been ? '<span class="tick" aria-label="visited">✓</span>' : '') + '</button>';
-    }).join('') + '</nav>';
-  }
   function doneBtn() { var b = breakdown(); return '<button type="button" class="cta" data-a="done"' + (onList().length ? '' : ' disabled') + '>Done <small>' + money(b.total) + (b.quote ? ' +' : '') + '</small></button>'; }
   function renderTray() {
-    var view = ui.mode + '|' + ui.layout + '|' + ui.struct + '|' + ui.cat + '|' + ui.after, keep = view === renderTray.view ? [].map.call(tray.querySelectorAll('.tbody'), function (e) { return e.scrollTop; }) : null, h = '';   // keep the scroll only when redrawing the same screen
+    var view = ui.mode + '|' + ui.cat + '|' + ui.after + '|' + ui.aiStep, keep = view === renderTray.view ? [].map.call(tray.querySelectorAll('.tbody'), function (e) { return e.scrollTop; }) : null;   // keep the scroll only when redrawing the same screen
     renderTray.view = view;
-    var sheetOpen = ui.mode === 'build' && ui.layout === 'menu' && ui.struct === 'sheet' && ui.cat !== null;
-    app.toggleAttribute('data-sheet', sheetOpen); app.toggleAttribute('data-cat', ui.mode === 'build' && ui.cat !== null);
-    if (ui.mode === 'q') { tray.innerHTML = renderQuestions(); return; }
     if (ui.mode === 'after') { tray.innerHTML = renderAfter(); return; }
-    if (ui.layout === 'menu') {
-      if (ui.struct === 'strip') { if (ui.cat === null) { ui.cat = 'teeth'; ui.visited.teeth = 1; } h = stripView(); }
-      else h = menuView(ui.struct === 'expand') + (ui.struct === 'sheet' && ui.cat !== null ? sheetView() : '');
-    } else {
-      var i = catIndex(ui.cat), last = i === CATS.length - 1;
-      h = '<nav class="cats" aria-label="Steps">' + CATS.map(function (c, k) { return '<button type="button" data-open="' + c[0] + '"' + (k === i ? ' aria-current="step"' : '') + (ui.visited[c[0]] && k !== i ? ' class="done"' : '') + '>' + c[1] + '</button>'; }).join('') + '</nav>' +
-        '<div class="thead"><h2>' + CATS[i][1] + '</h2></div><div class="tbody">' + options(ui.cat) + '</div><div class="tfoot">' + (i > 0 ? '<button type="button" class="back" data-a="prev" aria-label="Back">' + BACK + '</button>' : '') +
-        (last ? doneBtn() : '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + CATS[i + 1][1] + ' ' + ARROW + '</button>') + '</div>';
-    }
-    tray.innerHTML = h;
+    if (ui.mode === 'ai') { tray.innerHTML = renderAI(); if (!keep && ui.aiStep === 'talk' && ui.ai.msgs.length) { var tb = tray.querySelector('.tbody'); if (tb) tb.scrollTop = tb.scrollHeight; } return; }   // keep talking opens on the latest reply
+    if (ui.cat === null) { ui.cat = 'teeth'; ui.visited.teeth = 1; }
+    tray.innerHTML = stripView();
     if (keep) [].forEach.call(tray.querySelectorAll('.tbody'), function (e, i) { if (keep[i] !== undefined) e.scrollTop = keep[i]; });
-    else if (ui.struct === 'expand' && ui.cat) { var op = tray.querySelector('.mrow[aria-expanded="true"]'), tb = tray.querySelector('.tbody'); if (op && tb) tb.scrollTop = Math.max(0, tb.scrollTop + op.getBoundingClientRect().top - tb.getBoundingClientRect().top - 8); }
   }
-  // ---------- the builder's structures, to compare: a stacked sheet, expand in place, a build strip ----------
-  function upNext() {                    // the next part a first-timer hasn't opened
-    if (ui.nextp !== 'upnext') return null; if (!onList().length) return 'teeth';
-    for (var k = 0; k < CATS.length; k++) if (!ui.visited[CATS[k][0]] && CATS[k][0] !== ui.cat) return CATS[k][0];
-    return null;
-  }
+  // ---------- the build strip (chosen Nov 17): the five parts pinned on top, the open part below ----------
   function partBody(c) { return '<p class="intro">' + INTRO[c] + '</p>' + options(c); }
   function nextOf(c) { var i = catIndex(c); return i < CATS.length - 1 ? CATS[i + 1] : null; }
-  function menuRows(expand) {
-    var nx = upNext();
-    return '<div class="rows">' + CATS.map(function (c) {
-      var fresh = !ui.visited[c[0]], open = expand && ui.cat === c[0], up = nx === c[0] && !open;
-      return row({ cls: (!onList().length && c[0] === 'teeth' ? 'todo' : '') + (up ? ' upnext' : ''), attrs: 'data-open="' + c[0] + '"' + (expand ? ' aria-expanded="' + open + '"' : ''), title: c[1] + (fresh ? '<em class="new" title="Not opened yet"></em>' : '') + (up ? '<em class="up">Up next</em>' : ''), value: esc(rowValue(c[0])), hint: open ? '' : INSIDE[c[0]], thumb: preview(c[0]) }) +
-        (open ? '<div class="xpanel">' + partBody(c[0]) + (ui.nextp === 'nextbtn' && nextOf(c[0]) ? '<button type="button" class="cta ghost xnext" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + nextOf(c[0])[1] + ' ' + ARROW + '</button>' : '') + '</div>' : '');
-    }).join('') + '</div>';
-  }
-  function menuView(expand) {
-    var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
-    return '<div class="mhead"><h2>Your build</h2><div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · <b></b>not opened yet') + '</p></div>' +
-      '<div class="tbody">' + menuRows(expand) + '<p class="note tip">Tip: tap teeth on the 3D to style them on their own.</p></div><div class="tfoot">' + doneBtn() + '</div>';
-  }
-  function sheetView() {
-    var c = ui.cat, nx = nextOf(c), foot;
-    if (ui.nextp === 'nextbtn') foot = '<button type="button" class="cta ghost second" data-a="menu">' + BACK + 'Your build</button>' + (nx ? '<button type="button" class="cta" data-a="next"' + (onList().length ? '' : ' disabled') + '>Next: ' + nx[1] + ' ' + ARROW + '</button>' : '<button type="button" class="cta" data-a="menu">Done</button>');
-    else foot = '<button type="button" class="cta" data-a="menu">Done</button>';
-    return '<div class="psheet" role="dialog" aria-label="' + CATS[catIndex(c)][1] + '"><div class="shead"><h2>' + CATS[catIndex(c)][1] + '</h2><button type="button" class="x" data-a="menu" aria-label="Close and go back to your build">×</button></div><div class="tbody">' + partBody(c) + '</div><div class="tfoot">' + foot + '</div></div>';
-  }
-  function progLine(cls) {
-    var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
-    return '<div class="mhead' + (cls ? ' ' + cls : '') + '">' + (cls ? '' : '<h2>Your build</h2>') + '<div class="prog" aria-hidden="true"><i style="width:' + Math.round(seen / CATS.length * 100) + '%"></i></div><p class="prog-l">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored · <b></b>not opened yet') + '</p></div>';
-  }
   function stripView() {
-    var c = ui.cat, nx = nextOf(c), up = upNext(), off = onList().length ? '' : ' disabled';
+    var c = ui.cat, nx = nextOf(c), off = onList().length ? '' : ' disabled';
     var strip = '<div class="strip5" role="tablist" aria-label="Your build">' + CATS.map(function (k) {
       var on = c === k[0], fresh = !ui.visited[k[0]];
-      return '<button type="button" class="sitem' + (fresh ? ' fresh' : '') + '" role="tab" aria-selected="' + on + '" data-open="' + k[0] + '"' + (fresh ? ' aria-label="' + k[1] + ', not opened yet"' : '') + '><span class="prev">' + preview(k[0]) + '</span><b>' + k[1] + '</b><span class="sv">' + (up === k[0] ? '<em class="up">Up next</em>' : esc(rowValue(k[0]))) + '</span></button>';
+      return '<button type="button" class="sitem' + (fresh ? ' fresh' : '') + '" role="tab" aria-selected="' + on + '" data-open="' + k[0] + '"' + (fresh ? ' aria-label="' + k[1] + ', not opened yet"' : '') + '><span class="prev">' + preview(k[0]) + '</span><b>' + k[1] + '</b><span class="sv">' + esc(rowValue(k[0])) + '</span></button>';
     }).join('') + '</div>';
     var seen = CATS.filter(function (k) { return ui.visited[k[0]]; }).length;   // the rings show which parts are still new; the count sits by the buttons, where the choice to finish is made
     var foot = '<div class="btns"><button type="button" class="cta ghost second" data-a="sback">Back</button>' + (nx ? '<button type="button" class="cta" data-a="next"' + off + '>Next</button>' : doneBtn()) + '</div><p class="free">' + (seen === CATS.length ? 'Everything explored' : seen + ' of ' + CATS.length + ' explored') + '</p>';
     return strip + '<div class="thead"><h2>' + CATS[catIndex(c)][1] + '</h2></div><div class="tbody">' + partBody(c) + '</div><div class="tfoot col">' + foot + '</div>';
-  }
-
-
-  // ---------- questions at the start (the other way of guiding) ----------
-  var Q = [
-    ['Top, bottom or both?', [['top', 'Top', setSvg(6, 0, 'gold')], ['bottom', 'Bottom', setSvg(0, 6, 'gold')], ['both', 'Both', setSvg(6, 6, 'gold')]]],
-    ['How many teeth?', [['2', '2'], ['4', '4'], ['6', '6'], ['8', '8'], ['10', '10'], ['16', 'All 16']]],
-    ['Which metal?', Object.keys(METALS).map(function (k) { return [k, METALS[k].name, '<i style="background:' + SWATCH[k] + '"></i>']; })]
-  ];
-  function renderQuestions() {
-    var q = Q[ui.q];
-    return '<div class="thead"><button type="button" class="bk" data-a="qback" aria-label="Back">' + BACK + '</button><h2 style="font-size:15px;color:var(--s-mut);font-weight:500;letter-spacing:0">Question ' + (ui.q + 1) + ' of ' + Q.length + '</h2></div><div class="tbody"><div class="qs"><h2>' + q[0] + '</h2><div class="answers">' +
-      q[1].map(function (a) { return '<button type="button" class="ans" data-q="' + a[0] + '">' + (a[2] || '') + '<span>' + a[1] + '</span></button>'; }).join('') + '</div><button type="button" class="skip" data-a="qskip">Skip, I\'ll build it myself</button></div></div>';
-  }
-  function answerQ(v) {
-    if (ui.q === 0) { ui.qWhere = v; setRange(v === 'bottom' ? 0 : 6, v === 'top' ? 0 : 6); ui.q = 1; G.pop(); }
-    else if (ui.q === 1) { var n = +v; setRange(ui.qWhere === 'bottom' ? 0 : n, ui.qWhere === 'top' ? 0 : n); ui.q = 2; G.pop(); }
-    else { paint({ metal: v }); DEF.metal = v; ui.visited = { teeth: 1, metal: 1 }; ui.cat = ui.layout === 'steps' ? 'finish' : null; setMode('build'); G.glint(); }
-    refresh();
   }
 
   // ---------- the guide: steps in when someone seems stuck ----------
@@ -1715,11 +1546,11 @@ button.mrow:active { transform: scale(.985); }
   }
   function scopeWords() { var p = picked(); return p.length ? (p.length === 1 ? 'the ' + toothName(p[0]).toLowerCase() : 'the ' + p.length + ' teeth you picked') : 'all ' + onList().length + ' teeth'; }
   function teethWords() { var on = onList(), t = on.filter(function (k) { return k < 16; }).length, b = on.length - t; return (t && b ? t + ' top and ' + b + ' bottom teeth' : t ? t + ' top teeth' : b + ' bottom teeth') + ' picked'; }
-  function showUndo(msg, s, kind) {
+  function showUndo(msg, s, kind, who, ms) {
     clearTimeout(ui.undoTimer); ui.bub = 'undo'; ui.undoSnap = s; ui.undoKind = kind;
-    bubble.innerHTML = '<div class="who"><i></i>Changed<button type="button" class="x" data-b="x" aria-label="Close">×</button></div><div class="undo"><p>' + esc(msg) + '</p><button type="button" class="chip" data-b="undo">Undo</button></div>';
+    bubble.innerHTML = '<div class="who"><i></i>' + (who || 'Changed') + '<button type="button" class="x" data-b="x" aria-label="Close">×</button></div><div class="undo"><p>' + esc(msg) + '</p><button type="button" class="chip" data-b="undo">Undo</button></div>';
     bubble.hidden = false; app.setAttribute('data-bub', ''); placeBubble(); box();
-    ui.undoTimer = setTimeout(function () { if (ui.bub === 'undo') { hideBubble(); ui.lastTouch = performance.now(); } }, ui.undoMs || 6000);
+    ui.undoTimer = setTimeout(function () { if (ui.bub === 'undo') { hideBubble(); ui.lastTouch = performance.now(); } }, ui.undoMs || ms || 6000);
   }
   function placeBubble() {               // on a phone the bubble sits just above the controls, never over the piece
     var st = stage.getBoundingClientRect();
@@ -1734,7 +1565,7 @@ button.mrow:active { transform: scale(.985); }
     return 'happy';
   }
   setInterval(function () {
-    if (ui.guide !== 'stuck' || ui.mode !== 'build') { if (!bubble.hidden) hideBubble(); return; }
+    if (ui.mode !== 'build') { if (!bubble.hidden) hideBubble(); return; }
     var now = performance.now(); if (!bubble.hidden || now < ui.quietUntil) return;
     if (!onList().length) { showBubble('where'); return; }
     if (now - Math.max(ui.lastTouch, G.touched || 0) > 9000) showBubble(nextSuggestion());
@@ -1746,7 +1577,7 @@ button.mrow:active { transform: scale(.985); }
     hideBubble();
     var before = kind === 'many' && ui.qSnap ? ui.qSnap : snap(), msg = '';
     if (kind === 'where') { ui.qSnap = before; ui.qWhere = v; setRange(v === 'bottom' ? 0 : 6, v === 'top' ? 0 : 6); G.pop(); refresh(); showBubble('many'); return; }
-    if (kind === 'many') { var n = +v; setRange(ui.qWhere === 'bottom' ? 0 : n, ui.qWhere === 'top' ? 0 : n); ui.visited.teeth = 1; G.pop(); if (ui.layout === 'menu') ui.cat = null; ui.qSnap = null; refresh(); showUndo(teethWords(), before, 'where'); return; }
+    if (kind === 'many') { var n = +v; setRange(ui.qWhere === 'bottom' ? 0 : n, ui.qWhere === 'top' ? 0 : n); ui.visited.teeth = 1; G.pop(); ui.cat = 'teeth'; ui.qSnap = null; refresh(); showUndo(teethWords(), before, 'where'); return; }
     if (v === 'more') { openCat(kind); return; }
     if (kind === 'metal') { msg = METALS[v].name + ' on ' + scopeWords(); paint({ metal: v }); DEF.metal = v; }
     if (kind === 'finish') { msg = STYLES[v][0] + ' on ' + scopeWords(); paint({ style: v, type: 'plain' }); DEF.style = v; DEF.type = 'plain'; }
@@ -1819,7 +1650,7 @@ button.mrow:active { transform: scale(.985); }
       '<section class="sect">' + (ui.sms && !ui.code && !ui.checking ? '<button type="button" class="sms" data-x="fill"><span>From Messages</span><b>' + ui.sms + '</b></button>' : '') +
       '<label class="otp"><span class="sr">6-digit code</span><input id="aotp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="' + ui.code + '"' + (ui.checking ? ' disabled' : '') + '><span class="boxes" aria-hidden="true">' + otpBoxes() + '</span></label>' +
       '<p class="note" id="otpnote">' + (ui.checking ? 'Checking…' : resendWords()) + '</p></section><p class="proto-note">Prototype: no text is sent. Tap the code above (your phone offers it the same way) or type any 6 digits.</p>' +
-      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="back2">' + BACK + 'Back</button><button type="button" class="cta" disabled>' + (ui.checking ? 'Sending…' : 'Send to ' + S) + '</button></div><p class="free">It sends as soon as the code is in.</p></div>';
+      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="back2">' + BACK + 'Back</button><button type="button" class="cta" disabled>' + (ui.mode === 'ai' ? (ui.checking ? 'Building…' : 'Build it') : (ui.checking ? 'Sending…' : 'Send to ' + S)) + '</button></div><p class="free">It ' + (ui.mode === 'ai' ? 'builds' : 'sends') + ' as soon as the code is in.</p></div>';
   }
   function afterSent() {
     var S = esc(shopName()), m = money(breakdown().deposit), fit = FIT_WORDS[SET.mold], ready = ui.devAt && performance.now() - ui.devAt >= DEV;
@@ -1835,15 +1666,164 @@ button.mrow:active { transform: scale(.985); }
       '<section class="sect"><h3 class="sec">What happens next</h3><ol class="steps">' + steps.map(function (s, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="txt"><b>' + s[0] + '</b>' + (s[1] ? '<span class="ins">' + s[1] + '</span>' : '') + '</span><span class="prev">' + s[2] + '</span></li>'; }).join('') + '</ol></section>' +
       '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div><div class="tfoot">' + foot + '</div>';
   }
+
+  // ---------- AI: "Describe it", or start from a picture (decided Nov 17) ----------
+  // On the start page and as a tool on the stage. A conversation: one box, then keep talking. The phone sign-up comes first and says why,
+  // plainly; every phone gets 3 free builds and every reply counts. The AI builds the closest version in the 3D, all editable, says what's
+  // different, and offers Undo. In this prototype a simple word matcher stands in for the AI, and the page says so.
+  var AI_FREE = 3;
+  ui.ai = { msgs: [], text: '', pic: null }; ui.aiStep = 'talk'; ui.aiFrom = 'door'; ui.aiErr = '';
+  function aiKey() { return 'vvs-ai-' + (ui.verified ? ui.verified.phone : 'none'); }
+  function aiUsed() { try { return +(localStorage.getItem(aiKey()) || 0); } catch (e) { return ui.aiMem || 0; } }
+  function aiLeft() { return Math.max(0, AI_FREE - aiUsed()); }
+  function aiCount() { var n = aiUsed() + 1; try { localStorage.setItem(aiKey(), n); } catch (e) { ui.aiMem = n; } }
+  function openAI(from, wantPic) {
+    ui.aiFrom = from; ui.aiStep = 'talk'; ui.aiErr = ''; hideBubble(); ui.selOpen = false;
+    setMode('ai'); refresh();
+    if (wantPic) { var inp = tray.querySelector('[data-up="ai"]'); if (inp) inp.click(); } else focusId('aitext');
+  }
+  function leaveAI() { if (ui.aiFrom === 'build') { setMode('build'); refresh(true); } else goDoor(); }
+  function freeWords() {
+    if (!known()) return AI_FREE + ' free AI builds per phone. Each one costs us money, so we text you a code first.';
+    var l = aiLeft(); return l ? l + ' of ' + AI_FREE + ' free builds left on this phone. Every build counts, small changes too.' : 'That was your ' + AI_FREE + ' free builds on this phone.';
+  }
+  function aiMsg(m) {
+    return '<div class="me">' + esc(m.me) + (m.pic ? '<img alt="Your picture" src="' + m.pic + '">' : '') + '</div>' +
+      row({ cls: 'lead', title: m.diff.length ? 'Built the closest match' : 'Built it', hint: esc(m.built) + m.diff.map(function (d) { return '<br>' + esc(d); }).join(''), thumb: m.svg });
+  }
+  function renderAI() {
+    if (ui.aiStep === 'contact') return aiContact();
+    if (ui.aiStep === 'code') return afterCode();
+    var first = !ui.ai.msgs.length, out = known() && !aiLeft();
+    var h = '<div class="thead"><h2>' + (first ? 'Describe your grill' : 'Keep talking') + '</h2></div><div class="tbody flow">' +
+      (first ? '<p class="intro">Say it the way you\'d say it to a jeweler. AI builds the closest version in the 3D, tells you what\'s different, and you can change anything after.</p>' : '<div class="chat">' + ui.ai.msgs.map(aiMsg).join('') + '</div>');
+    if (out) h += row({ cls: 'lead', title: 'Keep going by hand', hint: 'Everything on your grill is still yours to change: tap a part on top, or tap teeth on the 3D.', thumb: ic('check') });
+    else h += '<section class="sect"><div class="field"><textarea id="aitext" maxlength="300" placeholder="' + (first ? 'Iced out bottom 8 in white gold, with fangs' : 'Make the front two rose gold') + '" aria-label="Describe your grill">' + esc(ui.ai.text) + '</textarea></div>' +
+      '<label class="up">' + (ui.ai.pic ? '<img alt="" src="' + ui.ai.pic + '">' : '') + '<span>' + (ui.ai.pic ? 'Change the picture' : 'Or add a picture: a photo or a screenshot') + '</span><input type="file" accept="image/*" data-up="ai"></label>' +
+      '<p class="err" id="aierr" role="alert">' + (ui.aiErr || '') + '</p></section>';
+    h += '<p class="proto-note">Prototype: a simple word matcher stands in for the AI. It knows teeth counts, metals, karats, finishes, stones, fangs and letters, and can\'t see pictures yet; the real AI will.</p></div>';
+    var main = out ? '<button type="button" class="cta" data-x="hand">Keep editing by hand</button>' : '<button type="button" class="cta" data-x="go">' + (known() ? 'Build it' : 'Text me a code to build it') + '</button>';
+    return h + '<div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="aiback">Back</button>' + main + '</div><p class="free">' + freeWords() + '</p></div>';
+  }
+  function aiContact() {
+    var S = esc(shopName());
+    return '<div class="thead"><h2>Where should we text your code?</h2></div><div class="tbody flow">' +
+      '<p class="intro">Every AI build costs us money, so we ask for your phone first. Each phone gets ' + AI_FREE + ' free builds, and it\'s the number ' + S + ' texts about your grill.</p>' +
+      '<section class="sect">' + contactHtml() + '</section></div>' +
+      '<div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="aiback">Back</button><button type="button" class="cta" data-x="go">Text me a code</button></div><p class="free">Free. Nothing to pay.</p></div>';
+  }
+  function aiAction(x) {
+    if (x === 'aiback') { if (ui.aiStep === 'talk') leaveAI(); else { ui.aiStep = 'talk'; renderTray(); focusId('aitext'); } return; }
+    if (x === 'hand') { setMode('build'); refresh(true); return; }
+    if (x === 'back2' || x === 'wrong') { clearTimeout(ui.smsT); ui.code = ''; ui.sms = null; ui.aiStep = 'contact'; renderTray(); if (x === 'wrong') focusId('aphone'); return; }
+    if (x === 'resend') { sendCode(true); return; }
+    if (x === 'fill') { ui.code = ui.sms; check(); return; }
+    if (x !== 'go') return;
+    if (ui.aiStep === 'talk') {
+      if (!ui.ai.text.trim() && !ui.ai.pic) { ui.aiErr = 'Say what you want, or add a picture.'; var p = $('aierr'); if (p) p.textContent = ui.aiErr; focusId('aitext'); return; }
+      ui.aiErr = '';
+      if (known()) { if (aiLeft()) runAI(); else renderTray(); return; }
+      ui.aiStep = 'contact'; renderTray(); focusId('aname'); return;
+    }
+    var e = contactErr(); if (e) { ui.err = e[1]; var q = $('aerr'); if (q) q.textContent = e[1]; focusId(e[0]); return; }
+    ui.err = ''; sendCode();
+  }
+  function runAI() {
+    var text = ui.ai.text.trim(), pic = ui.ai.pic, before = snap();
+    if (ui.aiFrom !== 'build') { freshHistory(); ui.lastSnap = designSnap(); if (!ui.t0) ui.t0 = performance.now(); }   // so the Undo tool steps back over the build too
+    var r = wish(text, pic);
+    if (pic) SET.inspo = pic;
+    if (text) SET.idea = ((SET.idea ? SET.idea + ' / ' : '') + text).slice(0, 400);   // their words travel to the jeweler as "their idea"
+    aiCount();
+    var n = counts(); ui.ai.msgs.push({ me: text || 'A picture', pic: pic, built: r.built, diff: r.diff, svg: setSvg(n[0], n[1], same(function (t) { return t.type; }) === 'iced' ? 'iced' : 'gold') });
+    ui.ai.text = ''; ui.ai.pic = null; ui.aiStep = 'talk'; ui.aiFrom = 'build'; ui.build = null; ui.navHist = []; ui.cat = 'teeth'; ui.visited.teeth = 1; clearPicks();
+    setMode('build'); G.sync(); G.pop(); refresh(true);
+    showUndo(r.built + (r.diff.length ? '. ' + r.diff[0] : ''), before, null, 'AI built it', 10000);
+  }
+  // the stand-in for the AI: a word matcher over the shop's own options. Anything it can't make becomes the closest match, and it says so.
+  var NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, sixteen: 16 };
+  var JOIN = [[/open ?face/g, 'openface'], [/diamond ?cut/g, 'diamondcut'], [/diamond ?dust/g, 'diamonddust'], [/deep ?cut/g, 'deepcut'], [/(?:two|2) ?tone/g, 'twotone'], [/bust ?down/g, 'bustdown'], [/white ?gold/g, 'whitegold'], [/(?:rose|pink) ?gold/g, 'rosegold'], [/black ?gold/g, 'blackgold'], [/lab ?(?:grown|diamonds?|made)/g, 'labdiamond'], [/(?:natural|real) ?diamonds?/g, 'naturaldiamond'], [/(?:one|1) ?of ?(?:one|1)|one of a kind/g, 'oneofone'], [/full ?set|whole mouth|all (?:my |of my )?teeth|every tooth/g, 'fullset']];
+  function wish(text, pic) {
+    var s = ' ' + text.toLowerCase().replace(/×/g, ' x ').replace(/[^a-z0-9& ]/g, ' ').replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve|sixteen)\b/g, function (w) { return NUMW[w]; }) + ' ';
+    JOIN.forEach(function (j) { s = s.replace(j[0], j[1]); }); s = s.replace(/\s+/g, ' ');
+    var diff = [], fresh = !onList().length, has = function (re) { return re.test(s); }, m, top = null, bot = null, c0 = counts();
+    // which teeth
+    if (has(/fullset/)) { top = 16; bot = 16; }
+    else if ((m = s.match(/(\d+) ?(?:x|by|and|&|over) ?(\d+)/))) { top = +m[1]; bot = +m[2]; }
+    else {
+      var mt = s.match(/(\d+) (?:on (?:the )?)?(?:top|upper)/) || s.match(/(?:top|upper) (?:row |teeth )?(?:of )?(\d+)/), mb = s.match(/(\d+) (?:on (?:the )?)?(?:bottom|lower)/) || s.match(/(?:bottom|lower) (?:row |teeth )?(?:of )?(\d+)/);
+      if (mt) top = +mt[1]; if (mb) bot = +mb[1];
+      if (top === null && bot === null) {
+        var n = s.match(/ (\d+) /), k = n ? +n[1] : 6, tw = has(/ (?:top|upper) /), bw = has(/ (?:bottom|lower) /);
+        if (has(/ single | 1 tooth /)) { top = 1; bot = 0; }
+        else if (has(/ 2 piece /)) { top = 2; bot = 0; }
+        else if (bw && !tw) { bot = k; top = fresh ? 0 : c0[0]; }
+        else if (tw && !bw) { top = k; bot = fresh ? 0 : c0[1]; }
+        else if (n || tw || bw) { top = k; bot = k; }
+        else if (fresh && (text || !pic)) { top = 6; bot = 6; diff.push('You didn\'t say which teeth, so it\'s 6 × 6, the most popular set.'); }
+      } else { if (top === null) top = fresh ? 0 : c0[0]; if (bot === null) bot = fresh ? 0 : c0[1]; }
+    }
+    if (top !== null && (top > 16 || bot > 16)) { top = Math.min(16, top); bot = Math.min(16, bot); diff.push('16 teeth per row is the most.'); }
+    var fangs = has(/\b(?:fangs?|vampire|canines?)\b/);
+    if (fangs && (top === null ? c0[0] : top) < 6) { top = 6; diff.push('Fangs sit on the upper canines, so it\'s 6 on top.'); }
+    if (pic && !text) { if (fresh) { top = 6; bot = 6; DEF.type = 'iced'; diff.push('This prototype can\'t read pictures, so here\'s an iced 6 × 6 to start from.'); } else diff.push('This prototype can\'t read pictures, so nothing changed.'); }
+    if (pic) diff.push('Your picture goes to the jeweler with your design; the real AI will read it too.');
+    if (top !== null) { if (!top && !bot) { top = 6; bot = 6; } setRange(top, bot); ui.visited.teeth = 1; }
+    // metal
+    var patch = {};
+    if (has(/whitegold|\bwhite\b/)) patch.metal = 'white'; else if (has(/rosegold|\brose\b/)) patch.metal = 'rose'; else if (has(/silver|sterling/)) patch.metal = 'silver'; else if (has(/platinum|\bplat\b/)) patch.metal = 'platinum';
+    else if (has(/blackgold/)) { patch.metal = 'white'; diff.push('No black gold here; white gold is the closest.'); }
+    else if (has(/titanium|steel|tungsten/)) { patch.metal = 'silver'; diff.push('No titanium or steel here; silver is the closest.'); }
+    else if (has(/yellow|\bgold\b/)) patch.metal = 'yellow';
+    if ((m = s.match(/\b(10|14|18) ?k\b/))) patch.karat = m[1] + 'k'; else if ((m = s.match(/\b(2[0-4]) ?k\b/))) { patch.karat = '18k'; diff.push(m[1] + 'K isn\'t offered; 18K is the highest here.'); } else if (has(/\b9 ?k\b/)) { patch.karat = '10k'; diff.push('10K is the lowest here, close to 9K.'); }
+    // finish and stones
+    var style = null, iced = has(/\b(?:ice|iced|icy|bustdown|flooded|flood|vvs|bling|pave|diamonds?|stones?|moissanite|moiss|honeycomb|mosaic|prong|labdiamond|naturaldiamond)\b/);
+    if (has(/openface|\bopen\b/)) style = 'open';
+    if (has(/diamondcut|faceted/)) style = 'cut';
+    if (has(/diamonddust|\bdust\b/)) style = 'dust';
+    if (has(/engrav|scroll/)) style = 'engr';
+    if (has(/opal/)) { style = 'opal'; patch.opal = has(/\bfire\b|\bred\b|orange/) ? 'fire' : has(/\bblue\b/) ? 'blue' : 'white'; }
+    if (has(/\bsolid\b|\bplain\b/)) style = 'solid';
+    if (iced) {
+      patch.type = 'iced';
+      if (style && style !== 'open' && style !== 'solid') { diff.push('With stones set, the finish is the frame around them, so ' + STYLES[style][0].toLowerCase() + ' doesn\'t apply.'); style = 'solid'; }
+      if (has(/honeycomb/)) patch.setting = 'honeycomb'; else if (has(/mosaic/)) patch.setting = 'mosaic'; else if (has(/prong/)) patch.setting = 'prong';
+      if (has(/labdiamond|\blab\b/)) patch.stone = 'lab'; else if (has(/naturaldiamond|\bnatural\b|\breal\b/)) patch.stone = 'natural'; else if (has(/moiss/)) patch.stone = 'moissanite';
+      if (style !== 'opal' && has(/\b(?:rub(?:y|ies)|red|emeralds?|green|sapphires?|blue|pink|purple|rainbow|colou?red|black diamonds?)\b/)) diff.push('No coloured stones here, so ' + STONES[patch.stone || cur().stone][0].toLowerCase() + 's, the closest match.');
+    } else if (style && style !== 'open' && style !== 'solid') patch.type = 'plain';
+    if (style) patch.style = style;
+    // extras
+    if (fangs) SET.fangs = true;
+    if (has(/\bperm\b|permanent|seamless/)) SET.cut = 'permanent'; else if (has(/deepcut|removable/)) SET.cut = 'deep';
+    if ((m = s.match(/\b(?:initials?|letters?|spell(?:ing)?|says?|saying|name|word) (?:of |that say |with |in |on it )?(?!on|in|of|the|with|and|my|it|iced|gold|a|an)([a-z0-9&]{1,6})\b/))) { SET.ins.text = m[1].toUpperCase(); SET.ins.style = has(/iced letters|letters iced|letters in stones/) ? 'iced' : has(/diamondcut letters|letters diamondcut|raised letters/) ? 'cut' : 'engraved'; }
+    if (has(/charms?|oneofone|crest|crown|cross|custom piece/)) diff.push('Charms are picked by hand in Extras, and the jeweler quotes them.');
+    if (has(/cuban|chain|pendant|\bring\b|bracelet|watch/)) diff.push('This builds grillz only.');
+    if (has(/enamel|paint/)) diff.push('No enamel here yet.');
+    // where it goes: the whole set, or the front teeth when they say so
+    var scope = onList();
+    if (!fresh && top === null && has(/\bfront\b/)) { var two = has(/front (?:2|two)|(?:2|two) front/); scope = two ? [7, 8, 23, 24].filter(function (k) { return T[k].on; }) : groupTeeth('front'); if (!scope.length) scope = onList(); }
+    var whole = scope.length === onList().length;
+    scope.forEach(function (k) { var t = T[k]; for (var key in patch) t[key] = patch[key]; if (t.type === 'iced' && t.style !== 'open' && t.style !== 'solid') t.style = 'solid'; });
+    if (whole) for (var key in patch) DEF[key] = patch[key];
+    if (has(/twotone/)) { var mid = [7, 8, 23, 24].filter(function (k) { return T[k].on; }).slice(0, 2); mid.forEach(function (k) { T[k].metal = T[k].metal === 'white' ? 'yellow' : 'white'; }); }
+    if (SET.ins.text && (SET.ins.tooth === null || !T[SET.ins.tooth] || !T[SET.ins.tooth].on)) SET.ins.tooth = firstFront();
+    var built = receipt(); if (insOn()) built += ' · "' + SET.ins.text + '"'; if (SET.cut === 'permanent') built += ' · permanent look';
+    return { built: built, diff: diff };
+  }
   function renderAfter() { return ui.after === 1 ? afterOne() : ui.after === 2 ? afterCode() : afterSent(); }
   function focusId(id) { var el = $(id); if (el) try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
   function redraw() { var a = document.activeElement, id = a && tray.contains(a) ? a.id : ''; renderTray(); if (id) focusId(id); }   // redraw without losing the field being typed in
   function goAfter(n) { ui.after = n; app.setAttribute('data-after', n); refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; if (n === 2) focusId('aotp'); }
-  function smsLater() { clearTimeout(ui.smsT); ui.smsT = setTimeout(function () { if (ui.after === 2 && !ui.code && !ui.checking) { ui.sms = String(100000 + Math.floor(Math.random() * 900000)); renderTray(); focusId('aotp'); } }, 1800); }
-  function sendCode(again) { ui.code = ''; ui.sms = null; ui.checking = false; ui.resendAt = performance.now() + 30000; goAfter(2); smsLater(); if (again) toast('A new code is on its way.'); }
+  function codeOpen() { return (ui.mode === 'after' && ui.after === 2) || (ui.mode === 'ai' && ui.aiStep === 'code'); }
+  function smsLater() { clearTimeout(ui.smsT); ui.smsT = setTimeout(function () { if (codeOpen() && !ui.code && !ui.checking) { ui.sms = String(100000 + Math.floor(Math.random() * 900000)); renderTray(); focusId('aotp'); } }, 1800); }
+  function sendCode(again) {
+    ui.code = ''; ui.sms = null; ui.checking = false; ui.resendAt = performance.now() + 30000;
+    if (ui.mode === 'ai') { ui.aiStep = 'code'; renderTray(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; focusId('aotp'); } else goAfter(2);
+    smsLater(); if (again) toast('A new code is on its way.');
+  }
   function check() {
     ui.checking = true; renderTray();
-    setTimeout(function () { ui.checking = false; ui.verified = { name: ui.c.name.trim(), phone: digits(ui.c.phone) }; saveVerified(ui.verified); ui.changing = false; sendIt(); }, 900);
+    setTimeout(function () { ui.checking = false; ui.verified = { name: ui.c.name.trim(), phone: digits(ui.c.phone) }; saveVerified(ui.verified); ui.changing = false; if (ui.mode === 'ai') runAI(); else sendIt(); }, 900);
   }
   function sendIt() {
     if (known()) { ui.c.name = ui.verified.name; ui.c.phone = ui.verified.phone; }
@@ -1851,6 +1831,7 @@ button.mrow:active { transform: scale(.985); }
     goAfter(3); showPhoto();
   }
   function afterAction(x) {
+    if (ui.mode === 'ai') { aiAction(x); return; }
     if (x === 'keep') { ui.tDone = 0; hidePhoto(); setMode('build'); ui.cat = null; refresh(true); return; }
     if (x === 'more') { ui.more = true; renderTray(); focusId('anote'); return; }
     if (x === 'go') {
@@ -1876,9 +1857,10 @@ button.mrow:active { transform: scale(.985); }
     else if (id === 'apromo') { SET.promo = v.trim(); meta(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
     else if (id === 'aig') ui.c.ig = v.slice(0, 31);
     else if (id === 'aemail') ui.c.email = v.slice(0, 120);
+    else if (id === 'aitext') { ui.ai.text = v.slice(0, 300); if (ui.aiErr) { ui.aiErr = ''; var q = $('aierr'); if (q) q.textContent = ''; } }
     if ((id === 'aname' || id === 'aphone') && ui.err && !contactErr()) { ui.err = ''; var p = $('aerr'); if (p) p.textContent = ''; }
   }
-  tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'aname' || e.target.id === 'aphone')) { e.preventDefault(); afterAction('go'); } });
+  tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && (e.target.id === 'aname' || e.target.id === 'aphone' || e.target.id === 'aitext')) { e.preventDefault(); afterAction('go'); } });
   tray.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('why')) ui.why = e.target.open; }, true);
   // the studio photo: the 3D develops into it, in the space where the piece was
   var photo = $('photo');
@@ -1897,8 +1879,8 @@ button.mrow:active { transform: scale(.985); }
     var sb = tray.querySelector('[data-x="save"]'); if (sb) sb.disabled = p < 1;
   }
   setInterval(function () {
-    if (ui.mode !== 'after') return;
-    var n = $('otpnote'); if (n && ui.after === 2 && !ui.checking) { var w = resendWords(); if (n.getAttribute('data-w') !== w) { n.setAttribute('data-w', w); n.innerHTML = w; } }
+    if (ui.mode !== 'after' && ui.mode !== 'ai') return;
+    var n = $('otpnote'); if (n && codeOpen() && !ui.checking) { var w = resendWords(); if (n.getAttribute('data-w') !== w) { n.setAttribute('data-w', w); n.innerHTML = w; } }
     if (ui.after === 3 && ui.devAt && !photo.hidden) paintPhoto();
   }, 250);
 
@@ -1920,11 +1902,10 @@ button.mrow:active { transform: scale(.985); }
   // ---------- moving around ----------
   function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { clearPicks(); hideBubble(); } box(); setTimeout(box, 450); }
   function openCat(c, noPush) {
-    if (ui.layout === 'menu' && ui.struct === 'expand' && ui.cat === c) { ui.cat = null; ui.extra = null; refresh(); return; }
-    if (ui.struct === 'strip' && !noPush && ui.cat && ui.cat !== c) (ui.navHist = ui.navHist || []).push(ui.cat);   // Back returns here
+    if (!noPush && ui.cat && ui.cat !== c) (ui.navHist = ui.navHist || []).push(ui.cat);   // Back returns here
     ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') clearPicks(); refresh();
   }
-  function stepOf() { if (ui.mode === 'q') return ui.q === 2 ? 1 : 0; if (ui.mode === 'after') return 5; return ui.cat === null ? 5 : catIndex(ui.cat); }
+  function stepOf() { if (ui.mode === 'after') return 5; if (ui.mode === 'ai') return 0; return ui.cat === null ? 5 : catIndex(ui.cat); }
   var shown = 0, anim = 0;
   function meta() {
     var b = breakdown(), to = b.total, from = shown, t0 = performance.now(); cancelAnimationFrame(anim);
@@ -1933,12 +1914,11 @@ button.mrow:active { transform: scale(.985); }
   function box() {
     var st = stage.getBoundingClientRect(), W = st.width, H = st.height, top = 60;
     if (ui.mode === 'door') { var el = ui.open === 'a' ? $('openA') : null, r = el ? el.getBoundingClientRect() : null; G.box = { top: top, bottom: r ? Math.max(top + 160, r.top - st.top - 6) : H * .55, left: 0, right: W }; return; }
-    if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') {
+    if (ui.mode === 'build' || ui.mode === 'after' || ui.mode === 'ai') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
-      var ch = ui.mode === 'build' && !$('changebar').hidden, ps = tray.querySelector('.psheet');   // keep the piece clear of Select teeth and the sheet
+      var ch = ui.mode === 'build' && !$('changebar').hidden;   // keep the piece clear of Select teeth
       if (ch) { placeSel(); if (W < 900) limit = Math.min(limit, $('selbtn').getBoundingClientRect().top); }
-      if (ps && W >= 900) t = { left: ps.getBoundingClientRect().left, top: t.top };
       G.box = W >= 900 ? { top: top, bottom: H - (ch ? 64 : 24), left: 0, right: t.left - st.left - 8 } : { top: top, bottom: Math.max(top + 110, limit - st.top - 6), left: 0, right: W };
       if (ui.mode === 'after' && typeof placePhoto === 'function') placePhoto();
       return;
@@ -1948,8 +1928,8 @@ button.mrow:active { transform: scale(.985); }
   window.addEventListener('resize', box);
   document.addEventListener('pointerdown', function (e) { if (ui.selOpen && !e.target.closest('#changebar')) { ui.selOpen = false; changeBar(); } });
   function refresh(glint) {
-    ui.step = stepOf();
-    if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') renderTray();
+    ui.step = stepOf(); app.toggleAttribute('data-empty', !onList().length);
+    if (ui.mode === 'build' || ui.mode === 'after' || ui.mode === 'ai') renderTray();
     changeBar(); track();
     var sc = $('selchip'), show = ui.mode === 'build' && hasSel() && $('changebar').hidden;
     var pk = picked(); sc.hidden = !show; if (show) sc.innerHTML = (pk.length === 1 ? 'Editing the <b>' + esc(toothName(pk[0]).toLowerCase()) + '</b> only' : 'Editing <b>' + pk.length + ' teeth</b>') + ' <span class="x">Whole set</span>';
@@ -1977,23 +1957,17 @@ button.mrow:active { transform: scale(.985); }
     var t = e.target.closest('button, label'); if (!t || t.closest('#proto')) return;
     if (t.closest('.stage')) { ui.taps++; ui.lastTouch = performance.now(); }
     var bd = t.getAttribute('data-build'); if (bd) { applyBuild(bd); renderOpenings(); return; }
-    var pk = t.getAttribute('data-pick'); if (pk) { applyBuild(pk); startCreator(); return; }
+    var aiv = t.getAttribute('data-ai'); if (aiv) { openAI(ui.mode === 'build' ? 'build' : 'door', aiv === 'picture'); return; }
     if (t.id === 'goA') { if (ui.resume) { ui.resume = false; setMode('build'); if (!ui.cat) ui.cat = 'teeth'; refresh(true); return; } if (!ui.build) applyBuild('empty'); startCreator(); return; }
     if (t.id === 'selbtn') { ui.selOpen = !ui.selOpen; changeBar(); return; }
     if (t.id === 'selchip') { clearPicks(); refresh(); return; }
     var x = t.getAttribute('data-x'); if (x) { afterAction(x); return; }
     var ft = t.getAttribute('data-fit'); if (ft) { SET.mold = ft; redraw(); return; }
-    var q = t.getAttribute('data-q'); if (q) { answerQ(q); return; }
     var op = t.getAttribute('data-open'); if (op) { if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble(); openCat(op); return; }
-    var s = t.getAttribute('data-s'); if (s === 'keep') { sheet.hidden = true; ui.tDone = 0; setMode('build'); refresh(); return; } if (s === 'photo') { toast('Next comes the phone sign-up, the studio photo and sending it. That part is in the flow lab.'); return; }
     var a = t.getAttribute('data-a');
-    if (a === 'menu') { ui.cat = null; ui.extra = null; refresh(); return; }
     if (a === 'sback') { if (ui.navHist && ui.navHist.length) openCat(ui.navHist.pop(), true); else goDoor(); return; }
     if (a === 'next') { openCat(CATS[catIndex(ui.cat) + 1][0]); return; }
-    if (a === 'prev') { openCat(CATS[catIndex(ui.cat) - 1][0]); return; }
     if (a === 'done') { done(); return; }
-    if (a === 'qskip') { ui.cat = 'teeth'; setMode('build'); refresh(); return; }
-    if (a === 'qback') { if (ui.q > 0) { ui.q--; refresh(); } else { resetAll(); ui.build = null; setMode('door'); renderOpenings(); G.sync(); G.goal(); } return; }
     if (!t.closest('#tray') && !t.closest('#changebar')) return;
     var g = t.getAttribute('data-g'), k = t.getAttribute('data-k'); if (!g) return;
     if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble();
@@ -2024,12 +1998,12 @@ button.mrow:active { transform: scale(.985); }
     ui.lastTouch = performance.now();
     if (e.target.id === 'instext') { SET.ins.text = e.target.value.toUpperCase().replace(/[^A-Z0-9&.\- ]/g, '').slice(0, 6); if (SET.ins.tooth === null || !T[SET.ins.tooth].on) SET.ins.tooth = firstFront(); G.sync(); meta(); }
     if (e.target.id === 'idea') SET.idea = e.target.value.slice(0, 400);
-    if (ui.mode === 'after') afterInput(e);
+    if (ui.mode === 'after' || ui.mode === 'ai') afterInput(e);
   });
   tray.addEventListener('change', function (e) {
     var kind = e.target.getAttribute && e.target.getAttribute('data-up'); if (!kind) return;
     var f = e.target.files[0]; if (!f) return; var fr = new FileReader();
-    fr.onload = function () { var im = new Image(); im.onload = function () { var c = document.createElement('canvas'), s = Math.min(1, 900 / Math.max(im.width, im.height)); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); var url = c.toDataURL('image/jpeg', .8); if (kind === 'photo') { SET.photo = url; if (G.photo) G.photo(im); } else SET.inspo = url; refresh(true); }; im.src = fr.result; };
+    fr.onload = function () { var im = new Image(); im.onload = function () { var c = document.createElement('canvas'), s = Math.min(1, 900 / Math.max(im.width, im.height)); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); var url = c.toDataURL('image/jpeg', .8); if (kind === 'ai') { ui.ai.pic = url; ui.aiErr = ''; renderTray(); focusId('aitext'); return; } if (kind === 'photo') { SET.photo = url; if (G.photo) G.photo(im); } else SET.inspo = url; refresh(true); }; im.src = fr.result; };
     fr.readAsDataURL(f);
   });
   $('jawbtn').addEventListener('click', function () { var o = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', o); $('jawlabel').textContent = o ? 'Close mouth' : 'Open mouth'; G.jaw(o); });
@@ -2043,29 +2017,27 @@ button.mrow:active { transform: scale(.985); }
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
       '<div class="stat"><p>This run</p><b id="pclock">' + mmss(elapsed()) + ' · ' + ui.taps + ' taps</b></div>' +
       '<div class="pair"><p>Holder</p><input type="range" id="psolid" min="30" max="100" step="5" value="' + (ui.solid || 70) + '" aria-label="How solid the clear holder is"></div>' +
-      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. Chosen Nov 17: the build strip with Next and Back. After Done: one screen to send it, the code, then Sent. Send a second design to see a returning shopper skip the code.</p>';
+      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + (ui.verified && aiUsed() ? '<button type="button" class="sm" data-p="aireset">Give this phone its ' + AI_FREE + ' free AI builds back</button>' : '') +
+      '<p>Chosen so far: bare teeth with a row of builds; the build strip with Next and Back, gold rings on parts not opened yet; a guide when you seem stuck, with Undo. After Done: one screen to send it, the code, then Sent. AI (Nov 17): Describe it on the start page and as a tool on the stage; a conversation; the phone sign-up first, said plainly; ' + AI_FREE + ' free builds per phone, every reply counts; the closest match, saying what\'s different. A word matcher stands in for the AI here.</p>';
   }
   function goDoor() { hideBubble(); ui.selOpen = false; ui.resume = onList().length > 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }   // the furthest Back: the start screen, with the build kept
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
   function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? 'GL' : 'VV'; m.querySelector('span').textContent = shopName(); }
-  function restart() { ui.resume = false; ui.navHist = []; sheet.hidden = true; hidePhoto(); ui.after = 0; ui.sent = false; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; SET.promo = ''; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
+  function restart() { ui.resume = false; ui.navHist = []; hidePhoto(); ui.ai = { msgs: [], text: '', pic: null }; ui.aiStep = 'talk'; ui.after = 0; ui.sent = false; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; SET.promo = ''; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
   $('protobtn').addEventListener('click', function () { var open = proto.hidden; proto.hidden = !open; this.setAttribute('aria-expanded', open); clearInterval(protoTimer); if (open) { renderProto(); protoTimer = setInterval(function () { var c = $('pclock'); if (c) c.textContent = mmss(elapsed()) + ' · ' + ui.taps + ' taps'; }, 500); } });
   proto.addEventListener('click', function (e) {
     var b = e.target.closest('[data-p]'); if (!b) return; var p = b.getAttribute('data-p'), v = b.getAttribute('data-v');
     if (p === 'restart') { restart(); renderProto(); return; }
-    if (p === 'forget') { ui.verified = null; saveVerified(null); if (ui.mode === 'after') renderTray(); renderProto(); return; }
+    if (p === 'forget') { ui.verified = null; saveVerified(null); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); renderProto(); return; }
+    if (p === 'aireset') { try { localStorage.removeItem(aiKey()); } catch (e) {} ui.aiMem = 0; if (ui.mode === 'ai') renderTray(); renderProto(); return; }
     setVariant(p, v);
-    if (p === 'site') { brand(); if (ui.mode === 'after') renderTray(); }
-    if ((p === 'struct' || p === 'nextp') && ui.mode === 'build') { if (p === 'struct' && v !== 'strip' && ui.struct !== 'strip') {} refresh(); }
-    if (p === 'open') restart();
-    if (p === 'layout' && ui.mode === 'build') { if (v === 'steps' && ui.cat === null) ui.cat = 'teeth'; refresh(); }
-    if (p === 'guide') { hideBubble(); if (v === 'start') restart(); }
+    if (p === 'site') { brand(); if (ui.mode === 'after' || ui.mode === 'ai') renderTray(); }
     renderProto();
   });
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm'); setVariant('site', 'vvs'); setVariant('struct', 'strip'); setVariant('nextp', 'nextbtn'); brand();
+  setVariant('site', 'vvs'); brand();
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

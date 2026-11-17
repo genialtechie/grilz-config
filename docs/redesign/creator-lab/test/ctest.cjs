@@ -1,8 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m v (the build strip: Next, Back, Select teeth, quick-question Undo) or m g (after Done)
-// Plans a to f, k and s exercise earlier versions and may no longer pass.
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   plans: v (the build strip: Next, Back, Select teeth, quick-question Undo), w (Select teeth), g (after Done), i (the AI path)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -23,42 +22,11 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
   const c = async s => { if (await p.isVisible('#bubble')) await p.click('#bubble [data-b="x"]').catch(() => {}); await p.click(s, { timeout: 20000 }); };
   const proto = async (k, v) => { await c('#protobtn'); await c('[data-p="' + k + '"][data-v="' + v + '"]'); await c('#protobtn'); };
   try {
-    if (plan === 'a') {
-      await shot('1-openA');
-      await c('[data-build="iced8"]'); await shot('2-openA-iced8');
-      await c('#goA'); await shot('3-menu');
-      await p.evaluate(() => window.__vvs.G.tap(24)); await shot('4-glow');
-      await c('[data-a="menu"]').catch(() => {}); await c('[data-open="metal"]'); await c('[data-g="metal"][data-k="rose"]'); await shot('5-metal-onetooth');
-      await c('#selchip'); await p.evaluate(() => { window.__vvs.ui.quietUntil = 0; window.__vvs.ui.lastTouch = 0; window.__vvs.G.touched = 0; }); await p.waitForTimeout(1600); await shot('6-guide'); await p.click('#bubble [data-b="x"]').catch(() => {});
-      await c('[data-a="done"]'); await shot('7-done');
-    } else if (plan === 'd') {
-      await c('[data-build="tone"]'); await c('#goA'); await shot('d1-menu-tone');
-      await c('[data-open="finish"]'); await c('[data-g="pick"][data-k="canines"]'); await c('[data-g="style"][data-k="cut"]'); await shot('d2-finish-canines');
-      await c('[data-g="pick"][data-k="front"]'); await c('[data-g="style"][data-k="engr"]');
-      await c('[data-a="menu"]'); await shot('d3-menu-mixed');
-      await p.evaluate(() => { window.__vvs.G.tap(7); window.__vvs.G.tap(23); }); await shot('d4-two-picked');
-    } else if (plan === 'e') {
-      await c('[data-build="tone"]'); await c('#goA'); await c('[data-open="finish"]');
-      await c('[data-g="pick"][data-k="canines"]'); await c('[data-g="style"][data-k="cut"]');
-      await c('[data-g="pick"][data-k="front"]'); await c('[data-g="style"][data-k="engr"]');
-      await c('[data-g="pick"][data-k="all"]'); await c('[data-a="menu"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 600000; }); await c('#bubble [data-b="x"]').catch(() => {});
-      await shot('e1-menu-whole-mixed');
-    } else if (plan === 'f') {
-      await p.evaluate(() => { window.__vvs.ui.undoMs = 600000; }); await p.click('[data-build="empty"]'); await p.click('#goA'); await p.waitForTimeout(1500); await shot('f1-empty-menu');
-      await p.click('#bubble [data-b="top"]'); await p.click('#bubble [data-b="6"]'); await shot('f2-undo');
-      await p.click('#bubble [data-b="undo"]'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 600000; }); await p.click('#bubble [data-b="x"]').catch(() => {}); await shot('f3-after-undo');
-      await c('.rows [data-open="teeth"]'); await shot('f4-teeth-empty');
-      await c('[data-g="set"]'); await shot('f5-teeth-picked');
-      await c('[data-a="next"]'); await shot('f6-metal');
-      await c('.stages [data-open="extras"]'); await shot('f7-extras');
-      await p.evaluate(() => { const u = window.__vvs.ui; u.quietUntil = 0; u.lastTouch = 0; window.__vvs.G.touched = 0; }); await p.waitForTimeout(1600);
-      const k = await p.evaluate(() => window.__vvs.ui.bub); console.log('bubble now', k);
-      if (k === 'metal' || k === 'finish' || k === 'stones') { await p.click('#bubble .chip:not(.more)'); await shot('f8-undo-' + k); }
-    } else if (plan === 'g') {
+    if (plan === 'g') {
       await p.evaluate(() => { try { localStorage.removeItem('vvs-verified'); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await shot('g0-door');
       await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await shot('g1-your-build');
-      await c('[data-a="done"]'); await shot('g2-your-grill');
+      await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g2-your-grill');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 230; }); await shot('g3-your-grill-mid');
       await c('[data-x="go"]'); await shot('g4-your-grill-error');
       await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('[data-fit="own"]'); await shot('g5-your-grill-filled');
@@ -70,25 +38,8 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 9999; }); await shot('g10-sent-bottom');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 0; }); await c('[data-x="pay"]'); await p.waitForTimeout(1900); await shot('g11-paid');
       await c('#protobtn'); await c('[data-p="site"][data-v="shop"]'); await c('[data-p="restart"]'); await c('#protobtn');
-      await c('[data-build="iced8"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await c('[data-a="done"]'); await shot('g12-jeweler-returning');
+      await c('[data-build="iced8"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('g12-jeweler-returning');
       await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 9999; }); await shot('g13-jeweler-returning-bottom');
-    } else if (plan === 'k') {
-      await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
-      await c('.rows [data-open="metal"]'); await shot('k1-metal-changebar');
-      await c('#changebar [data-k="front"]'); await c('[data-g="metal"][data-k="rose"]'); await shot('k2-front-rose');
-      await c('#undobtn'); await shot('k3-undone');
-      await c('[data-a="menu"]'); await p.evaluate(() => { window.__vvs.G.tap(7); }); await shot('k4-menu-one-picked');
-    } else if (plan === 's') {
-      const quiet = () => p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
-      await c('[data-build="tone"]'); await c('#goA'); await quiet(); await shot('s1-sheet-yourbuild');
-      await c('.rows [data-open="metal"]'); await shot('s2-sheet-metal');
-      await c('.psheet .tfoot [data-a="menu"]'); await shot('s3-sheet-upnext');
-      await proto('nextp', 'nextbtn'); await c('.rows [data-open="finish"]'); await shot('s4-sheet-finish-nextbtn');
-      await c('.psheet [data-a="menu"].x');
-      await proto('struct', 'expand'); await proto('nextp', 'upnext'); await c('.rows [data-open="stones"]'); await shot('s5-expand-stones');
-      await proto('nextp', 'nextbtn'); await shot('s6-expand-stones-nextbtn');
-      await proto('struct', 'strip'); await proto('nextp', 'upnext'); await c('.strip5 [data-open="metal"]'); await shot('s7-strip-metal');
-      await proto('nextp', 'nextbtn'); await c('.strip5 [data-open="finish"]'); await shot('s8-strip-finish-nextbtn');
     } else if (plan === 'v') {
       const quiet = () => p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await c('[data-build="tone"]'); await c('#goA'); await quiet(); await shot('v1-strip-teeth');
@@ -108,21 +59,25 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
       await c('[data-a="next"]'); await shot('w1-select-label');
       await c('#selbtn'); await c('#selpop [data-k="front"]'); await shot('w2-select-picked');
-    } else if (plan === 'c') {
-      await c('[data-build="iced8"]'); await c('#goA'); await shot('c1-menu-game');
-      await c('[data-open="stones"]'); await shot('c2-stones-game');
-      await c('[data-a="menu"]'); await c('[data-open="finish"]'); await shot('c3-finish-game');
-      await c('[data-a="menu"]'); await proto('menu', 'jeweler'); await shot('c4-menu-jeweler');
-      await c('[data-open="metal"]'); await c('[data-g="metal"][data-k="platinum"]'); await shot('c5-metal-jeweler');
-    } else {
-      await proto('open', 'b'); await shot('1-openB');
-      await proto('layout', 'steps'); await proto('guide', 'start');
-      await c('[data-pick="empty"]'); await shot('2-q1');
-      await c('[data-q="bottom"]'); await c('[data-q="8"]'); await shot('3-q3');
-      await c('[data-q="white"]'); await shot('4-steps-finish');
-      await c('[data-g="setting"][data-k="mosaic"]').catch(e => console.log('no mosaic in finish (expected)'));
-      await c('[data-open="stones"]'); await c('[data-g="setting"][data-k="prong"]'); await shot('5-steps-stones');
-      await c('[data-a="next"]'); await c('[data-g="x"][data-k="fangs"]'); await shot('6-steps-extras');
+    } else if (plan === 'i') {   // the AI path: Describe it from the start page, the sign-up, the code, the build and its note; keep talking; the free builds; a picture
+      await p.evaluate(() => { try { localStorage.clear(); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; window.__vvs.ui.undoMs = 9e6; });
+      await shot('i0-door-ai-chips');
+      await c('.openA [data-ai="describe"]'); await shot('i1-describe');
+      await p.fill('#aitext', 'iced out bottom 8 in white gold with fangs and rubies'); await c('[data-x="go"]'); await shot('i2-ai-contact');
+      await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await c('[data-x="go"]'); await p.waitForTimeout(2600); await shot('i3-ai-code');
+      await c('[data-x="fill"]'); await p.waitForTimeout(1500); await shot('i4-built-note');
+      await p.click('#bubble [data-b="x"]').catch(() => {});
+      await c('#aibtn'); await shot('i5-keep-talking');
+      await p.fill('#aitext', 'make it 18k rose gold with my initials MJ'); await c('[data-x="go"]'); await p.waitForTimeout(700); await shot('i6-rose-built');
+      await p.click('#bubble [data-b="undo"]'); await p.waitForTimeout(500); await shot('i7-undone');
+      await c('#aibtn'); await p.fill('#aitext', 'two tone open face on a cuban link'); await c('[data-x="go"]'); await p.waitForTimeout(700); await p.click('#bubble [data-b="x"]').catch(() => {});
+      await c('#aibtn'); await shot('i8-out-of-builds');
+      await c('[data-x="hand"]'); await c('.strip5 [data-open="extras"]'); await shot('i9-extras-idea');
+      await c('#protobtn'); await c('[data-p="aireset"]'); await c('[data-p="restart"]'); await c('#protobtn');
+      const [fc] = await Promise.all([p.waitForEvent('filechooser'), c('.openA [data-ai="picture"]')]);
+      await fc.setFiles(out + '/' + tag + '-i0-door-ai-chips.png'); await p.waitForTimeout(900); await shot('i10-picture-ready');
+      await c('[data-x="go"]'); await p.waitForTimeout(900); await shot('i11-built-from-picture');
+      await p.click('#bubble [data-b="x"]').catch(() => {}); await c('.strip5 [data-open="extras"]'); await c('[data-a="done"]'); await shot('i12-done-verified');
     }
   } catch (e) { console.log('STEP FAIL', e.message.split('\n')[0]); }
   console.log(errs.slice(0, 8).join('\n') || 'no errors');

@@ -79,6 +79,20 @@ on, and from the first screen to Start your build, where the button becomes
 a part not opened yet wears a gold ring, like an unseen story, and the count
 sits under the buttons. "Select teeth" is a toggle on the stage (bottom right
 on phones, beside Undo on computers, above the tools when there is no room).
-Undoing a quick-question answer brings the question back. The stacked-sheet
-and expand-in-place code is still in `50-ui.js` behind `ui.struct`; remove it
-once the owner confirms the strip.
+Undoing a quick-question answer brings the question back.
+
+v11 (Nov 17): the rings confirmed, so the stacked-sheet, expand-in-place,
+stages, steps-layout, full-screen-opening and start-questions code is gone.
+The **AI path**, from the owner's eight slides: "Describe it" and "From a
+picture" are two chips on the start page beside Start empty, and "Describe it"
+is a tool on the stage once building. The screen is a conversation: a box, an
+optional picture (a photo or a screenshot; no Instagram links, which can't be
+read), then each reply as a Row ("Built it" or "Built the closest match", with
+what's different). Before the first build, the sign-up says why, plainly, in
+the same fields as sending; the code screen is reused, and a phone verified
+here skips the code when sending. 3 free builds per phone, counted on the
+device, every reply counting; after that, "Keep editing by hand". The AI's
+note sits on the stage with Undo, and the Undo tool steps back over the build
+too. Their words and picture go to the jeweler as "their idea". In this
+prototype `wish()` in `50-ui.js`, a word matcher over the shop's own options,
+stands in for the AI, and the page says so.

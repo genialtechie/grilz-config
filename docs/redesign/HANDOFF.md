@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v10) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
+| Grill Creator Lab (the overhauled builder, v11) | `creator-lab/creator.html`, built from `creator-lab/src/` | First account: claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym (not shared). Republished Nov 17 from the second account: claude.ai/artifact/Apwvvs8JjwHDwus15UQKFg |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -65,6 +65,12 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 - **Sign-up:** Firebase phone codes (about $7 a month per 1,000 sign-ups). No
   WhatsApp. No fake Instagram verification; the owner chose an honest optional
   handle plus a Follow ask.
+- **The AI path (v11, Nov 17):** "Describe it" and "From a picture" as chips
+  on the start page and a "Describe it" tool on the stage. One box, then keep
+  talking. The phone sign-up comes first and says why, plainly; 3 free builds
+  per verified phone, every reply counts; a photo or screenshot, no Instagram
+  links; the closest match with a note on what's different, plus Undo. A word
+  matcher stands in for the AI in the prototype (`wish()` in `50-ui.js`).
 
 ## Next, in order
 
@@ -75,15 +81,13 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 2. ~~The own-site question~~ Decided Nov 17: on VVS Lab's own site the
    shopper sees VVS Lab and VVS Lab texts them (no partners yet). Deposit
    words: "$150 now, counted toward your grill. [Shop] confirms the rest."
-3. ~~Pick the builder's structure~~ The owner chose the build strip with
-   Next and Back (v10; see `creator-lab/README.md` and the Nov 17 "build
-   strip" row in plan.md). Waiting on their verdict on the gold rings for
-   progress; then delete the unused sheet, expand, stages and steps code.
-4. **Then the AI paths**, already decided on Nov 17 (see plan.md): "Describe
-   it" and "Start from a picture" on the start page and in Your build; the
-   phone sign-up after they describe it; the AI builds the closest version in
-   the 3D, all editable, with a note and Undo. Take the screens through on
-   slides (the words, what each holds) before building.
+3. ~~Pick the builder's structure~~ The build strip (v10), and the gold rings
+   for progress confirmed. The unused sheet, expand, stages, steps, opening-B
+   and start-questions code was deleted in v11.
+4. ~~The AI paths~~ Decided on Nov 17 over eight slides and built in v11.
+   **Waiting on:** the owner's verdict on v11 and on the words written without
+   a slide (listed first under "Open questions" in plan.md); bring those as
+   slides.
 5. **Later rounds:**
    - the hybrid front door
    - the shop's brand, and coming back to a design
@@ -105,9 +109,10 @@ cd docs/redesign/creator-lab/test && node ctest.cjs 390 780 m v
 ```
 
 `ctest.cjs` drives headless Chromium with Playwright and software WebGL (slow:
-a few minutes). It saves screenshots to `test/shots/`. Plans `a` to `e` in the
-script click through different paths. Copy the built `src/creator.html` to
-`creator-lab/creator.html` before committing.
+two to four minutes a run, and two runs at once starve each other, so run them
+one after another). It saves screenshots to `test/shots/`. Plans: `v` (the
+strip), `w` (Select teeth), `g` (after Done), `i` (the AI path). Copy the built
+`src/creator.html` to `creator-lab/creator.html` before committing.
 
 ## Facts about the real app worth knowing
 
