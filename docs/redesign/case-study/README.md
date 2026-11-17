@@ -16,6 +16,7 @@ private Claude artifact.
 | v6 | Nov 16 | Real tooth shapes and spacing across every finish, setting, charm, view and phone |
 | creator 5 | Nov 16 | The overhauled builder's menu after three passes with the owner: round pictures of each choice, no arrows or borders, one type family (desktop and phone) |
 | creator 6 | Nov 17 | Start empty opens Your build; Next leads through every part with Back beside it; stages on top; Undo on the guide's question (phone and desktop, 8 steps each) |
+| creator 7 | Nov 17 | The three screens after Done: Your grill, Where should VVS Lab text you (code step, returning shopper), Sent (the studio photo develops from the 3D, deposit, extras, what happens next) |
 | port 1-2 | Nov 16 | The approved piece inside the real builder (iced; a per-tooth mix); every state next to the prototype is in `docs/redesign/port/screenshots/` |
 
 Only our own work is here. Reference images (competitor sites, games, the

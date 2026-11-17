@@ -217,7 +217,7 @@
     var r = Math.max(19.4 * MM * H / (.9 * fh * tan), 36 * MM * H / (.92 * fw * tan)) * curv.zoom;
     var off = Math.round(W / 2 - xc);
     if (off !== place.off) { place.off = off; if (off) camera.setViewOffset(W, H, off, 0, W, H); else camera.clearViewOffset(); }
-    var sway = (!reduce && !dragging && t - idleAt > 2500) ? Math.sin((t - idleAt - 2500) / 2600) * .16 : 0;
+    var slow = ui.mode === 'after', wait = slow ? 400 : 2500, sway = (!reduce && !dragging && t - idleAt > wait) ? Math.sin((t - idleAt - wait) / (slow ? 3400 : 2600)) * (slow ? .5 : .16) : 0;   // after Done the piece turns slowly
     var yaw = curv.yaw + user.yaw + sway, pitch = Math.max(-.5, Math.min(.6, curv.pitch + user.pitch));
     var lift = -((H / 2 - yc) / (H / 2)) * r * tan, cz = -6 * MM;
     camera.position.set(Math.sin(yaw) * Math.cos(pitch) * r, Math.sin(pitch) * r + lift, cz + Math.cos(yaw) * Math.cos(pitch) * r);
@@ -252,7 +252,7 @@
     teeth.forEach(function (o) { o.lift = 0; o.g.position.copy(o.base); o.g.scale.setScalar(1); });
     place(performance.now()); updateGlints(); renderer.render(scene, camera);
     var right = boxC.right > boxC.left + 200 ? boxC.right : W, c = document.createElement('canvas'), ar = w / h, k = canvas.height / H, fh = (boxC.bottom - boxC.top) * k, fw = (right - boxC.left) * k;
-    var sh = Math.min(canvas.height, fh * 1.12, fw * 1.05 / ar), sw = sh * ar, cy = (boxC.top + boxC.bottom) / 2 * k, cx = (boxC.left + right) / 2 * k;
+    var sh = Math.min(canvas.height, fh * 1.12, fw * 1.05 / ar, canvas.width / ar), sw = sh * ar, cy = (boxC.top + boxC.bottom) / 2 * k, cx = (boxC.left + right) / 2 * k;
     c.width = w; c.height = h; c.getContext('2d').drawImage(canvas, Math.max(0, Math.min(canvas.width - sw, cx - sw / 2)), Math.max(0, Math.min(canvas.height - sh, cy - sh / 2)), sw, sh, 0, 0, w, h); dirty = true;
     return c.toDataURL('image/jpeg', .9);
   };

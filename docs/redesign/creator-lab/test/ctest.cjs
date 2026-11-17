@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 // Screenshots the Grill Creator Lab in headless Chromium (software WebGL, so it is slow).
-// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 1100 800 d f   or   node ctest.cjs 390 780 m f
+// Usage: node ctest.cjs <width> <height> <tag> <plan>   e.g. node ctest.cjs 390 780 m g (plan g walks the three screens after Done)
 // Build first: cd ../src && python3 build.py. Shots land in ./shots (not committed).
 const dir = __dirname, out = __dirname + '/shots';
 fs.mkdirSync(out, { recursive: true });
@@ -53,6 +53,22 @@ const [vw, vh, tag, plan] = [+(process.argv[2] || 1100), +(process.argv[3] || 80
       await p.evaluate(() => { const u = window.__vvs.ui; u.quietUntil = 0; u.lastTouch = 0; window.__vvs.G.touched = 0; }); await p.waitForTimeout(1600);
       const k = await p.evaluate(() => window.__vvs.ui.bub); console.log('bubble now', k);
       if (k === 'metal' || k === 'finish' || k === 'stones') { await p.click('#bubble .chip:not(.more)'); await shot('f8-undo-' + k); }
+    } else if (plan === 'g') {
+      await p.evaluate(() => { try { localStorage.removeItem('vvs-verified'); } catch (e) {} window.__vvs.ui.verified = null; window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-build="tone"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; });
+      await c('[data-a="done"]'); await shot('g1-your-grill');
+      await c('.why summary'); await c('[data-x="more"]'); await p.fill('#apromo', 'VVS10'); await c('[data-fit="own"]'); await shot('g2-your-grill-open');
+      await c('[data-x="send1"]'); await shot('g3-text-me');
+      await p.fill('#aname', 'Marcus'); await p.fill('#aphone', '5550123456'); await shot('g4-text-me-filled');
+      await c('[data-x="code"]'); await p.waitForTimeout(2600); await shot('g5-code');
+      await c('[data-x="fill"]'); await p.waitForTimeout(1500);
+      await p.evaluate(() => { window.__vvs.ui.devAt = performance.now() - 4000; }); await shot('g6-sent-developing');
+      await p.evaluate(() => { window.__vvs.ui.devAt = performance.now() - 20000; }); await p.waitForTimeout(400); await shot('g7-sent-developed');
+      await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 9999; }); await shot('g8-sent-bottom');
+      await p.evaluate(() => { document.querySelector('#tray .tbody').scrollTop = 0; }); await c('[data-x="pay"]'); await p.waitForTimeout(1800); await shot('g9-paid');
+      await c('#protobtn'); await c('[data-p="site"][data-v="shop"]'); await c('[data-p="restart"]'); await c('#protobtn');
+      await c('[data-build="iced8"]'); await c('#goA'); await p.evaluate(() => { window.__vvs.ui.quietUntil = performance.now() + 9e6; }); await c('[data-a="done"]'); await shot('g10-jeweler-your-grill');
+      await c('[data-x="send1"]'); await shot('g11-returning');
     } else if (plan === 'c') {
       await c('[data-build="iced8"]'); await c('#goA'); await shot('c1-menu-game');
       await c('[data-open="stones"]'); await shot('c2-stones-game');

@@ -28,7 +28,7 @@ Claude session should read, in this order:
 
 | Artifact | Source in this repo | Link on the first account |
 |---|---|---|
-| Grill Creator Lab (the overhauled builder, v6) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
+| Grill Creator Lab (the overhauled builder, v7) | `creator-lab/creator.html`, built from `creator-lab/src/` | claude.ai/artifact/DK6Km1K4CZZiCDbGwsPWym |
 | Flow Lab (low-fidelity flow options, v3) | `flow-lab/flow-lab.html` | claude.ai/artifact/8YSgY8b6cgC4F8peaW2ZG1 |
 | Prototype v6 (full journey before the overhaul) | `prototype/` | claude.ai/artifact/AuT9uiP5MtFsVjeVweLmLk |
 | Plan page (living doc) | `plan.md` (snapshot) | claude.ai/artifact/VdVY5BdtTBEXdTvdErb6xD |
@@ -71,26 +71,17 @@ If the plan page can't be opened, make a new one from `plan.md`, or keep
 1. ~~Build the builder fixes picked on Nov 17~~ Done in Creator Lab v6:
    Start empty opens Your build, "Next: Metal" with a smaller Back beside it,
    stages on top, Undo in the quick-question bubble. (Noticed, not changed: an
-   empty build shows a $200 estimate, which is the fitting fee alone.)
-2. **Answer the owner's open question on slides first:** "what happens when
-   they send it to us from our site, not a jeweler's integration?" On VVS
-   Lab's own site the order goes to a partner jeweler already on VVS Lab, and
-   VVS Lab can take a referral fee (decided Nov 16). Still open, one slide
-   each, recommended option first:
-   - whose name the shopper sees on screens 1 to 3 and who texts them (the
-     partner jeweler by name, VVS Lab, or "VVS Lab's partner jeweler, Gold
-     Lab")
-   - where the deposit goes (the partner's own Stripe with the referral fee
-     invoiced later; VVS Lab collecting through Stripe Connect; or no deposit
-     on VVS Lab's own site)
-   - the words under "Start your order": "the rest after your fitting" may
-     not be true for every shop; offer "the rest when Gold Lab confirms the
-     price" next to the owner's chosen words, and keep theirs unless they
-     change it.
-   Screens 1 to 3 share one pattern: a small "Keep editing" beside the main
-   button, and stages on top (Your grill · Text me · Sent).
-3. **Build screens 1 to 3** into the Creator Lab, republish it, save
-   screenshots to `case-study/`, and update the plan and the notes.
+   empty build shows a $200 estimate, which is the service fee alone.)
+2. ~~The own-site question~~ Decided Nov 17: on VVS Lab's own site the
+   shopper sees VVS Lab and VVS Lab texts them (no partners yet). Deposit
+   words: "$150 now, counted toward your grill. [Shop] confirms the rest."
+3. ~~Build screens 1 to 3~~ Done in Creator Lab v7 (see
+   `creator-lab/README.md`). Next: the owner reviews v7. Choices made while
+   building that the owner hasn't seen yet, to raise on slides:
+   - Sent has no bottom button (the deposit is the main action there).
+   - On VVS Lab's own site, In-store fitting is left out (VVS Lab has no store).
+   - The "usually within a day" line was left out of the Sent headline,
+     because it depends on the shop.
 4. **Later rounds:**
    - the AI paths (describe it, or start from a picture; a free sign-up is
      needed because AI costs per use)
@@ -110,7 +101,7 @@ cd docs/redesign/creator-lab/src && python3 build.py
 ```
 
 ```bash
-cd docs/redesign/creator-lab/test && node ctest.cjs 1100 800 d f
+cd docs/redesign/creator-lab/test && node ctest.cjs 390 780 m g
 ```
 
 `ctest.cjs` drives headless Chromium with Playwright and software WebGL (slow:

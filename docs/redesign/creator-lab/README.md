@@ -35,3 +35,19 @@ question shows what changed with an Undo for about 6 seconds.
 inside `src/` to rebuild (it writes `creator.html` and `engine.js` there).
 The 3D parts are the prototype's (see `../prototype/`), with a camera move per
 category and the selected-tooth glow added in `40-scene.js`.
+
+After Done (v7, Nov 17), each screen taken through with the owner first:
+1. **Your grill.** "This is your grill", one price ("About $2,000", the list
+   on tap), the fitting asked in plain words, "+ Add a note or promo code",
+   and "Send to VVS Lab" with "Free. Nothing to pay yet." beside a smaller
+   "Keep editing".
+2. **Where should VVS Lab text you?** First name and phone, then the code
+   opens in place; the 6th digit sends. A phone verified on this device skips
+   the code.
+3. **Sent.** The 3D fades as the studio photo develops in its place, then
+   "Start your order" (optional deposit), a card for Instagram, Follow and
+   email, and What happens next.
+
+The prototype switch "Opened from" flips between VVS Lab's own site (VVS Lab
+texts; no in-store fitting yet) and a jeweler's builder (Gold Lab). Nothing is
+sent: the code, the deposit and the AI photo are simulated, and say so.

@@ -174,9 +174,10 @@
   }
   function doneBtn() { var b = breakdown(); return '<button type="button" class="cta" data-a="done"' + (onList().length ? '' : ' disabled') + '>Done <small>' + money(b.total) + (b.quote ? ' +' : '') + '</small></button>'; }
   function renderTray() {
-    var view = ui.mode + '|' + ui.layout + '|' + ui.cat, keep = view === renderTray.view ? tray.querySelector('.tbody') : null, top = keep ? keep.scrollTop : 0, h = '';   // keep the scroll only when redrawing the same screen
+    var view = ui.mode + '|' + ui.layout + '|' + ui.cat + '|' + ui.after, keep = view === renderTray.view ? tray.querySelector('.tbody') : null, top = keep ? keep.scrollTop : 0, h = '';   // keep the scroll only when redrawing the same screen
     renderTray.view = view;
     if (ui.mode === 'q') { tray.innerHTML = renderQuestions(); return; }
+    if (ui.mode === 'after') { tray.innerHTML = renderAfter(); return; }
     if (ui.layout === 'menu') {
       if (ui.cat === null) {
         var seen = CATS.filter(function (c) { return ui.visited[c[0]]; }).length;
@@ -282,10 +283,134 @@
     if (msg) showUndo(msg, before);
   });
 
+  // ---------- after "Done": Your grill · Text me · Sent (each screen as the owner picked it, Nov 17) ----------
+  ui.after = 0; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; ui.verified = loadVerified();
+  function shopName() { return ui.site === 'shop' ? 'Gold Lab' : 'VVS Lab'; }
+  function fits() { return ui.site === 'shop' ? ['kit', 'own', 'store'] : ['kit', 'own']; }          // VVS Lab has no store yet
+  var FIT_WORDS = { kit: ['Mold kit by mail', 'They post you a kit. You bite, then mail it back.'], own: ['Own mold or scan', 'You already have one.'], store: ['In-store fitting', ''] };
+  var AFTER = ['Your grill', 'Text me', 'Sent'], DEV = 9000;
+  function loadVerified() { try { return JSON.parse(localStorage.getItem('vvs-verified') || 'null'); } catch (e) { return null; } }
+  function saveVerified(v) { try { if (v) localStorage.setItem('vvs-verified', JSON.stringify(v)); else localStorage.removeItem('vvs-verified'); } catch (e) {} }
+  function digits(s) { var d = String(s || '').replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; }
+  function fmtPhone(s) { var d = digits(s).slice(0, 10); if (d.length < 4) return d; if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3); return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6); }
+  function contactOk() { return ui.c.name.trim().length >= 2 && digits(ui.c.phone).length === 10; }
+  function afterStages() {
+    return '<nav class="stages" aria-label="Sending your grill">' + AFTER.map(function (n, k) {
+      var i = k + 1, here = i === ui.after, can = !ui.sent && i < ui.after, tick = ui.sent || i < ui.after;
+      return (k ? '<i aria-hidden="true">·</i>' : '') + '<button type="button"' + (can ? ' data-af="' + i + '"' : ' disabled') + (here ? ' aria-current="step"' : '') + '>' + n + (tick ? '<span class="tick" aria-label="done">✓</span>' : '') + '</button>';
+    }).join('') + '</nav>';
+  }
+  function sumHtml() {
+    var b = breakdown(), S = esc(shopName());
+    return '<p class="big">About ' + money(b.total) + (b.quote ? ' <small>+ a quote for your charm</small>' : '') + '</p><p class="note">' + S + ' confirms the exact price after your fitting.</p>' +
+      '<details class="why"' + (ui.why ? ' open' : '') + '><summary>What\'s in the price</summary><ul>' + b.lines.map(function (l) { return '<li><span>' + esc(l[0]) + '</span><span>' + money(l[1]) + '</span></li>'; }).join('') + (b.quote ? '<li><span>One-of-one charm</span><span>Quoted</span></li>' : '') + '</ul></details>';
+  }
+  function promoMsg() { var c = (SET.promo || '').toUpperCase(); if (!c) return ''; return PRICE.promo[c] ? c + ': ' + PRICE.promo[c] + '% off' : (c.length >= 4 ? 'That code doesn\'t work.' : ''); }
+  function afterOne() {
+    var S = esc(shopName()), f = fits(); if (f.indexOf(SET.mold) < 0) SET.mold = f[0];
+    return afterStages() + '<div class="thead"><h2>This is your grill</h2></div><div class="tbody">' +
+      '<div class="sum" id="asum">' + sumHtml() + '</div>' +
+      '<div class="q"><h3>How will they get the shape of your teeth?</h3><div class="fits" role="radiogroup" aria-label="Fitting">' + f.map(function (k) { var w = FIT_WORDS[k]; return '<button type="button" class="fit" role="radio" aria-checked="' + (SET.mold === k) + '" data-fit="' + k + '"><i></i><span><b>' + w[0] + '</b><span>' + (k === 'store' ? 'Visit ' + S + '.' : w[1]) + '</span></span></button>'; }).join('') + '</div></div>' +
+      (ui.more ? '<div class="more"><div class="field"><label for="anote">Note to ' + S + '</label><textarea id="anote" maxlength="200" placeholder="Anything they should know">' + esc(ui.c.note) + '</textarea></div><div class="field"><label for="apromo">Promo code</label><input id="apromo" type="text" autocomplete="off" autocapitalize="characters" value="' + esc(SET.promo || '') + '"></div><p class="note" id="pmsg">' + promoMsg() + '</p></div>'
+        : '<button type="button" class="link" data-x="more">+ Add a note or promo code</button>') +
+      '</div><div class="tfoot col"><div class="btns"><button type="button" class="cta ghost second" data-x="keep">' + BACK + 'Keep editing</button><button type="button" class="cta" data-x="send1">Send to ' + S + '</button></div><p class="free">Free. Nothing to pay yet.</p></div>';
+  }
+  function resendWords() { var s = Math.ceil((ui.resendAt - performance.now()) / 1000); return s > 0 ? 'Send a new code in ' + mmss(s) : '<button type="button" class="link" data-x="resend">Send a new code</button>'; }
+  function otpBoxes() { return [0, 1, 2, 3, 4, 5].map(function (i) { return '<i' + (i === Math.min(ui.code.length, 5) && !ui.checking ? ' class="at"' : '') + '>' + (ui.code[i] || '') + '</i>'; }).join(''); }
+  function afterTwo() {
+    var S = esc(shopName()), v = ui.verified, h = afterStages() + '<div class="thead"><h2>Where should ' + S + ' text you?</h2></div><div class="tbody">', foot = '';
+    if (v && !ui.changing) {
+      h += '<div class="known"><span><b>' + esc(v.name) + '</b> · ' + esc(fmtPhone(v.phone)) + ' <em aria-label="verified">✓</em></span><button type="button" class="link" data-x="change">Change</button></div><p class="note">Verified on this device, so no code this time.</p>';
+      foot = '<button type="button" class="cta" data-x="send">Send to ' + S + '</button>';
+    } else if (!ui.codeSent) {
+      h += '<div class="field"><label for="aname">First name</label><input id="aname" type="text" autocomplete="given-name" autocapitalize="words" value="' + esc(ui.c.name) + '"></div>' +
+        '<div class="field"><label for="aphone">Phone</label><input id="aphone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(555) 012-3456" value="' + esc(ui.c.phone) + '"></div>' +
+        '<p class="note">' + S + ' texts you about this grill only. We\'ll send a code first; msg &amp; data rates may apply.</p>';
+      foot = '<button type="button" class="cta" data-x="code"' + (contactOk() ? '' : ' disabled') + '>Text me a code</button>';
+    } else {
+      h += '<p class="intro">We texted a code to <b>' + esc(fmtPhone(ui.c.phone)) + '</b>. <button type="button" class="link" data-x="wrong">Wrong number? Change it</button></p>' +
+        (ui.sms && !ui.code && !ui.checking ? '<button type="button" class="sms" data-x="fill"><span>From Messages</span><b>' + ui.sms + '</b></button>' : '') +
+        '<label class="otp"><span class="sr">6-digit code</span><input id="aotp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="' + ui.code + '"' + (ui.checking ? ' disabled' : '') + '><span class="boxes" aria-hidden="true">' + otpBoxes() + '</span></label>' +
+        '<p class="note" id="otpnote">' + (ui.checking ? 'Checking…' : resendWords()) + '</p><p class="proto-note">Prototype: no text is sent. Tap the code above (your phone offers it the same way) or type any 6 digits.</p>';
+    }
+    return h + '</div><div class="tfoot"><button type="button" class="cta ghost second" data-x="back2">' + BACK + 'Back</button>' + foot + '</div>';
+  }
+  function afterThree() {
+    var S = esc(shopName()), dep = breakdown().deposit, h = afterStages() + '<div class="thead"><h2>Sent. ' + S + ' will text you.</h2></div><div class="tbody"><p class="intro">At ' + esc(fmtPhone(ui.c.phone)) + '.</p>';
+    if (ui.paid) h += '<div class="dep paid"><b>Order started</b><p class="note">' + money(dep) + ' deposit paid to ' + S + ', counted toward your grill.</p></div>';
+    else if (ui.skip) h += '<p class="note">No deposit for now. <button type="button" class="link" data-x="unskip">Pay the ' + money(dep) + ' deposit</button></p>';
+    else h += '<div class="dep"><h3>Start your order</h3><p class="note">' + money(dep) + ' now, counted toward your grill. ' + S + ' confirms the rest.</p><div class="btns"><button type="button" class="cta" data-x="pay"' + (ui.paying ? ' disabled' : '') + '>' + (ui.paying ? 'Opening secure checkout…' : 'Pay ' + money(dep) + ' deposit') + '</button><button type="button" class="link" data-x="skip">Not now</button></div></div>';
+    h += '<div class="xcard"><h3>While your photo develops</h3><div class="field"><label for="aig">Your Instagram</label><input id="aig" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@" value="' + esc(ui.c.ig) + '"></div><p class="note">' + S + ' sees it as you typed it.</p>' +
+      '<button type="button" class="cta ghost" data-x="follow">Follow @vvslab on Instagram</button><div class="field"><label for="aemail">Email me a copy</label><input id="aemail" type="email" inputmode="email" autocomplete="email" value="' + esc(ui.c.email) + '"></div></div>';
+    h += '<div class="next"><h3>What happens next</h3><ol><li><b>' + S + ' texts you</b></li><li><b>Fitting</b><span>' + FIT_WORDS[SET.mold][0] + '</span></li><li><b>They make it</b></li><li><b>It\'s yours</b></li></ol></div>';
+    return h + '<p class="proto-note">Prototype: nothing is sent and no card is charged. The real studio photo is made by AI from this design in about 30 seconds; here the 3D stands in for it.</p></div>';
+  }
+  function renderAfter() { return ui.after === 1 ? afterOne() : ui.after === 2 ? afterTwo() : afterThree(); }
+  function focusId(id) { var el = $(id); if (el) try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
+  function goAfter(n) { ui.after = n; refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; if (n === 2 && !ui.verified) focusId(ui.codeSent ? 'aotp' : 'aname'); }
+  function smsLater() { clearTimeout(ui.smsT); ui.smsT = setTimeout(function () { if (ui.after === 2 && ui.codeSent && !ui.code && !ui.checking) { ui.sms = String(100000 + Math.floor(Math.random() * 900000)); renderTray(); focusId('aotp'); } }, 1800); }
+  function check() {
+    ui.checking = true; renderTray();
+    setTimeout(function () { ui.checking = false; ui.verified = { name: ui.c.name.trim(), phone: digits(ui.c.phone) }; saveVerified(ui.verified); ui.changing = false; sendIt(); }, 900);
+  }
+  function sendIt() {
+    if (ui.verified && !ui.changing) { ui.c.name = ui.verified.name; ui.c.phone = ui.verified.phone; }
+    ui.sent = true; ui.tSent = performance.now(); ui.photo = G.shot(960, 720) || ''; ui.devAt = performance.now();
+    ui.after = 3; refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0; showPhoto();
+  }
+  function afterAction(x) {
+    if (x === 'keep') { ui.tDone = 0; hidePhoto(); setMode('build'); ui.cat = null; refresh(true); return; }
+    if (x === 'more') { ui.more = true; renderTray(); focusId('anote'); return; }
+    if (x === 'send1') { goAfter(2); return; }
+    if (x === 'back2') { clearTimeout(ui.smsT); ui.codeSent = false; ui.code = ''; ui.sms = null; goAfter(1); return; }
+    if (x === 'change') { ui.changing = true; ui.c.name = ui.verified.name; ui.c.phone = fmtPhone(ui.verified.phone); renderTray(); focusId('aname'); return; }
+    if (x === 'code' || x === 'resend') { if (!contactOk()) return; ui.codeSent = true; ui.code = ''; ui.sms = null; ui.resendAt = performance.now() + 30000; renderTray(); focusId('aotp'); smsLater(); if (x === 'resend') toast('A new code is on its way.'); return; }
+    if (x === 'wrong') { clearTimeout(ui.smsT); ui.codeSent = false; ui.code = ''; ui.sms = null; renderTray(); focusId('aphone'); return; }
+    if (x === 'fill') { ui.code = ui.sms; check(); return; }
+    if (x === 'send') { sendIt(); return; }
+    if (x === 'pay') { ui.paying = true; renderTray(); setTimeout(function () { ui.paying = false; ui.paid = true; if (ui.after === 3) renderTray(); }, 1400); return; }
+    if (x === 'skip') { ui.skip = true; renderTray(); return; }
+    if (x === 'unskip') { ui.skip = false; renderTray(); return; }
+    if (x === 'follow') { toast('This opens Instagram on @vvslab.'); return; }
+  }
+  function afterInput(e) {
+    var el = e.target, id = el.id, v = el.value;
+    if (id === 'aname') ui.c.name = v.slice(0, 40);
+    else if (id === 'aphone') { var f = fmtPhone(v); if (digits(v).length >= 4 && f !== v && digits(v).length <= 10) el.value = f; ui.c.phone = el.value; }
+    else if (id === 'aotp') { var d = v.replace(/\D/g, '').slice(0, 6); el.value = d; ui.code = d; var bx = tray.querySelector('.otp .boxes'); if (bx) bx.innerHTML = otpBoxes(); if (d.length === 6) check(); return; }
+    else if (id === 'anote') ui.c.note = v.slice(0, 200);
+    else if (id === 'apromo') { SET.promo = v.trim(); var s = $('asum'); if (s) s.innerHTML = sumHtml(); var m = $('pmsg'); if (m) m.textContent = promoMsg(); }
+    else if (id === 'aig') ui.c.ig = v.slice(0, 31);
+    else if (id === 'aemail') ui.c.email = v.slice(0, 120);
+    var cb = tray.querySelector('[data-x="code"]'); if (cb) cb.disabled = !contactOk();
+  }
+  tray.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'aname' || e.target.id === 'aphone') && contactOk()) { e.preventDefault(); afterAction('code'); } });
+  tray.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('why')) ui.why = e.target.open; }, true);
+  // the studio photo: the 3D develops into it, in the space where the piece was
+  var photo = $('photo');
+  function showPhoto() { $('photoimg').src = ui.photo; photo.hidden = false; app.setAttribute('data-photo', ''); placePhoto(); paintPhoto(); }
+  function hidePhoto() { photo.hidden = true; ui.devAt = 0; app.removeAttribute('data-photo'); }
+  function placePhoto() {
+    if (photo.hidden || !G.box) return; var b = G.box, aw = (b.right - b.left) * .9, ah = (b.bottom - b.top) * .9 - 36, w = Math.max(160, Math.min(aw, ah * 4 / 3, 640)), h = w * 3 / 4;
+    photo.style.left = Math.round(b.left + (b.right - b.left - w) / 2) + 'px'; photo.style.top = Math.round(b.top + Math.max(0, (b.bottom - b.top - h - 36) / 2)) + 'px'; photo.style.width = Math.round(w) + 'px';
+    $('photoimg').parentNode.style.height = Math.round(h) + 'px';
+  }
+  function paintPhoto() {
+    if (photo.hidden) return; var p = Math.min(1, (performance.now() - ui.devAt) / DEV), e = 1 - Math.pow(1 - p, 2.2), st = photo.style;
+    st.setProperty('--b', (16 * (1 - e)).toFixed(2) + 'px'); st.setProperty('--br', (1 + .9 * (1 - e)).toFixed(3)); st.setProperty('--sa', (.15 + .85 * e).toFixed(3)); st.setProperty('--co', (.55 + .45 * e).toFixed(3)); st.setProperty('--in', Math.min(1, p * 6).toFixed(3));
+    $('photocap').textContent = p < 1 ? 'Developing your studio photo… ' + mmss(Math.ceil((1 - p) * 30)) : 'Your studio photo · ' + lookLabel();
+    photo.classList.toggle('done', p >= 1);
+  }
+  setInterval(function () {
+    if (ui.mode !== 'after') return;
+    var n = $('otpnote'); if (n && ui.after === 2 && ui.codeSent && !ui.checking) { var w = resendWords(); if (n.getAttribute('data-w') !== w) { n.setAttribute('data-w', w); n.innerHTML = w; } }
+    if (ui.after === 3 && ui.devAt && !photo.hidden) paintPhoto();
+  }, 250);
+
   // ---------- moving around ----------
   function setMode(m) { ui.mode = m; app.setAttribute('data-mode', m); if (m !== 'build') { clearPicks(); hideBubble(); } box(); setTimeout(box, 450); }
   function openCat(c) { ui.cat = c; ui.visited[c] = 1; ui.extra = null; if (c === 'teeth') clearPicks(); refresh(); }
-  function stepOf() { if (ui.mode === 'q') return ui.q === 2 ? 1 : 0; return ui.cat === null ? 5 : catIndex(ui.cat); }
+  function stepOf() { if (ui.mode === 'q') return ui.q === 2 ? 1 : 0; if (ui.mode === 'after') return 5; return ui.cat === null ? 5 : catIndex(ui.cat); }
   var shown = 0, anim = 0;
   function meta() {
     var b = breakdown(), to = b.total, from = shown, t0 = performance.now(); cancelAnimationFrame(anim);
@@ -294,10 +419,11 @@
   function box() {
     var st = stage.getBoundingClientRect(), W = st.width, H = st.height, top = 60;
     if (ui.mode === 'door') { var el = ui.open === 'a' ? $('openA') : null, r = el ? el.getBoundingClientRect() : null; G.box = { top: top, bottom: r ? Math.max(top + 160, r.top - st.top - 6) : H * .55, left: 0, right: W }; return; }
-    if (ui.mode === 'build' || ui.mode === 'q') {
+    if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') {
       var t = tray.getBoundingClientRect(), limit = t.top;
       if (W < 900 && !bubble.hidden) limit = Math.min(limit, bubble.getBoundingClientRect().top);   // on a phone the piece makes room for the guide's question
       G.box = W >= 900 ? { top: top, bottom: H - 24, left: 0, right: t.left - st.left - 8 } : { top: top, bottom: Math.max(top + 110, limit - st.top - 6), left: 0, right: W };
+      if (ui.mode === 'after' && typeof placePhoto === 'function') placePhoto();
       return;
     }
     G.box = { top: top, bottom: H * .62, left: 0, right: W };
@@ -305,7 +431,7 @@
   window.addEventListener('resize', box);
   function refresh(glint) {
     ui.step = stepOf();
-    if (ui.mode === 'build' || ui.mode === 'q') renderTray();
+    if (ui.mode === 'build' || ui.mode === 'q' || ui.mode === 'after') renderTray();
     var sc = $('selchip'), show = ui.mode === 'build' && hasSel();
     var pk = picked(); sc.hidden = !show; if (show) sc.innerHTML = (pk.length === 1 ? 'Editing the <b>' + esc(toothName(pk[0]).toLowerCase()) + '</b> only' : 'Editing <b>' + pk.length + ' teeth</b>') + ' <span class="x">Whole set</span>';
     meta(); box(); requestAnimationFrame(box); G.sync(); G.goal(); if (glint) G.glint(); if (!bubble.hidden) placeBubble();
@@ -313,13 +439,8 @@
   }
   function firstFront() { var p = [7, 8, 6, 9, 23, 24].filter(function (x) { return T[x].on; })[0]; return p === undefined ? (onList()[0] === undefined ? null : onList()[0]) : p; }
   function done() {
-    ui.tDone = performance.now(); setMode('done'); G.goal(true);
-    var shot = G.shot(960, 720) || '', b = breakdown();
-    sheet.innerHTML = '<div class="sheet-in"><div class="print"><img alt="Your build" src="' + shot + '"><div class="cap"><span>' + esc(lookLabel()) + '</span><span>' + money(b.total) + (b.quote ? ' + quote' : '') + '</span></div></div><div class="side"><h2>Your build.</h2>' +
-      '<div class="box"><h3>What you made</h3><ul>' + specLines().filter(function (l) { return l.indexOf('Fit:') !== 0; }).map(function (l) { return l.replace(/^(\d+ teeth) \(\d+ teeth\)$/, '$1'); }).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>' +
-      '<div class="box"><div class="tot"><span>Estimated total</span><span>' + money(b.total) + '</span></div><p class="note">Built in ' + mmss(elapsed()) + ' with ' + ui.taps + ' taps.</p></div>' +
-      '<button type="button" class="cta" data-s="photo">See it as a studio photo ' + ARROW + '</button><button type="button" class="cta ghost" data-s="keep">Keep editing</button></div></div>';
-    sheet.hidden = false; sheet.scrollTop = 0;
+    ui.tDone = performance.now(); ui.after = 1; ui.sent = false; ui.more = false; ui.why = false; ui.codeSent = false; ui.code = ''; ui.sms = null; ui.checking = false; ui.changing = false; ui.paid = false; ui.skip = false; ui.paying = false;
+    setMode('after'); refresh(); var b = tray.querySelector('.tbody'); if (b) b.scrollTop = 0;
   }
 
   // ---------- taps ----------
@@ -340,6 +461,9 @@
     var pk = t.getAttribute('data-pick'); if (pk) { applyBuild(pk); startCreator(); return; }
     if (t.id === 'goA') { if (!ui.build) applyBuild('empty'); startCreator(); return; }
     if (t.id === 'selchip') { clearPicks(); refresh(); return; }
+    var x = t.getAttribute('data-x'); if (x) { afterAction(x); return; }
+    var af = t.getAttribute('data-af'); if (af) { goAfter(+af); return; }
+    var ft = t.getAttribute('data-fit'); if (ft) { SET.mold = ft; renderTray(); return; }
     var q = t.getAttribute('data-q'); if (q) { answerQ(q); return; }
     var op = t.getAttribute('data-open'); if (op) { if (!bubble.hidden && ui.bub !== 'where' && ui.bub !== 'many') hideBubble(); openCat(op); return; }
     var s = t.getAttribute('data-s'); if (s === 'keep') { sheet.hidden = true; ui.tDone = 0; setMode('build'); refresh(); return; } if (s === 'photo') { toast('Next comes the phone sign-up, the studio photo and sending it. That part is in the flow lab.'); return; }
@@ -380,6 +504,7 @@
     ui.lastTouch = performance.now();
     if (e.target.id === 'instext') { SET.ins.text = e.target.value.toUpperCase().replace(/[^A-Z0-9&.\- ]/g, '').slice(0, 6); if (SET.ins.tooth === null || !T[SET.ins.tooth].on) SET.ins.tooth = firstFront(); G.sync(); meta(); }
     if (e.target.id === 'idea') SET.idea = e.target.value.slice(0, 400);
+    if (ui.mode === 'after') afterInput(e);
   });
   tray.addEventListener('change', function (e) {
     var kind = e.target.getAttribute && e.target.getAttribute('data-up'); if (!kind) return;
@@ -391,21 +516,24 @@
   $('turnbtn').addEventListener('click', function () { if (G.turn) G.turn(); });
 
   // ---------- prototype switches (not part of the product) ----------
-  var PAIRS = [];
+  var PAIRS = [['site', 'Opened from', [['vvs', 'VVS Lab\'s site'], ['shop', 'A jeweler\'s builder']]]];
   var protoTimer = 0;
   function renderProto() {
     proto.innerHTML = '<h3>Compare</h3>' + PAIRS.map(function (p) { return '<div class="pair"><p>' + p[1] + '</p><div class="seg">' + p[2].map(function (o) { return '<button type="button" data-p="' + p[0] + '" data-v="' + o[0] + '" aria-pressed="' + (ui[p[0]] === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
       '<div class="stat"><p>This run</p><b id="pclock">' + mmss(elapsed()) + ' · ' + ui.taps + ' taps</b></div>' +
       '<div class="pair"><p>Holder</p><input type="range" id="psolid" min="30" max="100" step="5" value="' + (ui.solid || 70) + '" aria-label="How solid the clear holder is"></div>' +
-      '<button type="button" class="sm" data-p="restart">Start again from the opening</button><p>Chosen so far: bare teeth with a row of builds; the EA FC-style menu, leaning jeweler; a guide when you seem stuck. Tap teeth on the 3D to pick several; leave it alone for 9 seconds to meet the guide.</p>';
+      '<button type="button" class="sm" data-p="restart">Start again from the opening</button>' + (ui.verified ? '<button type="button" class="sm" data-p="forget">Forget my phone (see the code step again)</button>' : '') + '<p>Chosen so far: bare teeth with a row of builds; the menu in any order with Next through every part; a guide when you seem stuck, with Undo. After Done: Your grill, Text me, Sent. Send a second design to see a returning shopper skip the code.</p>';
   }
   function setVariant(k, v) { ui[k] = v; app.setAttribute('data-' + k, v); }
-  function restart() { sheet.hidden = true; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
+  function brand() { var m = document.querySelector('.bar .mark'); if (!m) return; m.querySelector('i').textContent = ui.site === 'shop' ? 'GL' : 'VV'; m.querySelector('span').textContent = shopName(); }
+  function restart() { sheet.hidden = true; hidePhoto(); ui.after = 0; ui.sent = false; ui.c = { name: '', phone: '', ig: '', email: '', note: '' }; SET.promo = ''; hideBubble(); resetAll(); ui.build = null; ui.t0 = 0; ui.tDone = 0; ui.taps = 0; ui.visited = {}; ui.cat = null; ui.extra = null; ui.quietUntil = 0; setMode('door'); renderOpenings(); G.sync(); G.goal(); meta(); }
   $('protobtn').addEventListener('click', function () { var open = proto.hidden; proto.hidden = !open; this.setAttribute('aria-expanded', open); clearInterval(protoTimer); if (open) { renderProto(); protoTimer = setInterval(function () { var c = $('pclock'); if (c) c.textContent = mmss(elapsed()) + ' · ' + ui.taps + ' taps'; }, 500); } });
   proto.addEventListener('click', function (e) {
     var b = e.target.closest('[data-p]'); if (!b) return; var p = b.getAttribute('data-p'), v = b.getAttribute('data-v');
     if (p === 'restart') { restart(); renderProto(); return; }
+    if (p === 'forget') { ui.verified = null; saveVerified(null); if (ui.mode === 'after') renderTray(); renderProto(); return; }
     setVariant(p, v);
+    if (p === 'site') { brand(); if (ui.mode === 'after') renderTray(); }
     if (p === 'open') restart();
     if (p === 'layout' && ui.mode === 'build') { if (v === 'steps' && ui.cat === null) ui.cat = 'teeth'; refresh(); }
     if (p === 'guide') { hideBubble(); if (v === 'start') restart(); }
@@ -414,7 +542,7 @@
   proto.addEventListener('input', function (e) { if (e.target.id === 'psolid') { ui.solid = +e.target.value; G.solid(ui.solid); } });
 
   // ---------- start ----------
-  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm');
+  setVariant('open', 'a'); setVariant('layout', 'menu'); setVariant('guide', 'stuck'); setVariant('menu', 'calm'); setVariant('site', 'vvs'); brand();
   resetAll(); setMode('door'); renderOpenings(); meta();
   if (G.boot) { G.boot(); setTimeout(function () { renderOpenings(); box(); }, 400); }
   window.__vvs = { T: T, ui: ui, SET: SET, G: G };

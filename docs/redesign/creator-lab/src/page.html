@@ -187,6 +187,65 @@ h1, h2, h3, p { margin: 0; }
 .bubble .undo { display: flex; align-items: center; gap: 12px; }
 .bubble .undo p { flex: 1; font: 500 15.5px/1.3 var(--sans); letter-spacing: -.01em; }
 .bubble .undo .chip { flex: none; background: #f4f3ef; color: var(--ink); border-color: transparent; font-weight: 600; }
+/* after Done: Your grill · Text me · Sent */
+.tfoot.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.tfoot .btns { display: flex; gap: 10px; }
+.tfoot .free { text-align: center; font-size: 12.5px; color: var(--s-mut); }
+.sum { display: grid; gap: 4px; }
+.sum .big { font: 600 34px/1.05 var(--sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.sum .big small { font: 500 14px/1 var(--sans); letter-spacing: 0; color: var(--s-mut); }
+.why summary { cursor: pointer; font: 500 14px/1.3 var(--sans); color: var(--s-fg); list-style: none; display: inline-flex; gap: 8px; align-items: center; padding: 6px 0 2px; }
+.why summary::-webkit-details-marker { display: none; }
+.why summary::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s ease; }
+.why[open] summary::after { transform: translateY(1px) rotate(225deg); }
+.why ul { list-style: none; display: grid; gap: 6px; padding: 8px 0 2px; }
+.why li { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--s-mut); font-variant-numeric: tabular-nums; }
+.why li span:last-child { color: var(--s-fg); }
+.q, .more { display: grid; gap: 8px; }
+.q h3, .dep h3, .xcard h3, .next h3 { font: 600 16px/1.25 var(--sans); letter-spacing: -.015em; }
+.fits { display: grid; gap: 6px; }
+.fit { border: 0; text-align: left; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.55); color: var(--s-fg); transition: background .15s ease; }
+.fit:hover { background: rgba(255,255,255,.9); }
+.fit[aria-checked="true"] { background: rgba(255,255,255,.98); box-shadow: 0 0 0 1.5px var(--ink); }
+.fit i { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--s-faint); margin-top: 1px; transition: box-shadow .15s ease; }
+.fit[aria-checked="true"] i { box-shadow: inset 0 0 0 6px var(--ink); }
+.fit b { font: 500 15px/1.3 var(--sans); display: block; }
+.fit span span { font-size: 13px; color: var(--s-mut); line-height: 1.35; }
+.link { border: 0; background: none; padding: 0; font: 500 14px/1.3 var(--sans); color: var(--s-fg); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--s-faint); justify-self: start; cursor: pointer; }
+.field label { display: block; font: 500 13px/1.2 var(--sans); color: var(--s-mut); margin-bottom: 6px; }
+.known { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.9); font-size: 15px; }
+.known em { font-style: normal; color: var(--s-gold); font-weight: 600; }
+.otp { position: relative; display: block; }
+.otp input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: text; }
+.otp .boxes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.otp .boxes i { font-style: normal; height: 56px; border-radius: 14px; background: rgba(255,255,255,.88); box-shadow: inset 0 0 0 1px var(--s-line); display: grid; place-items: center; font: 600 24px/1 var(--sans); font-variant-numeric: tabular-nums; }
+.otp:focus-within .boxes i.at { box-shadow: inset 0 0 0 2px var(--ink); }
+.sms { border: 0; display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-radius: 14px; background: #e1e4ea; color: var(--s-fg); font: 500 13px/1 var(--sans); }
+.sms b { font: 600 17px/1 var(--sans); letter-spacing: .14em; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dep { display: grid; gap: 6px; padding: 16px; border-radius: 18px; background: rgba(255,255,255,.92); }
+.dep .btns { display: flex; align-items: center; gap: 18px; margin-top: 6px; }
+.dep .cta { flex: 0 1 auto; }
+.dep.paid b { font: 600 16px/1.25 var(--sans); }
+.dep.paid b::before { content: "✓  "; color: var(--s-gold); }
+.xcard { display: grid; gap: 10px; padding: 16px; border-radius: 18px; background: rgba(255,255,255,.55); }
+.xcard .cta.ghost { min-height: 44px; font-size: 14.5px; flex: none; }
+.xcard .note { margin-top: -4px; }
+.next ol { list-style: none; counter-reset: n; display: grid; gap: 10px; margin-top: 10px; }
+.next li { counter-increment: n; display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.next li::before { content: counter(n); width: 22px; height: 22px; border-radius: 50%; background: rgba(18,18,17,.07); display: grid; place-items: center; font: 600 12px/1 var(--sans); grid-row: span 2; align-self: start; }
+.next li b { font: 500 15px/1.4 var(--sans); }
+.next li span { grid-column: 2; font-size: 13px; color: var(--s-mut); }
+.proto-note { font-size: 12px; line-height: 1.4; color: var(--s-faint); }
+.stages button[disabled] { cursor: default; }
+.stages button[disabled]:not([aria-current]):hover { color: var(--s-mut); }
+/* the studio photo develops where the piece was, and the 3D fades out behind it */
+.app[data-photo] #gl { opacity: 0; transition: opacity 2.6s ease; }
+.photo { position: absolute; z-index: 3; display: grid; gap: 10px; justify-items: center; pointer-events: none; opacity: var(--in, 0); }
+.photo .frame { width: 100%; border-radius: 18px; overflow: hidden; background: #1b1913; box-shadow: 0 30px 60px -28px rgba(30,26,18,.55), 0 0 0 1px rgba(255,255,255,.5); }
+.photo img { display: block; width: 100%; height: 100%; object-fit: cover; filter: blur(var(--b, 16px)) brightness(var(--br, 1.9)) saturate(var(--sa, .15)) contrast(var(--co, .55)); transform: scale(1.04); }
+.photo.done img { transform: none; transition: transform .8s ease; }
+.photo .cap { font: 500 12.5px/1.3 var(--sans); color: var(--s-fg); background: var(--s-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 7px 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--s-line); }
 /* different choices on different teeth: the round pictures overlap like coins, with the count in the row */
 .stack { position: relative; width: 44px; height: 44px; display: block; }
 .stack > span { position: absolute; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: radial-gradient(90% 90% at 50% 30%, #f6f5f1, var(--s-tile)); box-shadow: 0 0 0 2px rgba(251,250,247,.95), 0 3px 8px -3px rgba(40,36,24,.4); display: grid; place-items: center; }
@@ -257,7 +316,7 @@ h1, h2, h3, p { margin: 0; }
 /* which parts show in which mode */
 .app:not([data-mode="door"]) .openA, .app:not([data-mode="door"]) .openB { display: none; }
 .app[data-open="a"] .openB, .app[data-open="b"] .openA { display: none; }
-.app:not([data-mode="build"]):not([data-mode="q"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .only-build { display: none; }
+.app:not([data-mode="build"]):not([data-mode="q"]):not([data-mode="after"]) .tray, .app:not([data-mode="build"]) .tools, .app:not([data-mode="build"]) .only-build { display: none; }
 
 @media (min-width: 900px) {
   .tray { right: 20px; top: 72px; bottom: 20px; width: 392px; border-radius: 28px; }
@@ -307,6 +366,7 @@ h1, h2, h3, p { margin: 0; }
     </div>
     <button type="button" class="selchip" id="selchip" hidden></button>
     <div class="bubble" id="bubble" hidden></div>
+    <div class="photo" id="photo" hidden><div class="frame"><img alt="Your studio photo" id="photoimg"></div><p class="cap" id="photocap"></p></div>
 
     <div class="openA" id="openA">
       <div class="head"><h2>Start your build</h2><span>Start empty, or from a build you can change.</span></div>
