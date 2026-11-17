@@ -150,7 +150,8 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  margin-bottom: -64px;
+  margin-top: 8px;
+  margin-bottom: -50px;
   pointer-events: none; /* the page scrolls over it; the builder is where it turns */
   opacity: 0;
   transition: opacity 0.9s ease;
@@ -351,7 +352,7 @@
   min-width: 0;
 }
 
-.vl-gets {
+.vl .vl-gets {
   display: grid;
   margin: 26px 0 0;
   padding: 0;
@@ -694,6 +695,11 @@
 
 /* ---------- a phone ---------- */
 @media (max-width: 899px) {
+  /* a phone: the piece runs edge to edge, as in the prototype */
+  .vl-piece {
+    margin: 12px -16% 80px;
+  }
+
   .vl-home {
     gap: 12px;
     padding-bottom: 22px;

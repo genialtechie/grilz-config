@@ -27,4 +27,5 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 17: Landing: `/` rebuilt as the signed-off front door (live 3D hero cycling five builds with real demo prices, words strip, send, price, questions, closing card); Geist added; screenshots in `case-study/2026-11-17-build-landing-*`. See `landing.md`.
 - Nov 17: tracks set up; contract and stand-ins committed.

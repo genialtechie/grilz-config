@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   // The redesign prototype's sources are fragments of one script (build.py joins them), not modules to lint.
-  { ignores: ['dist', 'docs/redesign/prototype'] },
+  { ignores: ['dist', 'docs/redesign/prototype', 'docs/redesign/creator-lab'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

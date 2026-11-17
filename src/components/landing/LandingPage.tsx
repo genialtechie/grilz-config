@@ -37,8 +37,12 @@ function useReveal(root: React.RefObject<HTMLElement | null>) {
       (entries) =>
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          entry.target.classList.add('vl-risen');
-          io.unobserve(entry.target);
+          // The question lists rise together: on a phone one is behind a tab and never scrolls into view.
+          const group = entry.target.classList.contains('vl-qcol') ? el.querySelectorAll('.vl-qcol') : [entry.target];
+          group.forEach((item) => {
+            item.classList.add('vl-risen');
+            io.unobserve(item);
+          });
         }),
       { rootMargin: '0px 0px -8% 0px' },
     );
