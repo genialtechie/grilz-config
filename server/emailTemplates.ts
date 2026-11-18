@@ -100,6 +100,8 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
   const market = lead.price.market
     ? ` Metal at the market price of ${new Date(lead.price.market.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })} (gold ${usd(Math.round(lead.price.market.gold))}/oz, silver ${usd(Math.round(lead.price.market.silver * 100) / 100)}/oz, platinum ${usd(Math.round(lead.price.market.platinum))}/oz).`
     : '';
+  // Charms the shop hasn't priced: theirs to quote, not in the total.
+  const quoted = lead.price.quoted?.length ? ` To quote yourself, not in the total: ${lead.price.quoted.join(', ')}.` : '';
   const shown = config.pricing.display === 'exact' ? '' : config.pricing.display === 'from' ? ' The customer saw it as a "from" price.' : ' The customer saw "price on request".';
   // "Service fee $60 + Metal $900 − Set discount $45": a discount is subtracted, not added as a negative.
   const breakdown = lead.price.lines.map((line, i) => `${i ? (line.amount < 0 ? ' − ' : ' + ') : ''}${line.label} ${usd(Math.abs(line.amount))}`).join('');
@@ -120,7 +122,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     h(CTA, { brand, href: reach.href, margin: '26px 0 28px' }, reachCta(reach, first)),
     h(Details, { brand, rows: leadRows(brand, lead, reach) }),
     depositOffer && h(Paragraph, { brand, size: 15, margin: '20px 0 0' }, 'Take a deposit on orders like this? ', h(InlineLink, { brand, href: depositOffer }, 'Set it up in 2 minutes')),
-    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${market}${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
+    h(Paragraph, { brand, muted: true, size: 13, margin: '24px 0 0' }, `${total} from your price list v${lead.configVersion}: ${breakdown}.${quoted}${market}${shown}${lead.email ? ' Reply to this email to answer the customer directly.' : ''}`),
   );
   const text = [
     `New ${total} design from ${lead.name}`,
@@ -133,7 +135,7 @@ export async function shopEmail({ lead, config, origin, images, photoPending, te
     'What they designed:',
     ...lead.summary.map((line) => `- ${line}`),
     '',
-    `${total} from your price list v${lead.configVersion}: ${breakdown}.${market}${shown}`,
+    `${total} from your price list v${lead.configVersion}: ${breakdown}.${quoted}${market}${shown}`,
     photoPending ? '\nThe studio photo is still rendering and will follow in this thread.' : '',
     `\nLead ${lead.id}`,
   ]

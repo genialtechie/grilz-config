@@ -1,4 +1,4 @@
-import { CUTS, fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { CHARMS, CUTS, fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CharmId, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { CUT_UNITS, ICED_KEYS, TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 type IcedKey = (typeof ICED_KEYS)[number];
@@ -17,6 +17,8 @@ export type PriceLine = { label: string; amount: number };
 export type PriceBreakdown = {
   lines: PriceLine[];
   total: number;
+  /** Parts the shop quotes itself (charms it hasn't priced), left out of the total: "Crown charm". */
+  quoted?: string[];
   market?: { asOf: string; gold: number; silver: number; platinum: number };
   promo?: { code: string; amount: number; minOrder?: number };
 };
@@ -58,6 +60,9 @@ export const nearestOffered = (pricing: TenantPricing, design: ToothDesign, ston
   ];
   return tries.find((attempt) => offered(pricing, attempt)) ?? null;
 };
+
+/** What one charm costs at this shop, or undefined when the shop quotes it. */
+export const charmPrice = (pricing: TenantPricing, id: CharmId): number | undefined => pricing.charms?.byId?.[id] ?? pricing.charms?.each;
 
 /** The arches (top, bottom) with at least one tooth in the set. */
 export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.map((tooth) => (tooth.index < 16 ? 'top' : 'bottom'))).size;
@@ -138,6 +143,15 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     const span = inscription.teeth.length;
     add(span > 1 ? `Inscription "${inscription.text}" · ${span} teeth` : `Inscription "${inscription.text}"`, each * span);
   });
+  // Charms: each at the shop's price, or quoted by the shop (kept out of the total).
+  const quoted: string[] = [];
+  (set.charms ?? []).forEach((charm) => {
+    if (!teeth.some((tooth) => tooth.index === charm.tooth)) return;
+    const amount = charmPrice(pricing, charm.id);
+    const name = `${label(CHARMS, charm.id)} charm`;
+    if (amount === undefined) quoted.push(name);
+    else add(name, amount);
+  });
   if (set.mold) add(label(MOLDS, set.mold), pricing.molds?.[set.mold] ?? 0);
   (set.addOns ?? []).forEach((id) => {
     const addOn = addOns.find((item) => item.id === id);
@@ -157,7 +171,13 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const market = quote && teeth.some((tooth) => quote.perTooth[quoteKey(tooth.metal, tooth.karat)] !== undefined)
     ? { asOf: quote.asOf, gold: quote.gold, silver: quote.silver, platinum: quote.platinum }
     : undefined;
-  return { lines, total: Math.max(subtotal, pricing.minimumOrder), ...(market ? { market } : {}), ...(promoResult ? { promo: promoResult } : {}) };
+  return {
+    lines,
+    total: Math.max(subtotal, pricing.minimumOrder),
+    ...(quoted.length ? { quoted } : {}),
+    ...(market ? { market } : {}),
+    ...(promoResult ? { promo: promoResult } : {}),
+  };
 };
 
 /** The deposit for an estimate, or null when the shop takes no deposit. */
@@ -194,6 +214,11 @@ export const priceHints = (pricing: TenantPricing) => {
     cut: (cut: CutId) => {
       const { amount, per } = cutPrice(pricing, cut);
       return hint(amount ? `+${usd(amount)}${per === 'order' ? '' : ` / ${per}`}` : 'Included');
+    },
+    /** A charm: its price, or that the shop quotes it. */
+    charm: (id: CharmId) => {
+      const amount = charmPrice(pricing, id);
+      return hint(amount === undefined ? 'Quoted' : `+${usd(amount)}`);
     },
     /** A flat or per-tooth extra (permanent look, a shop's add-on). */
     extra: (amount: number, perTooth = false) => hint(amount ? `+${usd(amount)}${perTooth ? ' / tooth' : ''}` : 'Included'),

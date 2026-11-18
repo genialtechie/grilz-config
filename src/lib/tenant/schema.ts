@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   ADD_ON_ID,
+  CHARMS,
   CUTS,
   MAX_ADD_ONS,
   GRILLZ_TYPES,
@@ -29,6 +30,7 @@ export const StoneIdSchema = z.enum(ids(STONES));
 export const CutIdSchema = z.enum(ids(CUTS));
 export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
+export const CharmIdSchema = z.enum(ids(CHARMS));
 
 const money = z.number().min(0).max(100_000);
 const multiplier = z.number().min(0.1).max(10);
@@ -70,6 +72,8 @@ export const CatalogSchema = z.object({
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */
   vision: z.boolean(),
+  /** One-of-one charms the shop makes (Extras). Absent = none, as for shops from before charms. */
+  charms: z.object({ enabled: z.boolean(), ids: nonEmptyUnique(CharmIdSchema) }).optional(),
   /** The shop's own extras (rush order, carrier case…), offered on the Extras step. */
   addOns: z
     .array(
@@ -121,6 +125,11 @@ export const PricingSchema = z.object({
   /** The fangs price is for the set (default) or for each fang (one per upper canine in the set). */
   fangsPer: z.enum(['set', 'fang']).optional(),
   inscription: priceMap(InscriptionStyleIdSchema),
+  /**
+   * Charms: a price for each charm (`each`), or per charm (`byId`, which wins). A charm with
+   * neither is quoted by the shop: it shows as "Quoted" and stays out of the estimate. Absent = all quoted.
+   */
+  charms: z.object({ each: money.optional(), byId: priceMap(CharmIdSchema).optional() }).optional(),
   /** Totals below this are raised to it; 0 = no minimum. */
   minimumOrder: money,
   /**

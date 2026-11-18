@@ -17,6 +17,8 @@ export const VVSLAB_CONFIG: TenantConfig = {
     fangs: true,
     inscription: { enabled: true, styles: ['cut', 'iced', 'engraved'] },
     vision: true,
+    // Every charm, quoted by the shop (no charm prices below), as the Creator Lab showed them.
+    charms: { enabled: true, ids: ['crest', 'emblem', 'winged-heart', 'crown', 'hat', 'broom', 'owl', 'ruby-potion', 'emerald-potion', 'sapphire'] },
   },
   pricing: {
     currency: 'USD',
