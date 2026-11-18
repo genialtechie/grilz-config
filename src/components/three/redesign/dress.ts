@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { DEFAULT_TOOTH, type KaratId, type MetalId, type OpalId, type SettingId, type StyleId } from '../../../lib/renderSpec';
+import { DEFAULT_TOOTH, type CharmId, type KaratId, type MetalId, type OpalId, type SettingId, type StyleId } from '../../../lib/renderSpec';
 import type { ToothCustomization } from '../../../lib/types';
+import { buildCharm } from './charms';
 import type { Finish, Look } from './look';
 import { noRaycast, type ToothSlot } from './piece';
 import { beadGeo, capGeo, fangOf, gemGeo, maskTex, RIM, rimGeo, SIDE, sharedPatch, stoneLayout, TUBE, WIN, type ToothDef } from './sculpt';
@@ -26,6 +27,8 @@ export type ToothLook = {
   setting: SettingId;
   fang: boolean;
   cut: 'deep' | 'permanent';
+  /** A one-of-one charm on the face. */
+  charm: CharmId | null;
 };
 
 const STYLE: Record<StyleId, ToothLook['style']> = {
@@ -50,6 +53,7 @@ export function toothLook(customization: ToothCustomization | undefined): ToothL
     setting: customization.setting ?? 'honeycomb',
     fang: Boolean(customization.fang),
     cut: customization.cut === 'permanent' ? 'permanent' : 'deep',
+    charm: customization.charm ?? null,
   };
 }
 
@@ -94,7 +98,7 @@ export function dressTooth(slot: ToothSlot, look: Look, t: ToothLook | null): bo
     return true;
   }
   const { def, rise } = capShape(slot, t);
-  const key = [def.join('_'), rise, t.metal, t.karat, t.type, t.style, t.opal, t.setting].join('|');
+  const key = [def.join('_'), rise, t.metal, t.karat, t.type, t.style, t.opal, t.setting, t.charm ?? ''].join('|');
   if (slot.key === key) return false;
   slot.key = key;
   clearDeco(slot);
@@ -137,6 +141,7 @@ export function dressTooth(slot: ToothSlot, look: Look, t: ToothLook | null): bo
   }
   // The picture itself is laid across the whole run of photo teeth (overlays.ts); the rim is the tooth's own.
   if (t.type === 'photo') mesh(rimGeo(def, rise, PHOTO_INSET, 0.13), gold);
+  if (t.charm) deco.add(buildCharm(def, slot.upper, t.charm, look, gold));
   cap.add(deco);
   slot.deco = deco;
   return true;

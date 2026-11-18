@@ -1,4 +1,4 @@
-import type { CutId, Inscription, KaratId, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
+import type { CharmId, CutId, Inscription, KaratId, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -25,6 +25,8 @@ export type ToothCustomization = {
   diamondType?: DiamondType;
   /** How an iced tooth's stones are set (honeycomb when absent). */
   setting?: SettingId;
+  /** A one-of-one charm built onto this tooth's face. */
+  charm?: CharmId;
 };
 
 /** Teeth the camera glides in on, filling `fill` of the canvas; `turn` also turns to face them (MAG-148). */

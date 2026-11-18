@@ -144,7 +144,7 @@ export const inscriptionRow = (inscription: Pick<Inscription, 'teeth'>) => (insc
  */
 export const CHARMS = [
   { id: 'crest', label: 'Crest', detail: 'Quartered enamel shield', render: 'a small gold shield charm quartered in deep red and green enamel with a gold cross' },
-  { id: 'emblem', label: 'Emblem', detail: 'Open triangle, one stone', render: 'a small open gold triangle charm with one round stone set at its centre' },
+  { id: 'emblem', label: 'Emblem', detail: 'Gold triangle, one stone', render: 'a small solid gold triangle charm with a raised edge and one round stone set at its centre' },
   { id: 'winged-heart', label: 'Winged heart', detail: 'Gold heart, iced wings', render: 'a small gold heart charm with a pair of feathered gold wings set with small stones' },
   { id: 'crown', label: 'Crown', detail: 'Five points, three stones', render: 'a small five-pointed gold crown charm set with two blue stones and a clear one' },
   { id: 'hat', label: 'Pointed hat', detail: 'Brown enamel, gold band', render: 'a small crooked pointed hat charm in brown enamel with a gold band' },

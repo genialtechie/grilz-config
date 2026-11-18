@@ -325,8 +325,27 @@ function makeLook(renderer: THREE.WebGLRenderer) {
   const photoMat = (map: THREE.Texture) =>
     new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, roughness: 0.28, metalness: 0, clearcoat: 0.9, clearcoatRoughness: 0.06, envMap: metalEnv, envMapIntensity: 0.5 });
 
+  // ---------- the charms' enamel and coloured stones (the Creator Lab's 20-three.js) ----------
+  const jewels = new Map<string, THREE.Material>();
+  const jewel = (key: string, make: () => THREE.Material) => {
+    let m = jewels.get(key);
+    if (!m) {
+      m = make();
+      jewels.set(key, m);
+    }
+    return m;
+  };
+  /** Glossy fired enamel. */
+  const enamelMat = (hex: number) =>
+    jewel(`e${hex}`, () => new THREE.MeshPhysicalMaterial({ color: lin(hex), roughness: 0.22, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04, envMap: metalEnv, envMapIntensity: 0.9 }));
+  /** A smooth domed coloured stone (cabochon). */
+  const cabMat = (hex: number) =>
+    jewel(`c${hex}`, () => new THREE.MeshPhysicalMaterial({ color: lin(hex), emissive: lin(hex), emissiveIntensity: 0.05, roughness: 0.1, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, envMap: metalEnv, envMapIntensity: 0.55 }));
+  /** A faceted coloured stone. */
+  const facetMat = (hex: number) => jewel(`f${hex}`, () => new THREE.MeshStandardMaterial({ color: lin(hex), metalness: 1, roughness: 0, envMap: sparkleEnv, envMapIntensity: 1.5 }));
+
   setSolid(HOLDER_SOLID);
-  return { studioEnv, metalEnv, sparkleEnv, resinBack, depthOnly, resinTooth, resinGum, resinBlock, setSolid, diamondMat, matFor, opalMat, photoMat };
+  return { studioEnv, metalEnv, sparkleEnv, resinBack, depthOnly, resinTooth, resinGum, resinBlock, setSolid, diamondMat, matFor, opalMat, photoMat, enamelMat, cabMat, facetMat };
 }
 
 /** How solid the holder looks by default (the prototype's dial starts here). */
