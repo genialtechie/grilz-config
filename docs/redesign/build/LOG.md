@@ -27,6 +27,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 18 (lead): new title, share text and link preview (`public/assets/vvs/og-vvslab.jpg`, sources in `docs/brand/og/`); shop pages now also replace the twitter description and drop VVS Lab's image description. `npm test` skips `.claude/` (local agent copies). Charms + initials track started (`charms.md`).
 - Nov 17 (lead): builder merged — all four tracks are in `redesign`. `/configurator`, `/b/:slug` and shops' own domains open the new `CreatorApp` (old `Configurator.tsx` kept, unused, for rollback). Build, lint and 1,826 tests pass. Owner questions collected in `builder.md` and `after.md`.
 - Nov 17: Builder: `/configurator` and shop builders now open the Grill Creator Lab (`src/components/creator/`): start page, build strip, Select teeth with the amber glow, quick question + Undo, Describe it, drag handles, the real AfterFlow in the panel. `Configurator.tsx` kept, unused. Build, lint, tests pass. See `builder.md`.
 - Nov 17 (lead): landing, after-Done and backend merged into `redesign` and pushed; build, lint and 1,756 tests pass. After-Done now accepts the backend's `unverified` error (forgets the phone, asks for a new code) and refreshes a remembered phone's proof before sending. Builder still in progress. Owner to-dos: Firebase keys + `PHONE_HASH_SECRET` (names in `backend.md`), apply migration `20261117000001` to production when going live, new title/share text for `index.html`.

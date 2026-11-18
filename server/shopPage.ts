@@ -20,7 +20,7 @@ export function shopHead(html: string, tenant: PublishedTenant, origin: string, 
   const title = `Design your custom grillz · ${name}`;
   const description = `Build your grillz in 3D, see the price and get a studio photo of your exact set from ${name}.`;
   const logo = tenant.config.brand.logo;
-  const image = logo ? (logo.startsWith('http') ? logo : `${origin}${logo.startsWith('/') ? '' : '/'}${logo}`) : `${origin}/assets/vvs/og.png`;
+  const image = logo ? (logo.startsWith('http') ? logo : `${origin}${logo.startsWith('/') ? '' : '/'}${logo}`) : `${origin}/assets/vvs/og-vvslab.jpg`;
   const url = pageUrl ?? `${origin}/b/${tenant.slug}`;
   // The default share image's size no longer applies to a shop's logo.
   let out = html.replace(/\s*<meta\s+property="og:image:(?:width|height)"[^>]*>/g, '');
@@ -32,6 +32,9 @@ export function shopHead(html: string, tenant: PublishedTenant, origin: string, 
   out = setTag(out, /<meta\s+property="og:url"[^>]*>/, `<meta property="og:url" content="${escape(url)}" />`);
   out = setTag(out, /<meta\s+name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${escape(title)}" />`);
   out = setTag(out, /<meta\s+name="twitter:image"[^>]*>/, `<meta name="twitter:image" content="${escape(image)}" />`);
+  out = setTag(out, /<meta\s+name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${escape(description)}" />`);
+  // VVS Lab's own image description doesn't describe a shop's logo.
+  out = out.replace(/\s*<meta\s+property="og:image:alt"[^>]*>/g, '');
   out = setTag(out, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${escape(url)}" />`);
   // The logo is the largest thing in the header; fetch it alongside the JS instead of after it.
   if (logo) out = out.replace('</head>', `    <link rel="preload" as="image" href="${escape(image)}" fetchpriority="high" />\n  </head>`);
