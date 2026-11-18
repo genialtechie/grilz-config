@@ -16,6 +16,8 @@ import {
   fromSpec,
   initialsInscription,
   initialsRun,
+  inscriptionsOf,
+  withLine,
   groupTeeth,
   matchingGroup,
   offeredGroups,
@@ -262,5 +264,43 @@ describe('charms', () => {
     const priced = buildTenant('priced', { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, charms: { each: 100 } } });
     const one = shopBuilds(priced).find((b) => b.id === 'oneof')!;
     expect(buildPrice(priced, one)).toMatch(/^From \$/);
+  });
+});
+
+describe('a second line of letters', () => {
+  const six = setRange(blankDesign(shop), 6, 6);
+  const two = withLine(withLine(six, 0, { text: 'AB' }), 1, { text: 'Lainee', font: 'script', style: 'engraved', enamel: 'pink' });
+  it('goes on the other row, top row first in the spec', () => {
+    expect(inscriptionsOf(two).map((x) => [x.text, x.teeth])).toEqual([
+      ['AB', [7]],
+      ['Lainee', [23]],
+    ]);
+    // The first line moves to the bottom: the second takes the top.
+    const moved = withLine(two, 0, { teeth: [22, 23, 24, 25] });
+    expect(initialsRun(moved, 1)).toEqual([7]);
+    // A second line asked for on the first one's row keeps off it.
+    expect(initialsRun(withLine(two, 1, { teeth: [6, 7] }), 1)).toEqual([23]);
+  });
+  it('is priced per tooth like the first', () => {
+    const one = withLine(six, 0, { text: 'AB' });
+    const diff = price(shop, withLine(two, 1, { teeth: [22, 23, 24, 25] })).total - price(shop, one).total;
+    expect(diff).toBe(4 * VVSLAB_CONFIG.pricing.inscription.engraved!);
+  });
+  it('passes the shop check and comes back from a saved design', () => {
+    const d = withLine(two, 1, { teeth: [22, 23, 24, 25] });
+    expect(parseRenderSpec(toSpec(d), shop.config.catalog)).toEqual(toSpec(d));
+    const back = fromSnapshot(shop, checkSnapshot(JSON.parse(JSON.stringify({ v: 1, ...toSnapshot(d) })), shop)!);
+    expect(toSpec(back)).toEqual(toSpec(d));
+    expect(back.second.text).toBe('Lainee');
+    expect(summary(d)).toContain('"AB" · "Lainee"');
+  });
+  it('needs a row of its own: none on a top-only set', () => {
+    const top = withLine(withLine(setRange(blankDesign(shop), 6, 0), 0, { text: 'AB' }), 1, { text: 'CD' });
+    expect(initialsInscription(top, 1)).toBeNull();
+    expect(inscriptionsOf(top)).toHaveLength(1);
+  });
+  it('comes back from the AI as the second line', () => {
+    const spec = toSpec(withLine(two, 1, { teeth: [22, 23, 24, 25] }))!;
+    expect(fromSpec(shop, spec).second.text).toBe('Lainee');
   });
 });

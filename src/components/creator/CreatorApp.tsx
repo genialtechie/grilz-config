@@ -51,13 +51,16 @@ import {
   setRange,
   shopBuilds,
   summary,
+  takenRow,
   tapLetters,
+  withLine,
   toSnapshot,
   toSpec,
   toggleTooth,
   toothName,
   type Design,
   type GroupId,
+  type Line,
   type PartId,
 } from './model';
 import '@fontsource/geist/400.css';
@@ -73,8 +76,8 @@ type Visited = Partial<Record<PartId, boolean>>;
 type Snap = { design: Design; visited: Visited; picks: number[] };
 
 const PHONE_WIDTH = 900;
-const CLOSED = { ins: false, idea: false, charm: false };
-const NO_PICK = { on: false, anchor: null };
+const CLOSED = { ins: false, ins2: false, idea: false, charm: false };
+const NO_PICK: { on: boolean; line: Line; anchor: number | null } = { on: false, line: 0, anchor: null };
 const TOP = 60;
 const RESEND_SECONDS = 30;
 const AI_LEFT_KEY = 'vvs-ai-left:';
@@ -105,7 +108,8 @@ const writeLeft = (phone: string, left: number) => {
 };
 
 /** The top bar's price: it counts to the new total. */
-function PriceChip({ total, text, hidden }: { total: number; text: (n: number) => string; hidden: boolean }) {
+/** `quote`: part of the design is quoted by the shop (charms), on top of this total. */
+function PriceChip({ total, text, hidden, quote }: { total: number; text: (n: number) => string; hidden: boolean; quote: boolean }) {
   const [shown, setShown] = useState(total);
   const from = useRef(total);
   useEffect(() => {
@@ -129,8 +133,11 @@ function PriceChip({ total, text, hidden }: { total: number; text: (n: number) =
   }, [total]);
   if (hidden) return null;
   return (
-    <div className="pill price only-build" aria-live="polite" aria-label={`Estimate ${text(total)}`}>
-      <span>{text(shown)}</span>
+    <div className="pill price only-build" aria-live="polite" aria-label={`Estimate ${text(total)}${quote ? ', plus a quote for your charms' : ''}`}>
+      <span>
+        {text(shown)}
+        {quote && <em> + quote</em>}
+      </span>
       <small>est.</small>
     </div>
   );
@@ -163,12 +170,14 @@ export default function CreatorApp() {
   const [picked, setPicked] = useState<string | null>(null);
   const [extraOpen, setExtraOpen] = useState(CLOSED);
   /** Choosing the letters' teeth on the 3D (the old builder's first tap, last tap). */
-  const [insPick, setInsPick] = useState<{ on: boolean; anchor: number | null }>(NO_PICK);
+  const [insPick, setInsPick] = useState(NO_PICK);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inspo, setInspo] = useState<string | null>(null);
   const [after, setAfter] = useState<CreatorDesign | null>(null);
   const builds = useMemo(() => shopBuilds(shop).map((build) => ({ build, price: showPrices ? buildPrice(shop, build) : '' })), [shop, showPrices]);
   const breakdown = useMemo(() => price(shop, design), [shop, design]);
+  // Charms the shop quotes: every total says so (owner, Nov 18).
+  const quoted = Boolean(breakdown.quoted?.length) && config.pricing.display !== 'hidden';
 
   // ---------- the stage ----------
   const [startBig, setStartBig] = useState(false);
@@ -413,29 +422,40 @@ export default function CreatorApp() {
       }
       case 'ins-toggle':
         setInsPick(NO_PICK);
-        if (extraOpen.ins || design.initials.text) {
-          setExtraOpen((o) => ({ ...o, ins: false }));
-          setDesign({ ...design, initials: { ...design.initials, text: '', teeth: [] } });
+        if (extraOpen.ins || design.initials.text || design.second.text) {
+          setExtraOpen((o) => ({ ...o, ins: false, ins2: false }));
+          setDesign(withLine(withLine(design, 0, { text: '', teeth: [] }), 1, { text: '', teeth: [] }));
         } else setExtraOpen((o) => ({ ...o, ins: true }));
         return;
+      case 'ins2-toggle':
+        setInsPick(NO_PICK);
+        if (extraOpen.ins2 || design.second.text) {
+          setExtraOpen((o) => ({ ...o, ins2: false }));
+          setDesign(withLine(design, 1, { text: '', teeth: [] }));
+        } else {
+          // The second line starts in the first one's lettering and finish.
+          setExtraOpen((o) => ({ ...o, ins2: true }));
+          setDesign(withLine(design, 1, { text: '', teeth: [], font: design.initials.font, style: design.initials.style, enamel: design.initials.enamel }));
+        }
+        return;
       case 'ins-text':
-        setDesign({ ...design, initials: { ...design.initials, text: cleanLetters(a.text) } });
+        setDesign(withLine(design, a.line, { text: cleanLetters(a.text) }));
         return;
       case 'ins-style':
-        setDesign({ ...design, initials: { ...design.initials, style: a.style } });
+        setDesign(withLine(design, a.line, { style: a.style }));
         return;
       case 'ins-font':
-        setDesign({ ...design, initials: { ...design.initials, font: a.font } });
+        setDesign(withLine(design, a.line, { font: a.font }));
         return;
       case 'ins-enamel':
-        setDesign({ ...design, initials: { ...design.initials, enamel: a.enamel } });
+        setDesign(withLine(design, a.line, { enamel: a.enamel }));
         return;
       case 'ins-place':
         setInsPick(NO_PICK);
-        setDesign({ ...design, initials: { ...design.initials, teeth: centredRun(design, a.row, a.count) } });
+        setDesign(withLine(design, a.line, { teeth: centredRun(design, a.row, a.count) }));
         return;
       case 'ins-pick':
-        setInsPick((p) => (p.on ? NO_PICK : { on: true, anchor: null }));
+        setInsPick((p) => (p.on && p.line === a.line ? NO_PICK : { on: true, line: a.line, anchor: null }));
         setPicks([]);
         return;
       case 'charm-toggle':
@@ -495,9 +515,15 @@ export default function CreatorApp() {
     }
     if (part === 'extras' && insPick.on) {
       buzz();
+      // The second line keeps to the row the first one isn't on.
+      const taken = takenRow(design, insPick.line);
+      if (taken !== null && (k < 16 ? 0 : 1) === taken) {
+        say(`Your first letters are on the ${taken ? 'bottom' : 'top'} row. Tap a tooth on the ${taken ? 'top' : 'bottom'} row.`);
+        return;
+      }
       const t = tapLetters(design, insPick.anchor, k);
-      setDesign({ ...design, initials: { ...design.initials, teeth: t.teeth } });
-      setInsPick(t.anchor === null ? NO_PICK : { on: true, anchor: t.anchor });
+      setDesign(withLine(design, insPick.line, { teeth: t.teeth }));
+      setInsPick(t.anchor === null ? NO_PICK : { on: true, line: insPick.line, anchor: t.anchor });
       return;
     }
     buzz();
@@ -959,7 +985,7 @@ export default function CreatorApp() {
             </button>
           )}
           <div className="bar-r">
-            {(mode === 'build' || mode === 'after' || (mode === 'ai' && design.teeth.length > 0)) && <PriceChip total={breakdown.total} text={priceText} hidden={hidden} />}
+            {(mode === 'build' || mode === 'after' || (mode === 'ai' && design.teeth.length > 0)) && <PriceChip total={breakdown.total} text={priceText} hidden={hidden} quote={quoted} />}
           </div>
         </header>
         <div className="pill toast" role="status" style={{ opacity: toast ? 1 : 0 }}>
@@ -1098,7 +1124,7 @@ export default function CreatorApp() {
                 photo={photo}
                 inspo={inspo}
                 showPrices={showPrices}
-                totalText={priceText(breakdown.total)}
+                totalText={`${priceText(breakdown.total)}${quoted ? ' + quote' : ''}`}
                 grab={grabButton}
                 act={act}
               />
