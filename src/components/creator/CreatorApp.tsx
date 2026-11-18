@@ -33,7 +33,9 @@ import {
   buildPrice,
   canHaveFangs,
   counts,
-  firstFront,
+  centredRun,
+  charmTooth,
+  cleanLetters,
   fromSnapshot,
   fromSpec,
   groupTeeth,
@@ -42,12 +44,14 @@ import {
   money,
   offeredDesign,
   offeredGroups,
+  placeCharm,
   price,
   selectionWord,
   setOptions,
   setRange,
   shopBuilds,
   summary,
+  tapLetters,
   toSnapshot,
   toSpec,
   toggleTooth,
@@ -69,6 +73,8 @@ type Visited = Partial<Record<PartId, boolean>>;
 type Snap = { design: Design; visited: Visited; picks: number[] };
 
 const PHONE_WIDTH = 900;
+const CLOSED = { ins: false, idea: false, charm: false };
+const NO_PICK = { on: false, anchor: null };
 const TOP = 60;
 const RESEND_SECONDS = 30;
 const AI_LEFT_KEY = 'vvs-ai-left:';
@@ -155,7 +161,9 @@ export default function CreatorApp() {
   const [nav, setNav] = useState<PartId[]>([]);
   const [history, setHistory] = useState<History>(freshHistory);
   const [picked, setPicked] = useState<string | null>(null);
-  const [extraOpen, setExtraOpen] = useState({ ins: false, idea: false });
+  const [extraOpen, setExtraOpen] = useState(CLOSED);
+  /** Choosing the letters' teeth on the 3D (the old builder's first tap, last tap). */
+  const [insPick, setInsPick] = useState<{ on: boolean; anchor: number | null }>(NO_PICK);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inspo, setInspo] = useState<string | null>(null);
   const [after, setAfter] = useState<CreatorDesign | null>(null);
@@ -291,7 +299,8 @@ export default function CreatorApp() {
     setVisited({ teeth: true });
     setPicks([]);
     setNav([]);
-    setExtraOpen({ ins: false, idea: false });
+    setExtraOpen(CLOSED);
+    setInsPick(NO_PICK);
     setWaiting(false);
     setStartBig(false);
     touch();
@@ -309,7 +318,8 @@ export default function CreatorApp() {
     setNav((stack) => openPart(stack, part, p));
     setPart(p);
     setVisited((v) => ({ ...v, [p]: true }));
-    setExtraOpen({ ins: false, idea: false });
+    setExtraOpen(CLOSED);
+    setInsPick(NO_PICK);
     if (p === 'teeth') setPicks([]);
     setSelOpen(false);
   };
@@ -402,23 +412,51 @@ export default function CreatorApp() {
         return;
       }
       case 'ins-toggle':
+        setInsPick(NO_PICK);
         if (extraOpen.ins || design.initials.text) {
           setExtraOpen((o) => ({ ...o, ins: false }));
-          setDesign({ ...design, initials: { ...design.initials, text: '' } });
-        } else {
-          setExtraOpen((o) => ({ ...o, ins: true }));
-          if (design.initials.tooth === null || !design.teeth.includes(design.initials.tooth)) setDesign({ ...design, initials: { ...design.initials, tooth: firstFront(design) } });
-        }
+          setDesign({ ...design, initials: { ...design.initials, text: '', teeth: [] } });
+        } else setExtraOpen((o) => ({ ...o, ins: true }));
         return;
-      case 'ins-text': {
-        const text = a.text.toUpperCase().replace(/[^A-Z0-9&.'\- ]/g, '').slice(0, 6);
-        const tooth = design.initials.tooth !== null && design.teeth.includes(design.initials.tooth) ? design.initials.tooth : firstFront(design);
-        setDesign({ ...design, initials: { ...design.initials, text, tooth } });
+      case 'ins-text':
+        setDesign({ ...design, initials: { ...design.initials, text: cleanLetters(a.text) } });
+        return;
+      case 'ins-style':
+        setDesign({ ...design, initials: { ...design.initials, style: a.style } });
+        return;
+      case 'ins-font':
+        setDesign({ ...design, initials: { ...design.initials, font: a.font } });
+        return;
+      case 'ins-enamel':
+        setDesign({ ...design, initials: { ...design.initials, enamel: a.enamel } });
+        return;
+      case 'ins-place':
+        setInsPick(NO_PICK);
+        setDesign({ ...design, initials: { ...design.initials, teeth: centredRun(design, a.row, a.count) } });
+        return;
+      case 'ins-pick':
+        setInsPick((p) => (p.on ? NO_PICK : { on: true, anchor: null }));
+        setPicks([]);
+        return;
+      case 'charm-toggle':
+        if (extraOpen.charm || Object.keys(design.charms).length) {
+          setExtraOpen((o) => ({ ...o, charm: false }));
+          setDesign({ ...design, charms: {} });
+        } else setExtraOpen((o) => ({ ...o, charm: true }));
+        return;
+      case 'charm': {
+        buzz();
+        // No tooth picked: the charm goes on the first front tooth without one, which stays picked (the lab's rule).
+        let on = pk;
+        if (!on.length) {
+          const k = charmTooth(design);
+          if (k === null) return;
+          on = [k];
+          setPicks(on);
+        }
+        setDesign(placeCharm(design, on, a.id));
         return;
       }
-      case 'ins-style':
-        setDesign({ ...design, initials: { ...design.initials, style: a.style, tooth: design.initials.tooth ?? firstFront(design) } });
-        return;
       case 'idea-toggle':
         if (extraOpen.idea || design.idea.trim() || inspo) {
           setExtraOpen((o) => ({ ...o, idea: false }));
@@ -455,8 +493,11 @@ export default function CreatorApp() {
       say('That tooth isn’t in your build. Add it in Teeth.');
       return;
     }
-    if (part === 'extras' && extraOpen.ins) {
-      setDesign({ ...design, initials: { ...design.initials, tooth: k } });
+    if (part === 'extras' && insPick.on) {
+      buzz();
+      const t = tapLetters(design, insPick.anchor, k);
+      setDesign({ ...design, initials: { ...design.initials, teeth: t.teeth } });
+      setInsPick(t.anchor === null ? NO_PICK : { on: true, anchor: t.anchor });
       return;
     }
     buzz();
@@ -609,8 +650,7 @@ export default function CreatorApp() {
       }
       if (v === 'ins') {
         open('extras');
-        setExtraOpen({ ins: true, idea: false });
-        if (design.initials.tooth === null) setDesign({ ...design, initials: { ...design.initials, tooth: firstFront(design) } });
+        setExtraOpen({ ...CLOSED, ins: true });
         return;
       }
     }
@@ -845,10 +885,10 @@ export default function CreatorApp() {
   }, [selOpen]);
 
   // ---------- the 3D's view of the design ----------
-  const customizations = useMemo<ToothCustomization[]>(
-    () => Array.from({ length: 32 }, (_, k) => (design.designs[k] && design.teeth.includes(k) ? toothCustomization(design.designs[k], { fangs: setOptions(design).fangs, cut: design.cut }, k) : { ...baseToothState })),
-    [design],
-  );
+  const customizations = useMemo<ToothCustomization[]>(() => {
+    const set3d = setOptions(design);
+    return Array.from({ length: 32 }, (_, k) => (design.designs[k] && design.teeth.includes(k) ? toothCustomization(design.designs[k], set3d, k) : { ...baseToothState }));
+  }, [design]);
   const inscriptions = useMemo(() => setOptions(design).inscriptions, [design]);
   const glowing = building && part !== 'teeth';
 
@@ -1054,6 +1094,7 @@ export default function CreatorApp() {
                 part={part}
                 visited={visited}
                 open={extraOpen}
+                insPick={insPick}
                 photo={photo}
                 inspo={inspo}
                 showPrices={showPrices}

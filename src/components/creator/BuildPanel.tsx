@@ -1,18 +1,25 @@
 import type { ReactNode } from 'react';
-import { CUTS, METALS, OPALS, SETTINGS, STYLES, isGold, type ToothDesign } from '../../lib/renderSpec';
+import { CUTS, ENAMELS, INSCRIPTION_FONTS, INSCRIPTION_MAX, INSCRIPTION_PER_TOOTH, METALS, OPALS, SETTINGS, STYLES, isGold, type CharmId, type EnamelId, type InscriptionFontId, type ToothDesign } from '../../lib/renderSpec';
+import { charmPrice } from '../../lib/pricing';
 import { SetPicture } from './SetPicture';
 import {
   PARTS,
   SETS,
   apply,
+  centredRun,
+  charmList,
   counts,
   current,
   delta,
-  initialsOn,
+  initialsInscription,
+  initialsRun,
   isCentred,
+  lettersNeed,
   livePicks,
   money,
   partValue,
+  rowsOf,
+  runRow,
   setOptions,
   toothName,
   type Choice,
@@ -31,6 +38,14 @@ export type BuildAct =
   | { type: 'ins-toggle' }
   | { type: 'ins-text'; text: string }
   | { type: 'ins-style'; style: Design['initials']['style'] }
+  | { type: 'ins-font'; font: InscriptionFontId }
+  | { type: 'ins-enamel'; enamel: EnamelId | null }
+  /** The letters across `count` teeth of `row`, centred. */
+  | { type: 'ins-place'; row: number; count: number }
+  /** Choose the letters' teeth by tapping the first and the last on the 3D. */
+  | { type: 'ins-pick' }
+  | { type: 'charm-toggle' }
+  | { type: 'charm'; id: CharmId }
   | { type: 'idea-toggle' }
   | { type: 'idea'; text: string }
   | { type: 'photo'; file: File | null }
@@ -51,6 +66,10 @@ const SWATCH = Object.fromEntries(METALS.map((m) => [m.id, m.swatch])) as Record
 const imageOf = (list: readonly { id: string; image?: string }[], id: string) => list.find((x) => x.id === id)?.image ?? '';
 const PLAIN_IMAGE = '/assets/options/grillz/type-plain.webp';
 const PHOTO_IMAGE = '/assets/options/grillz/type-photo.webp';
+const charmImage = (id: CharmId) => `/assets/options/grillz/charm-${id}.webp`;
+/** How many teeth the letters can go across, as chips. */
+const SPANS = [1, 2, 3, 4, 6, 8];
+const FONT_HINT: Record<InscriptionFontId, string> = { block: 'Bold capitals', script: 'Joined, flowing' };
 
 type Props = {
   shop: Shop;
@@ -58,8 +77,10 @@ type Props = {
   picks: number[];
   part: PartId;
   visited: Partial<Record<PartId, boolean>>;
-  /** Extras rows opened without a value yet (initials, your idea). */
-  open: { ins: boolean; idea: boolean };
+  /** Extras rows opened without a value yet (initials, charms, your idea). */
+  open: { ins: boolean; idea: boolean; charm: boolean };
+  /** Choosing the letters' teeth on the 3D: on, and the first tooth tapped (waiting for the last). */
+  insPick: { on: boolean; anchor: number | null };
   photo: string | null;
   inspo: string | null;
   showPrices: boolean;
@@ -127,8 +148,21 @@ function Preview({ d, part }: { d: Design; part: PartId }) {
     if (st.length === 1 && st[0].type !== 'iced') return <span className="dash">None</span>;
     return <Stack items={st.map((t) => (t.type === 'iced' ? <Img src={imageOf(SETTINGS, t.setting)} /> : <span className="dash">None</span>))} />;
   }
-  const n = (setOptions(d).fangs ? 1 : 0) + (initialsOn(d) ? 1 : 0) + (d.cut === 'permanent' ? 1 : 0) + (d.idea.trim() ? 1 : 0);
+  const n = (setOptions(d).fangs ? 1 : 0) + (initialsInscription(d) ? 1 : 0) + (charmList(d).length ? 1 : 0) + (d.cut === 'permanent' ? 1 : 0) + (d.idea.trim() ? 1 : 0);
   return <span className="dash">{n ? `+${n}` : '—'}</span>;
+}
+
+/** The lab's row: words on the left, a round picture on the right; picked like a radio. */
+function MRow({ title, hint, on, picture, onClick }: { title: string; hint: string; on: boolean; picture: ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" role="radio" aria-checked={on} className="mrow" onClick={onClick}>
+      <span className="txt">
+        <b>{title}</b>
+        <span className="ins">{hint}</span>
+      </span>
+      <span className="prev">{picture}</span>
+    </button>
+  );
 }
 
 function Switch({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
@@ -331,11 +365,36 @@ export function PartBody(props: Props) {
   const hints = config.pricing;
   const set = setOptions(d);
   const insStyles = catalog.inscriptionStyles;
-  const insOn = initialsOn(d);
-  const where = insOn ? `the ${toothName(d.initials.tooth!)}` : 'a front tooth';
+  const ins = initialsInscription(d);
   const cheapest = insStyles.length ? Math.min(...insStyles.map((s) => hints.inscription[s.id] ?? 0)) : 0;
   const permOffered = catalog.cuts.some((c) => c.id === 'permanent');
   const price = (n: number) => (showPrices && n ? `+${money(n)}` : '');
+  // Letters: where they are, what fits, and the runs worth offering.
+  const text = d.initials.text.trim();
+  const run = initialsRun(d);
+  const row = runRow(run) ?? rowsOf(d)[0] ?? 0;
+  const need = lettersNeed(text);
+  const rowSize = centredRun(d, row, 16).length;
+  const spans = SPANS.filter((n) => n <= rowSize);
+  const fits = text.length <= INSCRIPTION_PER_TOOTH * Math.max(1, run.length);
+  const placeWords = run.length ? `${run.length === 1 ? `On the ${toothName(run[0])}` : `Across ${run.length} ${row ? 'bottom' : 'top'} teeth`}` : 'Pick your teeth first';
+  const pickWords = props.insPick.on ? (props.insPick.anchor === null ? 'Tap the first tooth on the 3D.' : 'Now tap the last tooth (or the same one again).') : `${placeWords}.`;
+  const glyphs = (font: InscriptionFontId) => (text ? text.slice(0, 2) : font === 'block' ? 'AB' : 'Ab');
+  // Charms: on the picked teeth, else the first front tooth without one.
+  const charms = catalog.charms;
+  const charmCount = charmList(d).length;
+  const quote = `Quoted by ${config.brand.name}`;
+  const charmCost = (id: CharmId) => {
+    const n = charmPrice(hints, id);
+    return n === undefined ? 'Quoted' : showPrices ? `+${money(n)}` : '';
+  };
+  const each = charms.length ? charmPrice(hints, charms[0].id) : undefined;
+  const charmSub = charmCount
+    ? `${charmCount} added · ${each === undefined ? quote.toLowerCase() : `${price(each)} each`}`
+    : each === undefined || !showPrices
+      ? quote
+      : `${price(each)} each`;
+  const charmTargets = pk.length ? pk : [];
   return (
     <>
       {catalog.fangs && (
@@ -350,23 +409,100 @@ export function PartBody(props: Props) {
         />
       )}
       {insStyles.length > 0 && (
-        <XRow title="Initials" sub={insOn ? `On ${where}. Tap a tooth to move them.` : showPrices ? `From ${money(cheapest)}` : 'On a tooth you pick'} on={open.ins || Boolean(d.initials.text)} onToggle={() => act({ type: 'ins-toggle' })}>
+        <XRow
+          title="Initials or a name"
+          sub={ins ? `"${ins.text}" · ${placeWords.toLowerCase()}` : showPrices ? `From ${money(cheapest)} a tooth` : 'On one tooth or across several'}
+          label="Initials or a name"
+          on={open.ins || Boolean(d.initials.text)}
+          onToggle={() => act({ type: 'ins-toggle' })}
+        >
           <div className="field">
             <input
               type="text"
-              maxLength={6}
-              placeholder="Up to 6 letters"
+              maxLength={INSCRIPTION_MAX}
+              placeholder="Initials or a name"
               value={d.initials.text}
               autoComplete="off"
-              aria-label="Initials"
+              autoCapitalize={d.initials.font === 'block' ? 'characters' : 'words'}
+              spellCheck={false}
+              aria-label="Letters"
+              aria-describedby="ins-where"
+              className={d.initials.font === 'script' ? 'script' : 'block'}
               onChange={(event) => act({ type: 'ins-text', text: event.target.value })}
             />
           </div>
-          <div className="chips">
-            {insStyles.map((s) => (
-              <Chip key={s.id} label={s.label} on={d.initials.style === s.id} em={showPrices ? money(hints.inscription[s.id] ?? 0) : ''} onClick={() => act({ type: 'ins-style', style: s.id })} />
+          <p className="lab">Lettering</p>
+          <div className="rows" role="radiogroup" aria-label="Lettering">
+            {INSCRIPTION_FONTS.map((f) => (
+              <MRow key={f.id} title={f.label} hint={FONT_HINT[f.id]} on={d.initials.font === f.id} picture={<span className={`glyph ${f.id}`}>{glyphs(f.id)}</span>} onClick={() => act({ type: 'ins-font', font: f.id })} />
             ))}
           </div>
+          <p className="lab">Finish</p>
+          <div className="chips">
+            {insStyles.map((s) => (
+              <Chip key={s.id} label={s.label} on={d.initials.style === s.id} em={showPrices ? `${money(hints.inscription[s.id] ?? 0)} a tooth` : ''} onClick={() => act({ type: 'ins-style', style: s.id })} />
+            ))}
+          </div>
+          {d.initials.style === 'engraved' ? (
+            <>
+              <p className="lab">Enamel</p>
+              <div className="chips" role="group" aria-label="Enamel in the letters">
+                <Chip label="None" on={d.initials.enamel === null} onClick={() => act({ type: 'ins-enamel', enamel: null })} />
+                {ENAMELS.map((e) => (
+                  <Chip
+                    key={e.id}
+                    label={
+                      <>
+                        <i className="dot" style={{ background: e.swatch }} />
+                        {e.label}
+                      </>
+                    }
+                    on={d.initials.enamel === e.id}
+                    onClick={() => act({ type: 'ins-enamel', enamel: e.id })}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="locked">Engraved letters can be filled with coloured enamel.</p>
+          )}
+          <p className="lab">Where</p>
+          {rowsOf(d).length > 1 && (
+            <div className="chips" role="group" aria-label="Which row">
+              {rowsOf(d).map((r) => (
+                <Chip key={r} label={r ? 'Bottom row' : 'Top row'} on={row === r} onClick={() => act({ type: 'ins-place', row: r, count: Math.max(need, run.length || 1) })} />
+              ))}
+            </div>
+          )}
+          <div className="chips" role="group" aria-label="How many teeth the letters go across">
+            {spans.map((n) => (
+              <Chip key={n} label={`${n} ${n === 1 ? 'tooth' : 'teeth'}`} on={!props.insPick.on && run.length === n} disabled={n < need} onClick={() => act({ type: 'ins-place', row, count: n })} />
+            ))}
+            <Chip label="Tap teeth on the 3D" on={props.insPick.on} onClick={() => act({ type: 'ins-pick' })} />
+          </div>
+          <p className="note" id="ins-where" aria-live="polite">
+            {pickWords}
+            {text && !fits ? ` ${text.length} letters need ${need} teeth or more: up to ${INSCRIPTION_PER_TOOTH} a tooth.` : ''}
+          </p>
+        </XRow>
+      )}
+      {charms.length > 0 && (
+        <XRow title="One-of-one charms" sub={charmSub} on={open.charm || charmCount > 0} onToggle={() => act({ type: 'charm-toggle' })}>
+          <div className="strip" role="group" aria-label="Charms">
+            {charms.map((c) => (
+              <Tile
+                key={c.id}
+                title={c.label}
+                sub={charmCost(c.id)}
+                on={charmTargets.length > 0 && charmTargets.every((k) => d.charms[k] === c.id)}
+                picture={<Img src={charmImage(c.id)} />}
+                onClick={() => act({ type: 'charm', id: c.id })}
+              />
+            ))}
+          </div>
+          <p className="note" aria-live="polite">
+            {pk.length ? `Goes on ${pk.length === 1 ? `the ${toothName(pk[0])}` : `the ${pk.length} teeth you picked`}. Tap it again to take it off.` : 'Tap a tooth on the 3D, then a charm. One charm a tooth.'}
+          </p>
         </XRow>
       )}
       {catalog.vision && (

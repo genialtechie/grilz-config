@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { checkSnapshot } from '../../../lib/savedDesign';
+import { parseRenderSpec } from '../../../lib/renderSpec';
 import { buildTenant } from '../../../lib/tenant/tenant';
 import { VVSLAB_CONFIG } from '../../../lib/tenant/vvslab';
 import { back, canUndo, freshHistory, openPart, track, undo, HISTORY_MAX } from '../history';
@@ -7,17 +9,26 @@ import {
   apply,
   blankDesign,
   buildPrice,
+  centredRun,
+  charmList,
+  charmTooth,
   fromSnapshot,
+  fromSpec,
+  initialsInscription,
+  initialsRun,
   groupTeeth,
   matchingGroup,
   offeredGroups,
   partValue,
+  placeCharm,
   price,
   selectionWord,
   setLabel,
   setRange,
   shopBuilds,
+  setOptions,
   summary,
+  tapLetters,
   toSnapshot,
   toSpec,
   toggleTooth,
@@ -115,13 +126,33 @@ describe('the design', () => {
   it('keeps a design through the saved-design format', () => {
     let d = setRange(blankDesign(shop), 6, 6);
     d = apply(shop, d, [7], { g: 'metal', k: 'rose' }, false);
-    d = { ...d, fangs: true, initials: { text: 'AB', style: 'cut', tooth: 7 } };
+    d = { ...d, fangs: true, initials: { text: 'AB', style: 'cut', font: 'block', enamel: null, teeth: [7] } };
     const back = fromSnapshot(shop, toSnapshot(d));
     expect(toSpec(back)).toEqual(toSpec(d));
   });
+  it('keeps letters across teeth, script, enamel and charms through a saved design and the shop’s check', () => {
+    let d = setRange(blankDesign(shop), 6, 6);
+    d = { ...d, initials: { text: 'Lainee', style: 'engraved', font: 'script', enamel: 'pink', teeth: [22, 23, 24, 25] } };
+    d = placeCharm(d, [8], 'crown');
+    const snap = checkSnapshot(JSON.parse(JSON.stringify({ v: 1, ...toSnapshot(d) })), shop);
+    expect(snap).not.toBeNull();
+    const back = fromSnapshot(shop, snap!);
+    expect(toSpec(back)).toEqual(toSpec(d));
+    expect(toSpec(back)!.inscriptions).toEqual([{ text: 'Lainee', teeth: [22, 23, 24, 25], style: 'engraved', font: 'script', enamel: 'pink' }]);
+    expect(toSpec(back)!.charms).toEqual([{ id: 'crown', tooth: 8 }]);
+    // Every design the creator makes passes the server's check.
+    expect(parseRenderSpec(toSpec(d), shop.config.catalog)).toEqual(toSpec(d));
+  });
+  it('reads designs saved before charms and multi-tooth letters', () => {
+    const old = { v: 1, teeth: [5, 6, 7, 8, 9, 10], base: shop.defaultTooth, overrides: {}, set: { fangs: false, cut: 'deep', vision: '' }, drafts: [{ text: 'AB', style: 'cut', font: 'block', enamel: null, teeth: [7] }] };
+    const back = fromSnapshot(shop, checkSnapshot(old, shop)!);
+    expect(back.charms).toEqual({});
+    expect(toSpec(back)!.inscriptions[0]).toMatchObject({ text: 'AB', teeth: [7] });
+    expect(toSpec(back)).not.toHaveProperty('charms');
+  });
   it('offers the lab’s builds the shop sells, with a price', () => {
     const builds = shopBuilds(shop);
-    expect(builds.map((b) => b.id)).toEqual(['gold6', 'gold66', 'iced8', 'fangs', 'tone', 'open']);
+    expect(builds.map((b) => b.id)).toEqual(['gold6', 'gold66', 'iced8', 'fangs', 'tone', 'open', 'oneof']);
     expect(buildPrice(shop, builds[1])).toBe('From $2,000');
     expect(builds.find((b) => b.id === 'tone')!.design.designs[7].metal).toBe('white');
   });
@@ -148,5 +179,88 @@ describe('the guide', () => {
     expect(nextQuestion(true, { teeth: true })).toBe('metal');
     expect(nextQuestion(true, { teeth: true, metal: true, finish: true })).toBe('stones');
     expect(nextQuestion(true, { metal: true, finish: true, stones: true, extras: true })).toBe('happy');
+  });
+});
+
+describe('letters', () => {
+  const six = setRange(blankDesign(shop), 6, 6);
+  const withText = (text: string, patch = {}) => ({ ...six, initials: { ...six.initials, text, ...patch } });
+  it('sit on the front of the top row, as many teeth as the letters need', () => {
+    expect(initialsRun(withText('AB'))).toEqual([7]);
+    expect(initialsRun(withText('LAINEE7'))).toEqual([7, 8]);
+    expect(initialsRun({ ...withText('AB'), teeth: [21, 22, 23, 24, 25, 26] })).toEqual([23]);
+  });
+  it('go across a centred run of the teeth asked for', () => {
+    expect(centredRun(six, 0, 2)).toEqual([7, 8]);
+    expect(centredRun(six, 0, 4)).toEqual([6, 7, 8, 9]);
+    expect(centredRun(six, 1, 6)).toEqual([21, 22, 23, 24, 25, 26]);
+    expect(centredRun(six, 0, 10)).toEqual([5, 6, 7, 8, 9, 10]);
+  });
+  it('take the first and last tooth tapped, in one row, at most eight', () => {
+    let t = tapLetters(six, null, 6);
+    expect(t).toEqual({ teeth: [6], anchor: 6 });
+    t = tapLetters(six, t.anchor, 9);
+    expect(t).toEqual({ teeth: [6, 7, 8, 9], anchor: null });
+    // The other row starts over.
+    expect(tapLetters(six, 6, 24)).toEqual({ teeth: [24], anchor: 24 });
+    // A tooth outside the set does nothing.
+    expect(tapLetters(six, 6, 2)).toEqual({ teeth: [], anchor: 6 });
+  });
+  it('keep script in its case, block in capitals, and enamel only when engraved', () => {
+    expect(initialsInscription(withText('Lainee', { font: 'script', style: 'cut', enamel: 'pink' }))).toMatchObject({ text: 'Lainee', font: 'script', enamel: null });
+    expect(initialsInscription(withText('ab', { style: 'engraved', enamel: 'blue' }))).toMatchObject({ text: 'AB', enamel: 'blue' });
+  });
+  it('count only when they fit their teeth (six letters a tooth)', () => {
+    expect(initialsInscription(withText('ABCDEFGH', { teeth: [7] }))).toBeNull();
+    expect(initialsInscription(withText('ABCDEFGH', { teeth: [7, 8] }))?.teeth).toEqual([7, 8]);
+    expect(setOptions(withText('ABCDEFGH', { teeth: [7] })).inscriptions).toEqual([]);
+  });
+  it('are priced per tooth they cover', () => {
+    const one = price(shop, withText('AB', { style: 'engraved', teeth: [7] })).total;
+    const four = price(shop, withText('AB', { style: 'engraved', teeth: [6, 7, 8, 9] })).total;
+    expect(four - one).toBe(3 * VVSLAB_CONFIG.pricing.inscription.engraved!);
+  });
+});
+
+describe('charms', () => {
+  const six = setRange(blankDesign(shop), 6, 6);
+  it('go on the first front tooth without one, and come off with a second tap', () => {
+    expect(charmTooth(six)).toBe(7);
+    let d = placeCharm(six, [7], 'owl');
+    expect(charmTooth(d)).toBe(8);
+    expect(charmList(d)).toEqual([{ id: 'owl', tooth: 7 }]);
+    d = placeCharm(d, [7], 'owl');
+    expect(charmList(d)).toEqual([]);
+  });
+  it('leave with their tooth', () => {
+    const d = placeCharm(six, [5], 'crown');
+    expect(toggleTooth(d, 5).charms).toEqual({});
+    expect(setRange(d, 2, 0).charms).toEqual({});
+  });
+  it('are quoted by the demo shop: in the summary, out of the total', () => {
+    const d = placeCharm(six, [7, 8], 'crown');
+    expect(price(shop, d).total).toBe(price(shop, six).total);
+    expect(price(shop, d).quoted).toEqual(['Crown charm', 'Crown charm']);
+    expect(summary(d)).toContain('2 charms');
+    expect(partValue(d, 'extras')).toBe('2 charms');
+  });
+  it('come back from the AI on teeth still in the set only', () => {
+    const spec = toSpec(placeCharm(six, [7], 'crown'))!;
+    expect(fromSpec(shop, spec).charms).toEqual({ 7: 'crown' });
+  });
+  it('make the One-of-one build: a charm on all twelve teeth, quoted', () => {
+    const one = shopBuilds(shop).find((b) => b.id === 'oneof')!;
+    expect(charmList(one.design)).toHaveLength(12);
+    expect(one.design.designs[5].type).toBe('iced');
+    expect(one.design.designs[7]).toMatchObject({ type: 'plain', karat: '18k' });
+    expect(buildPrice(shop, one)).toBe('Quoted');
+    expect(parseRenderSpec(toSpec(one.design), shop.config.catalog)).toEqual(toSpec(one.design));
+  });
+  it('leave One-of-one out at shops without charms', () => {
+    const plain = buildTenant('plain', { ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, charms: undefined } });
+    expect(shopBuilds(plain).map((b) => b.id)).not.toContain('oneof');
+    const priced = buildTenant('priced', { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, charms: { each: 100 } } });
+    const one = shopBuilds(priced).find((b) => b.id === 'oneof')!;
+    expect(buildPrice(priced, one)).toMatch(/^From \$/);
   });
 });

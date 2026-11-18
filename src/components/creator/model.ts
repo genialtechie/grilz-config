@@ -6,6 +6,10 @@
 // upper centrals, 5 and 10 the upper canines (the same numbering the lab used).
 import {
   FANG_TEETH,
+  INSCRIPTION_CHARS,
+  INSCRIPTION_MAX,
+  INSCRIPTION_PER_TOOTH,
+  INSCRIPTION_SPAN_MAX,
   INSCRIPTION_STYLES,
   KARATS,
   METALS,
@@ -15,7 +19,12 @@ import {
   STYLES,
   isGold,
   label,
+  type Charm,
+  type CharmId,
   type CutId,
+  type EnamelId,
+  type Inscription,
+  type InscriptionFontId,
   type InscriptionStyleId,
   type MoldId,
   type RenderSpec,
@@ -25,12 +34,16 @@ import {
 import { nearestOffered, priceBreakdown, type PriceBreakdown } from '../../lib/pricing';
 import type { DesignSnapshot } from '../../lib/savedDesign';
 import type { Tenant } from '../../lib/tenant/tenant';
-import type { InscriptionDraft } from '../../lib/inscriptionDrafts';
+import { autoRun, fitsTeeth, type InscriptionDraft } from '../../lib/inscriptionDrafts';
 
 export type Shop = Pick<Tenant, 'slug' | 'config' | 'catalog' | 'defaultTooth' | 'defaultSet'>;
 
-/** Initials on one tooth (the lab's Extras row). */
-export type Initials = { text: string; style: InscriptionStyleId; tooth: number | null };
+/**
+ * Letters on the set (the old builder's options in the lab's Extras row, Nov 18): the text, its lettering
+ * (block or script), its finish, enamel in engraved letters, and the run of neighbouring teeth in one row
+ * it goes across. No teeth = an automatic run centred on the front of the set, as many as the letters need.
+ */
+export type Initials = { text: string; style: InscriptionStyleId; font: InscriptionFontId; enamel: EnamelId | null; teeth: number[] };
 
 export type Design = {
   /** The teeth in the set, sorted. */
@@ -44,6 +57,8 @@ export type Design = {
   mold?: MoldId;
   addOns: string[];
   initials: Initials;
+  /** One-of-one charms: tooth → charm. */
+  charms: Record<number, CharmId>;
   /** Their own words (typed in Extras, or said to the AI): goes to the shop as their idea. */
   idea: string;
 };
@@ -80,7 +95,8 @@ export function blankDesign(shop: Shop): Design {
     cut: shop.defaultSet.cut,
     mold: shop.defaultSet.mold,
     addOns: [],
-    initials: { text: '', style: shop.catalog.inscriptionStyles[0]?.id ?? 'engraved', tooth: null },
+    initials: { text: '', style: shop.catalog.inscriptionStyles[0]?.id ?? 'engraved', font: 'block', enamel: null, teeth: [] },
+    charms: {},
     idea: '',
   };
 }
@@ -105,15 +121,19 @@ export function setRange(d: Design, top: number, bottom: number): Design {
   teeth.forEach((k) => {
     designs[k] = d.designs[k] ?? { ...d.base };
   });
-  return { ...d, teeth, designs };
+  return { ...d, teeth, designs, charms: keepCharms(d.charms, teeth) };
 }
+
+/** The charms on teeth still in the set. */
+const keepCharms = (charms: Design['charms'], teeth: readonly number[]) => Object.fromEntries(Object.entries(charms).filter(([k]) => teeth.includes(Number(k)))) as Design['charms'];
 
 /** Adds a tooth to the set, or takes it out. */
 export function toggleTooth(d: Design, k: number): Design {
   if (d.teeth.includes(k)) {
     const designs = { ...d.designs };
     delete designs[k];
-    return { ...d, teeth: d.teeth.filter((x) => x !== k), designs };
+    const teeth = d.teeth.filter((x) => x !== k);
+    return { ...d, teeth, designs, charms: keepCharms(d.charms, teeth) };
   }
   return { ...d, teeth: sorted([...d.teeth, k]), designs: { ...d.designs, [k]: { ...d.base } } };
 }
@@ -278,18 +298,103 @@ export function current(d: Design, picks: readonly number[]): ToothDesign {
 // ---------- the spec, the price and the words ----------
 export const canHaveFangs = (d: Pick<Design, 'teeth'>) => d.teeth.some((k) => FANG_TEETH.includes(k));
 
-/** Initials count once they have text and sit on a tooth in the set. */
-export const initialsOn = (d: Pick<Design, 'teeth' | 'initials'>) =>
-  Boolean(d.initials.text.trim()) && d.initials.tooth !== null && d.teeth.includes(d.initials.tooth);
+// ---------- letters ----------
+/** Text as the field takes it: the characters letters can be cut in, at most INSCRIPTION_MAX. */
+export const cleanLetters = (text: string) => text.replace(INSCRIPTION_CHARS, '').slice(0, INSCRIPTION_MAX);
+
+const rowOf = (k: number) => (k < 16 ? 0 : 1);
+/** Neighbouring teeth of one row, all in the set. */
+const isRun = (teeth: readonly number[], set: readonly number[]) =>
+  teeth.length > 0 && teeth.every((k, i) => set.includes(k) && rowOf(k) === rowOf(teeth[0]) && (i === 0 || k === teeth[i - 1] + 1));
+
+/** The rows of the set that have teeth (0 top, 1 bottom). */
+export const rowsOf = (d: Pick<Design, 'teeth'>) => [0, 1].filter((row) => d.teeth.some((k) => rowOf(k) === row));
+/** The row a run of teeth is on. */
+export const runRow = (teeth: readonly number[]) => (teeth.length ? rowOf(teeth[0]) : null);
+
+/** How many teeth the letters need at least (up to six a tooth). */
+export const lettersNeed = (text: string) => Math.max(1, Math.ceil(text.trim().length / INSCRIPTION_PER_TOOTH));
+
+/** `count` neighbouring teeth of `row`, centred on the front of the set (as the old builder placed them). */
+export function centredRun(d: Pick<Design, 'teeth'>, row: number, count: number): number[] {
+  // The longest stretch of neighbouring teeth in the row nearest its middle (lib/inscriptionDrafts' autoRun).
+  const block = autoRun('x'.repeat(INSCRIPTION_PER_TOOTH * INSCRIPTION_SPAN_MAX), new Set(d.teeth), row);
+  if (!block.length) return [];
+  const n = Math.min(block.length, Math.max(1, count));
+  const centre = row * 16 + 7.5;
+  let best = 0;
+  for (let i = 1; i + n <= block.length; i++) {
+    if (Math.abs((block[i] + block[i + n - 1]) / 2 - centre) < Math.abs((block[best] + block[best + n - 1]) / 2 - centre) - 1e-9) best = i;
+  }
+  return block.slice(best, best + n);
+}
+
+/** The teeth the letters go across: the run the customer chose, else one centred on the top row (the bottom with no top teeth). */
+export function initialsRun(d: Pick<Design, 'teeth' | 'initials'>): number[] {
+  if (isRun(d.initials.teeth, d.teeth)) return d.initials.teeth;
+  const row = rowsOf(d)[0];
+  return row === undefined ? [] : centredRun(d, row, lettersNeed(d.initials.text));
+}
+
+/** The letters as the 3D and the shop take them, or null (no text, no teeth, or too many letters for the teeth). */
+export function initialsInscription(d: Pick<Design, 'teeth' | 'initials'>): Inscription | null {
+  const text = d.initials.text.trim();
+  const teeth = initialsRun(d);
+  if (!text || !teeth.length || !fitsTeeth({ text, teeth })) return null;
+  return { text: d.initials.font === 'block' ? text.toUpperCase() : text, teeth, style: d.initials.style, font: d.initials.font, enamel: d.initials.style === 'engraved' ? d.initials.enamel : null };
+}
+
+/** Initials count once they have text and fit the teeth they are on. */
+export const initialsOn = (d: Pick<Design, 'teeth' | 'initials'>) => initialsInscription(d) !== null;
+
+/**
+ * A tap on a tooth while choosing where the letters go (the old builder's way): the first tap starts a
+ * run there, a second tap in the same row ends it (every tooth between must be in the set). Returns the
+ * new run and the tooth still waiting for its other end, if any.
+ */
+export function tapLetters(d: Pick<Design, 'teeth'>, anchor: number | null, k: number): { teeth: number[]; anchor: number | null } {
+  if (!d.teeth.includes(k)) return { teeth: [], anchor };
+  if (anchor === null || rowOf(anchor) !== rowOf(k) || !d.teeth.includes(anchor)) return { teeth: [k], anchor: k };
+  const teeth: number[] = [anchor];
+  for (let x = anchor - 1; x >= Math.min(anchor, k) && d.teeth.includes(x); x--) teeth.unshift(x);
+  for (let x = anchor + 1; x <= Math.max(anchor, k) && d.teeth.includes(x); x++) teeth.push(x);
+  return { teeth: teeth.slice(0, INSCRIPTION_SPAN_MAX), anchor: null };
+}
+
+// ---------- charms ----------
+/** The charms on teeth in the set, in tooth order. */
+export const charmList = (d: Pick<Design, 'teeth' | 'charms'>): Charm[] =>
+  d.teeth.filter((k) => d.charms[k]).map((k) => ({ id: d.charms[k], tooth: k }));
+
+/** Where a charm goes when no tooth is picked: the first front tooth without one (the lab's rule). */
+export function charmTooth(d: Pick<Design, 'teeth' | 'charms'>): number | null {
+  const p = [7, 8, 6, 9, 5, 10, 23, 24, 22, 25].find((k) => d.teeth.includes(k) && !d.charms[k]);
+  return p ?? d.teeth.find((k) => !d.charms[k]) ?? d.teeth[0] ?? null;
+}
+
+/** Puts a charm on these teeth, or takes it off them when they all wear it already. */
+export function placeCharm(d: Design, targets: readonly number[], id: CharmId): Design {
+  const on = targets.filter((k) => d.teeth.includes(k));
+  const all = on.length > 0 && on.every((k) => d.charms[k] === id);
+  const charms = { ...d.charms };
+  on.forEach((k) => {
+    if (all) delete charms[k];
+    else charms[k] = id;
+  });
+  return { ...d, charms };
+}
 
 export function setOptions(d: Design): SetOptions {
+  const ins = initialsInscription(d);
+  const charms = charmList(d);
   return {
     fangs: d.fangs && canHaveFangs(d),
     cut: d.cut,
     ...(d.mold ? { mold: d.mold } : {}),
     ...(d.addOns.length ? { addOns: d.addOns } : {}),
     vision: d.idea.slice(0, 500),
-    inscriptions: initialsOn(d) ? [{ text: d.initials.text.trim(), teeth: [d.initials.tooth!], style: d.initials.style, font: 'block', enamel: null }] : [],
+    inscriptions: ins ? [ins] : [],
+    ...(charms.length ? { charms } : {}),
   };
 }
 
@@ -329,7 +434,10 @@ export function summary(d: Design) {
   if (!d.teeth.length) return 'No teeth yet';
   let s = `${setLabel(d)} · ${same(d, metalWords) ?? 'mixed metals'} · ${same(d, finishWords) ?? 'mixed finishes'}`;
   if (setOptions(d).fangs) s += ' · fangs';
-  if (initialsOn(d)) s += ` · "${d.initials.text.trim()}"`;
+  const ins = initialsInscription(d);
+  if (ins) s += ` · "${ins.text}"`;
+  const c = charmList(d).length;
+  if (c) s += ` · ${c} ${c === 1 ? 'charm' : 'charms'}`;
   if (d.cut === 'permanent') s += ' · permanent look';
   return s;
 }
@@ -348,7 +456,10 @@ export function partValue(d: Design, part: PartId, picks: readonly number[] = []
   if (part === 'stones') return val((t) => (t.type === 'iced' ? `${label(SETTINGS, t.setting)}, ${label(STONES, t.stone).toLowerCase()}` : 'None'), 'settings');
   const e: string[] = [];
   if (setOptions(d).fangs) e.push('Fangs');
-  if (initialsOn(d)) e.push(`"${d.initials.text.trim()}"`);
+  const ins = initialsInscription(d);
+  if (ins) e.push(`"${ins.text}"`);
+  const c = charmList(d).length;
+  if (c) e.push(`${c} ${c === 1 ? 'charm' : 'charms'}`);
   if (d.cut === 'permanent') e.push('Permanent look');
   if (d.idea.trim()) e.push('Your idea');
   return e.length ? e.join(', ') : 'None';
@@ -362,14 +473,24 @@ export function toSnapshot(d: Design): DesignSnapshot {
   d.teeth.forEach((k) => {
     if (!sameTooth(d.designs[k], d.base)) overrides[k] = d.designs[k];
   });
-  const draft: InscriptionDraft[] = initialsOn(d)
-    ? [{ text: d.initials.text.trim(), style: d.initials.style, font: 'block', enamel: null, teeth: [d.initials.tooth!], anchor: null }]
+  // An automatic run is kept as no teeth: it is worked out again on the way back.
+  const ins = initialsInscription(d);
+  const draft: InscriptionDraft[] = ins
+    ? [{ text: d.initials.text.trim(), style: ins.style, font: ins.font, enamel: ins.enamel, teeth: isRun(d.initials.teeth, d.teeth) ? ins.teeth : [], anchor: null }]
     : [];
+  const charms = charmList(d);
   return {
     teeth: d.teeth,
     base: d.base,
     overrides,
-    set: { fangs: d.fangs, cut: d.cut, vision: d.idea.slice(0, 500), ...(d.mold ? { mold: d.mold } : {}), ...(d.addOns.length ? { addOns: d.addOns } : {}) },
+    set: {
+      fangs: d.fangs,
+      cut: d.cut,
+      vision: d.idea.slice(0, 500),
+      ...(d.mold ? { mold: d.mold } : {}),
+      ...(d.addOns.length ? { addOns: d.addOns } : {}),
+      ...(charms.length ? { charms } : {}),
+    },
     drafts: draft,
   };
 }
@@ -380,7 +501,7 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
   s.teeth.forEach((k) => {
     designs[k] = s.overrides[k] ?? s.base;
   });
-  const first = s.drafts.find((x) => x.text.trim() && x.teeth.length === 1);
+  const first = s.drafts.find((x) => x.text.trim());
   return {
     ...d,
     teeth: sorted(s.teeth),
@@ -391,7 +512,8 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
     mold: s.set.mold ?? d.mold,
     addOns: s.set.addOns ?? [],
     idea: s.set.vision ?? '',
-    initials: first ? { text: first.text.slice(0, 6).toUpperCase(), style: first.style, tooth: first.teeth[0] } : d.initials,
+    initials: first ? { text: cleanLetters(first.text), style: first.style, font: first.font, enamel: first.enamel, teeth: first.teeth } : d.initials,
+    charms: Object.fromEntries((s.set.charms ?? []).map((c) => [c.tooth, c.id])),
   };
 }
 
@@ -413,14 +535,15 @@ export function fromSpec(shop: Shop, spec: RenderSpec, keep?: Design): Design {
     cut: spec.cut,
     mold: spec.mold ?? d.mold,
     addOns: spec.addOns ?? d.addOns,
-    initials: ins ? { text: ins.text.slice(0, 6).toUpperCase(), style: ins.style, tooth: ins.teeth[0] } : d.initials,
+    initials: ins ? { text: cleanLetters(ins.text), style: ins.style, font: ins.font, enamel: ins.enamel, teeth: ins.teeth } : { ...d.initials, text: '' },
+    charms: Object.fromEntries((spec.charms ?? []).filter((c) => teeth.includes(c.tooth)).map((c) => [c.tooth, c.id])),
     idea: d.idea,
   };
 }
 
 // ---------- the starting builds (the lab's popular builds, on the shop's options) ----------
 export type Build = { id: string; label: string; picture: { top: number; bottom: number; kind: SetKind }; design: Design };
-export type SetKind = 'gold' | 'iced' | 'fangs' | 'tone' | 'open';
+export type SetKind = 'gold' | 'iced' | 'fangs' | 'tone' | 'open' | 'oneof';
 
 const sells = (shop: Shop, t: ToothDesign) =>
   shop.config.catalog.metals.includes(t.metal) &&
@@ -428,9 +551,25 @@ const sells = (shop: Shop, t: ToothDesign) =>
   (t.type !== 'plain' || shop.config.catalog.styles.includes(t.style));
 
 /**
- * The builds this shop can offer (each only when it sells every part of it). One-of-one, the lab's
- * seventh build, needs charms, which aren't in the app's catalogue yet.
+ * The One-of-one showpiece (the lab's LOOKS.oneof): an 18K gold 6 × 6, the top corners iced, a charm on
+ * every tooth. Tooth → [charm, iced].
  */
+const ONE_OF_ONE: Record<number, [CharmId, boolean]> = {
+  5: ['crest', true],
+  6: ['emblem', true],
+  7: ['winged-heart', false],
+  8: ['crown', false],
+  9: ['emblem', true],
+  10: ['crest', true],
+  21: ['ruby-potion', false],
+  22: ['emerald-potion', false],
+  23: ['hat', false],
+  24: ['broom', false],
+  25: ['owl', false],
+  26: ['sapphire', true],
+};
+
+/** The builds this shop can offer (each only when it sells every part of it; One-of-one only with every charm in it). */
 export function shopBuilds(shop: Shop): Build[] {
   const blank = blankDesign(shop);
   const tooth = (patch: Partial<ToothDesign>) => {
@@ -444,6 +583,7 @@ export function shopBuilds(shop: Shop): Build[] {
   };
   const gold = tooth({ metal: 'yellow', type: 'plain', style: 'solid' });
   const iced = tooth({ type: 'iced', style: 'solid' });
+  const k18 = shop.config.catalog.karats.includes('18k') ? '18k' : blank.base.karat;
   const list: (Build | null)[] = [
     ((d) => d && { id: 'gold6', label: 'Gold 6 top', picture: { top: 6, bottom: 0, kind: 'gold' as const }, design: d })(make(gold, 6, 0)),
     ((d) => d && { id: 'gold66', label: 'Gold 6 × 6', picture: { top: 6, bottom: 6, kind: 'gold' as const }, design: d })(make(gold, 6, 6)),
@@ -460,11 +600,24 @@ export function shopBuilds(shop: Shop): Build[] {
     ((d) => d && { id: 'open', label: 'Open face 6 × 6', picture: { top: 6, bottom: 6, kind: 'open' as const }, design: d })(
       make(tooth({ metal: 'yellow', type: 'plain', style: 'open-face' }), 6, 6),
     ),
+    ((d) => d && { id: 'oneof', label: 'One-of-one', picture: { top: 6, bottom: 6, kind: 'oneof' as const }, design: d })(
+      Object.values(ONE_OF_ONE).every(([c]) => shop.catalog.charms.some((x) => x.id === c))
+        ? make(tooth({ metal: 'yellow', karat: k18, type: 'plain', style: 'solid' }), 6, 6, (x) => {
+            const icedTooth = tooth({ metal: 'yellow', karat: k18, type: 'iced', style: 'solid' });
+            if (!icedTooth) return null;
+            const iced = Object.entries(ONE_OF_ONE).filter(([, [, ice]]) => ice).map(([k]) => Number(k));
+            return { ...paint(x, icedTooth, iced), charms: Object.fromEntries(Object.entries(ONE_OF_ONE).map(([k, [c]]) => [Number(k), c])) };
+          })
+        : null,
+    ),
   ];
   return list.filter((b): b is Build => Boolean(b));
 }
 
-/** "From $1,100" for a build's card. */
-export const buildPrice = (shop: Shop, b: Build) => `From ${money(price(shop, b.design).total)}`;
+/** "From $1,100" for a build's card, or "Quoted" when the shop quotes part of it (charms). */
+export function buildPrice(shop: Shop, b: Build) {
+  const p = price(shop, b.design);
+  return p.quoted?.length ? 'Quoted' : `From ${money(p.total)}`;
+}
 
 export const insStyles = INSCRIPTION_STYLES;
