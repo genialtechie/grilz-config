@@ -1,4 +1,4 @@
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
+import { CHARMS, CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
 import { ICED_KEYS, type TenantConfig } from './schema.js';
 import { cutPrice } from '../pricing.js';
 
@@ -64,6 +64,13 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   if (live.catalog.fangs !== draft.catalog.fangs) add('What you sell', draft.catalog.fangs ? 'Fangs turned on' : 'Fangs turned off');
   if (live.catalog.vision !== draft.catalog.vision) add('What you sell', draft.catalog.vision ? 'Ideas & inspiration upload turned on' : 'Ideas & inspiration upload turned off');
   if (live.catalog.inscription.enabled !== draft.catalog.inscription.enabled) add('What you sell', draft.catalog.inscription.enabled ? 'Inscriptions turned on' : 'Inscriptions turned off');
+  const charms0 = live.catalog.charms?.enabled ? live.catalog.charms.ids : [];
+  const charms1 = draft.catalog.charms?.enabled ? draft.catalog.charms.ids : [];
+  if (!charms0.length !== !charms1.length) add('What you sell', charms1.length ? 'Charms turned on' : 'Charms turned off');
+  else {
+    charms1.filter((id) => !charms0.includes(id)).forEach((id) => add('What you sell', `Charms: added ${label(CHARMS, id)}`));
+    charms0.filter((id) => !charms1.includes(id)).forEach((id) => add('What you sell', `Charms: removed ${label(CHARMS, id)}`));
+  }
 
   const a0 = live.catalog.addOns ?? [];
   const a1 = draft.catalog.addOns ?? [];
@@ -129,6 +136,8 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
       });
     });
   }
+  const charmEach = (pricing: typeof p0) => (pricing.charms?.each === undefined ? 'quoted by you' : `${usd(pricing.charms.each)} each`);
+  if (charmEach(p0) !== charmEach(p1)) add('Prices', `Charms: ${charmEach(p0)} → ${charmEach(p1)}`);
   // The fit: amount and how it's counted (permanent look's flat price included, for shops without cut prices).
   CUTS.forEach((cut) => {
     const text = (pricing: typeof p0) => {

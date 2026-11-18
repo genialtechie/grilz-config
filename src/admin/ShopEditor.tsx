@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
+import { CHARMS, CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
@@ -545,12 +545,21 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 next.catalog.inscription.enabled = event.target.checked;
                 if (event.target.checked) next.catalog.inscription.styles.forEach((style) => { next.pricing.inscription[style] ??= SAMPLE_PRICING.inscription[style] ?? 0; });
               })} /> Inscriptions</label>
+              <label className="admin-check"><input type="checkbox" checked={Boolean(catalog.charms?.enabled)} onChange={(event) => update((next) => {
+                next.catalog.charms = { enabled: event.target.checked, ids: next.catalog.charms?.ids ?? CHARMS.map((charm) => charm.id) };
+              })} /> One-of-one charms</label>
             </div>
             {catalog.inscription.enabled && (
               <Checks options={INSCRIPTION_STYLES} selected={catalog.inscription.styles} onToggle={(id, on) => update((next) => {
                 const styles = next.catalog.inscription.styles;
                 next.catalog.inscription.styles = (on ? [...styles, id] : styles.filter((item) => item !== id)) as typeof styles;
                 if (on) next.pricing.inscription[id as keyof typeof next.pricing.inscription] ??= SAMPLE_PRICING.inscription[id as keyof typeof SAMPLE_PRICING.inscription] ?? 0;
+              })} />
+            )}
+            {catalog.charms?.enabled && (
+              <Checks options={CHARMS} selected={catalog.charms.ids} onToggle={(id, on) => update((next) => {
+                const ids = next.catalog.charms!.ids;
+                next.catalog.charms!.ids = (on ? [...ids, id] : ids.filter((item) => item !== id)) as typeof ids;
               })} />
             )}
             <Issue issues={issues} path="catalog" />
@@ -683,6 +692,24 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 <Money key={style.id} label={`Inscription · ${style.label}`} value={pricing.inscription[style.id]} onChange={(value) => update((next) => { next.pricing.inscription[style.id] = value; })} />
               ))}
             </div>
+            {catalog.charms?.enabled && (
+              <>
+                <h3>Charms</h3>
+                <p className="admin-muted admin-section__hint">One price for each charm, or leave it to quote: customers see &quot;Quoted by {config.brand.name}&quot; and the charm stays out of the estimate.</p>
+                <div className="admin-grid admin-grid--prices">
+                  <label className="admin-check">
+                    <input type="checkbox" checked={pricing.charms?.each === undefined} onChange={(event) => update((next) => {
+                      const charms = { ...next.pricing.charms };
+                      if (event.target.checked) delete charms.each;
+                      else charms.each = 150;
+                      next.pricing.charms = charms;
+                    })} />
+                    I quote each charm
+                  </label>
+                  {pricing.charms?.each !== undefined && <Money label="Charm, each" value={pricing.charms.each} onChange={(value) => update((next) => { next.pricing.charms = { ...next.pricing.charms, each: value }; })} />}
+                </div>
+              </>
+            )}
             <Issue issues={issues} path="pricing" />
           </Section>
 

@@ -15,6 +15,7 @@ pick it up; "Describe it" uses real AI on the OpenAI key the server already has.
 | Builder | `src/components/creator/*` except `after/`, routes to it | `builder.md` |
 | After Done | `src/components/creator/after/*` | `after.md` |
 | Backend | `server/*`, `api/*`, `src/lib/phoneAuth.ts`, `src/lib/describe.ts`, migrations | `backend.md` |
+| Charms + initials (Nov 18) | charms and letters across the option model, prices, 3D, Extras, Describe it | `charms.md` |
 
 Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/lib/phoneAuth.ts` and
 `src/lib/describe.ts` (stand-ins now; the backend track fills them in without changing their signatures).
@@ -27,6 +28,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 18: Charms + initials: the lab's ten charms (two redrawn to stay original) and the One-of-one build in the app, quoted by the shop unless it sets a price; shops turn charms on in the Shop editor; Describe it places them; letters back across several teeth with Block/Script and enamel in the Extras row. Build, lint, tests pass. Screens `case-study/2026-11-18-build-*`. See `charms.md`.
 - Nov 18 (lead): new title, share text and link preview (`public/assets/vvs/og-vvslab.jpg`, sources in `docs/brand/og/`); shop pages now also replace the twitter description and drop VVS Lab's image description. `npm test` skips `.claude/` (local agent copies). Charms + initials track started (`charms.md`).
 - Nov 17 (lead): builder merged — all four tracks are in `redesign`. `/configurator`, `/b/:slug` and shops' own domains open the new `CreatorApp` (old `Configurator.tsx` kept, unused, for rollback). Build, lint and 1,826 tests pass. Owner questions collected in `builder.md` and `after.md`.
 - Nov 17: Builder: `/configurator` and shop builders now open the Grill Creator Lab (`src/components/creator/`): start page, build strip, Select teeth with the amber glow, quick question + Undo, Describe it, drag handles, the real AfterFlow in the panel. `Configurator.tsx` kept, unused. Build, lint, tests pass. See `builder.md`.

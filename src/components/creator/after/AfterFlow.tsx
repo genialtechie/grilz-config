@@ -392,7 +392,7 @@ export function AfterFlow({ design, onKeepEditing, onStartOver }: AfterFlowProps
         <YourGrill
           shop={shop}
           headRef={headRef}
-          price={tenant.config.pricing.display === 'hidden' || !breakdown ? null : { lines: breakdown.lines, total }}
+          price={tenant.config.pricing.display === 'hidden' || !breakdown ? null : { lines: breakdown.lines, total, quoted: breakdown.quoted ?? [] }}
           fittings={fittings}
           mold={mold}
           onMold={setMold}

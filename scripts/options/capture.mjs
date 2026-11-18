@@ -45,6 +45,13 @@ const shots = [
   { file: 'fangs-yes', spec: spec(TOP_SIX, {}, { fangs: true }), frame: TOP_SIX, view: { azimuth: 0.45, polar: 1.5, fill: 0.9 } },
   { file: 'cut-deep', spec: spec(SIX), frame: TOP_SIX, view: ROW_VIEW },
   { file: 'cut-permanent', spec: spec(SIX, {}, { cut: 'permanent' }), frame: TOP_SIX, view: ROW_VIEW },
+  // One-of-one charms (Nov 18): each on an 18K front tooth, close up. The broom runs over its neighbours.
+  ...['crest', 'emblem', 'winged-heart', 'crown', 'hat', 'broom', 'owl', 'ruby-potion', 'emerald-potion', 'sapphire'].map((id) => ({
+    file: `charm-${id}`,
+    spec: spec(TOP_SIX, { karat: '18k' }, { charms: [{ id, tooth: 7 }] }),
+    frame: id === 'broom' ? [6, 7, 8] : [7],
+    view: { azimuth: 0.12, polar: 1.52, fill: id === 'broom' ? 0.96 : 0.9 },
+  })),
   // The starting looks on the first step (src/lib/startingLooks.ts), as the demo shop offers them.
   ...[
     ['gold', SIX],

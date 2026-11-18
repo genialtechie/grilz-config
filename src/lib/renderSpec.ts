@@ -136,6 +136,28 @@ export type Inscription = { text: string; teeth: number[]; style: InscriptionSty
 
 export const inscriptionRow = (inscription: Pick<Inscription, 'teeth'>) => (inscription.teeth[0] < 16 ? 'upper' : 'lower');
 
+/**
+ * One-of-one charms: small raised pieces built onto the face of one tooth (the Creator Lab's charms,
+ * Nov 18). Every one is an original design drawn for VVS Lab: plain motifs (a shield, a crown, an owl),
+ * no brand marks or characters. The 3D builds them in code (three/redesign/charms.ts). A shop turns
+ * them on in its catalogue; one it hasn't priced is quoted by the shop.
+ */
+export const CHARMS = [
+  { id: 'crest', label: 'Crest', detail: 'Quartered enamel shield', render: 'a small gold shield charm quartered in deep red and green enamel with a gold cross' },
+  { id: 'emblem', label: 'Emblem', detail: 'Gold triangle, one stone', render: 'a small solid gold triangle charm with a raised edge and one round stone set at its centre' },
+  { id: 'winged-heart', label: 'Winged heart', detail: 'Gold heart, iced wings', render: 'a small gold heart charm with a pair of feathered gold wings set with small stones' },
+  { id: 'crown', label: 'Crown', detail: 'Five points, three stones', render: 'a small five-pointed gold crown charm set with two blue stones and a clear one' },
+  { id: 'hat', label: 'Pointed hat', detail: 'Brown enamel, gold band', render: 'a small crooked pointed hat charm in brown enamel with a gold band' },
+  { id: 'broom', label: 'Broom', detail: 'Lies across the teeth', render: 'a small gold broomstick charm with brown enamel bristles, lying sideways' },
+  { id: 'owl', label: 'Owl', detail: 'Blue-stone eyes', render: 'a small gold owl charm with blue stone eyes and a row of small stones down its chest' },
+  { id: 'ruby-potion', label: 'Ruby potion', detail: 'Round flask, red stone', render: 'a small round gold-framed flask charm filled with a deep red cabochon stone' },
+  { id: 'emerald-potion', label: 'Emerald potion', detail: 'Round flask, green stone', render: 'a small round gold-framed flask charm filled with a deep green cabochon stone' },
+  { id: 'sapphire', label: 'Sapphire', detail: 'Domed stone in a bezel', render: 'a domed oval blue sapphire cabochon in a gold bezel with four gold beads' },
+] as const;
+export type CharmId = (typeof CHARMS)[number]['id'];
+/** A charm on one tooth of the set. One charm a tooth. */
+export type Charm = { id: CharmId; tooth: number };
+
 /** A shop's own extra (rush order, carrier case…): defined in its config, not the platform catalog. */
 export type AddOn = { id: string; label: string; detail?: string; price: number; per: 'order' | 'tooth' };
 export const ADD_ON_ID = /^[a-z0-9-]{1,40}$/;
@@ -151,6 +173,8 @@ export type SetOptions = {
   vision: string;
   /** Up to two: one on the upper row, one on the lower. */
   inscriptions: Inscription[];
+  /** One-of-one charms, one a tooth, in tooth order. Absent (older designs and clients) = none. */
+  charms?: Charm[];
 };
 
 export type RenderTooth = ToothDesign & { index: number };
@@ -214,6 +238,9 @@ export const describeInscription = (inscription: Inscription) => {
   return `"${inscription.text}" in ${label(INSCRIPTION_FONTS, inscription.font).toLowerCase()}, ${finish.toLowerCase()}, ${where}`;
 };
 
+/** "Crown charm on the upper left central incisor": for the order summary and emails. */
+export const describeCharm = (charm: Charm) => `${label(CHARMS, charm.id)} charm on the ${wearerToothName(charm.tooth)}`;
+
 export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = []): string[] => {
   const upper = spec.teeth.filter((tooth) => tooth.index < 16).length;
   const lines = [`${upper} top + ${spec.teeth.length - upper} bottom`];
@@ -221,6 +248,7 @@ export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, '
   groups.forEach((group) => lines.push(groups.length > 1 ? `${group.length}× ${describeTooth(group[0])}` : describeTooth(group[0])));
   if (spec.fangs) lines.push('Fangs');
   spec.inscriptions.forEach((inscription) => lines.push(describeInscription(inscription)));
+  (spec.charms ?? []).forEach((charm) => lines.push(describeCharm(charm)));
   lines.push(label(CUTS, spec.cut));
   (spec.addOns ?? []).forEach((id) => lines.push(addOns.find((addOn) => addOn.id === id)?.label ?? id));
   if (spec.mold) lines.push(`Fit: ${label(MOLDS, spec.mold)}`);
@@ -245,7 +273,12 @@ export type EnabledOptions = {
   vision: boolean;
   addOns?: readonly Pick<AddOn, 'id'>[];
   molds?: readonly string[];
+  /** Charms the shop sells; absent or off = none. */
+  charms?: { enabled: boolean; ids: readonly string[] };
 };
+
+/** Most charms on one design: one a tooth, on a full set. */
+export const CHARM_MAX = 32;
 
 const parseTooth = (value: unknown): RenderTooth | null => {
   if (!value || typeof value !== 'object') return null;
@@ -308,7 +341,17 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
   if (!Array.isArray(addOns) || addOns.length > MAX_ADD_ONS || !addOns.every((id) => typeof id === 'string' && ADD_ON_ID.test(id))) return null;
   if (new Set(addOns).size !== addOns.length) return null;
   if (spec.mold !== undefined && !oneOf(MOLDS, spec.mold)) return null;
+  // Charms: optional (older clients send none), one a tooth, on teeth in the set.
+  const rawCharms = spec.charms ?? [];
+  if (!Array.isArray(rawCharms) || rawCharms.length > CHARM_MAX) return null;
+  const charms = rawCharms.map((raw): Charm | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const { id, tooth } = raw as Record<string, unknown>;
+    return oneOf(CHARMS, id) && typeof tooth === 'number' && inSet.has(tooth) ? { id, tooth } : null;
+  });
+  if (charms.some((charm) => charm === null) || new Set(charms.map((charm) => charm!.tooth)).size !== charms.length) return null;
   if (enabled) {
+    if (charms.length && !(enabled.charms?.enabled && charms.every((charm) => enabled.charms!.ids.includes(charm!.id)))) return null;
     if (spec.mold !== undefined && enabled.molds && !enabled.molds.includes(spec.mold as string)) return null;
     const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
     if (!addOns.every((id) => offered.has(id))) return null;
@@ -328,6 +371,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     vision: spec.vision.replace(/[^\p{L}\p{N}\p{P}\p{Zs}$+=<>^`|~]/gu, ' ').trim(),
     ...(addOns.length ? { addOns: addOns as string[] } : {}),
     ...(spec.mold !== undefined ? { mold: spec.mold as MoldId } : {}),
+    ...(charms.length ? { charms: (charms as Charm[]).sort((a, b) => a.tooth - b.tooth) } : {}),
   };
 };
 
@@ -416,6 +460,8 @@ export const describeSpec = (spec: RenderSpec): string => {
   // Fangs are added by their own section edits; asking for them here makes the
   // model reshape the neighbouring teeth, which then no longer line up with the 3D masks.
   if (spec.cut === 'permanent') parts.push('the grillz look seamless and permanent, like custom fitted caps');
+  const charms = spec.charms ?? [];
+  if (charms.length) parts.push(`raised charms built onto the front of single teeth, exactly as in the preview: ${charms.map((charm) => `${pick(CHARMS, charm.id).render} on one ${toothName(charm.tooth)}`).join('; ')}`);
   return `${parts.join('; ')}.`;
 };
 
@@ -465,6 +511,7 @@ export const buildPhotoPrompt = (spec: RenderSpec): string => {
     opals ? 'real opal with depth and play-of-colour, in the colour the render shows;' : '',
     'the model is matte dental stone with a fine plaster texture, and its uncovered teeth stay plain stone with no metal;',
     'professional jewelry photography with large soft boxes, crisp macro detail, shallow depth of field, on the same dark charcoal seamless background.',
+    spec.charms?.length ? 'Keep every charm exactly where the render shows it, the same shape, colours and size, in real polished metal, enamel and stones.' : '',
     'Do not add, remove or move anything: no extra teeth, stones, letters, logos, text, decorations, hands or props.',
   ]
     .filter(Boolean)

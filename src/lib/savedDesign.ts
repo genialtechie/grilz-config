@@ -59,7 +59,15 @@ export function checkSnapshot(value: unknown, shop: Shop): DesignSnapshot | null
   const drafts = raw.drafts.map(cleanDraft);
   if (drafts.some((draft) => draft === null)) return null;
   const set = raw.set as Record<string, unknown>;
-  const setOptions = { fangs: set.fangs, cut: set.cut, vision: set.vision, ...(set.addOns !== undefined ? { addOns: set.addOns } : {}), ...(set.mold !== undefined ? { mold: set.mold } : {}) };
+  const setOptions = {
+    fangs: set.fangs,
+    cut: set.cut,
+    vision: set.vision,
+    ...(set.addOns !== undefined ? { addOns: set.addOns } : {}),
+    ...(set.mold !== undefined ? { mold: set.mold } : {}),
+    // Charms (Nov 18): designs saved before them have none.
+    ...(set.charms !== undefined ? { charms: set.charms } : {}),
+  };
   const overridesRaw = raw.overrides && typeof raw.overrides === 'object' ? (raw.overrides as Record<string, unknown>) : {};
   const overrides = Object.fromEntries(Object.entries(overridesRaw).filter(([index]) => teeth.includes(Number(index)))) as Record<number, unknown>;
   const designOf = (index: number) => overrides[index] ?? raw.base;
@@ -67,7 +75,7 @@ export function checkSnapshot(value: unknown, shop: Shop): DesignSnapshot | null
   const inscriptions = inscriptionsFrom(placeDrafts(drafts as InscriptionDraft[], inSet), inSet);
   // The whole design, and the shared tooth design on its own, through the same check the server runs.
   const spec = parseRenderSpec({ ...setOptions, inscriptions, teeth: teeth.map((index) => ({ ...(designOf(index) as object), index })) }, shop.config.catalog);
-  const baseSpec = parseRenderSpec({ ...setOptions, inscriptions: [], teeth: [{ ...(raw.base as object), index: 0 }] }, shop.config.catalog);
+  const baseSpec = parseRenderSpec({ ...setOptions, inscriptions: [], charms: [], teeth: [{ ...(raw.base as object), index: 0 }] }, shop.config.catalog);
   if (!spec || !baseSpec) return null;
   // Iced from a price table: only combinations the shop prices.
   if (![...spec.teeth, ...baseSpec.teeth].every((tooth) => offered(shop.config.pricing, tooth))) return null;

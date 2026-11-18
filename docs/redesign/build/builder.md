@@ -45,12 +45,12 @@ Source of truth: `docs/redesign/creator-lab/src/` (v15) and the Decisions table 
 
 - **Option pictures** are the app's own option images (`/assets/options/grillz/*`), not the lab's live tooth
   renders: real data, no extra render work on phones.
-- **One-of-one build and charms left out:** charms aren't in the app's catalogue or `RenderSpec` (owner question).
+- **One-of-one build and charms left out:** charms aren't in the app's catalogue or `RenderSpec` (owner question). Nov 18: added, see `charms.md`.
 - **Labels** come from the catalogue ("Diamond-cut", "Open-face"), where the lab wrote "Diamond cut".
 - Picked teeth don't zoom the camera (Nov 16: "no zooming in on just the chosen teeth"); the lab's per-part
   camera turns aren't ported.
 - Initials are the lab's one-tooth version (block letters) mapped to the app's `Inscription`; multi-tooth
-  letters, fonts and enamel stay in the old editor for now.
+  letters, fonts and enamel stay in the old editor for now. Nov 18: back in the Extras row, see `charms.md`.
 - Dark mode not ported (the lab's stage is a lit room in both themes).
 
 ## Left

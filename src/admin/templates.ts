@@ -8,6 +8,8 @@ import { VVSLAB_CONFIG } from '../lib/tenant/vvslab.js';
 
 const base = (name: string): TenantConfig => ({
   ...structuredClone(VVSLAB_CONFIG),
+  // Charms are one-of-one work: a new shop turns them on itself (Shop editor, Catalog), not by default.
+  catalog: { ...structuredClone(VVSLAB_CONFIG.catalog), charms: { enabled: false, ids: structuredClone(VVSLAB_CONFIG.catalog.charms?.ids ?? ['crown']) } },
   pricing: { ...structuredClone(VVSLAB_CONFIG.pricing), source: 'default' },
   brand: { name, accent: '#C9A45C', fontPair: 'modern-sans', poweredBy: true },
   deposit: { mode: 'none', rule: { type: 'fixed', amount: 100 } },

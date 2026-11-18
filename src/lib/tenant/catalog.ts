@@ -1,4 +1,5 @@
 import {
+  CHARMS,
   CUTS,
   DEFAULT_SET,
   DEFAULT_TOOTH,
@@ -31,6 +32,7 @@ export const shopCatalog = (catalog: TenantCatalog) => ({
   inscriptionStyles: catalog.inscription.enabled ? only(INSCRIPTION_STYLES, catalog.inscription.styles) : [],
   fangs: catalog.fangs,
   vision: catalog.vision,
+  charms: catalog.charms?.enabled ? only(CHARMS, catalog.charms.ids) : [],
 });
 
 const pick = <T extends string>(preferred: T, enabled: readonly T[]) => (enabled.includes(preferred) ? preferred : enabled[0]);
