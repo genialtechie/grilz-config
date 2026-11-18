@@ -390,7 +390,7 @@ export function PartBody(props: Props) {
   };
   const each = charms.length ? charmPrice(hints, charms[0].id) : undefined;
   const charmSub = charmCount
-    ? `${charmCount} added · ${each === undefined ? quote.toLowerCase() : `${price(each)} each`}`
+    ? `${charmCount} added · ${each === undefined ? `quoted by ${config.brand.name}` : `${price(each)} each`}`
     : each === undefined || !showPrices
       ? quote
       : `${price(each)} each`;
