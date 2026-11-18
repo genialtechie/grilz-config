@@ -18,6 +18,7 @@ const plan = (patch: Partial<DescribePlan> = {}): DescribePlan => ({
   fangs: null,
   cut: null,
   inscription: null,
+  charms: null,
   differences: [],
   ...patch,
 });
@@ -168,6 +169,47 @@ describe('a plan becomes a valid design', () => {
     const built = planToSpec(plan({ teeth: { top: 6, bottom: 6 }, inscription: { text: 'Lainee<3', style: 'engraved', font: 'block' } }), null, VVSLAB_CONFIG)!;
     expect(built.spec.inscriptions).toEqual([{ text: 'LAINEE3', teeth: [7, 8], style: 'engraved', font: 'block', enamel: null }]);
     valid(built.spec);
+  });
+
+  it('puts charms on the teeth named, the nearest free front tooth otherwise, one a tooth', () => {
+    const built = planToSpec(
+      plan({
+        teeth: { top: 6, bottom: 6 },
+        charms: [
+          { charm: 'crown', tooth: 'upper_left_central' },
+          { charm: 'owl', tooth: 'upper_left_central' },
+          { charm: 'sapphire', tooth: 'lower_right_canine' },
+          { charm: 'team-logo', tooth: 'upper_right_central' },
+        ],
+      }),
+      null,
+      VVSLAB_CONFIG,
+    )!;
+    expect(built.spec.charms).toEqual([
+      { id: 'crown', tooth: 7 },
+      { id: 'owl', tooth: 8 },
+      { id: 'sapphire', tooth: 26 },
+    ]);
+    valid(built.spec);
+  });
+
+  it('keeps charms on teeth that stay, drops the rest, and [] takes them off', () => {
+    const current: RenderSpec = { ...sixBySix(), charms: [{ id: 'crown', tooth: 7 }, { id: 'owl', tooth: 23 }] };
+    const kept = planToSpec(plan({ teeth: { top: null, bottom: 0 } }), current, VVSLAB_CONFIG)!;
+    expect(kept.spec.charms).toEqual([{ id: 'crown', tooth: 7 }]);
+    expect(kept.differences.join(' ')).toMatch(/Charms on teeth that are gone/);
+    expect(planToSpec(plan({ charms: [] }), current, VVSLAB_CONFIG)!.spec).not.toHaveProperty('charms');
+    expect(describeCurrent(current)).toContain('charm crown on upper_left_central');
+  });
+
+  it("says no charms when the shop doesn't sell them, and tells the model so", () => {
+    const shop: TenantConfig = { ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, charms: undefined } };
+    const built = planToSpec(plan({ teeth: { top: 6, bottom: 6 }, charms: [{ charm: 'crown', tooth: 'upper_left_central' }] }), null, shop)!;
+    expect(built.spec).not.toHaveProperty('charms');
+    expect(built.differences).toContain('No charms here.');
+    expect((planSchema(shop.catalog) as { properties: Record<string, { type?: unknown }> }).properties.charms.type).toBe('null');
+    expect(planInstructions(shop.catalog, 'Gold Lab')).toContain('Charms: not sold');
+    expect(planInstructions(VVSLAB_CONFIG.catalog, 'VVS Lab')).toContain('crown: Crown');
   });
 
   it('moves a plain-metal finish off an iced set and says why', () => {

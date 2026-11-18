@@ -14,6 +14,8 @@ import {
   parseRenderSpec,
   STONES,
   STYLES,
+  type Charm,
+  type CharmId,
   type Inscription,
   type KaratId,
   type RenderSpec,
@@ -47,11 +49,32 @@ export type DescribePlan = {
   fangs: boolean | null;
   cut: string | null;
   inscription: { text: string; style: string; font: string } | null;
+  /** One-of-one charms, each on a named front tooth. Null keeps the current ones; [] takes them all off. */
+  charms: { charm: string; tooth: string }[] | null;
   /** Plain words: each thing asked for that isn't sold here, and what was built instead. */
   differences: string[];
 };
 
 type Catalog = TenantConfig['catalog'];
+
+/** The front teeth a charm can be asked for by name (the wearer's own left and right), and their indices. */
+export const CHARM_TEETH: Record<string, number> = {
+  upper_left_central: 7,
+  upper_right_central: 8,
+  upper_left_lateral: 6,
+  upper_right_lateral: 9,
+  upper_left_canine: 5,
+  upper_right_canine: 10,
+  lower_left_central: 23,
+  lower_right_central: 24,
+  lower_left_lateral: 22,
+  lower_right_lateral: 25,
+  lower_left_canine: 21,
+  lower_right_canine: 26,
+};
+/** Where a charm goes when its tooth isn't in the set or already wears one: the front first, then outwards. */
+const CHARM_ORDER = [7, 8, 6, 9, 5, 10, 23, 24, 22, 25, 21, 26];
+const MAX_PLANNED_CHARMS = 12;
 
 const enumOrNull = (ids: readonly string[]) => ({ type: ['string', 'null'], enum: [...ids, null] });
 
@@ -73,10 +96,27 @@ export function planSchema(catalog: Catalog) {
         ],
       }
     : { type: 'null' };
+  const charms = shop.charms.length
+    ? {
+        anyOf: [
+          {
+            type: 'array',
+            maxItems: MAX_PLANNED_CHARMS,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['charm', 'tooth'],
+              properties: { charm: { type: 'string', enum: ids(shop.charms) }, tooth: { type: 'string', enum: Object.keys(CHARM_TEETH) } },
+            },
+          },
+          { type: 'null' },
+        ],
+      }
+    : { type: 'null' };
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['teeth', 'apply_to', 'look', 'front_two_metal', 'fangs', 'cut', 'inscription', 'differences'],
+    required: ['teeth', 'apply_to', 'look', 'front_two_metal', 'fangs', 'cut', 'inscription', 'charms', 'differences'],
     properties: {
       teeth: { type: 'object', additionalProperties: false, required: ['top', 'bottom'], properties: { top: count, bottom: count } },
       apply_to: { type: 'string', enum: ['all', 'front_two', 'front_six'] },
@@ -98,6 +138,7 @@ export function planSchema(catalog: Catalog) {
       fangs: catalog.fangs ? { type: ['boolean', 'null'] } : { type: 'null' },
       cut: enumOrNull(ids(shop.cuts)),
       inscription,
+      charms,
       differences: { type: 'array', maxItems: 4, items: { type: 'string', maxLength: 160 } },
     },
   };
@@ -124,13 +165,17 @@ export function planInstructions(catalog: Catalog, shopName: string): string {
     optionLines('Cuts', shop.cuts),
     `Fangs: ${catalog.fangs ? 'sold (extended caps on the upper canines)' : 'not sold'}`,
     shop.inscriptionStyles.length ? `${optionLines('Letters', shop.inscriptionStyles)}\nFonts: block, script. Up to ${INSCRIPTION_MAX} letters, numbers or & $ # ! . ' -` : 'Letters: not sold',
+    shop.charms.length ? `${optionLines('Charms (one-of-one pieces built onto one tooth each, quoted by the shop)', shop.charms)}\nCharm teeth: ${Object.keys(CHARM_TEETH).join(', ')}` : 'Charms: not sold',
     '',
     'Rules:',
     '- teeth.top and teeth.bottom: how many teeth are covered on each row (0 to 16), counted from the middle out. "6 x 6" or "6 on 6" is 6 top and 6 bottom; a "full set" is 16 and 16; "8 top" leaves the bottom as it is (null). Null keeps the current count.',
     '- look: null keeps what is there. Iced (stones) takes the solid or open-face style only. Opals, engraving, diamond-cut and diamond-dust are finishes on plain metal.',
     '- apply_to: "all" unless they ask to change only the front two or the front six teeth of the current design.',
     '- front_two_metal: only for two-tone (the front two teeth in a second metal); otherwise null.',
-    '- Anything they ask for that is not in the catalogue (other stones like rubies or coloured stones, black gold, titanium, karats not listed, chains, charms, enamel...): pick the closest option that is, and add one short plain sentence to differences saying what is different, like "No rubies here, so moissanite, the closest match." Do not mention ids.',
+    shop.charms.length
+      ? '- charms: only when they ask for charms, symbols on the teeth or a one-of-one piece. One charm a tooth, on the tooth named (left and right are the wearer\'s own). Null keeps the current charms; an empty list takes them off. Never a brand logo, team badge, character or anything copied: pick the closest plain charm and say so in differences.'
+      : '',
+    `- Anything they ask for that is not in the catalogue (other stones like rubies or coloured stones, black gold, titanium, karats not listed, chains, ${shop.charms.length ? 'logos' : 'charms'}, enamel...): pick the closest option that is, and add one short plain sentence to differences saying what is different, like "No rubies here, so moissanite, the closest match." Do not mention ids.`,
     '- With a picture: describe what you see in it using the catalogue (metal colour, iced or plain, how many teeth). If the picture is not grillz, keep everything (all null) and say so in differences.',
     '- If the request is not about grillz, keep everything (all null) and add "This builds grillz only." to differences.',
     '- differences is empty when everything asked for is sold here. Never more than 4 short sentences, in plain words, no prices, no promises.',
@@ -148,7 +193,9 @@ export function describeCurrent(current: RenderSpec | null): string {
     return `${group.length} teeth: ${JSON.stringify({ metal, karat, type, style, setting, stone, ...(opal ? { opal } : {}) })}`;
   });
   const letters = current.inscriptions.map((inscription) => `letters "${inscription.text}" (${inscription.style}, ${inscription.font})`);
-  return [`Current design: ${top} top, ${current.teeth.length - top} bottom.`, ...looks, `fangs: ${current.fangs}, cut: ${current.cut}`, ...letters].join('\n');
+  const toothKey = (index: number) => Object.keys(CHARM_TEETH).find((key) => CHARM_TEETH[key] === index) ?? `tooth ${index}`;
+  const charms = (current.charms ?? []).map((charm) => `charm ${charm.id} on ${toothKey(charm.tooth)}`);
+  return [`Current design: ${top} top, ${current.teeth.length - top} bottom.`, ...looks, `fangs: ${current.fangs}, cut: ${current.cut}`, ...letters, ...charms].join('\n');
 }
 
 // ---- The plan becomes a design ----
@@ -326,16 +373,43 @@ export function planToSpec(raw: unknown, current: RenderSpec | null, config: Ten
     }
   }
 
+  // Charms: kept on teeth still in the set; the model's list replaces them (each on its tooth, else the nearest free front tooth).
+  const sold = catalog.charms?.enabled ? catalog.charms.ids : [];
+  let charms: Charm[] = (base.charms ?? []).filter((charm) => inSet.has(charm.tooth) && sold.includes(charm.id));
+  if ((base.charms ?? []).length > charms.length) notes.add('Charms on teeth that are gone came off.');
+  if (Array.isArray(plan.charms)) {
+    if (!sold.length) {
+      if (plan.charms.length) differences.push('No charms here.');
+    } else {
+      charms = [];
+      for (const item of plan.charms.slice(0, MAX_PLANNED_CHARMS)) {
+        const id = item && typeof item === 'object' ? (item as { charm?: unknown }).charm : null;
+        if (!has<CharmId>(sold, id)) continue;
+        const named = CHARM_TEETH[String((item as { tooth?: unknown }).tooth)];
+        const free = (index: number) => inSet.has(index) && !charms.some((charm) => charm.tooth === index);
+        const tooth = named !== undefined && free(named) ? named : CHARM_ORDER.find(free);
+        if (tooth === undefined) {
+          notes.add('Not every charm fits on these teeth: one a tooth.');
+          continue;
+        }
+        charms.push({ id, tooth });
+      }
+      charms.sort((a, b) => a.tooth - b.tooth);
+    }
+  }
+
   const candidate = {
     ...base,
     teeth,
     cut,
     fangs,
     inscriptions,
+    charms,
     vision: catalog.vision ? base.vision : '',
     ...(base.mold && catalog.molds.includes(base.mold) ? { mold: base.mold } : {}),
   };
   if (!candidate.mold) delete (candidate as { mold?: unknown }).mold;
+  if (!candidate.charms.length) delete (candidate as { charms?: unknown }).charms;
   const spec = parseRenderSpec(candidate, catalog);
   if (!spec || !spec.teeth.every((tooth) => offered(config.pricing, tooth))) return null;
 
