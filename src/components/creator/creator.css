@@ -330,7 +330,7 @@
 .creator .mark i { width: 28px; height: 28px; border-radius: 9px; background: var(--ink); color: var(--ink-fg); display: grid; place-items: center; font: 600 11px/1 var(--sans); font-style: normal; }
 .creator .mark img.logo { height: 28px; width: auto; max-width: 120px; object-fit: contain; }
 .creator .mark.own { gap: 5px; align-items: baseline; font-size: 25px; letter-spacing: -.035em; }
-.creator .mark.own img.vvs { height: 24px; width: auto; display: block; align-self: center; }
+.creator .mark.own img.vvs { height: 24px; width: auto; display: block; }   /* no align-self: the word sits on the mark's baseline (owner's lockup, Nov 17) */
 /* the toast fades in and out */
 .creator .toast { transition: opacity .3s ease; }
 /* targets at least 44px: small-looking controls get a larger invisible hit area */
