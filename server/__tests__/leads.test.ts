@@ -112,6 +112,14 @@ describe('lead emails', () => {
     expect(shop.html).toContain('cid:photo');
   });
 
+  it('tells the shop which charms are theirs to quote, outside the total', async () => {
+    const spec = { ...DESIGNS.plain6x6, charms: [{ id: 'crown' as const, tooth: 7 }] };
+    const price = priceBreakdown(VVSLAB_CONFIG.pricing, spec.teeth, spec);
+    const shop = await shopEmail({ lead: lead({ price, total: price.total, summary: summarizeDesign(spec) }), config: VVSLAB_CONFIG, origin, images: { photo: false, preview: false }, photoPending: false, test: false });
+    expect(shop.text).toContain('To quote yourself, not in the total: Crown charm.');
+    expect(shop.text).toContain('Crown charm on the upper left central incisor');
+  });
+
   it('gives the jeweler a one-tap way to reach the customer', () => {
     expect(contactLink('+14045550199')).toEqual({ href: 'sms:+14045550199', label: '(404) 555-0199', action: 'Text', channel: 'text' });
     expect(reachCta(contactLink('+14045550199'), 'Ava')).toBe('Text Ava');

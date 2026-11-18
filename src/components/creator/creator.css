@@ -354,3 +354,16 @@
 .creator .bar { padding-top: max(16px, env(safe-area-inset-top, 0px)); }
 .creator .after-spot { position: absolute; z-index: 3; pointer-events: none; }
 .creator[data-mode="after"] .tray > * { min-height: 0; }
+
+/* ===== letters and charms in Extras (Nov 18) ===== */
+.creator .xrow .rows { gap: 6px; }
+.creator .xrow .mrow { background: rgba(255,255,255,.72); padding: 9px 12px 9px 14px; min-height: 56px; }
+.creator .xrow .mrow b { font-size: 14.5px; }
+.creator .xrow .lab { margin-top: 4px; }
+.creator .prev .glyph { font: 800 16px/1 'Inter Tight', var(--sans); letter-spacing: -.01em; color: var(--s-gold); text-transform: uppercase; max-width: 40px; overflow: hidden; white-space: nowrap; }
+.creator .prev .glyph.script { font: 400 21px/1 'VVS Script', cursive; text-transform: none; padding-top: 2px; }
+.creator .field input.block { text-transform: uppercase; letter-spacing: .04em; }
+.creator .field input.block::placeholder { text-transform: none; letter-spacing: 0; }
+.creator .field input.script { font-family: 'VVS Script', cursive; font-size: 22px; padding-top: 9px; padding-bottom: 9px; }
+.creator .field input.script::placeholder { font-family: var(--sans); font-size: 16px; }
+.creator .xrow .strip { margin: 0 -14px 0 -16px; padding: 2px 14px 4px 16px; }

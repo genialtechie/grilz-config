@@ -11,8 +11,8 @@ const FIT_ICON: Record<MoldId, ReactElement> = { kit: <Package aria-hidden />, o
 export type YourGrillProps = {
   shop: string;
   headRef: RefObject<HTMLHeadingElement>;
-  /** The price lines and total, or null when the shop hides prices. */
-  price: { lines: PriceLine[]; total: number } | null;
+  /** The price lines and total, or null when the shop hides prices. `quoted`: parts the shop prices itself (charms). */
+  price: { lines: PriceLine[]; total: number; quoted?: string[] } | null;
   fittings: MoldId[];
   mold: MoldId | undefined;
   onMold: (mold: MoldId) => void;
@@ -62,6 +62,7 @@ export function YourGrill(props: YourGrillProps) {
       <div className="after-body">
         <div className="sum">
           <p className="note">
+            {props.price?.quoted?.length ? `${shop} quotes your ${props.price.quoted.length === 1 ? 'charm' : 'charms'} on top of the estimate. ` : ''}
             {shop} confirms the {props.price ? 'exact ' : ''}price after your fitting.
           </p>
           {props.price && (
@@ -72,6 +73,12 @@ export function YourGrill(props: YourGrillProps) {
                   <li key={`${line.label}-${index}`}>
                     <span>{line.label}</span>
                     <span>{money(line.amount)}</span>
+                  </li>
+                ))}
+                {props.price.quoted?.map((name, index) => (
+                  <li key={`q-${name}-${index}`}>
+                    <span>{name}</span>
+                    <span>Quoted</span>
                   </li>
                 ))}
                 <li className="total">
