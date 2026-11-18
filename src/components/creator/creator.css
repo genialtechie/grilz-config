@@ -367,3 +367,8 @@
 .creator .field input.script { font-family: 'VVS Script', cursive; font-size: 22px; padding-top: 9px; padding-bottom: 9px; }
 .creator .field input.script::placeholder { font-family: var(--sans); font-size: 16px; }
 .creator .xrow .strip { margin: 0 -14px 0 -16px; padding: 2px 14px 4px 16px; }
+/* a second line of letters (Nov 18) and "+ quote" on totals with quoted charms */
+.creator .price em { font-style: normal; font-weight: 500; font-size: .86em; color: var(--s-mut); white-space: nowrap; }
+.creator .xrow .line2 { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--s-line); }
+.creator .xrow .addline { margin-top: 6px; background: transparent; box-shadow: inset 0 0 0 1.5px rgba(18,18,17,.16); }
+.creator .xrow .addline .glyph { font-weight: 400; font-size: 22px; color: var(--s-fg); }

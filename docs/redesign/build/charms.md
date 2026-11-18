@@ -35,6 +35,12 @@ the new panel's look. Branch `charms-initials`, built on `redesign`; the lead me
   named front teeth; charms go on the tooth named, else the nearest free front tooth; null keeps them, [] takes
   them off; logos and characters are refused in favour of the closest plain charm. Shops without charms: schema
   `null`, "No charms here."
+- **Owner's answers, built (Nov 18, round 2):** a **second line of letters** on the other row ("Add letters on
+  the other row" under the first line; the same controls: text, Block/Script, finish, enamel, teeth; "Remove"),
+  priced per tooth like the first; it always keeps off the first line's row (taps there say so). Old saved
+  designs with one draft read as before. **"+ quote"** on every total while a charm is quoted: the Done button
+  ("Done $2,000 + quote") and the price chip ("$2,000 + quote EST."); Your grill already said it. One-of-one
+  stays last; the Emblem and the winged heart stay as redrawn.
 - **Fix on the way**: the Extras switches never looked on (CSS matched `aria-pressed`, the switch uses `aria-checked`).
 - **Tests**: `src/lib/__tests__/charms.test.ts` (schema, prices, spec clamp, prompts, diff, templates),
   `src/components/creator/__tests__/creator.test.ts` (letters, charms, One-of-one, saved designs old and new),
@@ -50,9 +56,10 @@ the new panel's look. Branch `charms-initials`, built on `redesign`; the lead me
   group and price as before, and old clients that don't know charms send exactly what they did.
 - **Quoted = out of the total**, not $0 in it: the estimate stays honest, and the shop sees what to price.
 - **New shops: charms off.** A one-of-one piece is custom work; a shop opts in.
-- **One letters line, not two.** The old builder allowed a second line on the other row; the new row keeps one
-  (owner question below). Picking teeth for letters is a mode ("Tap teeth on the 3D") so taps in Extras still
-  pick teeth for charms otherwise.
+- **Second line in its own model field** (`Design.second`), not a list: the first line keeps its shape, so the
+  saved-design format and everything reading `initials` stay as they were. The second line starts in the first
+  one's lettering and finish. Picking teeth for letters is a mode ("Tap teeth on the 3D") so taps in Extras
+  still pick teeth for charms otherwise.
 
 ## Left
 
@@ -61,14 +68,12 @@ the new panel's look. Branch `charms-initials`, built on `redesign`; the lead me
 
 ## Owner questions
 
-1. A second line of letters on the other row (the old builder had it): bring it back?
-2. Done shows the estimate without quoted charms; add "+ quote" next to the total?
-3. One-of-one is last of the builds; should it lead, as on the landing page's showcase?
+None open (answered Nov 18: second line back, "+ quote" on totals, One-of-one last, redrawn charms kept).
 
 ## How to check
 
 `npm test -- charms creator describe leads`; `npm run build && npx vite preview`, open `/configurator`, pick
 One-of-one, or Gold 6 × 6 → Extras → One-of-one charms → Crown, or Initials or a name → "Lainee", Script,
-Engraved, Pink, Bottom row, 4 teeth. Screens: `docs/redesign/case-study/2026-11-18-build-*` (390 × 844 and 1440 × 900).
+Engraved, Pink, Bottom row, 4 teeth, then "Add letters on the other row". Screens: `docs/redesign/case-study/2026-11-18-build-*` (390 × 844 and 1440 × 900).
 
-**Next**: owner walk-through of charms, One-of-one and the letters row on a phone; answer the three questions.
+**Next**: owner walk-through on a phone of charms, One-of-one, both lines of letters and "+ quote" (screens `2026-11-18-build-{initials-two-lines,quote}-*`).

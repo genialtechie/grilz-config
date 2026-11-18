@@ -57,6 +57,8 @@ export type Design = {
   mold?: MoldId;
   addOns: string[];
   initials: Initials;
+  /** A second line of letters, on the other row (owner, Nov 18). No text = none. */
+  second: Initials;
   /** One-of-one charms: tooth → charm. */
   charms: Record<number, CharmId>;
   /** Their own words (typed in Extras, or said to the AI): goes to the shop as their idea. */
@@ -96,6 +98,7 @@ export function blankDesign(shop: Shop): Design {
     mold: shop.defaultSet.mold,
     addOns: [],
     initials: { text: '', style: shop.catalog.inscriptionStyles[0]?.id ?? 'engraved', font: 'block', enamel: null, teeth: [] },
+    second: { text: '', style: shop.catalog.inscriptionStyles[0]?.id ?? 'engraved', font: 'block', enamel: null, teeth: [] },
     charms: {},
     idea: '',
   };
@@ -329,23 +332,52 @@ export function centredRun(d: Pick<Design, 'teeth'>, row: number, count: number)
   return block.slice(best, best + n);
 }
 
-/** The teeth the letters go across: the run the customer chose, else one centred on the top row (the bottom with no top teeth). */
-export function initialsRun(d: Pick<Design, 'teeth' | 'initials'>): number[] {
-  if (isRun(d.initials.teeth, d.teeth)) return d.initials.teeth;
-  const row = rowsOf(d)[0];
-  return row === undefined ? [] : centredRun(d, row, lettersNeed(d.initials.text));
+/** Which line of letters: 0 the first, 1 the second (on the other row). */
+export type Line = 0 | 1;
+type Lettered = Pick<Design, 'teeth' | 'initials'> & Partial<Pick<Design, 'second'>>;
+const NO_LINE: Initials = { text: '', style: 'engraved', font: 'block', enamel: null, teeth: [] };
+
+/** A line of letters as edited. */
+export const lineOf = (d: Lettered, line: Line): Initials => (line ? d.second ?? NO_LINE : d.initials);
+/** The design with one line of letters changed. */
+export const withLine = <D extends Design>(d: D, line: Line, patch: Partial<Initials>): D =>
+  line ? { ...d, second: { ...d.second, ...patch } } : { ...d, initials: { ...d.initials, ...patch } };
+
+/** The row the second line keeps off: the first line's, while it has letters. */
+export function takenRow(d: Lettered, line: Line): number | null {
+  return line && d.initials.text.trim() ? runRow(initialsRun(d, 0)) : null;
 }
 
-/** The letters as the 3D and the shop take them, or null (no text, no teeth, or too many letters for the teeth). */
-export function initialsInscription(d: Pick<Design, 'teeth' | 'initials'>): Inscription | null {
-  const text = d.initials.text.trim();
-  const teeth = initialsRun(d);
-  if (!text || !teeth.length || !fitsTeeth({ text, teeth })) return null;
-  return { text: d.initials.font === 'block' ? text.toUpperCase() : text, teeth, style: d.initials.style, font: d.initials.font, enamel: d.initials.style === 'engraved' ? d.initials.enamel : null };
+/**
+ * The teeth a line goes across: the run the customer chose, else one centred on the front of the top row
+ * (the bottom with no top teeth). The second line always takes the row the first one doesn't.
+ */
+export function initialsRun(d: Lettered, line: Line = 0): number[] {
+  const l = lineOf(d, line);
+  const avoid = takenRow(d, line);
+  if (isRun(l.teeth, d.teeth) && runRow(l.teeth) !== avoid) return l.teeth;
+  const row = rowsOf(d).find((r) => r !== avoid);
+  return row === undefined ? [] : centredRun(d, row, lettersNeed(l.text));
 }
+
+/** A line as the 3D and the shop take it, or null (no text, no teeth, or too many letters for the teeth). */
+export function initialsInscription(d: Lettered, line: Line = 0): Inscription | null {
+  const l = lineOf(d, line);
+  const text = l.text.trim();
+  const teeth = initialsRun(d, line);
+  if (!text || !teeth.length || !fitsTeeth({ text, teeth })) return null;
+  return { text: l.font === 'block' ? text.toUpperCase() : text, teeth, style: l.style, font: l.font, enamel: l.style === 'engraved' ? l.enamel : null };
+}
+
+/** Every line of letters that counts, top row first. */
+export const inscriptionsOf = (d: Lettered): Inscription[] =>
+  ([0, 1] as const)
+    .map((line) => initialsInscription(d, line))
+    .filter((x): x is Inscription => x !== null)
+    .sort((a, b) => a.teeth[0] - b.teeth[0]);
 
 /** Initials count once they have text and fit the teeth they are on. */
-export const initialsOn = (d: Pick<Design, 'teeth' | 'initials'>) => initialsInscription(d) !== null;
+export const initialsOn = (d: Lettered) => inscriptionsOf(d).length > 0;
 
 /**
  * A tap on a tooth while choosing where the letters go (the old builder's way): the first tap starts a
@@ -385,7 +417,6 @@ export function placeCharm(d: Design, targets: readonly number[], id: CharmId): 
 }
 
 export function setOptions(d: Design): SetOptions {
-  const ins = initialsInscription(d);
   const charms = charmList(d);
   return {
     fangs: d.fangs && canHaveFangs(d),
@@ -393,7 +424,7 @@ export function setOptions(d: Design): SetOptions {
     ...(d.mold ? { mold: d.mold } : {}),
     ...(d.addOns.length ? { addOns: d.addOns } : {}),
     vision: d.idea.slice(0, 500),
-    inscriptions: ins ? [ins] : [],
+    inscriptions: inscriptionsOf(d),
     ...(charms.length ? { charms } : {}),
   };
 }
@@ -434,8 +465,9 @@ export function summary(d: Design) {
   if (!d.teeth.length) return 'No teeth yet';
   let s = `${setLabel(d)} · ${same(d, metalWords) ?? 'mixed metals'} · ${same(d, finishWords) ?? 'mixed finishes'}`;
   if (setOptions(d).fangs) s += ' · fangs';
-  const ins = initialsInscription(d);
-  if (ins) s += ` · "${ins.text}"`;
+  inscriptionsOf(d).forEach((ins) => {
+    s += ` · "${ins.text}"`;
+  });
   const c = charmList(d).length;
   if (c) s += ` · ${c} ${c === 1 ? 'charm' : 'charms'}`;
   if (d.cut === 'permanent') s += ' · permanent look';
@@ -456,8 +488,7 @@ export function partValue(d: Design, part: PartId, picks: readonly number[] = []
   if (part === 'stones') return val((t) => (t.type === 'iced' ? `${label(SETTINGS, t.setting)}, ${label(STONES, t.stone).toLowerCase()}` : 'None'), 'settings');
   const e: string[] = [];
   if (setOptions(d).fangs) e.push('Fangs');
-  const ins = initialsInscription(d);
-  if (ins) e.push(`"${ins.text}"`);
+  inscriptionsOf(d).forEach((ins) => e.push(`"${ins.text}"`));
   const c = charmList(d).length;
   if (c) e.push(`${c} ${c === 1 ? 'charm' : 'charms'}`);
   if (d.cut === 'permanent') e.push('Permanent look');
@@ -474,10 +505,11 @@ export function toSnapshot(d: Design): DesignSnapshot {
     if (!sameTooth(d.designs[k], d.base)) overrides[k] = d.designs[k];
   });
   // An automatic run is kept as no teeth: it is worked out again on the way back.
-  const ins = initialsInscription(d);
-  const draft: InscriptionDraft[] = ins
-    ? [{ text: d.initials.text.trim(), style: ins.style, font: ins.font, enamel: ins.enamel, teeth: isRun(d.initials.teeth, d.teeth) ? ins.teeth : [], anchor: null }]
-    : [];
+  const draft: InscriptionDraft[] = ([0, 1] as const).flatMap((line) => {
+    const ins = initialsInscription(d, line);
+    const l = lineOf(d, line);
+    return ins ? [{ text: l.text.trim(), style: ins.style, font: ins.font, enamel: ins.enamel, teeth: isRun(l.teeth, d.teeth) && l.teeth.join() === ins.teeth.join() ? ins.teeth : [], anchor: null }] : [];
+  });
   const charms = charmList(d);
   return {
     teeth: d.teeth,
@@ -501,7 +533,9 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
   s.teeth.forEach((k) => {
     designs[k] = s.overrides[k] ?? s.base;
   });
-  const first = s.drafts.find((x) => x.text.trim());
+  // Designs from before the second line have one draft (or none): they read as before.
+  const [first, second] = s.drafts.filter((x) => x.text.trim());
+  const line = (x: InscriptionDraft): Initials => ({ text: cleanLetters(x.text), style: x.style, font: x.font, enamel: x.enamel, teeth: x.teeth });
   return {
     ...d,
     teeth: sorted(s.teeth),
@@ -512,7 +546,8 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
     mold: s.set.mold ?? d.mold,
     addOns: s.set.addOns ?? [],
     idea: s.set.vision ?? '',
-    initials: first ? { text: cleanLetters(first.text), style: first.style, font: first.font, enamel: first.enamel, teeth: first.teeth } : d.initials,
+    initials: first ? line(first) : d.initials,
+    second: second ? line(second) : d.second,
     charms: Object.fromEntries((s.set.charms ?? []).map((c) => [c.tooth, c.id])),
   };
 }
@@ -525,7 +560,8 @@ export function fromSpec(shop: Shop, spec: RenderSpec, keep?: Design): Design {
   spec.teeth.forEach(({ index, ...t }) => {
     designs[index] = offeredDesign(shop, t) ?? { ...d.base };
   });
-  const ins = spec.inscriptions[0];
+  const [ins, ins2] = spec.inscriptions;
+  const line = (x: Inscription): Initials => ({ text: cleanLetters(x.text), style: x.style, font: x.font, enamel: x.enamel, teeth: x.teeth });
   return {
     ...d,
     teeth,
@@ -535,7 +571,8 @@ export function fromSpec(shop: Shop, spec: RenderSpec, keep?: Design): Design {
     cut: spec.cut,
     mold: spec.mold ?? d.mold,
     addOns: spec.addOns ?? d.addOns,
-    initials: ins ? { text: cleanLetters(ins.text), style: ins.style, font: ins.font, enamel: ins.enamel, teeth: ins.teeth } : { ...d.initials, text: '' },
+    initials: ins ? line(ins) : { ...d.initials, text: '' },
+    second: ins2 ? line(ins2) : { ...d.second, text: '' },
     charms: Object.fromEntries((spec.charms ?? []).filter((c) => teeth.includes(c.tooth)).map((c) => [c.tooth, c.id])),
     idea: d.idea,
   };
