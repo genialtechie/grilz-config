@@ -2,8 +2,9 @@ import { addCacheTag } from '@vercel/functions';
 import { customDomainHead, shopHead } from '../server/shopPage.js';
 import { getPublishedTenant, slugForHost, tenantCacheTag } from '../server/tenants.js';
 
-// /b/<slug> is rewritten here (vercel.json), and so is "/" on any host other
-// than vvslab.magpollo.com (?domain=1): a shop's custom domain. Serves the app's
+// /b/<slug> is rewritten here (vercel.json), and "/" on a shop's custom domain
+// is sent here by middleware.ts (?domain=1; vercel.json can't do it, as the
+// static index.html wins over its rewrites). Serves the app's
 // index.html with the shop's title, preview image and public config; the client
 // then renders the shop page. An unknown host (a preview deployment) gets the plain app.
 export async function GET(request: Request): Promise<Response> {
