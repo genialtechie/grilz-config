@@ -38,6 +38,7 @@ import { InscriptionEditor } from './builder/InscriptionEditor';
 import { draftRow, inscriptionsFrom, newDraft, pickTooth, placeDrafts, unplaceDrafts, type InscriptionDraft } from '../lib/inscriptionDrafts';
 import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWithoutInscriptions, startingDesign, startingPoster, type DesignSnapshot } from '../lib/savedDesign';
 import {
+  ICED_FINISHES,
   OPALS,
   VISION_MAX,
   isGold,
@@ -1165,13 +1166,13 @@ function Configurator() {
                           hint={hints.style(style.id)}
                           image={style.image}
                           selected={shown.style === style.id}
-                          // Iced teeth take open face (stones round the frame) or none.
-                          disabled={pickingNothing || (shown.type === 'iced' && style.id !== 'solid' && style.id !== 'open-face')}
+                          // Iced teeth take open face or opals (stones round the frame), or none.
+                          disabled={pickingNothing || (shown.type === 'iced' && style.id !== 'solid' && !ICED_FINISHES.includes(style.id))}
                           onSelect={() => applyDesign({ style: style.id })}
                         />
                       ))}
                     </div>
-                    {shown.type === 'plain' && shown.style === 'opals' && (
+                    {opalOf(shown) && (
                       <div className="opal-row" role="group" aria-label="Opal colour">
                         <span>Opal</span>
                         {OPALS.map((opal) => (
@@ -1189,7 +1190,13 @@ function Configurator() {
                         ))}
                       </div>
                     )}
-                    {shown.type === 'iced' && <small className="field-hint">Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.</small>}
+                    {shown.type === 'iced' && (
+                      <small className="field-hint">
+                        {catalog.styles.some((style) => style.id === 'opals')
+                          ? 'Iced teeth take Solid, Open-face or Opals: open face and opals set the stones round the frame, with the tooth or an opal in the middle.'
+                          : 'Iced teeth take Solid or Open-face: open face sets the stones round the frame and leaves the middle open.'}
+                      </small>
+                    )}
                   </LookGroup>
                   {catalog.fangs && (
                     <LookGroup

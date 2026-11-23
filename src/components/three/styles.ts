@@ -286,8 +286,8 @@ export const ICED_RING = 0.8;
 const finishes = new Map<string, THREE.Group>();
 
 /**
- * The finish on a tooth's front for a plain (not iced) cap, or null for a
- * plain solid polish. Built once per tooth, style and metal, then reused.
+ * The finish on a tooth's front, or null for a plain solid polish. Iced
+ * teeth take open face or opals only, inside their ring of stones. Built once per tooth, style and metal, then reused.
  */
 export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, iced = false, opalColourId: OpalId = 'white'): THREE.Group | null {
   if (style === 'solid') return null;
@@ -302,6 +302,10 @@ export function finishFor(tooth: THREE.Mesh, style: StyleId, metal: MetalId, ice
   if (style === 'open-face' && iced) {
     // Iced open face: a smaller window with a thin inner rim, leaving a band for a ring of stones.
     add(panel(front, ICED_WINDOW - 0.02, 6), stone());
+    add(rim(front, ICED_WINDOW, rimThickness * 0.6), metalRim(metal));
+  } else if (style === 'opals' && iced) {
+    // Iced opal (MAG-169): the opal fills the same window as iced open face, the ring of stones round it.
+    add(panel(front, ICED_WINDOW - 0.02, 6, () => rimThickness * 0.25), opal(opalColourId));
     add(rim(front, ICED_WINDOW, rimThickness * 0.6), metalRim(metal));
   } else if (style === 'open-face') {
     // The metal stops short of the middle: a polished rim, the tooth showing inside.

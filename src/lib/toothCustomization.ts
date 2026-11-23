@@ -1,4 +1,4 @@
-import { FANG_TEETH, METALS, icedOpenFace, isGold, opalOf, type SetOptions, type ToothDesign } from './renderSpec';
+import { FANG_TEETH, METALS, icedBorder, isGold, opalOf, type SetOptions, type ToothDesign } from './renderSpec';
 import type { ToothCustomization } from './types';
 
 /** What the 3D model draws for one tooth of the set (the builder and the /lab page share this). */
@@ -8,7 +8,7 @@ export function toothCustomization(design: ToothDesign, set: Pick<SetOptions, 'f
     material: isGold(design.metal) ? 'gold' : 'silver',
     color: metal.swatch,
     metal: metal.id,
-    style: design.type === 'plain' || icedOpenFace(design) ? design.style : undefined,
+    style: design.type === 'plain' || icedBorder(design) ? design.style : undefined,
     opal: opalOf(design) ?? undefined,
     photo: design.type === 'photo',
     fang: set.fangs && FANG_TEETH.includes(index),
