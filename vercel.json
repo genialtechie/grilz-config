@@ -12,16 +12,6 @@
   },
   "rewrites": [
     {
-      "source": "/",
-      "missing": [
-        {
-          "type": "host",
-          "value": "vvslab.magpollo.com"
-        }
-      ],
-      "destination": "/api/shop-page?domain=1"
-    },
-    {
       "source": "/api/promo",
       "destination": "/api/leads?route=promo"
     },

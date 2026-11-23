@@ -110,14 +110,19 @@ function DomainSection({ shop, owner }: { shop: MyShop; owner: boolean }) {
     );
   }
 
+  // Live only once the domain's page was loaded and shows the shop (MAG-198).
+  const live = info.status === 'active' && info.showing !== false;
+
   return (
     <div>
       <p>
         <strong>{info.domain}</strong>{' '}
-        <span className={`admin-pill admin-pill--${info.status === 'active' ? 'live' : 'draft'}`}>{info.status === 'active' ? 'Live' : 'Waiting for DNS'}</span>
+        <span className={`admin-pill admin-pill--${live ? 'live' : 'draft'}`}>{live ? 'Live' : info.status === 'active' ? 'Connected' : 'Waiting for DNS'}</span>
       </p>
-      {info.status === 'active' ? (
+      {live ? (
         <p className="admin-muted">Your builder is live at <a href={`https://${info.domain}`} target="_blank" rel="noopener">https://{info.domain}</a>, with a secure (https) certificate.</p>
+      ) : info.status === 'active' ? (
+        <p className="admin-muted">{info.problem ?? 'Connected, but not showing your shop yet.'}</p>
       ) : (
         <>
           <p className="admin-muted">Add {info.records.length === 1 ? 'this record' : 'these records'} in your domain’s DNS settings (GoDaddy, Namecheap, Squarespace Domains, Cloudflare…). It usually goes live within an hour.</p>
@@ -137,7 +142,7 @@ function DomainSection({ shop, owner }: { shop: MyShop; owner: boolean }) {
         </>
       )}
       <div className="admin-actions">
-        {info.status !== 'active' && (
+        {!live && (
           <button className="admin-button" type="button" disabled={busy} onClick={() => void run(async () => setInfo(await checkDomain(shop.id)))}><RefreshCw size={14} /> Check now</button>
         )}
         {owner && (
