@@ -4,7 +4,7 @@ import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upl
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
-import { cutPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
+import { cutPrice, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
@@ -626,6 +626,16 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <div className="admin-grid admin-grid--prices">
                       <Money label="Share of stone price" step={5} suffix="%" value={pricing.icedOpenFace?.stoneShare ?? 100} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: Math.min(100, value) }; })} />
                       <Money label="Open-face labour" value={pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face']} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
+                    </div>
+                  </>
+                )}
+                {catalog.styles.includes('opals') && (
+                  <>
+                    <h3>Iced opal</h3>
+                    <p className="admin-muted admin-section__hint">An opal centre with a border of stones round it. Charge a share of the stone and setting prices, plus the opal. Until you set them, these follow your open-face share and your Opals price.</p>
+                    <div className="admin-grid admin-grid--prices">
+                      <Money label="Share of stone price" step={5} suffix="%" value={icedOpalPrice(pricing).stoneShare} onChange={(value) => update((next) => { next.pricing.icedOpal = { ...next.pricing.icedOpal, stoneShare: Math.min(100, value) }; })} />
+                      <Money label="Opal and labour" value={icedOpalPrice(pricing).perTooth} onChange={(value) => update((next) => { next.pricing.icedOpal = { ...next.pricing.icedOpal, perTooth: value }; })} />
                     </div>
                   </>
                 )}

@@ -164,18 +164,18 @@ function GrillzModel({
 
       const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
       if (capped && customization.hasDiamonds) {
-        // Iced open face: one ring of stones round the frame, the tooth showing in the middle.
-        const openFace = customization.style === 'open-face';
+        // Iced open face or opal: one ring of stones round the frame, the tooth (or an opal) in the middle.
+        const bordered = customization.style === 'open-face' || customization.style === 'opals';
         const stones = createDiamondStones(child, {
           kind: customization.diamondType === 'moissanite' ? 'moissanite' : 'diamond',
           setting: customization.setting,
           metal,
-          ring: openFace ? ICED_RING : 0,
+          ring: bordered ? ICED_RING : 0,
           moulds,
         });
         stones.name = 'diamond_stones';
         child.add(stones);
-        const finish = openFace ? finishFor(child, 'open-face', metal, true) : null;
+        const finish = bordered ? finishFor(child, customization.style!, metal, true, customization.opal) : null;
         if (finish) child.add(finish);
       } else if (capped && customization.style) {
         const finish = finishFor(child, customization.style, metal, false, customization.opal);

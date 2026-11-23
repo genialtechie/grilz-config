@@ -1,4 +1,4 @@
-// 20 varied designs used by the golden tests (prices, prompts, edit plans).
+// Varied designs used by the golden tests (prices, prompts, edit plans).
 import type { RenderSpec, RenderTooth, SetOptions, ToothDesign } from '../renderSpec';
 
 const T = (index: number, design: Partial<ToothDesign> = {}): RenderTooth => ({
@@ -36,4 +36,8 @@ export const DESIGNS: Record<string, RenderSpec> = {
   inscriptionCut: spec(row(5, 6), { inscriptions: [{ text: 'HB', teeth: [6], style: 'cut', font: 'block', enamel: null }] }),
   inscriptionEngravedFangs: spec(row(5, 6, { metal: 'white' }), { fangs: true, inscriptions: [{ text: 'MAG$', teeth: [8], style: 'engraved', font: 'block', enamel: null }] }),
   bottomOnly: spec(row(21, 6, { type: 'iced', stone: 'natural' }), { cut: 'permanent' }),
+  // MAG-169: an opal centre inside a border of stones, on one tooth.
+  icedOpalFire: spec(row(21, 6, { type: 'iced', style: 'opals', opal: 'fire', metal: 'white', karat: '14k' })),
+  // A mixed set: iced opal, plain iced and plain opal teeth side by side.
+  icedOpalMixed: spec([...row(5, 6, { type: 'iced', style: 'opals', setting: 'prong', stone: 'lab' }), T(21, { type: 'iced' }), ...row(22, 4, { style: 'opals', opal: 'blue' }), T(26, { type: 'iced' })]),
 };

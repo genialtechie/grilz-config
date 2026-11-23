@@ -172,19 +172,25 @@ export const DEFAULT_SET: SetOptions = { fangs: false, cut: 'deep', vision: '', 
 export const isGold = (metal: MetalId) => metal === 'yellow' || metal === 'white' || metal === 'rose';
 
 /**
- * An iced tooth takes no finish except open face: stones on the rim, the
- * natural tooth showing through the middle.
+ * An iced tooth takes no finish except open face (stones on the rim, the
+ * natural tooth showing through the middle) or opals (an opal centre inside a
+ * border of stones, MAG-169).
  */
 export const icedOpenFace = (tooth: Pick<ToothDesign, 'type' | 'style'>) => tooth.type === 'iced' && tooth.style === 'open-face';
+export const icedOpal = (tooth: Pick<ToothDesign, 'type' | 'style'>) => tooth.type === 'iced' && tooth.style === 'opals';
+/** The finishes an iced tooth can take besides solid (each sets its stones round a border). */
+export const ICED_FINISHES: readonly StyleId[] = ['open-face', 'opals'];
+/** An iced tooth with a finish: stones round a border, something else in the middle. */
+export const icedBorder = (tooth: Pick<ToothDesign, 'type' | 'style'>) => icedOpenFace(tooth) || icedOpal(tooth);
 
 export const label = <T extends readonly { id: string; label: string }[]>(list: T, id: string) =>
   list.find((item) => item.id === id)?.label ?? id;
 
-/** The opal colour a tooth shows (only for the opals style). */
-export const opalOf = (tooth: ToothDesign): OpalId | null => (tooth.type === 'plain' && tooth.style === 'opals' ? tooth.opal ?? 'white' : null);
+/** The opal colour a tooth shows (only for the opals style, on a plain or iced tooth). */
+export const opalOf = (tooth: ToothDesign): OpalId | null => ((tooth.type === 'plain' || tooth.type === 'iced') && tooth.style === 'opals' ? tooth.opal ?? 'white' : null);
 
 const designKey = (tooth: ToothDesign) =>
-  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedOpenFace(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? ''].join('|');
+  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedBorder(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? ''].join('|');
 
 /** Groups teeth that share a design, largest group first. */
 export const groupTeeth = <T extends ToothDesign & { index: number }>(teeth: T[]) => {
@@ -197,7 +203,7 @@ export const describeTooth = (tooth: ToothDesign) => {
   const metal = `${label(METALS, tooth.metal)}${isGold(tooth.metal) ? ` ${label(KARATS, tooth.karat)}` : ''}`;
   const surface =
     tooth.type === 'iced'
-      ? `Iced${icedOpenFace(tooth) ? ' open face' : ''} · ${label(SETTINGS, tooth.setting)} · ${label(STONES, tooth.stone)}`
+      ? `Iced${icedOpenFace(tooth) ? ' open face' : icedOpal(tooth) ? ` with ${label(OPALS, opalOf(tooth)!).toLowerCase()} opal centre` : ''} · ${label(SETTINGS, tooth.setting)} · ${label(STONES, tooth.stone)}`
       : tooth.type === 'photo'
         ? 'Photo'
         : opalOf(tooth)
@@ -285,7 +291,7 @@ const sells = (tooth: RenderTooth, enabled: EnabledOptions) =>
   (!isGold(tooth.metal) || enabled.karats.includes(tooth.karat)) &&
   enabled.types.includes(tooth.type) &&
   (tooth.type === 'iced'
-    ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) && (!icedOpenFace(tooth) || enabled.styles.includes(tooth.style))
+    ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) && (!icedBorder(tooth) || enabled.styles.includes(tooth.style))
     : enabled.styles.includes(tooth.style));
 
 export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): RenderSpec | null => {
@@ -355,6 +361,9 @@ const describeDesign = (tooth: ToothDesign) => {
   if (icedOpenFace(tooth)) {
     return `${metal}, iced open face: each tooth is a metal outline frame paved edge to edge with sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}, and the natural white tooth shows through the open middle of the frame`;
   }
+  if (icedOpal(tooth)) {
+    return `${metal}, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid ${pick(OPALS, opalOf(tooth)!).render}, framed all round by a narrow border of sparkling ${pick(STONES, tooth.stone).render} in a ${label(SETTINGS, tooth.setting).toLowerCase()} setting; the stones stay on the border and never cover the opal`;
+  }
   if (tooth.type === 'iced') {
     // Stones cover the whole face of an iced tooth, so other finishes (engraving…) do not apply.
     return `${metal}, fully iced out: the entire front face is covered edge to edge in sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}; solid, no openings or cut-outs`;
@@ -374,6 +383,9 @@ const shortDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${label(METALS, tooth.metal).toLowerCase()}`;
   if (icedOpenFace(tooth)) {
     return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}`;
+  }
+  if (icedOpal(tooth)) {
+    return `${label(OPALS, opalOf(tooth)!).toUpperCase()} OPAL inlay with a pave stone border (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}`;
   }
   if (tooth.type === 'iced') {
     return `ICED OUT, the whole face covered in sparkling ${pick(STONES, tooth.stone).render} (${label(SETTINGS, tooth.setting).toLowerCase()} setting) in ${metal}, no openings`;

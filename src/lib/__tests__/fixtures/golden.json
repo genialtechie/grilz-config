@@ -1228,6 +1228,166 @@
       }
     ]
   },
+  "icedOpalFire": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 6 teeth",
+          "amount": 1260
+        },
+        {
+          "label": "Style & finish",
+          "amount": 540
+        },
+        {
+          "label": "Stones",
+          "amount": 450
+        }
+      ],
+      "total": 2450
+    },
+    "deposit": 610,
+    "summary": [
+      "0 top + 6 bottom",
+      "White gold 14K · Iced with fire opal centre · Honeycomb · Moissanite",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering no grillz on the upper teeth and 6 lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow), opal inlay with a pave stone border: the middle of each tooth's face is an inlaid fiery orange-red fire opal with flashes of gold and green, framed all round by a narrow border of sparkling moissanite stones in a honeycomb setting; the stones stay on the border and never cover the opal; the upper row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering no grillz on the upper teeth and 6 lower teeth; all of the grillz teeth: 14K white gold, cool bright rhodium-plated white metal (not champagne, not yellow), opal inlay with a pave stone border: the middle of each tooth's face is an inlaid fiery orange-red fire opal with flashes of gold and green, framed all round by a narrow border of sparkling moissanite stones in a honeycomb setting; the stones stay on the border and never cover the opal; the upper row is completely bare natural white teeth: no metal, no outline, no frame, no gold line along the gums. The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "bare",
+          "indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ]
+        },
+        "prompt": "Make the teeth in this close-up clean natural white teeth, the same matte white as the dental display model: no metal, no gold, no stones, no grillz, no pink or peach tint. Keep their shape, size and position, and match the lighting and white studio background exactly. Photorealistic. No text."
+      }
+    ]
+  },
+  "icedOpalMixed": {
+    "pricing": {
+      "lines": [
+        {
+          "label": "Service fee",
+          "amount": 200
+        },
+        {
+          "label": "Metal · 12 teeth",
+          "amount": 1800
+        },
+        {
+          "label": "Style & finish",
+          "amount": 900
+        },
+        {
+          "label": "Stones",
+          "amount": 1110
+        }
+      ],
+      "total": 4010
+    },
+    "deposit": 1000,
+    "summary": [
+      "6 top + 6 bottom",
+      "6× Yellow gold 10K · Iced with white opal centre · Prong · Lab diamond",
+      "4× Yellow gold 10K · Blue opals",
+      "2× Yellow gold 10K · Iced · Honeycomb · Moissanite",
+      "Deep cut"
+    ],
+    "prompt": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; the 2 upper canines, the 2 upper lateral incisors, the 2 upper central incisors: 10K yellow gold, warm rich gold colour, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid milky white opal with soft rainbow play-of-colour, framed all round by a narrow border of sparkling lab-grown diamonds in a prong setting; the stones stay on the border and never cover the opal; the 2 lower lateral incisors, the 2 lower central incisors: 10K yellow gold, warm rich gold colour with an inlaid opal panel set into the front of each tooth: deep blue opal with flashes of green and violet; the 2 lower canines: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (2) lateral incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (3) central incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (4) central incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (5) lateral incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (6) canine: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold. Lower row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (2) lateral incisor: BLUE OPAL inlay in 10K yellow gold; (3) central incisor: BLUE OPAL inlay in 10K yellow gold; (4) central incisor: BLUE OPAL inlay in 10K yellow gold; (5) lateral incisor: BLUE OPAL inlay in 10K yellow gold; (6) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. In total exactly 6 teeth are WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; exactly 4 teeth are BLUE OPAL inlay in 10K yellow gold; exactly 2 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal). Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "promptWithInspiration": "Turn this rough 3D preview into a professional high-end jewelry product photograph. The product is custom grillz covering 6 upper teeth and 6 lower teeth; the 2 upper canines, the 2 upper lateral incisors, the 2 upper central incisors: 10K yellow gold, warm rich gold colour, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid milky white opal with soft rainbow play-of-colour, framed all round by a narrow border of sparkling lab-grown diamonds in a prong setting; the stones stay on the border and never cover the opal; the 2 lower lateral incisors, the 2 lower central incisors: 10K yellow gold, warm rich gold colour with an inlaid opal panel set into the front of each tooth: deep blue opal with flashes of green and violet; the 2 lower canines: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs; IMPORTANT, the teeth do NOT all match. Upper row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (2) lateral incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (3) central incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (4) central incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (5) lateral incisor: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; (6) canine: WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold. Lower row, listed tooth by tooth from the viewer's LEFT to the viewer's RIGHT in this front view: (1) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings; (2) lateral incisor: BLUE OPAL inlay in 10K yellow gold; (3) central incisor: BLUE OPAL inlay in 10K yellow gold; (4) central incisor: BLUE OPAL inlay in 10K yellow gold; (5) lateral incisor: BLUE OPAL inlay in 10K yellow gold; (6) canine: ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. In total exactly 6 teeth are WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold; exactly 4 teeth are BLUE OPAL inlay in 10K yellow gold; exactly 2 teeth are ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings. Never copy one tooth's design onto its neighbour or its mirror-image tooth; the 3D preview shows the same layout (sparkly = iced, smooth = metal). The second image is the customer's inspiration reference: borrow its design details where they fit the spec above, but keep the tooth layout and camera of the first image. Only the teeth that are metal in the input are grillz; every other tooth stays a natural white tooth colour with no metal. Keep exactly the same teeth, tooth count, arrangement, camera angle and framing as the input: every tooth keeps the exact size, outline and position it has in the input, so the photo lines up with it pixel for pixel. Show the grillz fitted on a clean matte white dental display mold, with nothing inside the open mouth. Seamless pure white studio background, soft diffused softbox lighting, crisp macro detail, realistic metal reflections, accurate metal colour. Photorealistic. No text, no watermark, no logos, no people in the scene.",
+    "edits": [
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            5,
+            6
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold: 10K yellow gold, warm rich gold colour, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid milky white opal with soft rainbow play-of-colour, framed all round by a narrow border of sparkling lab-grown diamonds in a prong setting; the stones stay on the border and never cover the opal. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            7,
+            8
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold: 10K yellow gold, warm rich gold colour, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid milky white opal with soft rainbow play-of-colour, framed all round by a narrow border of sparkling lab-grown diamonds in a prong setting; the stones stay on the border and never cover the opal. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            9,
+            10
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up WHITE OPAL inlay with a pave stone border (prong setting, lab-grown diamonds) in 10K yellow gold: 10K yellow gold, warm rich gold colour, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid milky white opal with soft rainbow play-of-colour, framed all round by a narrow border of sparkling lab-grown diamonds in a prong setting; the stones stay on the border and never cover the opal. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            22,
+            23
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up BLUE OPAL inlay in 10K yellow gold: 10K yellow gold, warm rich gold colour with an inlaid opal panel set into the front of each tooth: deep blue opal with flashes of green and violet. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            24,
+            25
+          ]
+        },
+        "prompt": "Make the 2 neighbouring grillz teeth in the centre of this close-up BLUE OPAL inlay in 10K yellow gold: 10K yellow gold, warm rich gold colour with an inlaid opal panel set into the front of each tooth: deep blue opal with flashes of green and violet. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            21
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      },
+      {
+        "plan": {
+          "kind": "tooth",
+          "indices": [
+            26
+          ]
+        },
+        "prompt": "Make the grillz tooth in the centre of this close-up ICED OUT, the whole face covered in sparkling moissanite stones (honeycomb setting) in 10K yellow gold, no openings: 10K yellow gold, warm rich gold colour, fully iced out: the entire front face is covered edge to edge in sparkling moissanite stones set in tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings; solid, no openings or cut-outs. Keep the same tooth shape, size and position, and match the lighting, reflections, white studio background and dental mold of the photo exactly. Photorealistic high-end jewelry macro photograph. No text, lettering, numbers or marks."
+      }
+    ]
+  },
   "__hints": {
     "metal": [
       "$150 / tooth",
