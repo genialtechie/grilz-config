@@ -218,6 +218,17 @@ describe('a plan becomes a valid design', () => {
     expect(built.differences.join(' ')).toMatch(/engraving finish doesn't apply/);
   });
 
+  it('builds iced with an opal centre where the shop sells both, and not elsewhere', () => {
+    const built = planToSpec(plan({ teeth: { top: 6, bottom: 0 }, look: look({ type: 'iced', style: 'opals', opal: 'blue' }) }), null, VVSLAB_CONFIG)!;
+    expect(built.spec.teeth.every((t) => t.type === 'iced' && t.style === 'opals' && t.opal === 'blue')).toBe(true);
+    expect(built.differences).toEqual([]);
+    expect(planInstructions(VVSLAB_CONFIG.catalog, 'VVS Lab')).toContain('opal centre inside a border of stones');
+    const noOpals: TenantConfig = { ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, styles: VVSLAB_CONFIG.catalog.styles.filter((s) => s !== 'opals') } };
+    const elsewhere = planToSpec(plan({ teeth: { top: 6, bottom: 0 }, look: look({ type: 'iced', style: 'opals', opal: 'blue' }) }), null, noOpals)!;
+    expect(elsewhere.spec.teeth.every((t) => t.type === 'iced' && t.style === 'solid' && !t.opal)).toBe(true);
+    expect(planInstructions(noOpals.catalog, 'Gold Lab')).toContain('solid or open-face style only');
+  });
+
   it('keeps iced combinations inside the shop price table', () => {
     const shop: TenantConfig = { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, icedPerTooth: { moissanite: { '10k': 200, '14k': 260, silver: 150 } } } };
     const built = planToSpec(plan({ teeth: { top: 6, bottom: 0 }, look: look({ metal: 'yellow', karat: '18k', type: 'iced', stone: 'natural' }) }), null, shop)!;
