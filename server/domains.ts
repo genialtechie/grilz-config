@@ -8,7 +8,11 @@ import type { Db } from './db.js';
 export type DomainEnv = { VERCEL_DOMAINS_TOKEN?: string; VERCEL_PROJECT_ID?: string; VERCEL_TEAM_ID?: string };
 
 export type DnsRecord = { type: 'CNAME' | 'A' | 'TXT'; name: string; value: string; why: string };
-export type DomainState = { domain: string; status: 'pending' | 'active'; records: DnsRecord[]; problem?: string };
+/**
+ * `showing`: for an active domain, whether https://<domain>/ actually serves
+ * the shop (MAG-198). DNS and Vercel can both be right while the page isn't.
+ */
+export type DomainState = { domain: string; status: 'pending' | 'active'; records: DnsRecord[]; problem?: string; showing?: boolean };
 type DomainRow = { id: string; tenant_id: string; domain: string; status: 'pending' | 'active'; verification: { type: string; domain: string; value: string }[] };
 
 const HOST = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -55,9 +59,38 @@ type ProjectDomain = { name: string; verified: boolean; verification?: DomainRow
 
 const project = (env: DomainEnv) => encodeURIComponent(env.VERCEL_PROJECT_ID ?? '');
 
+/** The marker shop-page puts in a custom domain's page (server/shopPage.ts customDomainHead). */
+export const shopMarker = (slug: string) => `<meta name="vvs-shop" content="${slug}"`;
+
+const NOT_SHOWING = 'Connected, but not showing your shop yet. Check again in a few minutes; if it stays like this, message VVS Lab.';
+
+/**
+ * Does https://<domain>/ serve this shop? Fetches the page the way a visitor
+ * would (fresh, not from the cache) and looks for the shop's marker. A
+ * redirect, an error or a timeout counts as no.
+ */
+export async function servesShop(domain: string, slug: string): Promise<boolean> {
+  try {
+    const response = await fetch(`https://${domain}/?vvs_check=${Date.now()}`, { headers: { accept: 'text/html' }, redirect: 'manual', signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return false;
+    return (await response.text()).includes(shopMarker(slug));
+  } catch {
+    return false;
+  }
+}
+
+/** An active domain's page, checked: whether it shows the shop, and what to say when it doesn't. */
+async function showingState(db: Db, tenantId: string, domain: string): Promise<Pick<DomainState, 'showing' | 'problem'>> {
+  const [tenant] = await db.select<{ slug: string }>('tenants', { id: `eq.${tenantId}`, select: 'slug' });
+  const showing = Boolean(tenant) && (await servesShop(domain, tenant.slug));
+  return showing ? { showing } : { showing, problem: NOT_SHOWING };
+}
+
 export async function domainState(db: Db, tenantId: string): Promise<DomainState | null> {
   const [row] = await db.select<DomainRow>('tenant_domains', { tenant_id: `eq.${tenantId}`, select: 'id,tenant_id,domain,status,verification' });
-  return row ? { domain: row.domain, status: row.status, records: dnsRecords(row.domain, row.verification) } : null;
+  if (!row) return null;
+  const state: DomainState = { domain: row.domain, status: row.status, records: dnsRecords(row.domain, row.verification) };
+  return row.status === 'active' ? { ...state, ...(await showingState(db, tenantId, row.domain)) } : state;
 }
 
 export async function addDomain(db: Db, env: DomainEnv, tenantId: string, userId: string, input: string): Promise<{ status: number; body: unknown }> {
@@ -87,7 +120,11 @@ export async function addDomain(db: Db, env: DomainEnv, tenantId: string, userId
   return { status: 200, body: { domain: parsed.domain, status: 'pending', records: dnsRecords(parsed.domain, verification) } };
 }
 
-/** Asks Vercel whether the domain is verified and DNS points at it; marks it active when both are true. */
+/**
+ * Asks Vercel whether the domain is verified and DNS points at it; marks it
+ * active when both are true (that is what maps the host to the shop). Then
+ * loads the domain's page to confirm it shows the shop before it reads "Live".
+ */
 export async function checkDomain(db: Db, env: DomainEnv, tenantId: string): Promise<{ status: number; body: unknown }> {
   if (!hasDomains(env)) return { status: 503, body: { error: 'not_configured', message: 'Custom domains aren’t switched on yet.' } };
   const [row] = await db.select<DomainRow>('tenant_domains', { tenant_id: `eq.${tenantId}`, select: 'id,tenant_id,domain,status,verification' });
@@ -101,8 +138,10 @@ export async function checkDomain(db: Db, env: DomainEnv, tenantId: string): Pro
   const status = verified && pointed ? 'active' : 'pending';
   const now = new Date().toISOString();
   await db.update('tenant_domains', { id: `eq.${row.id}` }, { status, verification, checked_at: now, ...(status === 'active' && row.status !== 'active' ? { verified_at: now } : {}) });
-  const problem = status === 'active' ? undefined : !pointed ? 'DNS isn’t pointing at VVS Lab yet. Changes can take up to an hour.' : 'Waiting for Vercel to confirm you own the domain (the TXT record).';
-  return { status: 200, body: { domain: row.domain, status, records: dnsRecords(row.domain, verification), problem } };
+  const records = dnsRecords(row.domain, verification);
+  if (status === 'active') return { status: 200, body: { domain: row.domain, status, records, ...(await showingState(db, tenantId, row.domain)) } };
+  const problem = !pointed ? 'DNS isn’t pointing at VVS Lab yet. Changes can take up to an hour.' : 'Waiting for Vercel to confirm you own the domain (the TXT record).';
+  return { status: 200, body: { domain: row.domain, status, records, problem } };
 }
 
 export async function removeDomain(db: Db, env: DomainEnv, tenantId: string): Promise<{ status: number; body: unknown }> {

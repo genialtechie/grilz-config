@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import type { RootState } from '@react-three/fiber';
 import Scene from '../components/three/Scene';
 import type { ToothCustomization } from '../lib/types';
-import { FANG_TEETH, METALS, groupTeeth, type RenderSpec, type SettingId, type StyleId } from '../lib/renderSpec';
+import { FANG_TEETH, METALS, groupTeeth, type OpalId, type RenderSpec, type SettingId, type StyleId } from '../lib/renderSpec';
 import { toothCustomization } from '../lib/toothCustomization';
 import { capturePreview } from '../lib/capturePreview';
 import { capturePhotoStill, type PhotoStill } from '../lib/photoStage';
@@ -69,7 +69,7 @@ function fromParams(params: URLSearchParams): ToothCustomization[] {
   const metal = METALS.find((item) => item.id === metalId) ?? METALS[0];
   return Array.from({ length: 32 }, (_, index) =>
     covered.has(index)
-      ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), cut, hasDiamonds: iced, diamondType: params.get('stone') === 'moissanite' ? 'moissanite' : 'lab', setting: (params.get('setting') ?? 'honeycomb') as SettingId }
+      ? { material: metal.id === 'silver' || metal.id === 'platinum' ? 'silver' : 'gold', color: metal.swatch, metal: metal.id, style, fang: fangs && FANG_TEETH.includes(index), cut, hasDiamonds: iced, opal: style === 'opals' ? ((params.get('opal') ?? 'white') as OpalId) : undefined, diamondType: params.get('stone') === 'moissanite' ? 'moissanite' : 'lab', setting: (params.get('setting') ?? 'honeycomb') as SettingId }
       : { ...baseToothState },
   );
 }

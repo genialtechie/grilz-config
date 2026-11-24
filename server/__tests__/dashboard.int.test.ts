@@ -21,6 +21,7 @@ const sent: { to: string[]; subject: string; html: string }[] = [];
 const stamp = Date.now();
 const vercelCalls: string[] = [];
 let dnsReady = false;
+let pageShowsShop = false;
 const domainName = `build-${stamp}.goldmouth.test`;
 const slug = `dash-int-${stamp}`;
 
@@ -52,6 +53,8 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
         if ((init?.method ?? 'GET') === 'DELETE') return Response.json({});
         return Response.json({ name: domainName, verified: true, verification: [] });
       }
+      // The domain's own page: the landing page until the shop shows there (MAG-198).
+      if (target.startsWith(`https://${domainName}/`)) return new Response(pageShowsShop ? `<head><meta name="vvs-shop" content="${slug}" /></head>` : '<head><title>VVS Lab</title></head>');
       if (target.startsWith('https://resend.test/')) {
         sent.push(JSON.parse(String(init?.body)));
         return Response.json({ id: `email-${sent.length}` });
@@ -177,9 +180,15 @@ describe.skipIf(!url || !key || !anon)('dashboard API (integration)', () => {
     const waiting = await handleDashboard('domain_check', { tenantId }, staffToken, env);
     expect(waiting.body).toMatchObject({ status: 'pending', problem: expect.stringContaining('DNS') });
     dnsReady = true;
-    const live = await handleDashboard('domain_check', { tenantId }, ownerToken, env);
-    expect(live.body).toMatchObject({ status: 'active' });
+    // Verified and pointed, so the host maps to the shop, but the page doesn't show it yet: not "Live".
+    const connected = await handleDashboard('domain_check', { tenantId }, ownerToken, env);
+    expect(connected.body).toMatchObject({ status: 'active', showing: false, problem: expect.stringContaining('not showing your shop') });
     expect(await slugForHost(`${domainName}:443`, env)).toBe(slug);
+    pageShowsShop = true;
+    const live = await handleDashboard('domain_check', { tenantId }, ownerToken, env);
+    expect(live.body).toMatchObject({ status: 'active', showing: true });
+    expect(live.body).not.toHaveProperty('problem');
+    expect((await handleDashboard('domain', { tenantId }, staffToken, env)).body).toMatchObject({ domain: { status: 'active', showing: true } });
     // one domain per shop, and a domain can't be claimed twice
     expect((await handleDashboard('domain_add', { tenantId, domain: `other-${stamp}.goldmouth.test` }, ownerToken, env)).status).toBe(409);
     const removed = await handleDashboard('domain_remove', { tenantId }, ownerToken, env);

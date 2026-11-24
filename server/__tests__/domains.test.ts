@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { dnsRecords, normaliseDomain } from '../domains';
+import { dnsRecords, normaliseDomain, servesShop, shopMarker } from '../domains';
 import { customDomainHead } from '../shopPage';
 import { slugForHost, TENANT_ZERO } from '../tenants';
 import { handleDashboard } from '../dashboard';
@@ -120,5 +120,33 @@ describe('domain actions', () => {
     stub('owner', () => Response.json({ error: { code: 'domain_already_in_use' } }, { status: 409 }));
     const result = await handleDashboard('domain_add', { tenantId, domain: 'build.shop.com' }, 'tok', env);
     expect(result.status).toBe(409);
+  });
+});
+
+describe('checking a custom domain shows the shop (MAG-198)', () => {
+  const page = (html: string, init?: ResponseInit) => vi.fn(async () => new Response(html, init));
+
+  it('says yes only when the page carries this shop\'s marker', async () => {
+    const out = customDomainHead('<html><head></head><body></body></html>', { ...TENANT_ZERO, slug: 'video-demo-shop' }, 'https://build.genialtechie.site');
+    expect(out).toContain(shopMarker('video-demo-shop'));
+    const fetch = page(out);
+    vi.stubGlobal('fetch', fetch);
+    expect(await servesShop('build.genialtechie.site', 'video-demo-shop')).toBe(true);
+    // Fresh from the domain itself, not a cached copy, and not following redirects.
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/^https:\/\/build\.genialtechie\.site\/\?vvs_check=\d+$/);
+    expect(init.redirect).toBe('manual');
+    expect(await servesShop('build.genialtechie.site', 'another-shop')).toBe(false);
+  });
+
+  it('says no for the landing page, a redirect, an error or no answer', async () => {
+    vi.stubGlobal('fetch', page('<html><head><title>VVS Lab</title></head></html>'));
+    expect(await servesShop('build.genialtechie.site', 'video-demo-shop')).toBe(false);
+    vi.stubGlobal('fetch', page('', { status: 301, headers: { location: 'https://vvslab.magpollo.com/b/video-demo-shop' } }));
+    expect(await servesShop('build.genialtechie.site', 'video-demo-shop')).toBe(false);
+    vi.stubGlobal('fetch', page('<meta name="vvs-shop" content="video-demo-shop" />', { status: 500 }));
+    expect(await servesShop('build.genialtechie.site', 'video-demo-shop')).toBe(false);
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed'); }));
+    expect(await servesShop('build.genialtechie.site', 'video-demo-shop')).toBe(false);
   });
 });

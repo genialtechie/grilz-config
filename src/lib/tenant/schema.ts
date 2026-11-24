@@ -139,6 +139,13 @@ export const PricingSchema = z.object({
    */
   icedOpenFace: z.object({ stoneShare: z.number().min(0).max(100), perTooth: money.optional() }).optional(),
   /**
+   * Iced opal (MAG-169): an opal centre inside a border of stones. The same
+   * shape as icedOpenFace: this share (%) of the stone and setting price plus
+   * an opal price per tooth. Absent fields fall back to the iced open-face
+   * share and the Opals finish price.
+   */
+  icedOpal: z.object({ stoneShare: z.number().min(0).max(100).optional(), perTooth: money.optional() }).optional(),
+  /**
    * Metal linked to the live market price (see lib/metalMarket): grams of
    * metal per tooth and labour per tooth for each metal, plus a markup on the
    * metal. The fixed metalPerTooth prices stay as the fallback when no market

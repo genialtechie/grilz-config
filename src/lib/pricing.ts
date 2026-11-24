@@ -1,4 +1,4 @@
-import { CHARMS, CUTS, fangCount, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CharmId, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { CHARMS, CUTS, fangCount, icedOpal, icedOpenFace, isGold, label, MOLDS, toothPosition, type AddOn, type CharmId, type CutId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { CUT_UNITS, ICED_KEYS, TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 type IcedKey = (typeof ICED_KEYS)[number];
@@ -64,6 +64,20 @@ export const nearestOffered = (pricing: TenantPricing, design: ToothDesign, ston
 /** What one charm costs at this shop, or undefined when the shop quotes it. */
 export const charmPrice = (pricing: TenantPricing, id: CharmId): number | undefined => pricing.charms?.byId?.[id] ?? pricing.charms?.each;
 
+/**
+ * Iced opal (MAG-169), as the shop priced it or from its other prices: the
+ * opal labour defaults to the Opals finish price, the stone share to the iced
+ * open-face share (both set stones round a border of the same size).
+ */
+export const icedOpalPrice = (pricing: TenantPricing) => ({
+  stoneShare: pricing.icedOpal?.stoneShare ?? pricing.icedOpenFace?.stoneShare ?? 100,
+  perTooth: pricing.icedOpal?.perTooth ?? pricing.stylePerTooth.opals ?? 0,
+});
+
+/** The share (%) of the stone and setting price an iced tooth with a border takes. */
+const borderShare = (pricing: TenantPricing, tooth: ToothDesign) =>
+  icedOpal(tooth) ? icedOpalPrice(pricing).stoneShare : pricing.icedOpenFace?.stoneShare ?? 100;
+
 /** The arches (top, bottom) with at least one tooth in the set. */
 export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.map((tooth) => (tooth.index < 16 ? 'top' : 'bottom'))).size;
 
@@ -87,10 +101,11 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
   const add = (label: string, amount: number) => amount && lines.push({ label, amount });
-  // Iced open face: a share of the stones (fewer fit) and its own labour price.
-  const openFaceShare = (tooth: ToothDesign) => (icedOpenFace(tooth) ? (pricing.icedOpenFace?.stoneShare ?? 100) / 100 : 1);
+  // Iced open face and iced opal: a share of the stones (fewer fit round the border) and their own labour price.
+  const openFaceShare = (tooth: ToothDesign) => (icedOpenFace(tooth) || icedOpal(tooth) ? borderShare(pricing, tooth) / 100 : 1);
   const finish = (tooth: ToothDesign) => {
     if (icedOpenFace(tooth)) return pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0;
+    if (icedOpal(tooth)) return icedOpalPrice(pricing).perTooth;
     return tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0;
   };
   // Iced teeth from the shop's all-in table replace metal plus stones.
@@ -102,7 +117,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const icedOf = (tooth: ToothDesign) => {
     const price = allIn(tooth);
     if (price === undefined) return 0;
-    if (!icedOpenFace(tooth)) return price;
+    if (openFaceShare(tooth) === 1) return price;
     const plain = metalPerTooth(pricing, tooth.metal, tooth.karat);
     return Math.min(price, plain) + Math.max(0, price - plain) * openFaceShare(tooth);
   };

@@ -243,7 +243,8 @@ export async function addLeadNote(lead: { id: string }, tenantId: string, text: 
 }
 
 export type DnsRecord = { type: 'CNAME' | 'A' | 'TXT'; name: string; value: string; why: string };
-export type DomainInfo = { domain: string; status: 'pending' | 'active'; records: DnsRecord[]; problem?: string };
+/** `showing`: an active domain's page was loaded and shows the shop (false: connected, but not showing it yet). */
+export type DomainInfo = { domain: string; status: 'pending' | 'active'; records: DnsRecord[]; problem?: string; showing?: boolean };
 
 export const getDomain = (tenantId: string) => api<{ domain: DomainInfo | null }>('domain', { tenantId }).then((result) => result.domain);
 export const connectDomain = (tenantId: string, domain: string) => api<DomainInfo>('domain_add', { tenantId, domain });
