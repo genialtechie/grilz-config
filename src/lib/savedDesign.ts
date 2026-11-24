@@ -26,6 +26,12 @@ export type DesignSnapshot = {
   set: Omit<SetOptions, 'inscriptions'>;
   /** The inscriptions as edited: text and any teeth the customer picked. */
   drafts: InscriptionDraft[];
+  /**
+   * How letters with no teeth of their own are placed: 'centred' when the new builder
+   * (src/components/creator) kept the design (its own centred run); absent for the old
+   * builder (lib/inscriptionDrafts' placeDrafts). Older readers ignore it.
+   */
+  runs?: 'centred';
 };
 
 type Shop = { slug: string; config: { catalog: TenantCatalog; pricing: TenantPricing } };
@@ -90,6 +96,7 @@ export function checkSnapshot(value: unknown, shop: Shop): DesignSnapshot | null
     overrides: Object.fromEntries(spec.teeth.filter((tooth) => overrides[tooth.index] !== undefined).map((tooth) => [tooth.index, strip(tooth)])),
     set: setOptions as DesignSnapshot['set'],
     drafts: drafts as InscriptionDraft[],
+    ...(raw.runs === 'centred' ? { runs: 'centred' as const } : {}),
   };
 }
 

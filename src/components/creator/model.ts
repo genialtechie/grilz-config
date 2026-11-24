@@ -35,7 +35,7 @@ import {
 import { nearestOffered, priceBreakdown, type PriceBreakdown } from '../../lib/pricing';
 import type { DesignSnapshot } from '../../lib/savedDesign';
 import type { Tenant } from '../../lib/tenant/tenant';
-import { autoRun, fitsTeeth, type InscriptionDraft } from '../../lib/inscriptionDrafts';
+import { autoRun, fitsTeeth, placeDrafts, type InscriptionDraft } from '../../lib/inscriptionDrafts';
 
 export type Shop = Pick<Tenant, 'slug' | 'config' | 'catalog' | 'defaultTooth' | 'defaultSet'>;
 
@@ -529,6 +529,7 @@ export function toSnapshot(d: Design): DesignSnapshot {
       ...(charms.length ? { charms } : {}),
     },
     drafts: draft,
+    runs: 'centred',
   };
 }
 
@@ -538,8 +539,12 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
   s.teeth.forEach((k) => {
     designs[k] = s.overrides[k] ?? s.base;
   });
+  // The old builder placed letters with no teeth its own way (placeDrafts: top row first unless the other
+  // line was tapped there, and a run of matching odd/even length). Its links and saved designs open with
+  // those runs pinned, so they show and cost what they did there.
+  const drafts = s.runs === 'centred' ? s.drafts : placeDrafts(s.drafts, new Set(s.teeth)).map((x) => ({ ...x, auto: undefined, anchor: null }));
   // Designs from before the second line have one draft (or none): they read as before.
-  const [first, second] = s.drafts.filter((x) => x.text.trim());
+  const [first, second] = drafts.filter((x) => x.text.trim());
   const line = (x: InscriptionDraft): Initials => ({ text: cleanLetters(x.text), style: x.style, font: x.font, enamel: x.enamel, teeth: x.teeth });
   return {
     ...d,
