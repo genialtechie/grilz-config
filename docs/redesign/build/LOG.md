@@ -28,6 +28,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 24 (lead): go-live plan approved (everything at once, but nothing live until the owner says "go live"). `main` merged into `redesign` (custom domains, iced + opals); checklist and setup guide in `LAUNCH.md`; launch-prep track started (`launch-prep.md`).
 - Nov 18 (round 2): Charms + initials, the owner's answers: a second line of letters on the other row (same controls, priced per tooth), and "+ quote" on the Done button and price chip while a charm is quoted. Build, lint, tests pass. Screens `case-study/2026-11-18-build-{initials-two-lines,quote}-*`. See `charms.md`.
 - Nov 18: Charms + initials: the lab's ten charms (two redrawn to stay original) and the One-of-one build in the app, quoted by the shop unless it sets a price; shops turn charms on in the Shop editor; Describe it places them; letters back across several teeth with Block/Script and enamel in the Extras row. Build, lint, tests pass. Screens `case-study/2026-11-18-build-*`. See `charms.md`.
 - Nov 18 (lead): new title, share text and link preview (`public/assets/vvs/og-vvslab.jpg`, sources in `docs/brand/og/`); shop pages now also replace the twitter description and drop VVS Lab's image description. `npm test` skips `.claude/` (local agent copies). Charms + initials track started (`charms.md`).
