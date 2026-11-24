@@ -301,6 +301,12 @@
 .creator .bar .pill.ink:hover { transform: translateY(-1px); box-shadow: 0 20px 40px -16px rgba(17,15,13,.6); }
 .creator[data-mode="door"] .stage { background-color: #f8f7f4; background-image: radial-gradient(rgba(0,0,0,.03) 1px, transparent 1px); background-size: 4px 4px; }
 .creator .stage { height: max(640px, 100svh); }
+/* In a frame on a shop's site (embed.js makes them 600 px and up) the builder fits the frame: no scrolling inside it. */
+.creator[data-framed] .stage { height: 100svh; }
+/* Short phone-width screens and frames: the quick question sits over the tool column, so the tools step aside while it's open (as Select teeth does). */
+@media (max-width: 899px) and (max-height: 760px) {
+.creator[data-bub] .tools { visibility: hidden; }
+}
 @media (max-width: 899px) {
 .creator .tray { max-height: none; top: calc(min(100svh, 1000px) * .46); }
 .creator[data-mode="ai"] .tray, .creator[data-mode="after"]:not([data-after="3"]) .tray { max-height: none; top: calc(min(100svh, 1000px) * .38); }
