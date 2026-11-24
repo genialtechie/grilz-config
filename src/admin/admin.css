@@ -108,6 +108,7 @@
 .admin-lead__body { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .admin-lead__top { display: flex; justify-content: space-between; gap: 8px; }
 .admin-lead__note { font-style: italic; }
+.admin-lead__verified { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; color: var(--a-ok); font-size: 0.85em; font-weight: 600; white-space: nowrap; vertical-align: 1px; }
 .admin-lead__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--a-muted); }
 .admin-lead__actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
 .admin .admin-lead__reach { background: #ce4257; border-color: #ce4257; color: #fff; border-radius: 999px; }

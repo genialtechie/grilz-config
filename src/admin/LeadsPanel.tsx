@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Download, Instagram, Mail, MessageCircle, MessageSquare, Search, Trash2 } from 'lucide-react';
+import { BadgeCheck, Download, Instagram, Mail, MessageCircle, MessageSquare, Search, Trash2 } from 'lucide-react';
 import { displayContact } from '../lib/contact';
 import { addLeadNote, deleteLeadData, leadNotes, listLeads, setLeadStatus, type LeadEvent } from './data';
 import { LEAD_STATUSES, leadsCsv, STATUS_LABEL } from './leadsCsv';
@@ -147,7 +147,15 @@ export function LeadsPanel({ tenantId, shopName = 'shop', canDelete = true }: { 
                   <strong>{lead.name}</strong>
                   <span className="admin-muted">{when(lead.created_at)}</span>
                 </div>
-                <div>{breakable(displayContact(lead.contact))}{lead.email && <> · {breakable(lead.email)}</>}</div>
+                <div>
+                  {breakable(displayContact(lead.contact))}
+                  {lead.phone_verified && (
+                    <span className="admin-lead__verified" title="They proved this number with a texted code">
+                      <BadgeCheck size={13} aria-hidden="true" /> Phone verified
+                    </span>
+                  )}
+                  {lead.email && <> · {breakable(lead.email)}</>}
+                </div>
                 <div className="admin-muted">{(lead.spec.summary ?? []).join(' · ')}</div>
                 {lead.note && <div className="admin-lead__note">“{lead.note}”</div>}
                 <ContactActions lead={lead} />
