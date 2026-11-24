@@ -141,12 +141,12 @@ describe('a plan becomes a valid design', () => {
   });
 
   it('makes small changes to the current design and keeps the rest', () => {
-    const current: RenderSpec = { ...sixBySix(), cut: 'permanent', mold: 'store' };
+    const current: RenderSpec = { ...sixBySix(), cut: 'permanent', mold: 'own' };
     const built = planToSpec(plan({ apply_to: 'front_two', look: look({ type: 'iced', stone: 'lab' }) }), current, VVSLAB_CONFIG)!;
     const iced = built.spec.teeth.filter((t) => t.type === 'iced').map((t) => t.index);
     expect(iced).toEqual([7, 8, 23, 24]);
     expect(built.spec.cut).toBe('permanent');
-    expect(built.spec.mold).toBe('store');
+    expect(built.spec.mold).toBe('own');
     expect(built.differences).toEqual([]);
     valid(built.spec);
   });

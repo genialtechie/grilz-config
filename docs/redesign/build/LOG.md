@@ -29,6 +29,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 24 (lead): launch prep merged (iced + opals in the new builder, Phone verified in the dashboard, old links open at the same price, embeds fit short frames, custom domains checked). VVS Lab's own builder drops in-store fitting (partner picked by hand). 415 tests pass. Waiting on the owner: live shops' prices query, Firebase/Vercel/database setup, then the preview test.
 - Nov 24: Launch prep: iced + opals (main's MAG-169) in the new builder, 3D and Describe it; "Phone verified" on leads and in the CSV; old-builder links and saved designs now open as the same design and price (letters were placed differently); framed builders fit embeds down to 600 px; "/" on a custom domain confirmed to open the shop's builder. Build, lint, tests pass. Screens `case-study/2026-11-24-launch-*`. See `launch-prep.md`.
 - Nov 24 (lead): go-live plan approved (everything at once, but nothing live until the owner says "go live"). `main` merged into `redesign` (custom domains, iced + opals); checklist and setup guide in `LAUNCH.md`; launch-prep track started (`launch-prep.md`).
 - Nov 18 (round 2): Charms + initials, the owner's answers: a second line of letters on the other row (same controls, priced per tooth), and "+ quote" on the Done button and price chip while a charm is quoted. Build, lint, tests pass. Screens `case-study/2026-11-18-build-{initials-two-lines,quote}-*`. See `charms.md`.

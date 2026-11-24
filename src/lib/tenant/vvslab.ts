@@ -13,7 +13,7 @@ export const VVSLAB_CONFIG: TenantConfig = {
     settings: ['honeycomb', 'mosaic', 'prong'],
     stones: ['moissanite', 'lab', 'natural'],
     cuts: ['deep', 'permanent'],
-    molds: ['kit', 'own', 'store'],
+    molds: ['kit', 'own'],   // VVS Lab's own site: orders go to a partner jeweler picked by hand (owner, Nov 24), so no in-store fitting
     fangs: true,
     inscription: { enabled: true, styles: ['cut', 'iced', 'engraved'] },
     vision: true,

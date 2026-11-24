@@ -8,15 +8,20 @@ Status key: [x] done · [ ] to do · (owner) = only the owner can do it.
 
 ## 1. Branch up to date with the live site
 - [x] `main` merged into `redesign` (custom domains at "/", iced + opals). Build, lint, 397 tests pass.
-- [ ] Iced + opals work in the new builder (launch-prep track, `launch-prep.md`).
-- [ ] Dashboard shows "Phone verified"; request emails and summaries include charms and both lines of letters.
-- [ ] Old share links and saved designs open in the new builder (test).
-- [ ] The builder works inside shops' website embeds (`public/embed.js`).
-- [ ] Custom domains open the shop's builder at "/".
+- [x] Iced + opals work in the new builder (launch-prep track, `launch-prep.md`).
+- [x] Dashboard shows "Phone verified"; request emails and summaries include charms and both lines of letters.
+- [x] Old share links and saved designs open in the new builder (test).
+- [x] The builder works inside shops' website embeds (`public/embed.js`).
+- [x] Custom domains open the shop's builder at "/".
 
 ## 2. Owner inputs
-- [ ] (owner) Partner jeweler for orders on VVS Lab's own site: their prices (or keep today's demo prices) and
-      which fittings they offer (mold kit by mail / own mold or scan / in store).
+- [x] Partner jeweler: none fixed; VVS Lab gets the orders and picks a partner by hand. Own site offers mold kit by
+      mail and own mold or scan (no in store). "VVS Lab will text you" stays.
+- [ ] (owner) Own-site prices = the most expensive live shop: run the query below in Supabase → SQL editor and send
+      the result; Claude compares shops on standard builds with `lib/pricing` and copies the highest into
+      `src/lib/tenant/vvslab.ts`.
+      `select t.slug, c.config->'pricing' as pricing, c.config->'catalog' as catalog from public.tenants t join
+      public.tenant_configs c on c.tenant_id = t.id and c.version = t.published_version where t.status = 'live' order by t.slug;`
 - [ ] (owner, can come after launch) Delivery time, returns, warranty answers for the shoppers' questions.
 
 ## 3. Services (owner, step by step)

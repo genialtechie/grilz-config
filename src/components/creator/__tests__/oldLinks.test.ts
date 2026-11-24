@@ -28,7 +28,7 @@ const OLD: Record<string, OldSnapshot> = {
     teeth: SIX_BY_SIX,
     base: { ...gold, type: 'iced', style: 'opals', opal: 'fire', setting: 'prong', stone: 'moissanite' },
     overrides: {},
-    set: { fangs: true, cut: 'permanent', vision: 'like my cousin’s', mold: 'store' },
+    set: { fangs: true, cut: 'permanent', vision: 'like my cousin’s', mold: 'own' },
     drafts: [],
   },
   // Two-tone: front two in white gold; short letters left to place themselves ("AB" goes on two teeth).
