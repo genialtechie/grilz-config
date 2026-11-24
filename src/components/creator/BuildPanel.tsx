@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CUTS, ENAMELS, INSCRIPTION_FONTS, INSCRIPTION_MAX, INSCRIPTION_PER_TOOTH, METALS, OPALS, SETTINGS, STYLES, isGold, type CharmId, type EnamelId, type InscriptionFontId, type ToothDesign } from '../../lib/renderSpec';
+import { CUTS, ENAMELS, ICED_FINISHES, INSCRIPTION_FONTS, INSCRIPTION_MAX, INSCRIPTION_PER_TOOTH, METALS, OPALS, SETTINGS, STYLES, isGold, type CharmId, type EnamelId, type InscriptionFontId, type ToothDesign } from '../../lib/renderSpec';
 import { charmPrice } from '../../lib/pricing';
 import { SetPicture } from './SetPicture';
 import {
@@ -381,10 +381,16 @@ export function PartBody(props: Props) {
     const iced = cc.type === 'iced';
     const photoOffered = catalog.types.some((t) => t.id === 'photo');
     const opalOffered = catalog.styles.some((s) => s.id === 'opals');
-    const opalOn = cc.type !== 'photo' && cc.style === 'opals' && !iced;
+    const opalOn = cc.type !== 'photo' && cc.style === 'opals';
     return (
       <>
-        {iced && <p className="note">With stones set, the finish is the frame around them: solid or open face.</p>}
+        {iced && (
+          <p className="note">
+            {opalOffered
+              ? 'With stones set, the finish is the frame around them: solid, open face, or an opal in the middle.'
+              : 'With stones set, the finish is the frame around them: solid or open face.'}
+          </p>
+        )}
         <div className="tiles">
           {catalog.styles.map((s) => {
             const on = cc.type !== 'photo' && cc.style === s.id;
@@ -394,7 +400,7 @@ export function PartBody(props: Props) {
                 title={s.label}
                 sub={on ? s.detail : cost({ g: 'style', k: s.id }) || s.detail}
                 on={on}
-                disabled={iced && s.id !== 'solid' && s.id !== 'open-face'}
+                disabled={iced && s.id !== 'solid' && !ICED_FINISHES.includes(s.id)}
                 picture={<Img src={s.image} />}
                 onClick={() => choose({ g: 'style', k: s.id })}
               />

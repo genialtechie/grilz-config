@@ -3,7 +3,7 @@ import type { LeadEvent, LeadRow } from './data';
 
 // Lead statuses and the CSV export, shared by the admin and the shop dashboard.
 
-type Lead = LeadRow;
+type Lead = Omit<LeadRow, 'phone_verified'> & { phone_verified?: boolean | null };
 
 export const LEAD_STATUSES = [
   ['new', 'New'],
@@ -23,11 +23,12 @@ export const csvCell = (value: unknown) => {
 };
 
 export function leadsCsv(leads: Lead[], notes: LeadEvent[]) {
-  const header = ['Date', 'Name', 'Contact', 'Email', 'Design', 'Total', 'Deposit', 'Status', 'Customer note', 'Shop notes', 'Source'];
+  const header = ['Date', 'Name', 'Contact', 'Phone verified', 'Email', 'Design', 'Total', 'Deposit', 'Status', 'Customer note', 'Shop notes', 'Source'];
   const rows = leads.map((lead) => [
     new Date(lead.created_at).toISOString(),
     lead.name,
     displayContact(lead.contact),
+    lead.phone_verified ? 'Yes' : 'No',
     lead.email ?? '',
     (lead.spec.summary ?? []).join(' · '),
     lead.total,

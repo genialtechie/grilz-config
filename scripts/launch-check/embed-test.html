@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed check</title>
+    <style>
+      body { margin: 0; padding: 24px; background: #ece8e1; font: 14px/1.4 -apple-system, Segoe UI, Roboto, sans-serif; color: #1b1714; }
+      h2 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+      .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+      iframe { display: block; border: 0; border-radius: 16px; background: #f6f4f0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08); }
+      section { margin-bottom: 32px; }
+    </style>
+  </head>
+  <body>
+    <!-- A shop's website with the builder framed the way public/embed.js frames it (/b/<slug>?embed=…). -->
+    <div class="row">
+      <section>
+        <h2>380 × 700</h2>
+        <iframe id="narrow" title="Design your grillz" width="380" height="700" allow="clipboard-write; fullscreen" src="/b/vvslab?utm_source=embed&amp;utm_medium=website&amp;embed=shop.example"></iframe>
+      </section>
+      <section>
+        <h2>1000 × 700</h2>
+        <iframe id="wide" title="Design your grillz" width="1000" height="700" allow="clipboard-write; fullscreen" src="/b/vvslab?utm_source=embed&amp;utm_medium=website&amp;embed=shop.example"></iframe>
+      </section>
+    </div>
+    <!-- embed.js never makes a frame shorter than 600 px (a short laptop screen). -->
+    <div class="row">
+      <section>
+        <h2>380 × 600</h2>
+        <iframe id="narrowShort" title="Design your grillz" width="380" height="600" src="/b/vvslab?utm_source=embed&amp;utm_medium=website&amp;embed=shop.example"></iframe>
+      </section>
+      <section>
+        <h2>1000 × 600</h2>
+        <iframe id="wideShort" title="Design your grillz" width="1000" height="600" src="/b/vvslab?utm_source=embed&amp;utm_medium=website&amp;embed=shop.example"></iframe>
+      </section>
+    </div>
+    <section style="max-width: 1000px">
+      <h2>embed.js, inline (data-height 700)</h2>
+      <div data-vvslab-shop="vvslab" data-mode="inline" data-height="700"></div>
+    </section>
+    <script src="/embed.js" async></script>
+  </body>
+</html>

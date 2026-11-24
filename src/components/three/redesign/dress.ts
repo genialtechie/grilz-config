@@ -21,7 +21,7 @@ export type ToothLook = {
   metal: MetalId;
   karat: KaratId;
   type: 'plain' | 'iced' | 'photo';
-  /** The finish on a plain cap; 'open' on any cap (an iced open face is a frame of stones). */
+  /** The finish on a plain cap; 'open' on any cap (an iced open face is a frame of stones); 'opal' on a plain or iced cap. */
   style: Finish | 'open' | 'opal';
   opal: OpalId;
   setting: SettingId;
@@ -112,6 +112,8 @@ export function dressTooth(slot: ToothSlot, look: Look, t: ToothLook | null): bo
   const plain = t.type === 'plain';
   const iced = t.type === 'iced';
   const open = t.style === 'open' && t.type !== 'photo';
+  // Iced opal: a solid cap, one ring of stones round the frame as on an iced open face, the opal in the window.
+  const icedOpal = iced && t.style === 'opal';
   const deco = new THREE.Group();
   deco.name = 'tooth_finish';
   const mesh = (g: THREE.BufferGeometry, m: THREE.Material) => {
@@ -126,7 +128,7 @@ export function dressTooth(slot: ToothSlot, look: Look, t: ToothLook | null): bo
   cap.userData.dressed = cap.material;
   if (open) mesh(rimGeo(def, rise, WIN, 0.15), gold);
   if (iced) {
-    const layout = stoneLayout(def, rise, t.setting, open);
+    const layout = stoneLayout(def, rise, t.setting, open || icedOpal);
     const stones = new THREE.Group();
     stones.name = STONES;
     stones.add(instanced(gemGeo, look.diamondMat, layout.stones));
@@ -138,6 +140,11 @@ export function dressTooth(slot: ToothSlot, look: Look, t: ToothLook | null): bo
   if (plain && t.style === 'opal') {
     mesh(sharedPatch(def, rise, OPAL_INSET, 0.1), look.opalMat(t.opal));
     mesh(rimGeo(def, rise, OPAL_INSET, 0.16), gold);
+  }
+  if (icedOpal) {
+    // The opal fills the open face's window, inside the ring of stones, with the same thin inner rim.
+    mesh(sharedPatch(def, rise, WIN, 0.1), look.opalMat(t.opal));
+    mesh(rimGeo(def, rise, WIN, 0.15), gold);
   }
   // The picture itself is laid across the whole run of photo teeth (overlays.ts); the rim is the tooth's own.
   if (t.type === 'photo') mesh(rimGeo(def, rise, PHOTO_INSET, 0.13), gold);

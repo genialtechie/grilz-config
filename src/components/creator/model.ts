@@ -6,6 +6,7 @@
 // upper centrals, 5 and 10 the upper canines (the same numbering the lab used).
 import {
   FANG_TEETH,
+  ICED_FINISHES,
   INSCRIPTION_CHARS,
   INSCRIPTION_MAX,
   INSCRIPTION_PER_TOOTH,
@@ -34,7 +35,7 @@ import {
 import { nearestOffered, priceBreakdown, type PriceBreakdown } from '../../lib/pricing';
 import type { DesignSnapshot } from '../../lib/savedDesign';
 import type { Tenant } from '../../lib/tenant/tenant';
-import { autoRun, fitsTeeth, type InscriptionDraft } from '../../lib/inscriptionDrafts';
+import { autoRun, fitsTeeth, placeDrafts, type InscriptionDraft } from '../../lib/inscriptionDrafts';
 
 export type Shop = Pick<Tenant, 'slug' | 'config' | 'catalog' | 'defaultTooth' | 'defaultSet'>;
 
@@ -238,7 +239,7 @@ export type Choice =
   | { g: 'setting'; k: ToothDesign['setting'] | 'none' }
   | { g: 'stone'; k: ToothDesign['stone'] };
 
-/** A tooth after a choice, following the lab's rules (stones keep a solid or open frame; a finish ends photo). */
+/** A tooth after a choice, following the lab's rules (stones keep a solid, open or opal frame; a finish ends photo). */
 export function chosen(t: ToothDesign, c: Choice): ToothDesign {
   const x = { ...t };
   if (c.g === 'metal') x.metal = c.k;
@@ -257,7 +258,8 @@ export function chosen(t: ToothDesign, c: Choice): ToothDesign {
     else {
       x.type = 'iced';
       x.setting = c.k;
-      if (x.style !== 'open-face') x.style = 'solid';
+      // Stones keep a frame that takes them (open face, opals); any other finish becomes solid.
+      if (!ICED_FINISHES.includes(x.style)) x.style = 'solid';
     }
   }
   if (c.g === 'stone') x.stone = c.k;
@@ -451,7 +453,10 @@ export function delta(shop: Shop, d: Design, next: Design) {
 
 export const metalWords = (t: ToothDesign) => `${isGold(t.metal) ? `${label(KARATS, t.karat)} ` : ''}${label(METALS, t.metal).toLowerCase()}`;
 export function finishWords(t: ToothDesign) {
-  if (t.type === 'iced') return `iced${t.style === 'open-face' ? ' open face' : ''} · ${label(SETTINGS, t.setting).toLowerCase()} · ${label(STONES, t.stone).toLowerCase()}`;
+  if (t.type === 'iced') {
+    const frame = t.style === 'open-face' ? ' open face' : t.style === 'opals' ? ` with ${label(OPALS, t.opal ?? 'white').toLowerCase()} opal centre` : '';
+    return `iced${frame} · ${label(SETTINGS, t.setting).toLowerCase()} · ${label(STONES, t.stone).toLowerCase()}`;
+  }
   if (t.type === 'photo') return 'photo';
   return t.style === 'opals' ? `${label(OPALS, t.opal ?? 'white').toLowerCase()} opals` : label(STYLES, t.style).toLowerCase();
 }
@@ -524,6 +529,7 @@ export function toSnapshot(d: Design): DesignSnapshot {
       ...(charms.length ? { charms } : {}),
     },
     drafts: draft,
+    runs: 'centred',
   };
 }
 
@@ -533,8 +539,12 @@ export function fromSnapshot(shop: Shop, s: DesignSnapshot): Design {
   s.teeth.forEach((k) => {
     designs[k] = s.overrides[k] ?? s.base;
   });
+  // The old builder placed letters with no teeth its own way (placeDrafts: top row first unless the other
+  // line was tapped there, and a run of matching odd/even length). Its links and saved designs open with
+  // those runs pinned, so they show and cost what they did there.
+  const drafts = s.runs === 'centred' ? s.drafts : placeDrafts(s.drafts, new Set(s.teeth)).map((x) => ({ ...x, auto: undefined, anchor: null }));
   // Designs from before the second line have one draft (or none): they read as before.
-  const [first, second] = s.drafts.filter((x) => x.text.trim());
+  const [first, second] = drafts.filter((x) => x.text.trim());
   const line = (x: InscriptionDraft): Initials => ({ text: cleanLetters(x.text), style: x.style, font: x.font, enamel: x.enamel, teeth: x.teeth });
   return {
     ...d,

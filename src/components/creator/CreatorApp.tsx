@@ -82,6 +82,14 @@ const TOP = 60;
 const RESEND_SECONDS = 30;
 const AI_LEFT_KEY = 'vvs-ai-left:';
 
+/** In someone else's page (public/embed.js, or a plain iframe on a shop's site): the frame is the whole screen. */
+const framed = (() => {
+  try {
+    return typeof window !== 'undefined' && window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
 const reduced = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const buzz = () => {
   try {
@@ -944,6 +952,7 @@ export default function CreatorApp() {
       className={own ? 'creator' : `creator shop ${fontPairClass(brand)}`}
       style={own ? undefined : themeStyle(brand)}
       data-mode={mode}
+      data-framed={framed ? '' : undefined}
       data-empty={design.teeth.length ? undefined : ''}
       data-bub={bubble ? '' : undefined}
       data-change={showSel ? '' : undefined}

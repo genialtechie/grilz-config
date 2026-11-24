@@ -4,6 +4,7 @@ import { nearestOffered, offered } from '../src/lib/pricing.js';
 import {
   FANG_TEETH,
   groupTeeth,
+  ICED_FINISHES,
   INSCRIPTION_CHARS,
   INSCRIPTION_FONTS,
   INSCRIPTION_MAX,
@@ -144,6 +145,9 @@ export function planSchema(catalog: Catalog) {
   };
 }
 
+/** The finishes an iced tooth can take at this shop besides solid: open face, and an opal centre (iced opal), when sold. */
+const icedFinishes = (catalog: Pick<Catalog, 'styles'>) => ICED_FINISHES.filter((style) => catalog.styles.includes(style));
+
 const optionLines = (title: string, list: readonly { id: string; label: string; detail?: string }[]) =>
   list.length ? `${title}:\n${list.map((item) => `- ${item.id}: ${item.label}${item.detail ? ` (${item.detail})` : ''}`).join('\n')}` : `${title}: none sold here`;
 
@@ -169,7 +173,9 @@ export function planInstructions(catalog: Catalog, shopName: string): string {
     '',
     'Rules:',
     '- teeth.top and teeth.bottom: how many teeth are covered on each row (0 to 16), counted from the middle out. "6 x 6" or "6 on 6" is 6 top and 6 bottom; a "full set" is 16 and 16; "8 top" leaves the bottom as it is (null). Null keeps the current count.',
-    '- look: null keeps what is there. Iced (stones) takes the solid or open-face style only. Opals, engraving, diamond-cut and diamond-dust are finishes on plain metal.',
+    icedFinishes(catalog).includes('opals') && catalog.types.includes('iced')
+      ? '- look: null keeps what is there. Iced (stones) takes the solid, open-face or opals style only; iced with opals is an opal centre inside a border of stones (set type iced and style opals, with an opal colour). Engraving, diamond-cut and diamond-dust are finishes on plain metal; opals alone (no stones) are plain metal too.'
+      : '- look: null keeps what is there. Iced (stones) takes the solid or open-face style only. Opals, engraving, diamond-cut and diamond-dust are finishes on plain metal.',
     '- apply_to: "all" unless they ask to change only the front two or the front six teeth of the current design.',
     '- front_two_metal: only for two-tone (the front two teeth in a second metal); otherwise null.',
     shop.charms.length
@@ -236,8 +242,8 @@ function fitTooth(tooth: ToothDesign, config: TenantConfig, notes: Set<string>):
   if (!catalog.settings.includes(next.setting)) next.setting = fallback.setting;
   if (!catalog.stones.includes(next.stone)) next.stone = fallback.stone;
   if (next.type === 'iced') {
-    // Stones cover the face: only solid, or open face when the shop sells it.
-    if (!(next.style === 'solid' || (next.style === 'open-face' && catalog.styles.includes('open-face')))) next.style = 'solid';
+    // Stones cover the face: only solid, or a border of stones (open face, an opal centre) when the shop sells it.
+    if (!(next.style === 'solid' || icedFinishes(catalog).includes(next.style))) next.style = 'solid';
     if (!offered(pricing, next)) {
       const nearest = nearestOffered(pricing, next, catalog.stones as StoneId[], catalog.karats as KaratId[]);
       if (nearest) {
@@ -253,7 +259,7 @@ function fitTooth(tooth: ToothDesign, config: TenantConfig, notes: Set<string>):
   } else if (!catalog.styles.includes(next.style)) {
     next.style = fallback.style;
   }
-  if (next.style === 'opals' && next.type === 'plain') {
+  if (next.style === 'opals' && (next.type === 'plain' || next.type === 'iced')) {
     if (next.opal && !OPALS.some((opal) => opal.id === next.opal)) delete next.opal;
   } else {
     delete next.opal;
@@ -332,7 +338,7 @@ export function planToSpec(raw: unknown, current: RenderSpec | null, config: Ten
   // Choosing a plain-metal finish on an iced set means plain metal.
   if (patch.style && !['solid', 'open-face'].includes(patch.style) && !patch.type) patch.type = 'plain';
   if (patch.opal && !patch.style) patch.style = 'opals';
-  if (patch.type === 'iced' && patch.style && patch.style !== 'solid' && patch.style !== 'open-face') {
+  if (patch.type === 'iced' && patch.style && patch.style !== 'solid' && !icedFinishes(catalog).includes(patch.style)) {
     notes.add(`With stones set, the ${label(STYLES, patch.style).toLowerCase()} finish doesn't apply.`);
     patch.style = 'solid';
   }

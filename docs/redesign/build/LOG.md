@@ -16,6 +16,7 @@ pick it up; "Describe it" uses real AI on the OpenAI key the server already has.
 | After Done | `src/components/creator/after/*` | `after.md` |
 | Backend | `server/*`, `api/*`, `src/lib/phoneAuth.ts`, `src/lib/describe.ts`, migrations | `backend.md` |
 | Charms + initials (Nov 18) | charms and letters across the option model, prices, 3D, Extras, Describe it | `charms.md` |
+| Launch prep (Nov 24) | parity with the live site: iced opals, old links, embeds, custom domains, dashboard | `launch-prep.md` |
 
 Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/lib/phoneAuth.ts` and
 `src/lib/describe.ts` (stand-ins now; the backend track fills them in without changing their signatures).
@@ -28,6 +29,7 @@ Hand-off points: `src/components/creator/contract.ts` (builder → after), `src/
 
 ## Log (newest first)
 
+- Nov 24: Launch prep: iced + opals (main's MAG-169) in the new builder, 3D and Describe it; "Phone verified" on leads and in the CSV; old-builder links and saved designs now open as the same design and price (letters were placed differently); framed builders fit embeds down to 600 px; "/" on a custom domain confirmed to open the shop's builder. Build, lint, tests pass. Screens `case-study/2026-11-24-launch-*`. See `launch-prep.md`.
 - Nov 24 (lead): go-live plan approved (everything at once, but nothing live until the owner says "go live"). `main` merged into `redesign` (custom domains, iced + opals); checklist and setup guide in `LAUNCH.md`; launch-prep track started (`launch-prep.md`).
 - Nov 18 (round 2): Charms + initials, the owner's answers: a second line of letters on the other row (same controls, priced per tooth), and "+ quote" on the Done button and price chip while a charm is quoted. Build, lint, tests pass. Screens `case-study/2026-11-18-build-{initials-two-lines,quote}-*`. See `charms.md`.
 - Nov 18: Charms + initials: the lab's ten charms (two redrawn to stay original) and the One-of-one build in the app, quoted by the shop unless it sets a price; shops turn charms on in the Shop editor; Describe it places them; letters back across several teeth with Block/Script and enamel in the Extras row. Build, lint, tests pass. Screens `case-study/2026-11-18-build-*`. See `charms.md`.

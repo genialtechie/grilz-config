@@ -1,0 +1,145 @@
+{
+  "fangs": false,
+  "cut": "deep",
+  "mold": "kit",
+  "vision": "",
+  "inscriptions": [
+    {
+      "text": "AB",
+      "teeth": [
+        7
+      ],
+      "style": "cut",
+      "font": "block",
+      "enamel": null
+    },
+    {
+      "text": "Lainee",
+      "teeth": [
+        22,
+        23,
+        24,
+        25
+      ],
+      "style": "engraved",
+      "font": "script",
+      "enamel": "pink"
+    }
+  ],
+  "charms": [
+    {
+      "id": "crown",
+      "tooth": 8
+    }
+  ],
+  "teeth": [
+    {
+      "index": 5,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 6,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 7,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 8,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 9,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 10,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 21,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 22,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 23,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 24,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 25,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    },
+    {
+      "index": 26,
+      "metal": "yellow",
+      "karat": "10k",
+      "type": "plain",
+      "style": "solid",
+      "setting": "honeycomb",
+      "stone": "moissanite"
+    }
+  ]
+}

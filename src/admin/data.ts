@@ -37,6 +37,8 @@ export type LeadRow = {
   source: Record<string, string>;
   /** The promo code the customer used, and what it took off. */
   promo: { code: string; amount: number } | null;
+  /** The contact is a phone the customer proved with a texted code (migration 20261117000001). */
+  phone_verified: boolean;
 };
 
 const must = <T,>(result: { data: T | null; error: { message: string } | null }): T => {
@@ -133,7 +135,7 @@ export async function listLeads(tenantId: string) {
   const leads = must(
     await db
       .from('leads')
-      .select('id,created_at,name,contact,email,note,status,total,deposit,render_status,notified_at,preview_path,photo_path,spec,source,promo:price->promo')
+      .select('id,created_at,name,contact,email,note,status,total,deposit,render_status,notified_at,preview_path,photo_path,spec,source,phone_verified,promo:price->promo')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(200),
@@ -258,7 +260,7 @@ export async function exportShopData(tenant: { id: string; slug: string; name: s
   const db = supabase();
   const [configs, leads, events, team] = await Promise.all([
     db.from('tenant_configs').select('version,status,config,created_at,published_at').eq('tenant_id', tenant.id).order('version'),
-    db.from('leads').select('id,created_at,status,name,contact,email,note,spec,price,total,deposit,config_version,source').eq('tenant_id', tenant.id).order('created_at'),
+    db.from('leads').select('id,created_at,status,name,contact,email,phone_verified,note,spec,price,total,deposit,config_version,source').eq('tenant_id', tenant.id).order('created_at'),
     db.from('lead_events').select('lead_id,type,created_at,data').eq('tenant_id', tenant.id).order('created_at'),
     db.rpc('shop_team', { target: tenant.id }),
   ]);
