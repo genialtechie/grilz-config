@@ -75,7 +75,7 @@ export const CatalogSchema = z.object({
   molds: nonEmptyUnique(MoldIdSchema),
   /** Named tooth extras the shop sells (MAG-204); absent = none. */
   extras: z.array(ExtraIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
-  /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
+  /** PVD colour coat (MAG-214): the shop offers it; absent = not offered. Colour costs nothing extra. */
   pvd: z.boolean().optional(),
   /** Diamond grade tiers the shop sells (MAG-215); absent = none. */
   grades: z.array(GradeIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
