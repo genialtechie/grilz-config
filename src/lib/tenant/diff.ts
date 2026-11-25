@@ -9,7 +9,7 @@ export type Change = { area: string; text: string };
 
 type Option = { id: string; label: string };
 const label = (list: readonly Option[], id: string) => list.find((item) => item.id === id)?.label ?? id;
-const usd = (value: number | undefined) => (value === undefined ? '—' : `$${Number(value).toLocaleString('en-US')}`);
+const usd = (value: number | undefined) => (value === undefined ? '—' : value < 0 ? `-$${Math.abs(Number(value)).toLocaleString('en-US')}` : `$${Number(value).toLocaleString('en-US')}`);
 const times = (value: number | undefined) => (value === undefined ? '—' : `${value}×`);
 
 const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds' | 'extras' | 'grades'>; name: string; options: readonly Option[] }[] = [
