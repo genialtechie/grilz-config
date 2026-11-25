@@ -58,7 +58,7 @@ import {
   type ToothDesign,
 } from '../lib/renderSpec';
 import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
-import { depositFor, displayTotal, extraPrice, gradePrice, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
+import { depositFor, displayTotal, extraPrice, gradePrice, nearestOffered, offered, priceBreakdown, volumeHints } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -338,6 +338,9 @@ function Configurator() {
   const fangsOn = setOptions.fangs && canHaveFangs;
   const effectiveSet: SetOptions = { ...setOptions, fangs: fangsOn, inscriptions };
   const pricing = priceBreakdown(tenant.config.pricing, teethDesigns, effectiveSet, tenant.config.catalog.addOns, promo);
+  // Live volume-discount hint (MAG-216): the next set-price tier within
+  // reach, recomputed from the same table as the total above.
+  const volumeHintList = volumeHints(tenant.config.pricing, teethDesigns);
   const deposit = depositFor(tenant.config.deposit, pricing.total);
   const brand = tenant.config.brand;
   const priceHidden = tenant.config.pricing.display === 'hidden';
@@ -1574,6 +1577,11 @@ function Configurator() {
                       </dl>
                     </details>
                   )}
+                  {volumeHintList.map((hint) => (
+                    <p key={hint.key} className="inline-note">
+                      {hint.more} more {hint.label} {hint.more === 1 ? 'tooth' : 'teeth'} → −${hint.saving}/tooth
+                    </p>
+                  ))}
                   {tenant.promos && (
                     <PromoField
                       shop={tenant.slug}

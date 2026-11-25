@@ -122,6 +122,51 @@ export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
   (pricing.volume ?? []).filter((tier) => teeth >= tier.minTeeth).reduce((best, tier) => Math.max(best, tier.percentOff), 0);
 
+/** A live volume-discount hint: the next set-price tier within reach for one metal. */
+export type VolumeHint = { key: IcedKey; label: string; more: number; saving: number };
+
+/**
+ * The next set-price tier for each metal in the set, as a live hint in the
+ * summary — "4 more 14K teeth → −$50/tooth" (MAG-216). The saving is the
+ * per-tooth metal price at the next tier against what the tooth costs now:
+ * the current tier's price/size when the set already reaches one, else the
+ * fixed per-tooth metal price. Only the next tier up, only when it actually
+ * saves at least a dollar a tooth — a bigger tier's price can be worse per
+ * tooth if the shop's table is off, and a hint must never promise a saving
+ * that isn't there. All-in iced teeth take no set price, and a market-quoted
+ * metal's price moves daily, so neither counts toward a tier. A shop hiding
+ * its prices gets no hint either. Display-only: the hint names the tier, it
+ * never applies anything. The % volume discount has no hint: it keys off the
+ * total tooth count, not a per-metal ladder, and it never applies to
+ * set-priced metal — a % hint on this set would not match what the customer
+ * pays.
+ */
+export const volumeHints = (pricing: TenantPricing, teeth: readonly RenderTooth[]): VolumeHint[] => {
+  if (pricing.display === 'hidden' || !(pricing.setPrices ?? []).length) return [];
+  const byKey = new Map<IcedKey, { metal: MetalId; karat: KaratId; count: number }>();
+  teeth.forEach((tooth) => {
+    if (tooth.type === 'iced' && icedAllIn(pricing, tooth) !== undefined) return;
+    if (metalQuoted(pricing, tooth.metal, tooth.karat)) return;
+    const key = setPriceKey(tooth.metal, tooth.karat);
+    const group = byKey.get(key) ?? { metal: tooth.metal, karat: tooth.karat, count: 0 };
+    group.count += 1;
+    byKey.set(key, group);
+  });
+  const hints: VolumeHint[] = [];
+  byKey.forEach((group, key) => {
+    const next = (pricing.setPrices ?? [])
+      .filter((tier) => tier.size > group.count && tier.prices[key] !== undefined)
+      .sort((a, b) => a.size - b.size)[0];
+    if (!next) return;
+    const current = setPriceCell(pricing, key, group.count);
+    const nowPerTooth = current ? current.price / current.size : metalPerTooth(pricing, group.metal, group.karat);
+    const saving = Math.round(nowPerTooth - next.prices[key]! / next.size);
+    if (saving < 1) return;
+    hints.push({ key, label: setPriceKeyLabel(key), more: next.size - group.count, saving });
+  });
+  return hints.sort((a, b) => b.saving - a.saving);
+};
+
 /** A tooth's share of the front-tooth price, by where it sits (1 = the same as the front). */
 export const positionFactor = (pricing: TenantPricing, index: number) => {
   const position = toothPosition(index);
