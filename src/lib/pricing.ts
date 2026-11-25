@@ -28,7 +28,7 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
   return Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
 };
 
-/** Whether a tooth's metal price comes from a market quote (fixed-price extras don't apply on top of one). */
+/** Whether a tooth's metal price comes from a market quote (metal-price items — the colour surcharge, set prices — don't apply on top of one; labour/finish charges like styles, extras and the PVD coat still do). */
 export const metalQuoted = (pricing: TenantPricing, metal: MetalId, karat: KaratId) =>
   Boolean(pricing.market?.enabled && pricing.market.quote?.perTooth[quoteKey(metal, karat)] !== undefined);
 
