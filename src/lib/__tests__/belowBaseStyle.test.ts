@@ -136,14 +136,27 @@ describe('a below-base style (MAG-219)', () => {
     expect(quote(priced, teeth.map((item) => ({ ...item, style: 'solid' as const }))).total).toBe(50 + 575 - 115);
   });
 
-  it('applies to iced open-face teeth too — their labour falls back to the style price', () => {
+  it('does not discount iced open-face teeth by default — a below-base style is plain-only (MAG-225)', () => {
     // 6 iced open-face 10K teeth, moissanite $75 a tooth, honeycomb $0:
-    // metal $690 + stones $450 + finish 6 × -$60 + fee $50.
+    // metal $690 + stones $450 + finish $0 + fee $50. The -$60 style price
+    // is plain-only unless the shop opts in (applyBelowBase), so an iced
+    // open-face set costs the same as with the style at $0.
     const teeth = setOf(6, 'yellow', '10k', { type: 'iced', style: 'open-face' });
-    expect(line(BELOW, teeth, 'Style & finish')).toEqual({ label: 'Style & finish', amount: -360 });
-    expect(quote(BELOW, teeth).total).toBe(830);
-    // At Luckey's +$15 open-face price the same set is $1,280.
+    expect(line(BELOW, teeth, 'Style & finish')).toBeUndefined();
+    expect(quote(BELOW, teeth).total).toBe(1190);
+    expect(quote({ ...BELOW, stylePerTooth: { ...BELOW.stylePerTooth, 'open-face': 0 } }, teeth).total).toBe(1190);
+    // At Luckey's +$15 open-face price the same set is $1,280 — a positive
+    // style price still falls back to iced open-face teeth.
     expect(quote(LUCKEY, teeth).total).toBe(1280);
+  });
+
+  it('applies to iced open-face teeth when the shop opts in (MAG-225)', () => {
+    // The same set with applyBelowBase: the -$60 style price flows through
+    // to iced open-face teeth, as it did before MAG-225.
+    const optedIn: TenantPricing = { ...BELOW, icedOpenFace: { stoneShare: 100, applyBelowBase: true } };
+    const teeth = setOf(6, 'yellow', '10k', { type: 'iced', style: 'open-face' });
+    expect(line(optedIn, teeth, 'Style & finish')).toEqual({ label: 'Style & finish', amount: -360 });
+    expect(quote(optedIn, teeth).total).toBe(830);
   });
 
   it('does not leak onto full-face iced teeth — they take no finish at all', () => {
@@ -198,6 +211,87 @@ describe('a below-base style in the config (MAG-219)', () => {
   it('reads honestly in the publish diff', () => {
     const changes = describeChanges(VVSLAB_CONFIG, belowConfig);
     expect(changes.map((change) => change.text)).toContain('Open-face: $40 → -$60 per tooth');
+    // The iced open-face line shows what iced teeth actually cost: by
+    // default the -$60 does not reach them (MAG-225), so it reads $0.
+    expect(changes.map((change) => change.text)).toContain('Iced open face: 100% of stones + $40 → 100% of stones + $0');
+  });
+
+  it('reads honestly in the publish diff when the shop opts in (MAG-225)', () => {
+    const optedIn = {
+      ...belowConfig,
+      pricing: { ...belowConfig.pricing, icedOpenFace: { stoneShare: 100, applyBelowBase: true } },
+    };
+    const changes = describeChanges(VVSLAB_CONFIG, optedIn);
     expect(changes.map((change) => change.text)).toContain('Iced open face: 100% of stones + $40 → 100% of stones + -$60');
+  });
+});
+
+describe('a below-base style on iced open-face teeth (MAG-225)', () => {
+  // Haleem's demo numbers (Nov 25 live test, 12 iced moissanite open-face
+  // teeth, 10K yellow, honeycomb, $200 fee): style +$40 -> $3,380, style
+  // -$60 -> $2,180 (old behaviour), full iced -> $2,900. The demo shop
+  // stores no open-face labour, so the style price was the whole finish.
+  const DEMO = VVSLAB_CONFIG.pricing;
+  const icedOpen = (count: number) => setOf(count, 'yellow', '10k', { type: 'iced', style: 'open-face' });
+
+  it('keeps the +$40 case: a positive style price still falls back to iced open-face teeth', () => {
+    const teeth = icedOpen(12);
+    expect(line(DEMO, teeth, 'Style & finish')).toEqual({ label: 'Style & finish', amount: 480 });
+    expect(quote(DEMO, teeth).total).toBe(3380);
+  });
+
+  it('is plain-only by default: a -$60 style gives iced open-face teeth no discount', () => {
+    const priced: TenantPricing = { ...DEMO, stylePerTooth: { ...DEMO.stylePerTooth, 'open-face': -60 } };
+    const teeth = icedOpen(12);
+    expect(line(priced, teeth, 'Style & finish')).toBeUndefined();
+    // The same as a full iced set ($2,900): metal $1,800 + stones $900 +
+    // finish $0 + fee $200. The old behaviour was $2,180.
+    expect(quote(priced, teeth).total).toBe(2900);
+    expect(quote(priced, setOf(12, 'yellow', '10k', { type: 'iced', style: 'solid' })).total).toBe(2900);
+  });
+
+  it('applies to iced open-face teeth when the shop opts in', () => {
+    const priced: TenantPricing = {
+      ...DEMO,
+      stylePerTooth: { ...DEMO.stylePerTooth, 'open-face': -60 },
+      icedOpenFace: { stoneShare: 100, applyBelowBase: true },
+    };
+    const teeth = icedOpen(12);
+    expect(line(priced, teeth, 'Style & finish')).toEqual({ label: 'Style & finish', amount: -720 });
+    expect(quote(priced, teeth).total).toBe(2180);
+  });
+
+  it('a set labour beats the style price — it is the shop explicit iced price (trace)', () => {
+    // Labour $40 + style -$60: the finish is $40, not -$60 and not $80.
+    // The labour takes precedence; the style price is only the fallback
+    // when no labour is stored. This is why Haleem's $40 labour "didn't
+    // seem to add anything": no labour was stored on the demo shop, so the
+    // $40 he saw in the admin was the style price itself.
+    const priced: TenantPricing = {
+      ...DEMO,
+      stylePerTooth: { ...DEMO.stylePerTooth, 'open-face': -60 },
+      icedOpenFace: { stoneShare: 100, perTooth: 40 },
+    };
+    const teeth = icedOpen(12);
+    expect(line(priced, teeth, 'Style & finish')).toEqual({ label: 'Style & finish', amount: 480 });
+    expect(quote(priced, teeth).total).toBe(3380);
+  });
+
+  it('an explicit $0 labour is used, not the style fallback (trace)', () => {
+    const priced: TenantPricing = {
+      ...DEMO,
+      stylePerTooth: { ...DEMO.stylePerTooth, 'open-face': -60 },
+      icedOpenFace: { stoneShare: 100, perTooth: 0 },
+    };
+    const teeth = icedOpen(12);
+    expect(line(priced, teeth, 'Style & finish')).toBeUndefined();
+    expect(quote(priced, teeth).total).toBe(2900);
+  });
+
+  it('the setting is optional in the schema — absent means plain-only', () => {
+    const config = { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, icedOpenFace: { stoneShare: 100 } } };
+    expect(parseTenantConfig(config).ok).toBe(true);
+    const optedIn = { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, icedOpenFace: { stoneShare: 100, applyBelowBase: true } } };
+    expect(parseTenantConfig(optedIn).ok).toBe(true);
   });
 });

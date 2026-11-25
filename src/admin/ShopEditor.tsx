@@ -4,7 +4,7 @@ import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upl
 import { CUTS, DIAMOND_GRADES, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS, type CutId, type ExtraId, type GradeId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
-import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
+import { cutPrice, feeLabel, icedOpalPrice, icedOpenFacePrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, extendTrial, latestTrialExtension, type ConfigRow, type TenantRow, type TrialExtension } from './data';
 import { adminStatus, ADMIN_STATUS_LABEL, hasCard, trialDisplay } from '../lib/trial';
@@ -881,11 +881,16 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 {catalog.styles.includes('open-face') && (
                   <>
                     <h3>Iced open face</h3>
-                    <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour.</p>
+                    <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour. Iced open-face teeth use your open-face finish price unless you set a labour here.</p>
                     <div className="admin-grid admin-grid--prices">
                       <Money label="Share of stone price" step={5} suffix="%" value={pricing.icedOpenFace?.stoneShare ?? 100} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: Math.min(100, value) }; })} />
-                      <Money label="Open-face labour" min={-100_000} value={pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face']} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
+                      <Money label="Open-face labour" min={-100_000} value={icedOpenFacePrice(pricing).perTooth} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
                     </div>
+                    <label className="admin-check">
+                      <input type="checkbox" checked={Boolean(pricing.icedOpenFace?.applyBelowBase)} onChange={(event) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, applyBelowBase: event.target.checked || undefined }; })} />
+                      <span>Let a below-base open-face price apply to iced teeth too</span>
+                    </label>
+                    <p className="admin-muted admin-section__hint">A below-base (negative) open-face price applies to plain teeth only. Turn this on if you want the discount to apply to iced open-face teeth as well. It only matters when your open-face price is below $0.</p>
                   </>
                 )}
                 {catalog.styles.includes('opals') && (

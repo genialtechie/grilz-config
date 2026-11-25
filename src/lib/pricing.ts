@@ -111,9 +111,25 @@ export const icedOpalPrice = (pricing: TenantPricing) => ({
   perTooth: pricing.icedOpal?.perTooth ?? pricing.stylePerTooth.opals ?? 0,
 });
 
+/**
+ * Iced open face (MAG-225), as the shop priced it: the labour the shop set
+ * for iced open-face teeth, or the open-face finish price as the fallback —
+ * but a below-base (negative) finish price is plain-only unless the shop
+ * opted in (applyBelowBase): the "windows" discount must not undercut a
+ * full iced set. A set labour is the shop's explicit iced price, so it
+ * applies as stored.
+ */
+export const icedOpenFacePrice = (pricing: TenantPricing) => {
+  const style = pricing.stylePerTooth['open-face'] ?? 0;
+  return {
+    stoneShare: pricing.icedOpenFace?.stoneShare ?? 100,
+    perTooth: pricing.icedOpenFace?.perTooth ?? (style < 0 && !pricing.icedOpenFace?.applyBelowBase ? 0 : style),
+  };
+};
+
 /** The share (%) of the stone and setting price an iced tooth with a border takes. */
 const borderShare = (pricing: TenantPricing, tooth: ToothDesign) =>
-  icedOpal(tooth) ? icedOpalPrice(pricing).stoneShare : pricing.icedOpenFace?.stoneShare ?? 100;
+  icedOpal(tooth) ? icedOpalPrice(pricing).stoneShare : icedOpenFacePrice(pricing).stoneShare;
 
 /** The arches (top, bottom) with at least one tooth in the set. */
 export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.map((tooth) => (tooth.index < 16 ? 'top' : 'bottom'))).size;
@@ -205,7 +221,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // Iced open face and iced opal: a share of the stones (fewer fit round the border) and their own labour price.
   const openFaceShare = (tooth: ToothDesign) => (icedOpenFace(tooth) || icedOpal(tooth) ? borderShare(pricing, tooth) / 100 : 1);
   const finish = (tooth: ToothDesign) => {
-    if (icedOpenFace(tooth)) return pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0;
+    if (icedOpenFace(tooth)) return icedOpenFacePrice(pricing).perTooth;
     if (icedOpal(tooth)) return icedOpalPrice(pricing).perTooth;
     return tooth.type === 'iced' ? 0 : pricing.stylePerTooth[tooth.style] ?? 0;
   };
