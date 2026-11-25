@@ -42,8 +42,19 @@ export const seededRng = (seed: number): Rng => {
 
 /** Price calls per roll, so a pathological shop can't spin the repair loop forever. */
 const MAX_PRICE_CALLS = 500;
-/** Below this share of the budget, the roll tries one upgrade so a big budget doesn't return a small set. */
+/**
+ * The spend-up target: the roll keeps upgrading until it reaches this share
+ * of the budget (or no upgrade kind yields a fitting improvement). A single
+ * upgrade could never close a big gap — a $1,510 roll on a $5,000 budget
+ * (MAG-222) — so the target is a share to climb toward, not a trigger for
+ * one attempt. 0.85 leaves headroom for the last fitting upgrade to
+ * overshoot without forcing every roll to the max; tunable.
+ */
 const SPEND_UP_SHARE = 0.85;
+/** Max upgrade rounds in the spend-up. One adoption per round, so a climb
+ * from the smallest set to the largest needs room — but each round costs
+ * price calls, and the shared price() counter still stops the loop. */
+const MAX_SPEND_UP_ROUNDS = 24;
 /** The front two teeth get a second metal this often — the two-tone look. */
 const TWO_TONE_CHANCE = 0.25;
 /** A plain set gets a named extra on a few teeth this often. */
@@ -548,8 +559,21 @@ export function randomizeDesign(shop: RandomizeShop, budget: number, keep: Desig
   // the answer (see onExhausted); a stall with calls to spare is a real
   // no-fit — the repair tried every step it has.
   if (total > dollars) return calls >= MAX_PRICE_CALLS ? onExhausted() : { ok: false, minTotal };
-  // Under budget with room: try one random upgrade and keep it only when it still fits.
-  if (total < SPEND_UP_SHARE * dollars) {
+  // Under budget with room: keep upgrading — one fitting upgrade per round,
+  // in a fresh shuffled order each round — until the roll reaches
+  // SPEND_UP_SHARE of the budget, or no upgrade kind yields a fitting
+  // improvement. One upgrade could never close a big gap (a $1,510 roll on
+  // a $5,000 budget, MAG-222), so the loop climbs step by step instead of
+  // stopping after the first attempt. Every adoption is priced first and
+  // must raise the total and still fit, so the roll never exceeds the
+  // budget and never goes backwards. A kind that overshoots is skipped, not
+  // terminal — another kind may fit where it didn't. Bounded by
+  // MAX_SPEND_UP_ROUNDS, and the shared price() counter stops the loop
+  // when calls run out (the fitting roll is kept).
+  let spendUpRounds = 0;
+  let outOfCalls = false;
+  while (total < SPEND_UP_SHARE * dollars && spendUpRounds < MAX_SPEND_UP_ROUNDS && !outOfCalls) {
+    spendUpRounds += 1;
     const upgrades = shuffle(
       [
         () => biggerSet(candidate),
@@ -560,21 +584,28 @@ export function randomizeDesign(shop: RandomizeShop, budget: number, keep: Desig
       ],
       rng,
     );
+    let advanced = false;
     for (const upgrade of upgrades) {
       const next = upgrade();
       if (!next) continue;
       const nextTotal = price(next);
-      if (nextTotal === null) break;
-      // A no-op (an upgrade that changes nothing — a dearer base no tooth
-      // wears, on a set the two-tone covers whole) is not an upgrade: try
-      // the next kind. A real upgrade that doesn't fit ends the attempt.
-      if (nextTotal === total) continue;
-      if (nextTotal <= dollars) {
-        candidate = next;
-        total = nextTotal;
+      if (nextTotal === null) {
+        outOfCalls = true;
+        break;
       }
+      // A no-op (an upgrade that changes nothing — a dearer base no tooth
+      // wears, on a set the two-tone covers whole) or a downgrade (a
+      // bigger set at a set price can cost LESS) is not an upgrade: try
+      // the next kind. An upgrade that doesn't fit is skipped, not
+      // terminal — another kind may fit where it didn't.
+      if (nextTotal <= total) continue;
+      if (nextTotal > dollars) continue;
+      candidate = next;
+      total = nextTotal;
+      advanced = true;
       break;
     }
+    if (!advanced) break;
   }
   const snapshot: DesignSnapshot = {
     teeth: teethFor(candidate.size),
