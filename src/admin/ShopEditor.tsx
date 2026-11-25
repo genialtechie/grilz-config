@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS, type CutId, type ExtraId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
@@ -139,6 +139,97 @@ function IcedTable({ pricing, catalog, onChange }: { pricing: TenantPricing; cat
           ))}
         </Fragment>
       ))}
+    </div>
+  );
+}
+
+/** Set prices (MAG-204): a row per metal (gold by karat), a column per set size. A cell is what the whole set costs in that metal; blank means no set price, so that metal stays per tooth. */
+function SetPricesTable({ pricing, catalog, onChange }: { pricing: TenantPricing; catalog: TenantConfig['catalog']; onChange: (table: TenantPricing['setPrices']) => void }) {
+  const rows = icedColumns(catalog);
+  const table = pricing.setPrices ?? [];
+  const setCell = (size: number, key: IcedKey, text: string) => {
+    const next = table.map((tier) => (tier.size === size ? { ...tier, prices: { ...tier.prices } } : tier));
+    const tier = next.find((item) => item.size === size)!;
+    if (text === '') delete tier.prices[key];
+    else tier.prices[key] = Math.max(0, Number(text));
+    onChange(next);
+  };
+  const setSize = (oldSize: number, text: string) => {
+    const size = Math.max(2, Math.min(32, Math.round(Number(text) || oldSize)));
+    onChange(table.map((tier) => (tier.size === oldSize ? { ...tier, size } : tier)));
+  };
+  return (
+    <div>
+      <div className="admin-iced-table" style={{ gridTemplateColumns: `minmax(110px, 1.4fr) repeat(${table.length}, minmax(64px, 1fr))` }}>
+        <span />
+        {table.map((tier) => (
+          <span key={tier.size} className="admin-set-size">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={2}
+              max={32}
+              step={1}
+              aria-label="Set size in teeth"
+              value={tier.size}
+              onChange={(event) => setSize(tier.size, event.target.value)}
+            />
+            <button className="admin-icon-button" type="button" aria-label={`Remove the ${tier.size}-tooth set size`} onClick={() => onChange(table.filter((item) => item.size !== tier.size))}>
+              <X size={13} />
+            </button>
+          </span>
+        ))}
+        {rows.map((row) => (
+          <Fragment key={row.key}>
+            <strong>{row.label}</strong>
+            {table.map((tier) => (
+              <input
+                key={tier.size}
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step={5}
+                placeholder="—"
+                aria-label={`${row.label}, ${tier.size} teeth, whole set price`}
+                value={tier.prices[row.key] ?? ''}
+                onChange={(event) => setCell(tier.size, row.key, event.target.value)}
+              />
+            ))}
+          </Fragment>
+        ))}
+      </div>
+      {table.length < 4 && (() => {
+        // The smallest size not already in the table, so Add can never create
+        // an unsavable duplicate (MAG-204 review): with the table ending at
+        // 32, "last + 4" capped at 32 used to duplicate it.
+        const used = new Set(table.map((tier) => tier.size));
+        const nextSize = Array.from({ length: 31 }, (_, i) => i + 2).find((size) => !used.has(size));
+        if (nextSize === undefined) return null;
+        return (
+          <button
+            className="admin-button admin-button--small"
+            type="button"
+            onClick={() => onChange([...table, { size: nextSize, prices: {} }])}
+          >
+            Add a set size
+          </button>
+        );
+      })()}
+      {(() => {
+        // A set price above what the teeth cost one by one is almost always
+        // a typo — and the dangerous typo runs the other way, a per-tooth
+        // price typed into a set cell selling the whole set for that price,
+        // which no check can catch (a set price below per tooth is the
+        // normal discount). Flag the checkable direction (MAG-204 review).
+        const overpriced = table.flatMap((tier) => rows.flatMap((row) => {
+          const price = tier.prices[row.key];
+          if (price === undefined) return [];
+          const perTooth = row.key === 'silver' || row.key === 'platinum' ? metalPerTooth(pricing, row.key, '10k') : metalPerTooth(pricing, 'yellow', row.key);
+          return price > tier.size * perTooth ? [`${row.label} · ${tier.size} teeth: $${price} is more than ${tier.size} × $${perTooth} = $${tier.size * perTooth}`] : [];
+        }));
+        if (!overpriced.length) return null;
+        return <p className="admin-muted admin-section__hint">Check these — the set price is higher than the teeth cost one by one, so customers pay the set price: {overpriced.join('; ')}.</p>;
+      })()}
     </div>
   );
 }
@@ -525,6 +616,24 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
             )}
             <h3>Fit</h3><Checks options={CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
             <h3>Molds</h3><Checks options={MOLDS} selected={catalog.molds} onToggle={(id, on) => toggle('molds', id, on)} />
+            <h3>Tooth extras</h3>
+            <Checks
+              options={TOOTH_EXTRAS}
+              selected={catalog.extras ?? []}
+              onToggle={(id, on) => update((next) => {
+                const extras = (next.catalog.extras ?? []) as ExtraId[];
+                const order = TOOTH_EXTRAS.map((item) => item.id);
+                next.catalog.extras = (on ? [...extras, id as ExtraId] : extras.filter((item) => item !== id)).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+                // No price is seeded here: a new extra has no price until the
+                // shop sets one in the Prices section below, and saving stays
+                // blocked until it does ("Add a price for cross."). Seeding
+                // $0 would offer it free — and $0 is also a price a shop can
+                // choose on purpose (brushed, laser), so an invented $0 is
+                // indistinguishable from an intended one (MAG-204 review).
+                // A price left over in this draft (toggled off, then back on
+                // before saving) is kept as it was.
+              })}
+            />
             <h3>Extras</h3>
             <div className="admin-checks">
               <label className="admin-check"><input type="checkbox" checked={catalog.fangs} onChange={(event) => update((next) => { next.catalog.fangs = event.target.checked; })} /> Fangs</label>
@@ -587,12 +696,39 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 </div>
               </>
             )}
+            <h3>Colour surcharge</h3>
+            <p className="admin-muted admin-section__hint">A flat amount per tooth on a metal, whatever the karat — white and rose gold usually cost extra. Added on top of the metal price, and on top of a set price too.</p>
+            <div className="admin-grid admin-grid--prices">
+              {pick(METALS, catalog.metals).map((metal) => (
+                <Money
+                  key={metal.id}
+                  label={`${metal.label} extra`}
+                  value={pricing.colourSurcharge?.[metal.id] ?? 0}
+                  onChange={(value) => update((next) => {
+                    const surcharge = { ...next.pricing.colourSurcharge };
+                    if (value) surcharge[metal.id] = value;
+                    else delete surcharge[metal.id];
+                    next.pricing.colourSurcharge = Object.keys(surcharge).length ? surcharge : undefined;
+                  })}
+                />
+              ))}
+            </div>
             <h3>Finish</h3>
             <div className="admin-grid admin-grid--prices">
               {pick(STYLES, catalog.styles).map((style) => (
                 <Money key={style.id} label={style.label} value={pricing.stylePerTooth[style.id]} onChange={(value) => update((next) => { next.pricing.stylePerTooth[style.id] = value; })} />
               ))}
             </div>
+            {(catalog.extras?.length ?? 0) > 0 && (
+              <>
+                <h3>Tooth extras</h3>
+                <div className="admin-grid admin-grid--prices">
+                  {pick(TOOTH_EXTRAS, catalog.extras ?? []).map((extra) => (
+                    <Money key={extra.id} label={extra.label} value={pricing.extraPerTooth?.[extra.id] ?? 0} onChange={(value) => update((next) => { next.pricing.extraPerTooth = { ...next.pricing.extraPerTooth, [extra.id]: value }; })} />
+                  ))}
+                </div>
+              </>
+            )}
             {catalog.types.includes('iced') && (
               <>
                 <h3>Stones and settings</h3>
@@ -647,6 +783,13 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 Add a set-size discount
               </button>
             )}
+            <h3>Set prices</h3>
+            <p className="admin-muted admin-section__hint">What a whole set costs in each metal: a 6/6 is 12 teeth, an 8/8 is 16, and so on. A set of that size or bigger uses the biggest size it reaches, so the price never jumps backwards. A set price wins over the percentage discount above for the metals that have one; the percentage still applies to the rest. Set prices don&apos;t apply to metal priced from the live market — those teeth use the day&apos;s quote instead, so a fixed set price can&apos;t turn the gold price&apos;s daily movement into a phantom saving.</p>
+            <label className="admin-check">
+              <input type="checkbox" checked={Boolean(pricing.setPrices)} onChange={(event) => update((next) => { if (event.target.checked) next.pricing.setPrices = [12, 16, 20, 24].map((size) => ({ size, prices: {} })); else delete next.pricing.setPrices; })} />
+              <span>Price whole sets by metal and karat</span>
+            </label>
+            {pricing.setPrices && <SetPricesTable pricing={pricing} catalog={catalog} onChange={(table) => update((next) => { next.pricing.setPrices = table; })} />}
             <h3>Back teeth</h3>
             <p className="admin-muted admin-section__hint">Premolars and molars are bigger than front teeth. Price them as a share of a front tooth's price: 100% is the same, 125% is a quarter more. Covers metal, finish, stones and setting.</p>
             <div className="admin-grid admin-grid--prices">

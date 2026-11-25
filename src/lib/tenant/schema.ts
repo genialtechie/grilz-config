@@ -11,6 +11,7 @@ import {
   SETTINGS,
   STONES,
   STYLES,
+  TOOTH_EXTRAS,
 } from '../renderSpec.js';
 
 // A tenant (jeweler) config: everything that differs between shops. The option
@@ -26,6 +27,7 @@ export const GrillzTypeSchema = z.enum(ids(GRILLZ_TYPES));
 export const StyleIdSchema = z.enum(ids(STYLES));
 export const SettingIdSchema = z.enum(ids(SETTINGS));
 export const StoneIdSchema = z.enum(ids(STONES));
+export const ExtraIdSchema = z.enum(ids(TOOTH_EXTRAS));
 export const CutIdSchema = z.enum(ids(CUTS));
 export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
@@ -67,6 +69,8 @@ export const CatalogSchema = z.object({
   /** May be empty: no cut choice, and the builder hides the Cut group (MAG-205). */
   cuts: z.array(CutIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.'),
   molds: nonEmptyUnique(MoldIdSchema),
+  /** Named tooth extras the shop sells (MAG-204); absent = none. */
+  extras: z.array(ExtraIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */
@@ -177,6 +181,31 @@ export const PricingSchema = z.object({
     .max(4)
     .refine((tiers) => new Set(tiers.map((tier) => tier.minTeeth)).size === tiers.length, 'Each set size can have one discount.')
     .optional(),
+  /**
+   * Set prices by metal (MAG-204): whole-set prices, gold by karat and the
+   * other metals by name (the same key as the iced table). A size entry's
+   * price is what the whole set costs in that metal; a missing cell is a
+   * metal with no set price. Absent = per-tooth prices, as before.
+   */
+  setPrices: z
+    .array(
+      z.object({
+        size: z.number().int().min(2).max(32),
+        prices: z.record(IcedKeySchema, money),
+      }),
+    )
+    .max(4)
+    .refine((tiers) => new Set(tiers.map((tier) => tier.size)).size === tiers.length, 'Each set size can have one price.')
+    .optional(),
+  /**
+   * A flat surcharge per tooth on a metal (MAG-204): white and rose gold cost
+   * a fixed amount over the base metal price, whatever the karat. Applies to
+   * fixed metal prices only — a market-linked quote already is that metal's
+   * price. Absent = no surcharge.
+   */
+  colourSurcharge: z.record(MetalIdSchema, money).optional(),
+  /** Named tooth extras, per tooth (MAG-204); absent = none offered. */
+  extraPerTooth: z.record(ExtraIdSchema, money).optional(),
 });
 
 export const DepositSchema = z.object({
@@ -195,6 +224,14 @@ export const pruneCutPrices = <P extends { cuts?: Partial<Record<string, unknown
   const kept = Object.fromEntries(Object.entries(pricing.cuts).filter(([id]) => offered.includes(id)));
   const { cuts: _drop, ...rest } = pricing;
   return (Object.keys(kept).length ? { ...rest, cuts: kept } : rest) as P;
+};
+
+/** The pricing with extra prices kept only for the extras on offer (none left = no `extraPerTooth` table). */
+export const pruneExtraPrices = <P extends { extraPerTooth?: Partial<Record<string, unknown>> }>(pricing: P, offered: readonly string[]): P => {
+  if (!pricing.extraPerTooth) return pricing;
+  const kept = Object.fromEntries(Object.entries(pricing.extraPerTooth).filter(([id]) => offered.includes(id)));
+  const { extraPerTooth: _drop, ...rest } = pricing;
+  return (Object.keys(kept).length ? { ...rest, extraPerTooth: kept } : rest) as P;
 };
 
 export const TenantConfigSchema = z
@@ -219,6 +256,7 @@ export const TenantConfigSchema = z
     need(catalog.styles, pricing.stylePerTooth, 'stylePerTooth');
     need(catalog.stones, pricing.stonePerTooth, 'stonePerTooth');
     need(catalog.settings, pricing.settingPerTooth, 'settingPerTooth');
+    need(catalog.extras ?? [], pricing.extraPerTooth ?? {}, 'extraPerTooth');
     if (catalog.inscription.enabled) need(catalog.inscription.styles, pricing.inscription, 'inscription');
     if (deposit.mode === 'link' && !deposit.link) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['deposit', 'link'], message: 'Add the payment link.' });
     if (pricing.display === 'hidden' && deposit.mode !== 'none' && deposit.rule.type !== 'fixed') {
@@ -229,7 +267,8 @@ export const TenantConfigSchema = z
     }
   })
   // Pricing only ever charges for cuts the shop offers: drop entries left over from cuts turned off.
-  .transform((config) => ({ ...config, pricing: pruneCutPrices(config.pricing, config.catalog.cuts) }));
+  // The same for named extras.
+  .transform((config) => ({ ...config, pricing: pruneExtraPrices(pruneCutPrices(config.pricing, config.catalog.cuts), config.catalog.extras ?? []) }));
 
 export type TenantConfig = z.infer<typeof TenantConfigSchema>;
 export type TenantCatalog = TenantConfig['catalog'];
