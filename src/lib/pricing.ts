@@ -183,7 +183,10 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // engine rule is that only metal-price items are gated on quotes). Like
   // the stone price, it takes the open-face border share: fewer stones round
   // the frame, less of an upgrade to pay for.
-  const gradeOf = (tooth: ToothDesign) => (tooth.type === 'iced' && tooth.grade ? gradePrice(pricing, tooth.grade) * openFaceShare(tooth) : 0);
+  const gradeOf = (tooth: ToothDesign) => {
+    const grade = tooth.type === 'iced' ? tooth.grade : undefined;
+    return grade && gradePairsWithStone(grade, tooth.stone) ? gradePrice(pricing, grade) * openFaceShare(tooth) : 0;
+  };
   // Open face takes its share of the stones: the part of the all-in price above the plain metal.
   const icedOf = (tooth: ToothDesign) => {
     const price = allIn(tooth);

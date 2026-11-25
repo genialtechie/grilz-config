@@ -159,6 +159,24 @@ describe('diamond grade tiers (MAG-215)', () => {
     expect(line(LUCKEY, teeth, 'Natural VS1')).toBeUndefined();
   });
 
+  it('a grade that does not pair with the stone charges nothing: lab + Natural VS1 = $1,700', () => {
+    const teeth = front(6, { stone: 'lab', grade: 'natural-vs1' });
+    expect(quote(LUCKEY, teeth).total).toBe(1700);
+    expect(line(LUCKEY, teeth, 'Natural VS1')).toBeUndefined();
+  });
+
+  it('a grade that does not pair with the stone charges nothing: moissanite + Grown VVS = $1,190', () => {
+    const teeth = front(6, { stone: 'moissanite', grade: 'grown-vvs' });
+    expect(quote(LUCKEY, teeth).total).toBe(1190);
+    expect(line(LUCKEY, teeth, 'Grown VVS')).toBeUndefined();
+  });
+
+  it('a grade on a photo tooth charges nothing = $990', () => {
+    const teeth = front(6, { type: 'photo', grade: 'natural-vs1' });
+    expect(quote(LUCKEY, teeth).total).toBe(990);
+    expect(line(LUCKEY, teeth, 'Natural VS1')).toBeUndefined();
+  });
+
   it('grade prices read back per tier', () => {
     expect(gradePrice(LUCKEY, 'grown-vvs')).toBe(250);
     expect(gradePrice(LUCKEY, 'natural-si-vs')).toBe(450);

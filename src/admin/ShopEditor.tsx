@@ -846,7 +846,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                   </>
                 )}
                 <h3>Iced, all-in per tooth</h3>
-                <p className="admin-muted admin-section__hint">For shops whose iced price changes with the karat: one price per tooth that covers metal and stones. The setting price and open-face share still apply on top. Leave a cell blank if you don't offer that combination; customers won't see it.</p>
+                <p className="admin-muted admin-section__hint">For shops whose iced price changes with the karat: one price per tooth that covers metal and stones. The setting price, open-face share, and diamond grades still apply on top. Leave a cell blank if you don't offer that combination; customers won't see it.</p>
                 <label className="admin-check">
                   <input type="checkbox" checked={Boolean(pricing.icedPerTooth)} onChange={(event) => update((next) => { if (event.target.checked) next.pricing.icedPerTooth = startingIcedTable(next.pricing, next.catalog); else delete next.pricing.icedPerTooth; })} />
                   <span>Price iced teeth all-in by metal and karat</span>
