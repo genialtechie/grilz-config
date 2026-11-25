@@ -23,6 +23,52 @@ const LUCKEY: TenantPricing = {
   ],
 };
 
+// Reviewer probe P6 (MAG-216 re-review F1): the quote covers yellow 10K
+// ($157) but not white 10K. Yellow's fixed price is $200 — the quote is
+// what the tooth actually costs. The 10K ladder is $1,900 at 12 teeth,
+// $2,400 at 16.
+const MIXED_QUOTE: TenantPricing = {
+  ...VVSLAB_CONFIG.pricing,
+  base: 25,
+  metalPerTooth: { yellow: 200, white: 180, rose: 180, silver: 80, platinum: 320 },
+  karatMultiplier: { '10k': 1, '14k': 1, '18k': 1, '22k': 1 },
+  setPrices: [
+    { size: 12, prices: { '10k': 1900 } },
+    { size: 16, prices: { '10k': 2400 } },
+  ],
+  market: {
+    ...MARKET_DEFAULTS,
+    enabled: true,
+    quote: { asOf: '2026-11-25T00:00:00.000Z', gold: 4000, silver: 50, platinum: 1600, perTooth: { 'yellow:10k': 157 } },
+  },
+};
+
+// Reviewer probe P9 (MAG-216 re-review N1): white 10K lists at $240 a
+// tooth, yellow at $180 — same karat, same ladder as MIXED_QUOTE, no quote.
+const MIXED_COLOUR: TenantPricing = {
+  ...VVSLAB_CONFIG.pricing,
+  base: 0,
+  metalPerTooth: { yellow: 180, white: 240, rose: 180, silver: 80, platinum: 320 },
+  karatMultiplier: { '10k': 1, '14k': 1, '18k': 1, '22k': 1 },
+  setPrices: [
+    { size: 12, prices: { '10k': 1900 } },
+    { size: 16, prices: { '10k': 2400 } },
+  ],
+};
+
+// The $20 total-saving gate: a $100-a-tooth metal, 12 teeth at $1,140
+// ($95 a tooth), 16 at $1,456 ($91 a tooth).
+const GATE: TenantPricing = {
+  ...VVSLAB_CONFIG.pricing,
+  base: 0,
+  metalPerTooth: { yellow: 100, white: 100, rose: 100, silver: 80, platinum: 320 },
+  karatMultiplier: { '10k': 1, '14k': 1, '18k': 1, '22k': 1 },
+  setPrices: [
+    { size: 12, prices: { '10k': 1140 } },
+    { size: 16, prices: { '10k': 1456 } },
+  ],
+};
+
 // Trax's own ladder, from the teardown's price book: 14K $400 a tooth, and
 // the 12-tooth set at $4,200 — $350 a tooth, $50 less per tooth.
 const TRAX: TenantPricing = {
@@ -77,10 +123,22 @@ describe('volume hints (MAG-216)', () => {
     expect(volumeHints(LUCKEY, setOf(12, 'yellow', '14k'))).toEqual([]);
   });
 
-  it('hints on a tier already reached, against the tier price not the list price', () => {
+  it('a hint whose total saving is under $20 is noise and stays hidden', () => {
     // 12 teeth of 10K already pay $1,250/12 = $104.17 a tooth; the 16-tooth
-    // set is $1,650, $103.13 a tooth — a $1.04 saving, so −$1/tooth.
-    expect(volumeHints(LUCKEY, setOf(12, 'yellow', '10k'))).toEqual([{ key: '10k', label: '10K', more: 4, saving: 1 }]);
+    // set is $1,650, $103.13 a tooth — a $1.04 saving, so −$1/tooth, $4
+    // over the whole tier jump. Correct, but noise: Cowork's preview test
+    // caught it showing on Luckey's real table. A hint only shows when
+    // more × saving is at least $20. (The tier-price reference itself — the
+    // current price is the tier the teeth pay, not the list price — is
+    // pinned by the F1 test below, where the hint shows.)
+    expect(volumeHints(LUCKEY, setOf(12, 'yellow', '10k'))).toEqual([]);
+  });
+
+  it('the $20 total-saving gate: exactly $20 shows, under $20 hides', () => {
+    // 8 teeth: −$5/tooth over 4 more teeth is exactly $20 — shows.
+    expect(volumeHints(GATE, setOf(8, 'yellow', '10k'))).toEqual([{ key: '10k', label: '10K', more: 4, saving: 5 }]);
+    // 12 teeth: −$4/tooth over 4 more teeth is $16 — hides.
+    expect(volumeHints(GATE, setOf(12, 'yellow', '10k'))).toEqual([]);
   });
 
   it('no hint when the next tier saves less than a dollar a tooth', () => {
@@ -149,5 +207,50 @@ describe('volume hints (MAG-216)', () => {
 
   it('a shop hiding its prices gets no hint', () => {
     expect(volumeHints({ ...LUCKEY, display: 'hidden' }, setOf(8, 'yellow', '14k'))).toEqual([]);
+  });
+
+  it('a quoted tooth counts toward the tier; the hint is priced off the unquoted teeth (re-review F1)', () => {
+    // Reviewer probe P6: the quote covers yellow 10K ($157) but not white
+    // 10K. 8 quoted yellow + 4 unquoted white = 12 teeth of the key, so the
+    // white teeth already pay the 12-tier price ($1,900/12 = $158.33) — the
+    // old hint counted only the 4 white teeth and promised "8 more →
+    // −$22/tooth", a saving no tooth in the set could make. The fixed hint
+    // counts all 12 and prices off the tier the white teeth actually pay:
+    // $158.33 → $150 at 16 teeth is −$8/tooth, $32 over the 4 added teeth.
+    const mixed = [...setOf(8, 'yellow', '10k'), ...setOf(4, 'white', '10k')];
+    expect(volumeHints(MIXED_QUOTE, mixed)).toEqual([{ key: '10k', label: '10K', more: 4, saving: 8 }]);
+    // The engine agrees the white teeth are on the 12-tier: Metal $1,976
+    // (8 × $157 quoted + 4 × $180 list), Set price −$76, total $1,925.
+    const breakdown = priceBreakdown(MIXED_QUOTE, mixed, DEFAULT_SET);
+    expect(breakdown.lines.find((line) => line.label.startsWith('Metal'))).toEqual({ label: 'Metal · 12 teeth', amount: 1976 });
+    expect(breakdown.lines.find((line) => line.label.startsWith('Set price'))).toEqual({ label: 'Set price · 10K · 12 teeth', amount: -76 });
+    expect(breakdown.total).toBe(1925);
+    // And the hinted tier is real: 16 white teeth are $2,400 of metal,
+    // $150 a tooth — $158.33 → $150 is the promised $8.
+    const sixteen = priceBreakdown(MIXED_QUOTE, setOf(16, 'white', '10k'), DEFAULT_SET);
+    expect(sixteen.lines.find((line) => line.label.startsWith('Metal'))).toEqual({ label: 'Metal · 16 teeth', amount: 2880 });
+    expect(sixteen.lines.find((line) => line.label.startsWith('Set price'))).toEqual({ label: 'Set price · 10K · 16 teeth', amount: -480 });
+    expect(sixteen.total).toBe(2425);
+  });
+
+  it('no hint when every tooth of the key is quoted — no tooth would ever pay a set price', () => {
+    expect(volumeHints(MIXED_QUOTE, setOf(8, 'yellow', '10k'))).toEqual([]);
+    // Even at a count where a tier is reached: the tier exists, but every
+    // tooth in the key is quoted, so none of them takes a set price.
+    expect(volumeHints(MIXED_QUOTE, setOf(12, 'yellow', '10k'))).toEqual([]);
+  });
+
+  it('a mixed-colour key prices off the cheapest list price, whichever tooth comes first (re-review N1)', () => {
+    // Reviewer probe P9: white 10K lists at $240 a tooth, yellow at $180.
+    // The old hint priced off the FIRST tooth's metal, so the same set
+    // promised −$22 with yellow first and −$82 with white first — the tier
+    // price is exact either way ($158.33), only the "current" reference
+    // moved with tooth order. The fix prices off the cheapest list price
+    // in the group: every tooth saves at least that much, so the hint can
+    // never overpromise and never depends on tooth order.
+    const yellowFirst = [...setOf(4, 'yellow', '10k'), ...setOf(4, 'white', '10k')];
+    const whiteFirst = [...setOf(4, 'white', '10k'), ...setOf(4, 'yellow', '10k')];
+    expect(volumeHints(MIXED_COLOUR, yellowFirst)).toEqual([{ key: '10k', label: '10K', more: 4, saving: 22 }]);
+    expect(volumeHints(MIXED_COLOUR, whiteFirst)).toEqual([{ key: '10k', label: '10K', more: 4, saving: 22 }]);
   });
 });
