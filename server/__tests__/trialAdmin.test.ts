@@ -75,6 +75,26 @@ describe('extendTrial', () => {
     expect(tenant?.trial_ends_at).toBe('2026-12-10T23:59:59.000Z');
   });
 
+  it('rejects a picked date that does not extend the trial', async () => {
+    // No-op: the current end is already the end of the picked day (set by a
+    // previous date-picker extension) — the end would not move, yet the
+    // audit row would claim an extension happened.
+    const same = setup(shop({ trial_ends_at: '2026-12-11T23:59:59.000Z' }));
+    const sameResult = await extendTrial(same.db, 'admin-1', 't1', { date: '2026-12-11' }, now);
+    expect(sameResult.status).toBe(400);
+    expect(sameResult.body).toMatchObject({ error: 'invalid' });
+    expect(same.tenant?.trial_ends_at).toBe('2026-12-11T23:59:59.000Z');
+    expect(same.events).toHaveLength(0);
+    // Shorten: a future date that is still before the current end would
+    // silently pull the trial forward.
+    const shorter = setup(shop({ trial_ends_at: '2026-12-20T13:05:00.000Z' }));
+    const shorterResult = await extendTrial(shorter.db, 'admin-1', 't1', { date: '2026-12-15' }, now);
+    expect(shorterResult.status).toBe(400);
+    expect(shorterResult.body).toMatchObject({ error: 'invalid' });
+    expect(shorter.tenant?.trial_ends_at).toBe('2026-12-20T13:05:00.000Z');
+    expect(shorter.events).toHaveLength(0);
+  });
+
   it('rejects shops with no trial to extend, and a shop whose card is on file', async () => {
     const founding = setup(shop({ plan: null, trial_ends_at: null }));
     const foundingResult = await extendTrial(founding.db, 'admin-1', 't1', { days: 7 }, now);

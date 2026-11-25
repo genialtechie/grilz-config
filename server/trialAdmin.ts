@@ -37,6 +37,14 @@ export async function extendTrial(db: Db, adminId: string, tenantId: string, opt
   if (tenant.plan !== 'trial' || hasCard(tenant)) return reply(409, { error: 'not_on_trial', message: 'This shop is not on a trial.' });
   const endsAt = newEnd(option, tenant.trial_ends_at, now);
   if (!endsAt) return reply(400, { error: 'invalid', message: 'Pick a number of days, or a future date.' });
+  // A picked date has to actually extend the trial: a date on or before the
+  // current end would silently no-op — or shorten it — while the audit row
+  // claims an extension happened. (The +days path can never do this: it
+  // always lands strictly later.) A trial with no end date yet stays
+  // extendable: any valid future date is strictly after null.
+  if (tenant.trial_ends_at && new Date(endsAt).getTime() <= new Date(tenant.trial_ends_at).getTime()) {
+    return reply(400, { error: 'invalid', message: 'The new end has to be after the current trial end.' });
+  }
   // A paused shop whose trial ran out comes back on; a shop paused by hand
   // while its trial still runs stays paused.
   const restore = tenant.status === 'paused' && trialExpired(tenant, now) && !hasCard(tenant);
