@@ -2,8 +2,6 @@ import { z } from 'zod';
 import {
   ADD_ON_ID,
   CUTS,
-  SELLABLE_CUTS,
-  type CutId,
   MAX_ADD_ONS,
   GRILLZ_TYPES,
   INSCRIPTION_STYLES,
@@ -29,9 +27,6 @@ export const StyleIdSchema = z.enum(ids(STYLES));
 export const SettingIdSchema = z.enum(ids(SETTINGS));
 export const StoneIdSchema = z.enum(ids(STONES));
 export const CutIdSchema = z.enum(ids(CUTS));
-/** The cuts a shop can list or price: never 'standard', the builder's own free default. */
-export type SellableCutId = Exclude<CutId, 'standard'>;
-export const SellableCutIdSchema = z.enum(ids(SELLABLE_CUTS) as unknown as [SellableCutId, ...SellableCutId[]]);
 export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
 
@@ -70,7 +65,7 @@ export const CatalogSchema = z.object({
   settings: nonEmptyUnique(SettingIdSchema),
   stones: nonEmptyUnique(StoneIdSchema),
   /** May be empty: no cut choice, and the builder hides the Cut group (MAG-205). */
-  cuts: z.array(SellableCutIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.'),
+  cuts: z.array(CutIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.'),
   molds: nonEmptyUnique(MoldIdSchema),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
@@ -117,7 +112,7 @@ export const PricingSchema = z.object({
    * (top and bottom each count once they have a tooth), or per tooth. Absent =
    * how it worked first: permanent look at extras.permanent per order, deep cut free.
    */
-  cuts: z.record(SellableCutIdSchema, z.object({ amount: money, per: z.enum(CUT_UNITS) })).optional(),
+  cuts: z.record(CutIdSchema, z.object({ amount: money, per: z.enum(CUT_UNITS) })).optional(),
   /**
    * Iced teeth priced all-in (MAG-97): by stone, then metal (silver, platinum)
    * or gold karat, the whole price of one iced tooth, in place of metal plus
@@ -194,6 +189,14 @@ export const DepositSchema = z.object({
   link: z.string().url().optional(),
 });
 
+/** The pricing with cut prices kept only for the cuts on offer (none left = no `cuts` table). */
+export const pruneCutPrices = <P extends { cuts?: Partial<Record<string, unknown>> }>(pricing: P, offered: readonly string[]): P => {
+  if (!pricing.cuts) return pricing;
+  const kept = Object.fromEntries(Object.entries(pricing.cuts).filter(([id]) => offered.includes(id)));
+  const { cuts: _drop, ...rest } = pricing;
+  return (Object.keys(kept).length ? { ...rest, cuts: kept } : rest) as P;
+};
+
 export const TenantConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -224,7 +227,9 @@ export const TenantConfigSchema = z
     if (catalog.types.includes('iced') && (!catalog.settings.length || !catalog.stones.length)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['catalog', 'types'], message: 'Iced out needs at least one setting and stone.' });
     }
-  });
+  })
+  // Pricing only ever charges for cuts the shop offers: drop entries left over from cuts turned off.
+  .transform((config) => ({ ...config, pricing: pruneCutPrices(config.pricing, config.catalog.cuts) }));
 
 export type TenantConfig = z.infer<typeof TenantConfigSchema>;
 export type TenantCatalog = TenantConfig['catalog'];

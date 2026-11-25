@@ -1,9 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, SELLABLE_CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
-import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type SellableCutId, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
+import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, pruneCutPrices, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
@@ -257,6 +257,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       const current = next.catalog[list] as string[];
       next.catalog[list] = (on ? [...current, id] : current.filter((item) => item !== id)) as never;
       const order = { metals: METALS, karats: KARATS, types: GRILLZ_TYPES, styles: STYLES, settings: SETTINGS, stones: STONES, cuts: CUTS, molds: MOLDS }[list] as readonly Option[];
+      if (list === 'cuts') next.pricing = pruneCutPrices(next.pricing, next.catalog.cuts);
       (next.catalog[list] as string[]).sort((a, b) => order.findIndex((item) => item.id === a) - order.findIndex((item) => item.id === b));
       const prices = { metals: 'metalPerTooth', karats: 'karatMultiplier', styles: 'stylePerTooth', settings: 'settingPerTooth', stones: 'stonePerTooth' } as const;
       const key = prices[list as keyof typeof prices];
@@ -350,7 +351,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const { catalog, pricing, deposit } = config;
   const pick = <T extends Option>(list: readonly T[], ids: readonly string[]) => list.filter((item) => ids.includes(item.id));
   // The first edit to a fit's price writes every fit out, starting from what the shop charges now.
-  const setCut = (next: TenantConfig, id: SellableCutId, patch: Partial<CutPrice>) => {
+  const setCut = (next: TenantConfig, id: CutId, patch: Partial<CutPrice>) => {
     const cuts = { ...next.pricing.cuts };
     next.catalog.cuts.forEach((cut) => {
       cuts[cut] ??= cutPrice(next.pricing, cut);
@@ -535,7 +536,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 <h3>Stones</h3><Checks options={STONES} selected={catalog.stones} onToggle={(id, on) => toggle('stones', id, on)} />
               </>
             )}
-            <h3>Fit</h3><Checks options={SELLABLE_CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
+            <h3>Fit</h3><Checks options={CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
             <h3>Molds</h3><Checks options={MOLDS} selected={catalog.molds} onToggle={(id, on) => toggle('molds', id, on)} />
             <h3>Extras</h3>
             <div className="admin-checks">
@@ -678,7 +679,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                   </select>
                 </label>
               )}
-              {pick(SELLABLE_CUTS, catalog.cuts).map((cut) => (
+              {pick(CUTS, catalog.cuts).map((cut) => (
                 <Fragment key={cut.id}>
                   <Money label={cut.label} value={cutPrice(pricing, cut.id).amount} onChange={(value) => update((next) => setCut(next, cut.id, { amount: value }))} />
                   <label className="admin-field">

@@ -27,7 +27,7 @@ export const buildTenant = (slug: string, config: TenantConfig, demo = false, ve
   preview,
   promos,
   config,
-  catalog: shopCatalog(config.catalog, config.pricing),
+  catalog: shopCatalog(config.catalog),
   hints: priceHints(config.pricing),
   defaultTooth: defaultTooth(config.catalog),
   defaultSet: defaultSet(config.catalog, config.pricing),

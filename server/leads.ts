@@ -156,7 +156,7 @@ export async function handleLead(payload: unknown, ip: string, env: LeadEnv, def
         contact: contact.value,
         email: email || null,
         note: note || null,
-        spec: { ...spec, summary: summarizeDesign(spec, session.config.catalog.addOns) },
+        spec: { ...spec, summary: summarizeDesign(spec, session.config.catalog.addOns, session.config.catalog.cuts) },
         price,
         total: price.total,
         deposit,

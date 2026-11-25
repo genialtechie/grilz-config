@@ -35,7 +35,7 @@ export const feeLabel = (pricing: Pick<TenantPricing, 'baseLabel'>) => pricing.b
 
 /** What a fit costs and how it's counted. Shops without cut prices keep the first rule: permanent look per order, deep cut free. */
 export const cutPrice = (pricing: TenantPricing, cut: CutId): CutPrice =>
-  (cut === 'standard' ? undefined : pricing.cuts?.[cut]) ?? { amount: cut === 'permanent' ? pricing.extras.permanent : 0, per: 'order' };
+  pricing.cuts?.[cut] ?? { amount: cut === 'permanent' ? pricing.extras.permanent : 0, per: 'order' };
 
 /** The iced price table's column for a metal: gold by karat, the others by name. */
 export const icedKey = (metal: MetalId, karat: KaratId): IcedKey => (isGold(metal) ? karat : (metal as IcedKey));

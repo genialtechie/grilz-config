@@ -454,7 +454,7 @@ function Configurator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setOptions, fangsOn, teethDesigns, inscriptionsKey],
   );
-  const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns) : [];
+  const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns, tenant.config.catalog.cuts) : [];
 
   const designProperties = () => ({
     selected_teeth: selectedTeeth.length,

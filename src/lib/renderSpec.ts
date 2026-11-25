@@ -63,12 +63,7 @@ export const FANG_OPTIONS = [
 export const CUTS = [
   { id: 'deep', label: 'Deep cut', detail: 'Natural tooth lines, removable', image: card('cut-deep') },
   { id: 'permanent', label: 'Permanent look', detail: 'Seamless, custom-fit cap', image: card('cut-permanent') },
-  // Never listed in a shop's catalog: the builder adds it, free, when no enabled cut is free (MAG-205).
-  { id: 'standard', label: 'Standard', detail: 'No special cut', image: card('cut-deep') },
 ] as const;
-
-/** The cuts a shop can turn on (everything but the builder's own free default). */
-export const SELLABLE_CUTS = CUTS.filter((cut) => cut.id !== 'standard');
 
 export const MOLDS = [
   { id: 'kit', label: 'Mold kit by mail', detail: 'We ship a kit, you send it back' },
@@ -225,14 +220,15 @@ export const describeInscription = (inscription: Inscription) => {
   return `"${inscription.text}" in ${label(INSCRIPTION_FONTS, inscription.font).toLowerCase()}, ${finish.toLowerCase()}, ${where}`;
 };
 
-export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = []): string[] => {
+/** `offeredCuts`: the cuts the shop sells; a design from a shop with none doesn't claim one. Omit it to always name the cut. */
+export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = [], offeredCuts?: readonly string[]): string[] => {
   const upper = spec.teeth.filter((tooth) => tooth.index < 16).length;
   const lines = [`${upper} top + ${spec.teeth.length - upper} bottom`];
   const groups = groupTeeth(spec.teeth);
   groups.forEach((group) => lines.push(groups.length > 1 ? `${group.length}× ${describeTooth(group[0])}` : describeTooth(group[0])));
   if (spec.fangs) lines.push('Fangs');
   spec.inscriptions.forEach((inscription) => lines.push(describeInscription(inscription)));
-  if (spec.cut !== 'standard') lines.push(label(CUTS, spec.cut));
+  if (!offeredCuts || offeredCuts.includes(spec.cut)) lines.push(label(CUTS, spec.cut));
   (spec.addOns ?? []).forEach((id) => lines.push(addOns.find((addOn) => addOn.id === id)?.label ?? id));
   if (spec.mold) lines.push(`Fit: ${label(MOLDS, spec.mold)}`);
   return lines;
@@ -324,7 +320,8 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
     if (!addOns.every((id) => offered.has(id))) return null;
     if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
-    if ((spec.cut !== 'standard' && !enabled.cuts.includes(spec.cut)) || (spec.fangs && !enabled.fangs)) return null;
+    // A shop with no cuts has nothing to check the stored one against (it's meaningless there).
+    if ((enabled.cuts.length > 0 && !enabled.cuts.includes(spec.cut)) || (spec.fangs && !enabled.fangs)) return null;
     if (inscriptions.some((inscription) => !(enabled.inscription.enabled && enabled.inscription.styles.includes(inscription!.style)))) return null;
     if (!enabled.vision && spec.vision.trim()) return null;
   }

@@ -21,9 +21,9 @@ export const POSTER_ASPECT = 4.3 / 3.4;
 /**
  * The poster for a builder that opens on this design, or null when there is no
  * still of it. Stills exist for the default set in each metal: plain, solid,
- * deep cut or standard, no fangs (which is what every shop that sells plain grillz opens on).
+ * deep cut, no fangs (which is what every shop that sells plain grillz opens on).
  */
 export function posterFor(tooth: ToothDesign, set: Pick<SetOptions, 'fangs' | 'cut'>): string | null {
-  if (tooth.type !== 'plain' || tooth.style !== 'solid' || set.fangs || set.cut === 'permanent') return null;
+  if (tooth.type !== 'plain' || tooth.style !== 'solid' || set.fangs || set.cut !== 'deep') return null;
   return `/assets/posters/set-${tooth.metal}.webp`;
 }
