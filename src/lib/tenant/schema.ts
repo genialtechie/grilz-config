@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   ADD_ON_ID,
   CUTS,
+  DIAMOND_GRADES,
   MAX_ADD_ONS,
   GRILLZ_TYPES,
   INSCRIPTION_STYLES,
@@ -28,6 +29,7 @@ export const GrillzTypeSchema = z.enum(ids(GRILLZ_TYPES));
 export const StyleIdSchema = z.enum(ids(STYLES));
 export const SettingIdSchema = z.enum(ids(SETTINGS));
 export const StoneIdSchema = z.enum(ids(STONES));
+export const GradeIdSchema = z.enum(ids(DIAMOND_GRADES));
 export const ExtraIdSchema = z.enum(ids(TOOTH_EXTRAS));
 export const PvdColorIdSchema = z.enum(ids(PVD_COLORS));
 export const CutIdSchema = z.enum(ids(CUTS));
@@ -75,6 +77,8 @@ export const CatalogSchema = z.object({
   extras: z.array(ExtraIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
   /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
   pvd: z.boolean().optional(),
+  /** Diamond grade tiers the shop sells (MAG-215); absent = none. */
+  grades: z.array(GradeIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */
@@ -210,6 +214,8 @@ export const PricingSchema = z.object({
   colourSurcharge: z.record(MetalIdSchema, money).optional(),
   /** Named tooth extras, per tooth (MAG-204); absent = none offered. */
   extraPerTooth: z.record(ExtraIdSchema, money).optional(),
+  /** Diamond grade tiers, per tooth (MAG-215); absent = none offered. */
+  gradePerTooth: z.record(GradeIdSchema, money).optional(),
 });
 
 export const DepositSchema = z.object({
@@ -238,6 +244,14 @@ export const pruneExtraPrices = <P extends { extraPerTooth?: Partial<Record<stri
   return (Object.keys(kept).length ? { ...rest, extraPerTooth: kept } : rest) as P;
 };
 
+/** The pricing with grade prices kept only for the tiers on offer (none left = no `gradePerTooth` table). */
+export const pruneGradePrices = <P extends { gradePerTooth?: Partial<Record<string, unknown>> }>(pricing: P, offered: readonly string[]): P => {
+  if (!pricing.gradePerTooth) return pricing;
+  const kept = Object.fromEntries(Object.entries(pricing.gradePerTooth).filter(([id]) => offered.includes(id)));
+  const { gradePerTooth: _drop, ...rest } = pricing;
+  return (Object.keys(kept).length ? { ...rest, gradePerTooth: kept } : rest) as P;
+};
+
 export const TenantConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -261,6 +275,7 @@ export const TenantConfigSchema = z
     need(catalog.stones, pricing.stonePerTooth, 'stonePerTooth');
     need(catalog.settings, pricing.settingPerTooth, 'settingPerTooth');
     need(catalog.extras ?? [], pricing.extraPerTooth ?? {}, 'extraPerTooth');
+    need(catalog.grades ?? [], pricing.gradePerTooth ?? {}, 'gradePerTooth');
     if (catalog.inscription.enabled) need(catalog.inscription.styles, pricing.inscription, 'inscription');
     if (deposit.mode === 'link' && !deposit.link) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['deposit', 'link'], message: 'Add the payment link.' });
     if (pricing.display === 'hidden' && deposit.mode !== 'none' && deposit.rule.type !== 'fixed') {
@@ -271,8 +286,8 @@ export const TenantConfigSchema = z
     }
   })
   // Pricing only ever charges for cuts the shop offers: drop entries left over from cuts turned off.
-  // The same for named extras.
-  .transform((config) => ({ ...config, pricing: pruneExtraPrices(pruneCutPrices(config.pricing, config.catalog.cuts), config.catalog.extras ?? []) }));
+  // The same for named extras and diamond grade tiers.
+  .transform((config) => ({ ...config, pricing: pruneGradePrices(pruneExtraPrices(pruneCutPrices(config.pricing, config.catalog.cuts), config.catalog.extras ?? []), config.catalog.grades ?? []) }));
 
 export type TenantConfig = z.infer<typeof TenantConfigSchema>;
 export type TenantCatalog = TenantConfig['catalog'];

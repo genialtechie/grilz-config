@@ -39,11 +39,14 @@ import { draftRow, inscriptionsFrom, newDraft, pickTooth, placeDrafts, unplaceDr
 import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWithoutInscriptions, startingDesign, startingPoster, type DesignSnapshot } from '../lib/savedDesign';
 import { randomizeDesign } from '../lib/randomize';
 import {
+  DIAMOND_GRADES,
   ICED_FINISHES,
   OPALS,
   PVD_COLORS,
   TOOTH_EXTRAS,
   VISION_MAX,
+  gradePairsWithStone,
+  gradesForStone,
   isGold,
   planMasks,
   groupTeeth,
@@ -55,7 +58,7 @@ import {
   type ToothDesign,
 } from '../lib/renderSpec';
 import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
-import { depositFor, displayTotal, extraPrice, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
+import { depositFor, displayTotal, extraPrice, gradePrice, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -129,7 +132,7 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
   );
 }
 
-type LookGroupId = 'type' | 'stones' | 'setting' | 'finish' | 'extras' | 'fangs' | 'cut';
+type LookGroupId = 'type' | 'stones' | 'grade' | 'setting' | 'finish' | 'extras' | 'fangs' | 'cut';
 
 /**
  * One group of the Look step (MAG-148). On phones it is a row that names the
@@ -420,6 +423,10 @@ function Configurator() {
     // drops it, the same way — an iced face is covered in stones, and a
     // coat would hide a photo.
     if (next.type !== 'plain') next.pvd = undefined;
+    // A diamond grade only applies to iced teeth, and only the tiers for the
+    // tooth's stone (MAG-215): leaving iced, or switching to a stone the grade
+    // doesn't pair with, drops it.
+    if (next.type !== 'iced' || (next.grade && !gradePairsWithStone(next.grade, next.stone))) next.grade = undefined;
     return nearestOffered(shopPricing, next, stoneIds, karatIds) ?? design;
   };
   const icedOffers = (design: Partial<ToothDesign>) => offered(shopPricing, { ...shown, type: 'iced', ...design });
@@ -438,7 +445,7 @@ function Configurator() {
   const applyDesign = (patch: Partial<ToothDesign>) => {
     // Stones and settings differ stone by stone: go in close to show it. Any other choice: back out.
     const tooth = showcaseTooth();
-    setCloseUp(tooth !== undefined && (patch.stone || patch.setting) ? { teeth: [tooth], fill: 0.42 } : null);
+    setCloseUp(tooth !== undefined && (patch.stone || patch.setting || patch.grade) ? { teeth: [tooth], fill: 0.42 } : null);
     if (pickMode) {
       if (!activePicked.length) return;
       setOverrides((previous) => {
@@ -1202,6 +1209,43 @@ function Configurator() {
                           ))}
                         </div>
                       </LookGroup>
+                      {/* A grade refines the stone: only the tiers for this stone are offered (moissanite has none). */}
+                      {gradesForStone(shown.stone).some((grade) => catalog.grades.some((offered) => offered.id === grade.id)) && (
+                      <LookGroup
+                        id="grade"
+                        title="Diamond grade"
+                        summary={shown.grade ? label(DIAMOND_GRADES, shown.grade) : 'None'}
+                        collapsible={compactLook}
+                        open={lookOpen === 'grade'}
+                        onToggle={toggleLookGroup}
+                        revealed
+                      >
+                        <div className="option-grid option-grid--three">
+                          <OptionCard
+                            label="None"
+                            detail="Standard stone quality"
+                            hint={hints.extra(0, true)}
+                            selected={shown.grade === undefined}
+                            disabled={pickingNothing}
+                            onSelect={() => applyDesign({ grade: undefined })}
+                          />
+                          {gradesForStone(shown.stone)
+                            .filter((grade) => catalog.grades.some((offered) => offered.id === grade.id))
+                            .map((grade) => (
+                              <OptionCard
+                                key={grade.id}
+                                label={grade.label}
+                                detail={grade.detail}
+                                hint={hints.extra(gradePrice(tenant.config.pricing, grade.id), true)}
+                                selected={shown.grade === grade.id}
+                                disabled={pickingNothing}
+                                onSelect={() => applyDesign({ grade: grade.id })}
+                              />
+                            ))}
+                        </div>
+                        <small className="field-hint">Per tooth, on top of the stone price. Only the tiers for this stone are shown: Grown VVS goes with lab diamonds, the Natural tiers with natural diamonds.</small>
+                      </LookGroup>
+                      )}
                       <LookGroup
                         id="setting"
                         title="Setting"

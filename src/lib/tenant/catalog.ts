@@ -2,6 +2,7 @@ import {
   CUTS,
   DEFAULT_SET,
   DEFAULT_TOOTH,
+  DIAMOND_GRADES,
   GRILLZ_TYPES,
   INSCRIPTION_STYLES,
   KARATS,
@@ -33,6 +34,7 @@ export const shopCatalog = (catalog: TenantCatalog) => ({
   extras: only(TOOTH_EXTRAS, catalog.extras ?? []),
   /** PVD colour coat (MAG-214): offered or not — colour costs nothing extra. */
   pvd: Boolean(catalog.pvd),
+  grades: only(DIAMOND_GRADES, catalog.grades ?? []),
   inscriptionStyles: catalog.inscription.enabled ? only(INSCRIPTION_STYLES, catalog.inscription.styles) : [],
   fangs: catalog.fangs,
   vision: catalog.vision,
