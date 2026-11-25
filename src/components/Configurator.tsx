@@ -339,10 +339,11 @@ function Configurator() {
   const priceHidden = tenant.config.pricing.display === 'hidden';
   const totalText = (value: number) => displayTotal(tenant.config.pricing, value, formatPrice).text;
   const totalCost = pricing.total;
-  // "Roll it" prefill: the next $100 above the current total, so the roll
-  // always has at least $100 of headroom to improve on what the customer
-  // already has (a prefill equal to the total could only keep or downgrade).
-  const rollPrefill = Math.max(1, Math.floor(totalCost / 100) * 100 + 100);
+  // "Roll it" prefill: $200 above the floored $100 of the current total, so
+  // the roll always has at least $100 of headroom ($101-$200) to improve on
+  // what the customer already has (a prefill equal to the total, or $1
+  // above it, could only keep or downgrade).
+  const rollPrefill = Math.max(1, Math.floor(totalCost / 100) * 100 + 200);
 
   // What the 3D model shows: every tooth in the set wears its design from the
   // first frame (the builder opens on a finished set, and choosing teeth adds
