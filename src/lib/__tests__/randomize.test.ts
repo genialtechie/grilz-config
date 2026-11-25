@@ -295,4 +295,91 @@ describe('randomizeDesign', () => {
       expect(result.total).toBe(quote(shop, result.snapshot).total);
     }
   });
+
+  it('spends up toward the budget: a $5,000 roll lands much closer than $1,510 (MAG-222)', () => {
+    // Cowork's preview test (Nov 25): nine rolls at $800/$2,000/$5,000 all
+    // came in under budget, but one $5,000 roll came to only $1,510 — the
+    // old spend-up was a single upgrade attempt. The roll now keeps
+    // upgrading until it reaches 85% of the budget (or no fitting upgrade
+    // exists), so the distribution, not just the best seed, must sit near
+    // the budget. (Thresholds are the design target — confirm against the
+    // real distribution when the suite runs; adjust with evidence if the
+    // loop stalls below them on some seeds.)
+    const totals: number[] = [];
+    for (let seed = 0; seed < 20; seed++) {
+      const result = rollOrThrow(LUCKEY_SHOP, 5000, seed);
+      expect(result.total).toBeLessThanOrEqual(5000);
+      expect(result.total).toBe(quote(LUCKEY_SHOP, result.snapshot).total);
+      // The spend-up never touches the customer's own choices.
+      expect(result.snapshot.set.cut).toBe('deep');
+      totals.push(result.total);
+    }
+    totals.sort((a, b) => a - b);
+    const median = (totals[9] + totals[10]) / 2;
+    // At least half the rolls land within 85% of the budget, and even the
+    // worst roll spends half of it — the old worst was 30% ($1,510).
+    expect(median).toBeGreaterThanOrEqual(0.85 * 5000);
+    expect(totals[0]).toBeGreaterThanOrEqual(0.5 * 5000);
+  });
+
+  it('spends up at smaller budgets too, without breaking the budget', () => {
+    for (const budget of [800, 2000]) {
+      const totals: number[] = [];
+      for (let seed = 0; seed < 20; seed++) {
+        const result = rollOrThrow(LUCKEY_SHOP, budget, seed);
+        expect(result.total).toBeLessThanOrEqual(budget);
+        expect(result.total).toBe(quote(LUCKEY_SHOP, result.snapshot).total);
+        totals.push(result.total);
+      }
+      totals.sort((a, b) => a - b);
+      const median = (totals[9] + totals[10]) / 2;
+      expect(median).toBeGreaterThanOrEqual(0.85 * budget);
+    }
+  });
+
+  it('spends up on a different shop table, not just Luckey (MAG-222)', () => {
+    // Fresh fixture, different numbers: no colour surcharge, smaller set
+    // ladder, $30 fee. The ceiling (~$1,930 for 16 teeth 14K) sits above
+    // the 85% target ($1,700), so the target is reachable here too.
+    const fresh: TenantPricing = {
+      ...VVSLAB_CONFIG.pricing,
+      base: 30,
+      metalPerTooth: { yellow: 100, white: 100, rose: 100, silver: 70, platinum: 300 },
+      karatMultiplier: { '10k': 1.1, '14k': 1.6, '18k': 2.0, '22k': 2.3 },
+      stylePerTooth: { solid: 0, 'open-face': 10, 'diamond-cut': 15, 'diamond-dust': 15, engraving: 25, opals: 50 },
+      cuts: { deep: { amount: 0, per: 'tooth' }, permanent: { amount: 80, per: 'order' } },
+      setPrices: [
+        { size: 12, prices: { silver: 700, '10k': 1100, '14k': 1500 } },
+        { size: 16, prices: { silver: 850, '10k': 1350, '14k': 1900 } },
+        { size: 20, prices: { silver: 1000, '10k': 1600, '14k': 2300 } },
+        { size: 24, prices: { silver: 1150, '10k': 1850, '14k': 2600 } },
+      ],
+      colourSurcharge: { white: 0, rose: 0 },
+      extraPerTooth: { starburst: 20, pineapple: 20, princess: 15, nugget: 30, 'enamel-fill': 25, brushed: 0, laser: 0 },
+    };
+    const shop = buildTenant('fresh', {
+      ...VVSLAB_CONFIG,
+      catalog: { ...VVSLAB_CONFIG.catalog, extras: TOOTH_EXTRAS.map((extra) => extra.id) },
+      pricing: fresh,
+    });
+    const totals: number[] = [];
+    for (let seed = 0; seed < 20; seed++) {
+      const result = rollOrThrow(shop, 2000, seed);
+      expect(result.total).toBeLessThanOrEqual(2000);
+      expect(result.total).toBe(quote(shop, result.snapshot).total);
+      totals.push(result.total);
+    }
+    totals.sort((a, b) => a - b);
+    const median = (totals[9] + totals[10]) / 2;
+    expect(median).toBeGreaterThanOrEqual(0.85 * 2000);
+    // Worst-seed floor is 40%, not 50%: the worst seed ($970, seed 7) is a
+    // 2-piece platinum iced set — every upgrade kind is unavailable (already
+    // platinum, already iced, no extras on iced, no canine for fangs) or
+    // overshoots (biggerSet jumps to 6 teeth past the budget). It is a
+    // structural local maximum, not a loop failure: the old code produced
+    // the same $970 on that seed. The old worst across 20 seeds was $480
+    // (24%), so a 40% floor still catches a regression to single-upgrade
+    // while the new worst ($970) clears it with margin.
+    expect(totals[0]).toBeGreaterThanOrEqual(0.4 * 2000);
+  });
 });
