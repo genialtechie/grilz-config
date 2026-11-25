@@ -40,17 +40,20 @@ import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWi
 import {
   ICED_FINISHES,
   OPALS,
+  TOOTH_EXTRAS,
   VISION_MAX,
   isGold,
   planMasks,
   groupTeeth,
+  sortExtras,
   summarizeDesign,
+  type ExtraId,
   type RenderSpec,
   type SetOptions,
   type ToothDesign,
 } from '../lib/renderSpec';
 import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
-import { depositFor, displayTotal, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
+import { depositFor, displayTotal, extraPrice, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -124,7 +127,7 @@ function ShopBrand({ brand }: { brand: ReturnType<typeof useTenant>['config']['b
   );
 }
 
-type LookGroupId = 'type' | 'stones' | 'setting' | 'finish' | 'fangs' | 'cut';
+type LookGroupId = 'type' | 'stones' | 'setting' | 'finish' | 'extras' | 'fangs' | 'cut';
 
 /**
  * One group of the Look step (MAG-148). On phones it is a row that names the
@@ -440,6 +443,12 @@ function Configurator() {
     setCloseUp(null);
     setLookOpen((current) => (current === id ? null : id));
     posthog.capture('sample_look_group_toggled', { group: id, open: lookOpen !== id });
+  };
+
+  // A named extra on or off the teeth being styled, per tooth.
+  const toggleExtra = (id: ExtraId) => {
+    const current = shown.extras ?? [];
+    applyDesign({ extras: sortExtras(current.includes(id) ? current.filter((item) => item !== id) : [...current, id]) });
   };
 
   const updateSet = (patch: Partial<SetOptions>) => {
@@ -1198,6 +1207,39 @@ function Configurator() {
                       </small>
                     )}
                   </LookGroup>
+                  {catalog.extras.length > 0 && (
+                    <LookGroup
+                      id="extras"
+                      title="Extras"
+                      summary={(shown.extras ?? []).map((id) => label(TOOTH_EXTRAS, id)).join(', ') || 'None'}
+                      collapsible={compactLook}
+                      open={lookOpen === 'extras'}
+                      onToggle={toggleLookGroup}
+                    >
+                      <div className="choice-list">
+                        {catalog.extras.map((extra) => {
+                          const on = (shown.extras ?? []).includes(extra.id);
+                          const hint = hints.extra(extraPrice(tenant.config.pricing, extra.id), true);
+                          return (
+                            <button
+                              key={extra.id}
+                              className={on ? 'choice-row choice-row--selected' : 'choice-row'}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={on}
+                              disabled={pickingNothing}
+                              onClick={() => toggleExtra(extra.id)}
+                            >
+                              <Plus size={17} />
+                              <span><strong>{extra.label}</strong>{(extra.detail || hint) && <small>{[extra.detail, hint].filter(Boolean).join(' · ')}</small>}</span>
+                              <span className="check-indicator">{on && <Check size={13} />}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <small className="field-hint">Per tooth, on the teeth you are styling — or the whole set when you are styling it as one.</small>
+                    </LookGroup>
+                  )}
                   {catalog.fangs && (
                     <LookGroup
                       id="fangs"

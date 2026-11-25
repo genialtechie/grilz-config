@@ -10,6 +10,7 @@ import {
   SETTINGS,
   STONES,
   STYLES,
+  TOOTH_EXTRAS,
   type SetOptions,
   type ToothDesign,
 } from '../renderSpec.js';
@@ -29,6 +30,7 @@ export const shopCatalog = (catalog: TenantCatalog) => ({
   stones: only(STONES, catalog.stones),
   cuts: only(CUTS, catalog.cuts),
   molds: only(MOLDS, catalog.molds),
+  extras: only(TOOTH_EXTRAS, catalog.extras ?? []),
   inscriptionStyles: catalog.inscription.enabled ? only(INSCRIPTION_STYLES, catalog.inscription.styles) : [],
   fangs: catalog.fangs,
   vision: catalog.vision,

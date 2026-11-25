@@ -47,7 +47,8 @@ export function quickAnswers(pricing: TenantPricing): QuickAnswers {
 /**
  * Every price from the three answers. What the questions don't cover stays as
  * it was: price display, deposits, inscription, photo and cut (fit) prices,
- * mold fees, set discounts, back teeth, iced open face and market-linked metal.
+ * mold fees, set discounts, set prices, colour surcharges, tooth extras,
+ * back teeth, iced open face and market-linked metal.
  */
 export function quickPricing(pricing: TenantPricing, answers: QuickAnswers): TenantPricing {
   const gold = Math.max(0, Math.round(answers.gold));

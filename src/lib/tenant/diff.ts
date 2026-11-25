@@ -1,6 +1,6 @@
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
+import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS } from '../renderSpec.js';
 import { ICED_KEYS, type TenantConfig } from './schema.js';
-import { cutPrice, feeLabel, icedOpalPrice } from '../pricing.js';
+import { cutPrice, feeLabel, icedOpalPrice, setPriceKeyLabel } from '../pricing.js';
 
 // Plain-language list of what a draft changes compared with the live config,
 // shown before a shop publishes ("Yellow gold: $150 → $165 per tooth").
@@ -12,7 +12,7 @@ const label = (list: readonly Option[], id: string) => list.find((item) => item.
 const usd = (value: number | undefined) => (value === undefined ? '—' : `$${Number(value).toLocaleString('en-US')}`);
 const times = (value: number | undefined) => (value === undefined ? '—' : `${value}×`);
 
-const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds'>; name: string; options: readonly Option[] }[] = [
+const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds' | 'extras'>; name: string; options: readonly Option[] }[] = [
   { key: 'metals', name: 'Metals', options: METALS },
   { key: 'karats', name: 'Karats', options: KARATS },
   { key: 'types', name: 'Types', options: GRILLZ_TYPES },
@@ -21,14 +21,16 @@ const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 't
   { key: 'stones', name: 'Stones', options: STONES },
   { key: 'cuts', name: 'Fit', options: CUTS },
   { key: 'molds', name: 'Molds', options: MOLDS },
+  { key: 'extras', name: 'Extras', options: TOOTH_EXTRAS },
 ];
 
-const PRICE_MAPS: { key: keyof Pick<TenantConfig['pricing'], 'metalPerTooth' | 'stylePerTooth' | 'stonePerTooth' | 'settingPerTooth' | 'inscription'>; options: readonly Option[]; suffix: string }[] = [
+const PRICE_MAPS: { key: keyof Pick<TenantConfig['pricing'], 'metalPerTooth' | 'stylePerTooth' | 'stonePerTooth' | 'settingPerTooth' | 'inscription' | 'extraPerTooth'>; options: readonly Option[]; suffix: string }[] = [
   { key: 'metalPerTooth', options: METALS, suffix: ' per tooth' },
   { key: 'stylePerTooth', options: STYLES, suffix: ' per tooth' },
   { key: 'stonePerTooth', options: STONES, suffix: ' per tooth' },
   { key: 'settingPerTooth', options: SETTINGS, suffix: ' setting per tooth' },
   { key: 'inscription', options: INSCRIPTION_STYLES, suffix: ' inscription' },
+  { key: 'extraPerTooth', options: TOOTH_EXTRAS, suffix: ' extra per tooth' },
 ];
 
 const DISPLAY: Record<TenantConfig['pricing']['display'], string> = { exact: 'exact price', from: '"from" price', hidden: 'price on request' };
@@ -56,8 +58,8 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   if (b0.poweredBy !== b1.poweredBy) add('Brand', b1.poweredBy ? '"Powered by VVS Lab" shown' : '"Powered by VVS Lab" hidden');
 
   for (const list of LISTS) {
-    const before = live.catalog[list.key] as string[];
-    const after = draft.catalog[list.key] as string[];
+    const before = (live.catalog[list.key] ?? []) as string[];
+    const after = (draft.catalog[list.key] ?? []) as string[];
     after.filter((id) => !before.includes(id)).forEach((id) => add('What you sell', `${list.name}: added ${label(list.options, id)}`));
     before.filter((id) => !after.includes(id)).forEach((id) => add('What you sell', `${list.name}: removed ${label(list.options, id)}`));
   }
@@ -82,8 +84,8 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   if (p0.base !== p1.base) add('Prices', `${feeLabel(p1)}: ${usd(p0.base)} → ${usd(p1.base)}`);
   if (p0.minimumOrder !== p1.minimumOrder) add('Prices', `Minimum order: ${usd(p0.minimumOrder)} → ${usd(p1.minimumOrder)}`);
   for (const map of PRICE_MAPS) {
-    const before = p0[map.key] as Record<string, number>;
-    const after = p1[map.key] as Record<string, number>;
+    const before = (p0[map.key] ?? {}) as Record<string, number>;
+    const after = (p1[map.key] ?? {}) as Record<string, number>;
     for (const id of Object.keys(after)) {
       if (before[id] !== undefined && before[id] !== after[id]) add('Prices', `${label(map.options, id)}: ${usd(before[id])} → ${usd(after[id])}${map.suffix}`);
     }
@@ -117,6 +119,16 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   });
   const tiers = (pricing: typeof p0) => (pricing.volume ?? []).map((tier) => `${tier.percentOff}% off from ${tier.minTeeth} teeth`).join(', ') || 'none';
   if (tiers(p0) !== tiers(p1)) add('Prices', `Set-size discounts: ${tiers(p0)} → ${tiers(p1)}`);
+  METALS.forEach((metal) => {
+    const before = p0.colourSurcharge?.[metal.id] ?? 0;
+    const after = p1.colourSurcharge?.[metal.id] ?? 0;
+    if (before !== after) add('Prices', `${metal.label} colour: ${usd(before)} → ${usd(after)} per tooth`);
+  });
+  const setPrices = (pricing: typeof p0) =>
+    (pricing.setPrices ?? [])
+      .flatMap((tier) => Object.entries(tier.prices).map(([key, price]) => `${setPriceKeyLabel(key as (typeof ICED_KEYS)[number])} · ${tier.size} teeth: ${usd(price)}`))
+      .join(', ') || 'none';
+  if (setPrices(p0) !== setPrices(p1)) add('Prices', `Set prices: ${setPrices(p0)} → ${setPrices(p1)}`);
   (['fangs', 'photo'] as const).forEach((key) => {
     if (p0.extras[key] !== p1.extras[key]) add('Prices', `${{ fangs: 'Fangs', photo: 'Photo artwork' }[key]}: ${usd(p0.extras[key])} → ${usd(p1.extras[key])}`);
   });

@@ -49,6 +49,29 @@ export const SETTINGS = [
   { id: 'prong', label: 'Prong', detail: 'Uniform rows', image: card('setting-prong'), render: 'a uniform prong setting in neat rows of equal round stones' },
 ] as const;
 
+/**
+ * Named extras a shop can sell per tooth (MAG-204): decorations on a tooth
+ * beyond its finish. Fang, open face, diamond dust and engraving are NOT here
+ * — fang is the set-level Fangs option and the other three are finishes
+ * (STYLES), each with its own price already, so nothing is charged twice.
+ */
+export const TOOTH_EXTRAS = [
+  { id: 'cross', label: 'Cross', detail: 'A small cross on the tooth', render: 'a small cross inlaid in the front of the tooth' },
+  { id: 'star', label: 'Star', detail: 'A small star on the tooth', render: 'a small star inlaid in the front of the tooth' },
+  { id: 'heart', label: 'Heart', detail: 'A small heart on the tooth', render: 'a small heart inlaid in the front of the tooth' },
+  { id: 'lightning', label: 'Lightning bolt', detail: 'A lightning bolt on the tooth', render: 'a lightning bolt inlaid in the front of the tooth' },
+  { id: '3d', label: '3D design', detail: 'A raised 3D shape on the tooth', render: 'a raised three-dimensional shape on the front of the tooth' },
+  { id: 'diamond-shapes', label: 'Diamond shapes', detail: 'Diamond-shaped stones or cut-outs', render: 'diamond-shaped stones set into the front of the tooth' },
+  { id: '3d-animal', label: '3D animal', detail: 'A raised 3D animal on the tooth', render: 'a raised three-dimensional animal on the front of the tooth' },
+  { id: 'starburst', label: 'Starburst', detail: 'A starburst pattern cut into the metal', render: 'a starburst pattern cut into the front of the tooth' },
+  { id: 'pineapple', label: 'Pineapple', detail: 'A pineapple motif on the tooth', render: 'a pineapple motif on the front of the tooth' },
+  { id: 'princess', label: 'Princess', detail: 'A princess-cut detail on the tooth', render: 'a princess-cut detail on the front of the tooth' },
+  { id: 'nugget', label: 'Nugget', detail: 'A nugget-textured finish on the tooth', render: 'a nugget texture across the front of the tooth' },
+  { id: 'enamel-fill', label: 'Enamel colour fill', detail: 'Coloured enamel inlaid in the design', render: 'coloured enamel inlaid in the front of the tooth' },
+  { id: 'brushed', label: 'Brushed', detail: 'A brushed matte finish', render: 'a brushed matte finish on the front of the tooth' },
+  { id: 'laser', label: 'Laser', detail: 'Laser-etched detail', render: 'laser-etched detail on the front of the tooth' },
+] as const;
+
 export const STONES = [
   { id: 'moissanite', label: 'Moissanite', detail: 'VVS, passes diamond tester', image: card('stone-moissanite'), render: 'moissanite stones' },
   { id: 'lab', label: 'Lab diamond', detail: 'Real diamond, lab-grown', image: card('stone-lab'), render: 'lab-grown diamonds' },
@@ -78,6 +101,7 @@ export type KaratId = Id<typeof KARATS>;
 export type StyleId = Id<typeof STYLES>;
 export type SettingId = Id<typeof SETTINGS>;
 export type StoneId = Id<typeof STONES>;
+export type ExtraId = Id<typeof TOOTH_EXTRAS>;
 export type CutId = Id<typeof CUTS>;
 export type MoldId = Id<typeof MOLDS>;
 export type OpalId = Id<typeof OPALS>;
@@ -92,6 +116,8 @@ export type ToothDesign = {
   stone: StoneId;
   /** The opal's colour, for the opals style (white when absent). */
   opal?: OpalId;
+  /** Named extras on this tooth, in catalog order (absent = none). */
+  extras?: ExtraId[];
 };
 
 /** Options that apply to the whole set. */
@@ -190,7 +216,7 @@ export const label = <T extends readonly { id: string; label: string }[]>(list: 
 export const opalOf = (tooth: ToothDesign): OpalId | null => ((tooth.type === 'plain' || tooth.type === 'iced') && tooth.style === 'opals' ? tooth.opal ?? 'white' : null);
 
 const designKey = (tooth: ToothDesign) =>
-  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedBorder(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? ''].join('|');
+  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedBorder(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? '', (tooth.extras ?? []).join(',')].join('|');
 
 /** Groups teeth that share a design, largest group first. */
 export const groupTeeth = <T extends ToothDesign & { index: number }>(teeth: T[]) => {
@@ -210,7 +236,8 @@ export const describeTooth = (tooth: ToothDesign) => {
           ? `${label(OPALS, opalOf(tooth)!)} opals`
           : label(STYLES, tooth.style);
   const extraStyle = tooth.type === 'photo' && tooth.style !== 'solid' ? ` + ${label(STYLES, tooth.style)}` : '';
-  return `${metal} · ${surface}${extraStyle}`;
+  const extras = (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id)).join(', ');
+  return `${metal} · ${surface}${extraStyle}${extras ? ` + ${extras}` : ''}`;
 };
 
 /** "“Lainee” in script, engraved with pink enamel, across 6 lower teeth": for the order summary and emails. */
@@ -238,6 +265,10 @@ export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, '
 const oneOf = <T extends readonly { id: string }[]>(list: T, value: unknown): value is Id<T> =>
   typeof value === 'string' && list.some((item) => item.id === value);
 
+/** Named extras in catalog order (the order they display in). */
+export const sortExtras = (extras: readonly ExtraId[]) =>
+  [...extras].sort((a, b) => TOOTH_EXTRAS.findIndex((item) => item.id === a) - TOOTH_EXTRAS.findIndex((item) => item.id === b));
+
 /** Which options a shop sells; validation rejects anything else. Omit to allow the whole catalog. */
 export type EnabledOptions = {
   metals: readonly string[];
@@ -252,6 +283,8 @@ export type EnabledOptions = {
   vision: boolean;
   addOns?: readonly Pick<AddOn, 'id'>[];
   molds?: readonly string[];
+  /** Named tooth extras the shop sells; absent = none. */
+  extras?: readonly string[];
 };
 
 const parseTooth = (value: unknown): RenderTooth | null => {
@@ -261,8 +294,13 @@ const parseTooth = (value: unknown): RenderTooth | null => {
   if (!oneOf(METALS, tooth.metal) || !oneOf(KARATS, tooth.karat) || !oneOf(GRILLZ_TYPES, tooth.type)) return null;
   if (!oneOf(STYLES, tooth.style) || !oneOf(SETTINGS, tooth.setting) || !oneOf(STONES, tooth.stone)) return null;
   if (tooth.opal !== undefined && !oneOf(OPALS, tooth.opal)) return null;
+  if (tooth.extras !== undefined) {
+    if (!Array.isArray(tooth.extras) || !tooth.extras.every((id) => oneOf(TOOTH_EXTRAS, id))) return null;
+    if (new Set(tooth.extras).size !== tooth.extras.length) return null;
+  }
   const opal = tooth.style === 'opals' && tooth.opal && tooth.opal !== 'white' ? { opal: tooth.opal as OpalId } : {};
-  return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone, ...opal };
+  const extras = tooth.extras?.length ? { extras: sortExtras(tooth.extras as ExtraId[]) } : {};
+  return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone, ...opal, ...extras };
 };
 
 /** One inscription from the client, or null if it isn't valid. Accepts the old single-tooth shape. */
@@ -293,7 +331,8 @@ const sells = (tooth: RenderTooth, enabled: EnabledOptions) =>
   enabled.types.includes(tooth.type) &&
   (tooth.type === 'iced'
     ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) && (!icedBorder(tooth) || enabled.styles.includes(tooth.style))
-    : enabled.styles.includes(tooth.style));
+    : enabled.styles.includes(tooth.style)) &&
+  (tooth.extras ?? []).every((extra) => (enabled.extras ?? []).includes(extra));
 
 export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): RenderSpec | null => {
   if (!value || typeof value !== 'object') return null;
@@ -358,24 +397,32 @@ const describeLocation = (indices: number[], allCount: number) => {
 
 const pick = <T extends readonly { id: string }[]>(list: T, id: string): T[number] => list.find((item) => item.id === id)!;
 
+/** The named extras on a tooth, as render-prompt text ('' when there are none). */
+const extrasSuffix = (tooth: ToothDesign) => {
+  const extras = tooth.extras ?? [];
+  if (!extras.length) return '';
+  return `, with ${extras.map((id) => pick(TOOTH_EXTRAS, id).render).join(' and ')}`;
+};
+
 const describeDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${pick(METALS, tooth.metal).render}`;
+  const suffix = extrasSuffix(tooth);
   if (icedOpenFace(tooth)) {
-    return `${metal}, iced open face: each tooth is a metal outline frame paved edge to edge with sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}, and the natural white tooth shows through the open middle of the frame`;
+    return `${metal}, iced open face: each tooth is a metal outline frame paved edge to edge with sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}, and the natural white tooth shows through the open middle of the frame${suffix}`;
   }
   if (icedOpal(tooth)) {
-    return `${metal}, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid ${pick(OPALS, opalOf(tooth)!).render}, framed all round by a narrow border of sparkling ${pick(STONES, tooth.stone).render} in a ${label(SETTINGS, tooth.setting).toLowerCase()} setting; the stones stay on the border and never cover the opal`;
+    return `${metal}, opal inlay with a pave stone border: the middle of each tooth's face is an inlaid ${pick(OPALS, opalOf(tooth)!).render}, framed all round by a narrow border of sparkling ${pick(STONES, tooth.stone).render} in a ${label(SETTINGS, tooth.setting).toLowerCase()} setting; the stones stay on the border and never cover the opal${suffix}`;
   }
   if (tooth.type === 'iced') {
     // Stones cover the whole face of an iced tooth, so other finishes (engraving…) do not apply.
-    return `${metal}, fully iced out: the entire front face is covered edge to edge in sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}; solid, no openings or cut-outs`;
+    return `${metal}, fully iced out: the entire front face is covered edge to edge in sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}; solid, no openings or cut-outs${suffix}`;
   }
   if (tooth.type === 'photo') {
-    return `${metal} with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided`;
+    return `${metal} with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided${suffix}`;
   }
   const opal = opalOf(tooth);
-  if (opal) return `${metal} with ${pick(STYLES, tooth.style).render}: ${pick(OPALS, opal).render}`;
-  return `${metal} with ${pick(STYLES, tooth.style).render}`;
+  if (opal) return `${metal} with ${pick(STYLES, tooth.style).render}: ${pick(OPALS, opal).render}${suffix}`;
+  return `${metal} with ${pick(STYLES, tooth.style).render}${suffix}`;
 };
 
 const rowText = (count: number, row: 'upper' | 'lower') =>
@@ -383,19 +430,21 @@ const rowText = (count: number, row: 'upper' | 'lower') =>
 
 const shortDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${label(METALS, tooth.metal).toLowerCase()}`;
+  const extras = (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id).toUpperCase()).join(', ');
+  const suffix = extras ? ` + ${extras}` : '';
   if (icedOpenFace(tooth)) {
-    return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}`;
+    return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}${suffix}`;
   }
   if (icedOpal(tooth)) {
-    return `${label(OPALS, opalOf(tooth)!).toUpperCase()} OPAL inlay with a pave stone border (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}`;
+    return `${label(OPALS, opalOf(tooth)!).toUpperCase()} OPAL inlay with a pave stone border (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}${suffix}`;
   }
   if (tooth.type === 'iced') {
-    return `ICED OUT, the whole face covered in sparkling ${pick(STONES, tooth.stone).render} (${label(SETTINGS, tooth.setting).toLowerCase()} setting) in ${metal}, no openings`;
+    return `ICED OUT, the whole face covered in sparkling ${pick(STONES, tooth.stone).render} (${label(SETTINGS, tooth.setting).toLowerCase()} setting) in ${metal}, no openings${suffix}`;
   }
-  if (tooth.type === 'photo') return `PHOTO ENGRAVED, ${metal}`;
+  if (tooth.type === 'photo') return `PHOTO ENGRAVED, ${metal}${suffix}`;
   const opal = opalOf(tooth);
-  if (opal) return `${label(OPALS, opal).toUpperCase()} OPAL inlay in ${metal}`;
-  return `${label(STYLES, tooth.style).toUpperCase()} ${metal}, no stones`;
+  if (opal) return `${label(OPALS, opal).toUpperCase()} OPAL inlay in ${metal}${suffix}`;
+  return `${label(STYLES, tooth.style).toUpperCase()} ${metal}, no stones${suffix}`;
 };
 
 // The model numbers each row from the viewer's right (index 0) to the viewer's left (index 15),
