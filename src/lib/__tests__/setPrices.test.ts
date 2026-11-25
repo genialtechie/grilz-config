@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { MARKET_DEFAULTS } from '../metalMarket';
 import { priceBreakdown, priceHints } from '../pricing';
-import { DEFAULT_SET, describeSpec, parseRenderSpec, type KaratId, type MetalId, type RenderTooth, type ToothDesign } from '../renderSpec';
+import { DEFAULT_SET, describeSpec, describeTooth, parseRenderSpec, type KaratId, type MetalId, type RenderTooth, type ToothDesign } from '../renderSpec';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { describeChanges } from '../tenant/diff';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
@@ -120,10 +121,33 @@ describe('set prices (MAG-204)', () => {
     expect(line(pricing, setOf(12, 'yellow', '10k'), 'Set discount')).toEqual({ label: 'Set discount · 12 teeth, 10% off', amount: -138 });
   });
 
+  it('the back-teeth delta on set-priced teeth never feeds the percentage discount', () => {
+    // 12 teeth 10K at the $1,250 set price, back teeth at 50%: the back-teeth
+    // line is real (6 back teeth × $1,250/12 × −50% = −$312), but the volume
+    // base is $0 — every tooth is set-priced — so no discount line appears.
+    // Before the fix the negative base flipped the "discount" into a $31
+    // surcharge (total $1,019 instead of $988).
+    const half: TenantPricing = { ...LUCKEY, volume: [{ minTeeth: 12, percentOff: 10 }], positions: { premolar: 50, molar: 50 } };
+    const halfQuote = quote(half, setOf(12, 'yellow', '10k'));
+    expect(line(half, setOf(12, 'yellow', '10k'), 'Back teeth')).toEqual({ label: 'Back teeth · 6 teeth', amount: -312 });
+    expect(line(half, setOf(12, 'yellow', '10k'), 'Set discount')).toBeUndefined();
+    expect(halfQuote.total).toBe(50 + 1250 - 312);
+    // The other direction: back teeth at 125% (+$156) must not earn a
+    // discount either — before the fix it undercharged by $16.
+    const dear: TenantPricing = { ...LUCKEY, volume: [{ minTeeth: 12, percentOff: 10 }], positions: { premolar: 125, molar: 125 } };
+    expect(line(dear, setOf(12, 'yellow', '10k'), 'Back teeth')).toEqual({ label: 'Back teeth · 6 teeth', amount: 156 });
+    expect(line(dear, setOf(12, 'yellow', '10k'), 'Set discount')).toBeUndefined();
+    expect(quote(dear, setOf(12, 'yellow', '10k')).total).toBe(50 + 1250 + 156);
+  });
+
   it('a shop with no set prices quotes exactly as before', () => {
+    // Pinned, not compared against itself: the demo shop's 10K 6/6 is $2,000
+    // ($200 service fee + 12 × $150 metal). The unchanged golden suite is
+    // the real regression cover; this pins the total here too (MAG-204 review).
     const breakdown = quote(VVSLAB_CONFIG.pricing, setOf(12, 'yellow', '10k'));
     expect(breakdown.lines.some((item) => item.label.startsWith('Set price'))).toBe(false);
-    expect(breakdown.total).toBe(quote(VVSLAB_CONFIG.pricing, setOf(12, 'yellow', '10k')).total);
+    expect(breakdown.lines).toEqual([{ label: 'Service fee', amount: 200 }, { label: 'Metal · 12 teeth', amount: 1800 }]);
+    expect(breakdown.total).toBe(2000);
   });
 
   it('the server, from the stored config and the posted design, gets the builder’s total', () => {
@@ -150,9 +174,48 @@ describe('colour surcharge (MAG-204)', () => {
   });
 
   it('the metal hint shows the surcharge in the per-tooth price', () => {
-    expect(priceHints(LUCKEY).metal('white', '10k')).toBe('$155 / tooth');
-    expect(priceHints(LUCKEY).metal('yellow', '10k')).toBe('$115 / tooth');
+    // And the set price, so a 10K card doesn't read "$115 / tooth" while the
+    // 6/6 set costs $1,250 (MAG-204 review).
+    expect(priceHints(LUCKEY).metal('white', '10k')).toBe('$155 / tooth · 12 teeth $1250');
+    expect(priceHints(LUCKEY).metal('yellow', '10k')).toBe('$115 / tooth · 12 teeth $1250');
     expect(priceHints({ ...LUCKEY, setPrices: undefined }).metal('rose', '18k')).toBe('$260 / tooth');
+  });
+});
+
+describe('set prices and market-linked metal (MAG-204 review)', () => {
+  // A market quote of $140 a tooth for 10K gold, forged the same way the
+  // metal-market tests forge one (the server rebuilds the real quote).
+  const quoted: TenantPricing = {
+    ...LUCKEY,
+    market: {
+      ...MARKET_DEFAULTS,
+      enabled: true,
+      quote: { asOf: '2026-11-25T00:00:00.000Z', gold: 4000, silver: 50, platinum: 1600, perTooth: { 'yellow:10k': 140 } },
+    },
+  };
+
+  it('a set price never overrides a market quote — the quote is the price', () => {
+    // Decision (MAG-204 review): set prices apply to fixed-price metal only.
+    // The 12-tooth set price is $1,250, but the day's quote is $140 a tooth,
+    // so the set costs $1,680 + $50 fee — no Set price line, and no phantom
+    // "saving" that would move every time the gold price moves.
+    const breakdown = quote(quoted, setOf(12, 'yellow', '10k'));
+    expect(line(quoted, setOf(12, 'yellow', '10k'), 'Metal')).toEqual({ label: 'Metal · 12 teeth', amount: 1680 });
+    expect(line(quoted, setOf(12, 'yellow', '10k'), 'Set price')).toBeUndefined();
+    expect(breakdown.total).toBe(50 + 1680);
+    expect(breakdown.market).toEqual({ asOf: '2026-11-25T00:00:00.000Z', gold: 4000, silver: 50, platinum: 1600 });
+    // The card hint shows the quote with no set-price note, either.
+    expect(priceHints(quoted).metal('yellow', '10k')).toBe('$140 / tooth');
+  });
+
+  it('the market prices ride along only when a tooth was actually priced from the quote', () => {
+    // All-in iced teeth: the quote exists for their metal, but no tooth's
+    // metal came from it — so no market attachment on the breakdown.
+    const iced: TenantPricing = { ...quoted, icedPerTooth: { moissanite: { '10k': 300 } } };
+    const teeth = setOf(6, 'yellow', '10k', { type: 'iced', style: 'solid' });
+    const breakdown = quote(iced, teeth);
+    expect(breakdown.total).toBe(6 * 300 + 50);
+    expect(breakdown.market).toBeUndefined();
   });
 });
 
@@ -181,6 +244,23 @@ describe('per-tooth extras (MAG-204)', () => {
     expect(line(LUCKEY, teeth, 'Brushed')).toBeUndefined();
   });
 
+  it('extras never apply to iced teeth — not charged, not described', () => {
+    // Decision (MAG-204 review): the whole face is covered edge to edge, so
+    // there is nowhere to put a cross — the same rule as the other finishes.
+    // 6 all-in iced teeth at $300 are $1,800 + $50 fee; before the fix a
+    // cross added $900 and the render text contradicted itself ("no openings
+    // or cut-outs, with a small cross inlaid").
+    const iced: TenantPricing = { ...LUCKEY, icedPerTooth: { moissanite: { '10k': 300 } } };
+    const teeth = setOf(6, 'yellow', '10k', { type: 'iced', style: 'solid', extras: ['cross'] });
+    expect(line(iced, teeth, 'Iced')).toEqual({ label: 'Iced · 6 teeth', amount: 1800 });
+    expect(line(iced, teeth, 'Cross')).toBeUndefined();
+    expect(quote(iced, teeth).total).toBe(6 * 300 + 50);
+    expect(describeTooth({ ...tooth('yellow', '10k'), type: 'iced', extras: ['cross'] })).not.toContain('Cross');
+    expect(describeSpec({ ...DEFAULT_SET, teeth })).not.toContain('cross');
+    // Plain teeth still charge extras — the gate is iced-only.
+    expect(quote(LUCKEY, setOf(1, 'yellow', '10k', { extras: ['cross'] })).total).toBe(115 + 150 + 50);
+  });
+
   it('a design only validates extras the shop sells', () => {
     const catalog = { ...VVSLAB_CONFIG.catalog, extras: ['starburst', 'star', 'cross'] as never };
     const withExtras = (extras: string[]) => ({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, extras }] });
@@ -199,6 +279,19 @@ describe('per-tooth extras (MAG-204)', () => {
     const parsed = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: LUCKEY, catalog });
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.config.pricing.extraPerTooth).toEqual({ starburst: 25, star: 150 });
+  });
+
+  it('a newly toggled-on extra with no price blocks saving — $0 is never assumed', () => {
+    // The admin no longer seeds $0 when an extra is switched on (MAG-204
+    // review): without a price the save stays blocked, so the builder can
+    // never offer the extra free. $0 typed in on purpose still saves —
+    // brushed and laser really are free.
+    const catalog = { ...VVSLAB_CONFIG.catalog, extras: ['cross'] as never };
+    const unpriced = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...LUCKEY, extraPerTooth: {} }, catalog });
+    expect(unpriced.ok).toBe(false);
+    if (!unpriced.ok) expect(unpriced.issues.some((issue) => /Add a price for cross/.test(issue.message))).toBe(true);
+    const freeOnPurpose = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...LUCKEY, extraPerTooth: { cross: 0 } }, catalog });
+    expect(freeOnPurpose.ok).toBe(true);
   });
 
   it('the config rejects duplicate set sizes and sizes outside 2–32 teeth', () => {
@@ -221,5 +314,9 @@ describe('per-tooth extras (MAG-204)', () => {
     const before = { ...VVSLAB_CONFIG, pricing: VVSLAB_CONFIG.pricing };
     const after = { ...VVSLAB_CONFIG, pricing: LUCKEY };
     expect(describeChanges(before, after).map((change) => change.text).some((text) => text.startsWith('Set prices'))).toBe(true);
+    // Reordering the tiers is not a change (MAG-204 review).
+    const reordered = { ...VVSLAB_CONFIG, pricing: { ...LUCKEY, setPrices: [...LUCKEY.setPrices!].reverse() } };
+    const ordered = { ...VVSLAB_CONFIG, pricing: LUCKEY };
+    expect(describeChanges(ordered, reordered)).toEqual([]);
   });
 });

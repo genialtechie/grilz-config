@@ -145,6 +145,11 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   });
   const setPerTooth = (tooth: ToothDesign) => {
     if (allIn(tooth) !== undefined) return undefined;
+    // A set price never overrides a market-linked quote: the quote is the
+    // shop's live price for that metal, and a fixed set price would turn the
+    // quote's daily movement into a phantom "saving" on the Set price line.
+    // Set prices apply to fixed-price metal only (MAG-204 review).
+    if (metalQuoted(pricing, tooth.metal, tooth.karat)) return undefined;
     const cell = setPriceCell(pricing, setPriceKey(tooth.metal, tooth.karat), keyCounts.get(setPriceKey(tooth.metal, tooth.karat)) ?? 0);
     return cell ? cell.price / cell.size : undefined;
   };
@@ -152,7 +157,11 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // Colour is a flat surcharge on the fixed metal price, on top of a set
   // price too; all-in iced teeth already include everything.
   const colourOf = (tooth: ToothDesign) => (allIn(tooth) === undefined && !metalQuoted(pricing, tooth.metal, tooth.karat) ? colourPerTooth(pricing, tooth.metal) : 0);
-  const extrasOf = (tooth: ToothDesign) => (tooth.extras ?? []).reduce((total, extra) => total + extraPrice(pricing, extra), 0);
+  // Named extras never apply to iced teeth (MAG-204 review): the whole face
+  // is covered edge to edge, so there is nowhere to put a cross or a
+  // starburst — the same rule as the other finishes, which the builder
+  // already gates for iced teeth. The picker hides them there too.
+  const extrasOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? 0 : (tooth.extras ?? []).reduce((total, extra) => total + extraPrice(pricing, extra), 0));
   const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' && allIn(tooth) === undefined ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
   const settingOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0);
   // Open face takes its share of the stones: the part of the all-in price above the plain metal.
@@ -170,7 +179,9 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const metalGroups = [...keyCounts.entries()].map(([key, count]) => {
     const teethOfKey = teeth.filter((tooth) => allIn(tooth) === undefined && setPriceKey(tooth.metal, tooth.karat) === key);
     const list = teethOfKey.reduce((total, tooth) => total + metalPerTooth(pricing, tooth.metal, tooth.karat), 0);
-    const cell = setPriceCell(pricing, key, count);
+    // The cell only applies when a tooth of this metal actually takes a set
+    // price — market-quoted teeth never do (see setPerTooth above).
+    const cell = teethOfKey.some((tooth) => setPerTooth(tooth) !== undefined) ? setPriceCell(pricing, key, count) : undefined;
     return { key, count, list, charged: cell ? Math.round((count * cell.price) / cell.size) : list, cell };
   });
   const metal = metalGroups.reduce((total, group) => total + group.list, 0);
@@ -203,10 +214,10 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   add('Style & finish', finishes);
   add('Stones', stones);
   add('Mosaic setting', settings);
-  // Named extras, per extra.
+  // Named extras, per extra (iced teeth take none — see extrasOf above).
   const extraGroups = new Map<ExtraId, { count: number; amount: number }>();
   teeth.forEach((tooth) =>
-    (tooth.extras ?? []).forEach((extra) => {
+    (tooth.type === 'iced' ? [] : (tooth.extras ?? [])).forEach((extra) => {
       const group = extraGroups.get(extra) ?? { count: 0, amount: 0 };
       group.count += 1;
       group.amount += extraPrice(pricing, extra);
@@ -216,19 +227,28 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   extraGroups.forEach((group, extra) => add(`${label(TOOTH_EXTRAS, extra)} · ${group.count} ${group.count === 1 ? 'tooth' : 'teeth'}`, group.amount));
   // Back teeth at the shop's own share of the front price: the difference, on its own line.
   const back = teeth.filter((tooth) => positionFactor(pricing, tooth.index) !== 1);
-  const backAdjustment = Math.round(back.reduce((total, tooth) => total + (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + colourOf(tooth) + extrasOf(tooth)) * (positionFactor(pricing, tooth.index) - 1), 0));
+  const backDelta = (tooth: RenderTooth) => (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + colourOf(tooth) + extrasOf(tooth)) * (positionFactor(pricing, tooth.index) - 1);
+  // Split by whether the tooth's metal is set-priced: the % volume discount
+  // never applies to set-priced metal, so the back-teeth delta on those teeth
+  // must not sit in its base either — a cheaper back tooth would make the
+  // base negative and flip the "discount" into a surcharge. Colour and extras
+  // on set-priced teeth stay in the base: they are charged on top of the set
+  // price, so the % discount does apply to them (MAG-204 review decision).
+  const backSet = Math.round(back.filter((tooth) => setPerTooth(tooth) !== undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
+  const backRest = Math.round(back.filter((tooth) => setPerTooth(tooth) === undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
+  const backAdjustment = backSet + backRest;
   add(`Back teeth · ${back.length} ${back.length === 1 ? 'tooth' : 'teeth'}`, backAdjustment);
   // The set-size discount comes off everything charged per tooth — except the
   // metal of teeth a set price already covers (MAG-204: set prices win for
-  // the metals that have them, the % applies to the rest). The back-teeth
-  // delta on set-priced teeth stays in the base: splitting it out is not
-  // worth the complexity, and it only matters when a shop uses both.
+  // the metals that have them, the % applies to the rest), and except the
+  // back-teeth delta on those teeth (backRest above, not the whole
+  // backAdjustment).
   const volumeMetal = teeth.reduce((total, tooth) => {
     if (allIn(tooth) !== undefined || setPerTooth(tooth) !== undefined) return total;
     return total + metalPerTooth(pricing, tooth.metal, tooth.karat);
   }, 0);
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + colour + extras + backAdjustment) * percent) / 100));
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + colour + extras + backRest) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);
@@ -263,7 +283,11 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const subtotal = lines.reduce((total, line) => total + line.amount, 0);
   if (pricing.minimumOrder > subtotal) lines.push({ label: 'Minimum order adjustment', amount: pricing.minimumOrder - subtotal });
   const quote = pricing.market?.enabled ? pricing.market.quote : undefined;
-  const market = quote && teeth.some((tooth) => quote.perTooth[quoteKey(tooth.metal, tooth.karat)] !== undefined)
+  // The market prices ride along only when at least one tooth was actually
+  // priced from the quote — not when every tooth took a set price, a fixed
+  // price or an all-in iced price instead (MAG-204 review).
+  const pricedFromQuote = (tooth: ToothDesign) => allIn(tooth) === undefined && setPerTooth(tooth) === undefined && metalQuoted(pricing, tooth.metal, tooth.karat);
+  const market = quote && teeth.some(pricedFromQuote)
     ? { asOf: quote.asOf, gold: quote.gold, silver: quote.silver, platinum: quote.platinum }
     : undefined;
   return { lines, total: Math.max(subtotal, pricing.minimumOrder), ...(market ? { market } : {}), ...(promoResult ? { promo: promoResult } : {}) };
@@ -290,7 +314,16 @@ export const priceHints = (pricing: TenantPricing) => {
       if (price === undefined) return undefined;
       // A colour surcharge shows on the card (fixed prices only: a market quote already is that metal's price).
       const surcharge = icedStone || metalQuoted(pricing, metal, karat) ? 0 : colourPerTooth(pricing, metal);
-      return hint(`${usd(price + surcharge)} / tooth`);
+      // A set price changes what the tooth actually costs at set sizes, so
+      // say so on the card instead of showing only the per-tooth list price
+      // (MAG-204 review): the smallest set size with a price for this metal.
+      // No note for all-in iced or market-quoted metal — set prices apply to
+      // neither.
+      const setCell = icedStone || metalQuoted(pricing, metal, karat)
+        ? undefined
+        : (pricing.setPrices ?? []).filter((tier) => tier.prices[icedKey(metal, karat)] !== undefined).sort((a, b) => a.size - b.size)[0];
+      const setNote = setCell ? ` · ${setCell.size} teeth $${setCell.prices[icedKey(metal, karat)]}` : '';
+      return hint(`${usd(price + surcharge)} / tooth${setNote}`);
     },
     style: (style: StyleId) => hint(pricing.stylePerTooth[style] ? `+${usd(pricing.stylePerTooth[style]!)} / tooth` : 'Included'),
     /** All-in for the chosen metal and karat when the shop prices iced teeth from a table. */

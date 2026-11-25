@@ -236,7 +236,9 @@ export const describeTooth = (tooth: ToothDesign) => {
           ? `${label(OPALS, opalOf(tooth)!)} opals`
           : label(STYLES, tooth.style);
   const extraStyle = tooth.type === 'photo' && tooth.style !== 'solid' ? ` + ${label(STYLES, tooth.style)}` : '';
-  const extras = (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id)).join(', ');
+  // Iced teeth take no extras (MAG-204 review): the face is covered edge to
+  // edge, so a stored extra is not charged and is not described either.
+  const extras = tooth.type === 'iced' ? '' : (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id)).join(', ');
   return `${metal} · ${surface}${extraStyle}${extras ? ` + ${extras}` : ''}`;
 };
 
@@ -397,8 +399,9 @@ const describeLocation = (indices: number[], allCount: number) => {
 
 const pick = <T extends readonly { id: string }[]>(list: T, id: string): T[number] => list.find((item) => item.id === id)!;
 
-/** The named extras on a tooth, as render-prompt text ('' when there are none). */
+/** The named extras on a tooth, as render-prompt text ('' when there are none — and never on iced teeth, which take no extras). */
 const extrasSuffix = (tooth: ToothDesign) => {
+  if (tooth.type === 'iced') return '';
   const extras = tooth.extras ?? [];
   if (!extras.length) return '';
   return `, with ${extras.map((id) => pick(TOOTH_EXTRAS, id).render).join(' and ')}`;
@@ -430,7 +433,8 @@ const rowText = (count: number, row: 'upper' | 'lower') =>
 
 const shortDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${label(METALS, tooth.metal).toLowerCase()}`;
-  const extras = (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id).toUpperCase()).join(', ');
+  // Iced teeth take no extras (see describeTooth above).
+  const extras = tooth.type === 'iced' ? '' : (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id).toUpperCase()).join(', ');
   const suffix = extras ? ` + ${extras}` : '';
   if (icedOpenFace(tooth)) {
     return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}${suffix}`;

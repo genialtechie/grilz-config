@@ -402,6 +402,9 @@ function Configurator() {
   const karatIds = catalog.karats.map((karat) => karat.id);
   const withPatch = (design: ToothDesign, patch: Partial<ToothDesign>) => {
     const next = { ...design, ...patch };
+    // Iced teeth take no named extras (MAG-204 review): switching a tooth to
+    // iced drops them, so a design can never carry an extra it cannot show.
+    if (next.type === 'iced') next.extras = [];
     return nearestOffered(shopPricing, next, stoneIds, karatIds) ?? design;
   };
   const icedOffers = (design: Partial<ToothDesign>) => offered(shopPricing, { ...shown, type: 'iced', ...design });
@@ -1207,7 +1210,7 @@ function Configurator() {
                       </small>
                     )}
                   </LookGroup>
-                  {catalog.extras.length > 0 && (
+                  {catalog.extras.length > 0 && shown.type !== 'iced' && (
                     <LookGroup
                       id="extras"
                       title="Extras"

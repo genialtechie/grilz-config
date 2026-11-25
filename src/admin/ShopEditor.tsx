@@ -198,15 +198,38 @@ function SetPricesTable({ pricing, catalog, onChange }: { pricing: TenantPricing
           </Fragment>
         ))}
       </div>
-      {table.length < 4 && (
-        <button
-          className="admin-button admin-button--small"
-          type="button"
-          onClick={() => onChange([...table, { size: table.at(-1) ? Math.min(32, table.at(-1)!.size + 4) : 12, prices: {} }])}
-        >
-          Add a set size
-        </button>
-      )}
+      {table.length < 4 && (() => {
+        // The smallest size not already in the table, so Add can never create
+        // an unsavable duplicate (MAG-204 review): with the table ending at
+        // 32, "last + 4" capped at 32 used to duplicate it.
+        const used = new Set(table.map((tier) => tier.size));
+        const nextSize = Array.from({ length: 31 }, (_, i) => i + 2).find((size) => !used.has(size));
+        if (nextSize === undefined) return null;
+        return (
+          <button
+            className="admin-button admin-button--small"
+            type="button"
+            onClick={() => onChange([...table, { size: nextSize, prices: {} }])}
+          >
+            Add a set size
+          </button>
+        );
+      })()}
+      {(() => {
+        // A set price above what the teeth cost one by one is almost always
+        // a typo — and the dangerous typo runs the other way, a per-tooth
+        // price typed into a set cell selling the whole set for that price,
+        // which no check can catch (a set price below per tooth is the
+        // normal discount). Flag the checkable direction (MAG-204 review).
+        const overpriced = table.flatMap((tier) => rows.flatMap((row) => {
+          const price = tier.prices[row.key];
+          if (price === undefined) return [];
+          const perTooth = row.key === 'silver' || row.key === 'platinum' ? metalPerTooth(pricing, row.key, '10k') : metalPerTooth(pricing, 'yellow', row.key);
+          return price > tier.size * perTooth ? [`${row.label} · ${tier.size} teeth: $${price} is more than ${tier.size} × $${perTooth} = $${tier.size * perTooth}`] : [];
+        }));
+        if (!overpriced.length) return null;
+        return <p className="admin-muted admin-section__hint">Check these — the set price is higher than the teeth cost one by one, so customers pay the set price: {overpriced.join('; ')}.</p>;
+      })()}
     </div>
   );
 }
@@ -601,8 +624,14 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 const extras = (next.catalog.extras ?? []) as ExtraId[];
                 const order = TOOTH_EXTRAS.map((item) => item.id);
                 next.catalog.extras = (on ? [...extras, id as ExtraId] : extras.filter((item) => item !== id)).sort((a, b) => order.indexOf(a) - order.indexOf(b));
-                // A new extra starts at $0 so the config stays valid; set its price below.
-                if (on) next.pricing.extraPerTooth = { ...next.pricing.extraPerTooth, [id as ExtraId]: next.pricing.extraPerTooth?.[id as ExtraId] ?? 0 };
+                // No price is seeded here: a new extra has no price until the
+                // shop sets one in the Prices section below, and saving stays
+                // blocked until it does ("Add a price for cross."). Seeding
+                // $0 would offer it free — and $0 is also a price a shop can
+                // choose on purpose (brushed, laser), so an invented $0 is
+                // indistinguishable from an intended one (MAG-204 review).
+                // A price left over in this draft (toggled off, then back on
+                // before saving) is kept as it was.
               })}
             />
             <h3>Extras</h3>
@@ -755,7 +784,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               </button>
             )}
             <h3>Set prices</h3>
-            <p className="admin-muted admin-section__hint">What a whole set costs in each metal: a 6/6 is 12 teeth, an 8/8 is 16, and so on. A set of that size or bigger uses the biggest size it reaches, so the price never jumps backwards. A set price wins over the percentage discount above for the metals that have one; the percentage still applies to the rest.</p>
+            <p className="admin-muted admin-section__hint">What a whole set costs in each metal: a 6/6 is 12 teeth, an 8/8 is 16, and so on. A set of that size or bigger uses the biggest size it reaches, so the price never jumps backwards. A set price wins over the percentage discount above for the metals that have one; the percentage still applies to the rest. Set prices don&apos;t apply to metal priced from the live market — those teeth use the day&apos;s quote instead, so a fixed set price can&apos;t turn the gold price&apos;s daily movement into a phantom saving.</p>
             <label className="admin-check">
               <input type="checkbox" checked={Boolean(pricing.setPrices)} onChange={(event) => update((next) => { if (event.target.checked) next.pricing.setPrices = [12, 16, 20, 24].map((size) => ({ size, prices: {} })); else delete next.pricing.setPrices; })} />
               <span>Price whole sets by metal and karat</span>

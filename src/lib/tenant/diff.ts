@@ -124,9 +124,12 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = p1.colourSurcharge?.[metal.id] ?? 0;
     if (before !== after) add('Prices', `${metal.label} colour: ${usd(before)} → ${usd(after)} per tooth`);
   });
+  // Sorted by size and metal, so reordering the tiers in the admin reads as
+  // no change instead of a price change (MAG-204 review).
   const setPrices = (pricing: typeof p0) =>
-    (pricing.setPrices ?? [])
-      .flatMap((tier) => Object.entries(tier.prices).map(([key, price]) => `${setPriceKeyLabel(key as (typeof ICED_KEYS)[number])} · ${tier.size} teeth: ${usd(price)}`))
+    [...(pricing.setPrices ?? [])]
+      .sort((a, b) => a.size - b.size)
+      .flatMap((tier) => Object.entries(tier.prices).sort(([a], [b]) => a.localeCompare(b)).map(([key, price]) => `${setPriceKeyLabel(key as (typeof ICED_KEYS)[number])} · ${tier.size} teeth: ${usd(price)}`))
       .join(', ') || 'none';
   if (setPrices(p0) !== setPrices(p1)) add('Prices', `Set prices: ${setPrices(p0)} → ${setPrices(p1)}`);
   (['fangs', 'photo'] as const).forEach((key) => {
