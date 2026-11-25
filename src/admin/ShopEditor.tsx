@@ -1,9 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, SELLABLE_CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
+import { CUTS, SELLABLE_CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
-import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
+import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type SellableCutId, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
@@ -350,7 +350,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const { catalog, pricing, deposit } = config;
   const pick = <T extends Option>(list: readonly T[], ids: readonly string[]) => list.filter((item) => ids.includes(item.id));
   // The first edit to a fit's price writes every fit out, starting from what the shop charges now.
-  const setCut = (next: TenantConfig, id: CutId, patch: Partial<CutPrice>) => {
+  const setCut = (next: TenantConfig, id: SellableCutId, patch: Partial<CutPrice>) => {
     const cuts = { ...next.pricing.cuts };
     next.catalog.cuts.forEach((cut) => {
       cuts[cut] ??= cutPrice(next.pricing, cut);
@@ -678,7 +678,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                   </select>
                 </label>
               )}
-              {pick(CUTS, catalog.cuts).map((cut) => (
+              {pick(SELLABLE_CUTS, catalog.cuts).map((cut) => (
                 <Fragment key={cut.id}>
                   <Money label={cut.label} value={cutPrice(pricing, cut.id).amount} onChange={(value) => update((next) => setCut(next, cut.id, { amount: value }))} />
                   <label className="admin-field">

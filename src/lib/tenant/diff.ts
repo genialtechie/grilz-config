@@ -78,6 +78,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   const p0 = live.pricing;
   const p1 = draft.pricing;
   if (p0.display !== p1.display) add('Prices', `Show ${DISPLAY[p0.display]} → ${DISPLAY[p1.display]}`);
+  if (feeLabel(p0) !== feeLabel(p1)) add('Prices', `Fee name: ${feeLabel(p0)} → ${feeLabel(p1)}`);
   if (p0.base !== p1.base) add('Prices', `${feeLabel(p1)}: ${usd(p0.base)} → ${usd(p1.base)}`);
   if (p0.minimumOrder !== p1.minimumOrder) add('Prices', `Minimum order: ${usd(p0.minimumOrder)} → ${usd(p1.minimumOrder)}`);
   for (const map of PRICE_MAPS) {

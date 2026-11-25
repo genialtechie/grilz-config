@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cutPrice, priceBreakdown, priceHints } from '../pricing';
+import { cutPrice, feeLabel, priceBreakdown, priceHints } from '../pricing';
 import { checkLines, quickPricing } from '../quickPricing';
 import { DEFAULT_SET, parseRenderSpec, type CutId, type RenderTooth, type ToothDesign } from '../renderSpec';
 import { defaultSet, shopCatalog } from '../tenant/catalog';
@@ -120,5 +120,28 @@ describe('no forced cut', () => {
     expect(priceBreakdown(luckey, SIX_TOP, DEFAULT_SET).lines[0]).toEqual({ label: 'Appointment fee', amount: 50 });
     expect(priceBreakdown({ ...luckey, baseLabel: undefined }, SIX_TOP, DEFAULT_SET).lines[0].label).toBe('Service fee');
     expect(describeChanges({ ...VVSLAB_CONFIG, pricing: legacy }, { ...VVSLAB_CONFIG, pricing: luckey }).map((c) => c.text)).toContain(`Appointment fee: $${legacy.base} → $50`);
+  });
+
+  it('renaming the fee alone shows up as a change, so it can be published', () => {
+    const renamed = { ...legacy, baseLabel: 'VIP fee' };
+    expect(describeChanges({ ...VVSLAB_CONFIG, pricing: legacy }, { ...VVSLAB_CONFIG, pricing: renamed }).map((c) => c.text)).toEqual(['Fee name: Service fee → VIP fee']);
+  });
+
+  it('validates the fee label: optional, trimmed, up to 40 characters', () => {
+    const withLabel = (baseLabel?: string) => parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...legacy, baseLabel } }).ok;
+    expect(withLabel(undefined)).toBe(true);
+    expect(withLabel('Appointment fee')).toBe(true);
+    expect(withLabel('x'.repeat(40))).toBe(true);
+    // Blank is allowed and means the default name.
+    expect(withLabel('')).toBe(true);
+    expect(withLabel('   ')).toBe(true);
+    expect(feeLabel({ baseLabel: '' })).toBe('Service fee');
+    expect(feeLabel({ baseLabel: '   ' })).toBe('Service fee');
+    expect(withLabel('x'.repeat(41))).toBe(false);
+  });
+
+  it('keeps Standard out of the shop config', () => {
+    expect(parseTenantConfig({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts: ['standard'] } }).ok).toBe(false);
+    expect(parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...legacy, cuts: { standard: { amount: 10, per: 'order' } } } }).ok).toBe(false);
   });
 });

@@ -48,7 +48,7 @@ export function QuickPricing({ shop, prompt = false, onSaved }: { shop: MyShop; 
     const fee = answers.feeKind === 'none' ? 0 : number(answers.fee);
     if (!(gold > 0)) return setNotice({ kind: 'error', text: 'Add your 10K gold price per tooth.' });
     if (!(iced > gold)) return setNotice({ kind: 'error', text: 'The iced price should be more than the gold price: it includes the stones.' });
-    if (answers.feeKind !== 'none' && !(fee >= 0)) return setNotice({ kind: 'error', text: answers.feeKind === 'service' ? 'Add your service fee, or pick None.' : 'Add your minimum order, or pick None.' });
+    if (answers.feeKind !== 'none' && !(fee >= 0)) return setNotice({ kind: 'error', text: answers.feeKind === 'service' ? `Add your ${feeLabel(shown)}, or pick None.` : 'Add your minimum order, or pick None.' });
     setNotice(null);
     setPricing(quickPricing(loaded.config.pricing, { gold, iced, fee: { kind: answers.feeKind, amount: fee } }));
     setStep('check');
@@ -77,7 +77,7 @@ export function QuickPricing({ shop, prompt = false, onSaved }: { shop: MyShop; 
 
   const lines = checkLines(pricing ?? loaded.config.pricing);
   const shown = pricing ?? loaded.config.pricing;
-  const feeLine = shown.base > 0 ? `Plus a ${usd(shown.base)} ${feeLabel(shown).toLowerCase()} on every order.` : shown.minimumOrder > 0 ? `Orders under ${usd(shown.minimumOrder)} are raised to ${usd(shown.minimumOrder)}.` : `No ${feeLabel(shown).toLowerCase()} or minimum order.`;
+  const feeLine = shown.base > 0 ? `Plus a ${usd(shown.base)} ${feeLabel(shown)} on every order.` : shown.minimumOrder > 0 ? `Orders under ${usd(shown.minimumOrder)} are raised to ${usd(shown.minimumOrder)}.` : `No ${feeLabel(shown)} or minimum order.`;
 
   return (
     <section className="admin-card admin-section dash-quick">
