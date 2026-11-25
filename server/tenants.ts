@@ -7,8 +7,10 @@ import { latestSpot } from './metalPrices.js';
 
 // Loads a tenant's published config from Supabase (PostgREST, service role).
 // Shared by /api/tenant, /api/render and the link-preview page. Tenant zero
-// (vvslab) is bundled with the app so the public demo never depends on the
-// database being reachable.
+// (vvslab) is bundled with the app as a fallback so the public demo never
+// depends on the database being reachable: the demo reads its published
+// config from the database like any other shop (MAG-223) and falls back to
+// the bundle when the database cannot serve it.
 
 export type TenantEnv = { SUPABASE_URL?: string; SUPABASE_SERVICE_ROLE_KEY?: string };
 
@@ -60,14 +62,18 @@ type Row = {
 };
 
 export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<TenantLookup> {
-  if (slug === TENANT_ZERO.slug) return { ok: true, tenant: TENANT_ZERO };
   if (!isValidSlug(slug)) return { ok: false, reason: 'invalid_slug' };
   const hit = cache.get(slug);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
 
   const url = env.SUPABASE_URL;
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return { ok: false, reason: 'unavailable' };
+  // The demo is bundled so it loads without a database; with one configured
+  // it reads its published config like any other shop and only falls back
+  // to the bundle when the database cannot serve it (MAG-223).
+  if (!url || !key) {
+    return slug === TENANT_ZERO.slug ? { ok: true, tenant: TENANT_ZERO } : { ok: false, reason: 'unavailable' };
+  }
 
   let value: TenantLookup;
   try {
@@ -82,6 +88,7 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
     });
     if (!response.ok) {
       console.error('tenant lookup failed', slug, response.status);
+      if (slug === TENANT_ZERO.slug) return { ok: true, tenant: TENANT_ZERO };
       return { ok: false, reason: 'unavailable' };
     }
     const rows = (await response.json()) as Row[];
@@ -102,8 +109,12 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
             slug: row.slug,
             name: row.name,
             // The trial gate takes effect the moment it ends, not at the nightly cron.
-            status: row.status === 'live' && trialExpired(row) ? 'paused' : (row.status as TenantStatus),
-            kind: row.kind as PublishedTenant['kind'],
+            // Demo pages are showcase pages, not trial shops: the demo never
+            // goes paused on a trial end, whatever its stored trial fields say.
+            status: row.status === 'live' && slug !== TENANT_ZERO.slug && trialExpired(row) ? 'paused' : (row.status as TenantStatus),
+            // The demo is a demo whatever the row says: kind drives lead routing
+            // and the builder's demo treatment, so it comes from the slug, not the row.
+            kind: slug === TENANT_ZERO.slug ? 'demo' : (row.kind as PublishedTenant['kind']),
             version: published.version,
             // A shop on market pricing gets today's per-tooth quote (or its fixed prices without one).
             config: parsed.config.pricing.market ? { ...parsed.config, pricing: withMarketQuote(parsed.config.pricing, await latestSpot(env)) } : parsed.config,
@@ -114,8 +125,13 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
     }
   } catch (error) {
     console.error('tenant lookup error', slug, error instanceof Error ? error.message : error);
+    if (slug === TENANT_ZERO.slug) return { ok: true, tenant: TENANT_ZERO };
     return { ok: false, reason: 'unavailable' };
   }
+  // The demo falls back to the bundled config when the database has no
+  // published config for it (or the stored config is invalid) — it never
+  // 404s or 503s on a missing database row.
+  if (!value.ok && slug === TENANT_ZERO.slug) return { ok: true, tenant: TENANT_ZERO };
   // Only live shops are kept in memory. Instances don't share memory, so a paused
   // shop that pays (or is switched back on) must show up on the next request.
   if (value.ok && value.tenant.status === 'live') cache.set(slug, { at: Date.now(), value });

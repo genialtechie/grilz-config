@@ -29,11 +29,83 @@ const lookups = (fetch: ReturnType<typeof vi.fn>) => fetch.mock.calls.filter(([u
 afterEach(() => vi.unstubAllGlobals());
 
 describe('tenant lookup', () => {
-  it('serves tenant zero without touching the database', async () => {
+  it('serves the bundled demo when no database is configured', async () => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);
     expect(await getPublishedTenant('vvslab', {})).toEqual({ ok: true, tenant: TENANT_ZERO });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('serves the demo published config from the database, not the bundle', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => (String(input).includes('/rest/v1/tenants?') ? Response.json([row('vvslab', demoConfig, { kind: 'demo' })]) : Response.json([]))));
+    const lookup = await getPublishedTenant('vvslab', env);
+    expect(lookup.ok && lookup.tenant.version).toBe(2);
+    expect(lookup.ok && lookup.tenant.kind).toBe('demo');
+    expect(lookup.ok && lookup.tenant.id).toBe('id-vvslab');
+    expect(lookup.ok && lookup.tenant.config.catalog.pvd).toBe(true);
+    expect(lookup).not.toEqual({ ok: true, tenant: TENANT_ZERO });
+    await forgetTenant('vvslab');
+  });
+
+  it('forces kind demo for the demo slug whatever the row says', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => (String(input).includes('/rest/v1/tenants?') ? Response.json([row('vvslab', demoConfig, { kind: 'shop' })]) : Response.json([]))));
+    const lookup = await getPublishedTenant('vvslab', env);
+    expect(lookup.ok && lookup.tenant.kind).toBe('demo');
+    expect(lookup.ok && lookup.tenant.version).toBe(2);
+    expect(lookup.ok && lookup.tenant.config.catalog.pvd).toBe(true);
+    await forgetTenant('vvslab');
+  });
+
+  it('falls back to the bundled demo when the database lookup fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch(async () => new Response('down', { status: 500 }));
+    expect(await getPublishedTenant('vvslab', env)).toEqual({ ok: true, tenant: TENANT_ZERO });
+    await forgetTenant('vvslab');
+  });
+
+  it('falls back to the bundled demo when the database throws', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch(async () => { throw new Error('network down'); });
+    expect(await getPublishedTenant('vvslab', env)).toEqual({ ok: true, tenant: TENANT_ZERO });
+    await forgetTenant('vvslab');
+  });
+
+  it('falls back to the bundled demo when the database has no published config', async () => {
+    mockFetch(async () => Response.json([]));
+    expect(await getPublishedTenant('vvslab', env)).toEqual({ ok: true, tenant: TENANT_ZERO });
+    await forgetTenant('vvslab');
+  });
+
+  it('falls back to the bundled demo when the published version has no config', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    mockFetch(async () => Response.json([row('vvslab', demoConfig, { kind: 'demo', published_version: 3 })]));
+    expect(await getPublishedTenant('vvslab', env)).toEqual({ ok: true, tenant: TENANT_ZERO });
+    await forgetTenant('vvslab');
+  });
+
+  it('never pauses the demo on a trial end', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    const expired = new Date(Date.now() - 864e5).toISOString();
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => (String(input).includes('/rest/v1/tenants?') ? Response.json([row('vvslab', demoConfig, { kind: 'demo', plan: 'trial', trial_ends_at: expired })]) : Response.json([]))));
+    const lookup = await getPublishedTenant('vvslab', env);
+    expect(lookup.ok && lookup.tenant.status).toBe('live');
+    await forgetTenant('vvslab');
+  });
+
+  it('publishing the demo purges its cache so the new config shows up', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    const fetch = vi.fn(async (input: string | URL | Request) => (String(input).includes('/rest/v1/tenants?') ? Response.json([row('vvslab', demoConfig, { kind: 'demo' })]) : Response.json([])));
+    vi.stubGlobal('fetch', fetch);
+    await getPublishedTenant('vvslab', env);
+    purge.mockClear();
+    await forgetTenant('vvslab');
+    expect(purge).toHaveBeenCalledTimes(1);
+    expect(purge).toHaveBeenCalledWith(tenantCacheTag('vvslab'));
+    await getPublishedTenant('vvslab', env);
+    expect(lookups(fetch)).toBe(2);
+    await forgetTenant('vvslab');
   });
 
   it('rejects malformed slugs before querying', async () => {
