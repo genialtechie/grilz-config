@@ -37,10 +37,16 @@ export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
 
 const money = z.number().min(0).max(100_000);
+/**
+ * A price that can go below zero: styles can be priced below the base style
+ * (MAG-219 — Trax lists Windows at -$60, and a shop prices it the same way).
+ * Everything else stays non-negative.
+ */
+const signedMoney = z.number().min(-100_000).max(100_000);
 const multiplier = z.number().min(0.1).max(10);
 const nonEmptyUnique = <T extends z.ZodTypeAny>(item: T) =>
   z.array(item).min(1).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.');
-const priceMap = <K extends z.ZodEnum<[string, ...string[]]>>(key: K) => z.record(key, money);
+const priceMap = <K extends z.ZodEnum<[string, ...string[]]>>(key: K, value: z.ZodTypeAny = money) => z.record(key, value);
 
 export const FONT_PAIRS = ['serif-classic', 'modern-sans', 'editorial'] as const;
 export const PRICE_DISPLAYS = ['exact', 'from', 'hidden'] as const;
@@ -115,7 +121,14 @@ export const PricingSchema = z.object({
   metalPerTooth: priceMap(MetalIdSchema),
   /** Applies to gold only (yellow, white, rose). */
   karatMultiplier: z.record(KaratIdSchema, multiplier),
-  stylePerTooth: priceMap(StyleIdSchema),
+  /**
+   * Per-tooth finish prices. A style can cost less than the base style
+   * (Solid, $0): a negative price is a below-base style, shown openly as
+   * -$60 / tooth in the builder and as a negative "Style & finish" line in
+   * the summary (MAG-219). The shop still sets every price — a style with
+   * no price is not offered, never free by accident.
+   */
+  stylePerTooth: priceMap(StyleIdSchema, signedMoney),
   stonePerTooth: priceMap(StoneIdSchema),
   settingPerTooth: priceMap(SettingIdSchema),
   extras: z.object({ fangs: money, permanent: money, photo: money }),

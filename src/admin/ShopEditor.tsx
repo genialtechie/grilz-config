@@ -74,13 +74,13 @@ function Issue({ issues, path }: { issues: Map<string, string>; path: string }) 
   return hit ? <small className="admin-error">{hit[1]}</small> : null;
 }
 
-function Money({ label, value, onChange, step = 5, suffix = '' }: { label: string; value: number | undefined; onChange: (value: number) => void; step?: number; suffix?: string }) {
+function Money({ label, value, onChange, step = 5, suffix = '', min = 0 }: { label: string; value: number | undefined; onChange: (value: number) => void; step?: number; suffix?: string; min?: number }) {
   return (
     <label className="admin-field admin-field--money">
       <span>{label}</span>
       <div className="admin-prefix">
         {!suffix && <em>$</em>}
-        <input type="number" inputMode="decimal" min={0} step={step} value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))} />
+        <input type="number" inputMode="decimal" min={min} step={step} value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))} />
         {suffix && <em>{suffix}</em>}
       </div>
     </label>
@@ -808,9 +808,10 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               ))}
             </div>
             <h3>Finish</h3>
+            <p className="admin-muted admin-section__hint">A finish can cost less than Solid: enter a negative price (e.g. −$60 for open-face, the windows style) and the builder shows it openly as a saving on the style card and in the total.</p>
             <div className="admin-grid admin-grid--prices">
               {pick(STYLES, catalog.styles).map((style) => (
-                <Money key={style.id} label={style.label} value={pricing.stylePerTooth[style.id]} onChange={(value) => update((next) => { next.pricing.stylePerTooth[style.id] = value; })} />
+                <Money key={style.id} label={style.label} min={-100_000} value={pricing.stylePerTooth[style.id]} onChange={(value) => update((next) => { next.pricing.stylePerTooth[style.id] = value; })} />
               ))}
             </div>
             {(catalog.extras?.length ?? 0) > 0 && (

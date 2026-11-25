@@ -360,7 +360,13 @@ export const priceHints = (pricing: TenantPricing) => {
       const setNote = setCell ? ` · ${setCell.size} teeth $${setCell.prices[icedKey(metal, karat)]}` : '';
       return hint(`${usd(price + surcharge)} / tooth${setNote}`);
     },
-    style: (style: StyleId) => hint(pricing.stylePerTooth[style] ? `+${usd(pricing.stylePerTooth[style]!)} / tooth` : 'Included'),
+    style: (style: StyleId) => {
+      const price = pricing.stylePerTooth[style];
+      if (!price) return hint('Included');
+      // A below-base style (MAG-219): a negative price shows openly as a
+      // saving, not as "+$-60". Solid at $0 stays "Included".
+      return hint(`${price < 0 ? '-' : '+'}${usd(Math.abs(price))} / tooth`);
+    },
     /** All-in for the chosen metal and karat when the shop prices iced teeth from a table. */
     stone: (stone: StoneId, metal?: MetalId, karat?: KaratId) => {
       if (!pricing.icedPerTooth || !metal || !karat) return hint(`+${usd(pricing.stonePerTooth[stone] ?? 0)} / tooth`);
