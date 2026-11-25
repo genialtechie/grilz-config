@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { checkoutTrialEnd, onFreeTrial, pickPrompt, reminderChance, TRIAL_DAYS, trialDaysLeft, trialExpired } from '../../src/lib/trial';
+import {
+  ADMIN_STATUS_LABEL,
+  adminStatus,
+  checkoutTrialEnd,
+  CLAIM_TRIAL_DAYS,
+  extendTrialEnd,
+  onFreeTrial,
+  pickPrompt,
+  reminderChance,
+  TRIAL_DAYS,
+  trialDaysLeft,
+  trialDisplay,
+  trialEndForDate,
+  trialExpired,
+  trialStartMs,
+} from '../../src/lib/trial';
 
 const now = Date.parse('2026-11-01T12:00:00Z');
 const at = (days: number) => new Date(now + days * 864e5).toISOString();
@@ -41,6 +56,54 @@ describe('free trial', () => {
   it('starts billing right away within 48 hours of the end', () => {
     expect(checkoutTrialEnd({ trial_ends_at: at(1.9) }, now)).toBeNull();
     expect(checkoutTrialEnd({ trial_ends_at: null }, now)).toBeNull();
+  });
+});
+
+describe('trial admin (MAG-220)', () => {
+  it('claims and owner invites start a 30-day trial; self-signup stays 14', () => {
+    expect(CLAIM_TRIAL_DAYS).toBe(30);
+    expect(TRIAL_DAYS).toBe(14);
+  });
+
+  it('extends from the current end while the trial runs, and from today once it ended', () => {
+    expect(extendTrialEnd(at(5), 14, now)).toBe(at(19));
+    expect(extendTrialEnd(at(-2), 30, now)).toBe(at(30));
+    expect(extendTrialEnd(null, 7, now)).toBe(at(7));
+  });
+
+  it('extends to the end of a picked date, and rejects a past or malformed one', () => {
+    expect(trialEndForDate('2026-11-20', now)).toBe('2026-11-20T23:59:59.000Z');
+    expect(trialEndForDate('2026-11-01', now)).toBe('2026-11-01T23:59:59.000Z'); // today, still ahead
+    expect(trialEndForDate('2026-10-31', now)).toBeNull();
+    expect(trialEndForDate('not-a-date', now)).toBeNull();
+    expect(trialEndForDate('', now)).toBeNull();
+  });
+
+  it('counts a trial from when it started, falling back for rows made before the start was recorded', () => {
+    expect(trialStartMs({ trial_ends_at: at(10), trial_started_at: at(-4), created_at: at(-20) })).toBe(Date.parse(at(-4)));
+    // Self-signup: the tenant and its trial start together.
+    expect(trialStartMs({ trial_ends_at: at(10), created_at: at(-4), created_via: 'signup' })).toBe(Date.parse(at(-4)));
+    // A claim trial with no start recorded: the end minus 14 days — every trial before MAG-220 was 14 days, and the 30-day ones write the start.
+    expect(trialStartMs({ trial_ends_at: at(10), created_at: at(-20), created_via: 'admin' })).toBe(Date.parse(at(-4)));
+    expect(trialStartMs({ trial_ends_at: null })).toBeNull();
+  });
+
+  it('reads a shop whose trial ended as paused, even when the stored status still says live', () => {
+    const expired = { status: 'live', plan: 'trial', trial_ends_at: at(-1), billing_status: 'none' };
+    expect(adminStatus(expired, now)).toBe('paused-trial');
+    expect(ADMIN_STATUS_LABEL['paused-trial']).toBe('Paused (trial ended)');
+    expect(adminStatus({ ...expired, status: 'paused' }, now)).toBe('paused-trial');
+    expect(adminStatus({ status: 'live', plan: 'trial', trial_ends_at: at(5), billing_status: 'none' }, now)).toBe('live');
+    expect(adminStatus({ status: 'live', plan: 'trial', trial_ends_at: at(-1), billing_status: 'active' }, now)).toBe('live'); // a card: not expired
+    expect(adminStatus({ status: 'draft', plan: 'founding', trial_ends_at: null, billing_status: 'none' }, now)).toBe('draft');
+  });
+
+  it('shows the trial end, paid, ended, or nothing yet', () => {
+    expect(trialDisplay({ plan: 'trial', trial_ends_at: at(5), billing_status: 'none' }, now)).toEqual({ kind: 'trial', endsAt: at(5), daysLeft: 5 });
+    expect(trialDisplay({ plan: 'trial', trial_ends_at: at(-1), billing_status: 'none' }, now)).toEqual({ kind: 'ended', endsAt: at(-1) });
+    expect(trialDisplay({ plan: 'paid', trial_ends_at: null, billing_status: 'active', current_period_end: at(30) }, now)).toEqual({ kind: 'paid', renewsAt: at(30) });
+    expect(trialDisplay({ plan: 'trial', trial_ends_at: at(5), billing_status: 'active' }, now)).toEqual({ kind: 'paid', renewsAt: null });
+    expect(trialDisplay({ plan: 'founding', trial_ends_at: null, billing_status: 'none' }, now)).toEqual({ kind: 'none' });
   });
 });
 

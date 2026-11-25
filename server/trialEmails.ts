@@ -24,7 +24,7 @@ export type TrialShop = {
   daysLeft: number;
 };
 
-export type TrialStep = 'day-1' | 'day-3' | 'day-7' | 'day-12' | 'day-14';
+export type TrialStep = 'day-1' | 'day-3' | 'day-7' | 'week-left' | 'last-day';
 
 const html = (element: ReactElement) => render(element);
 /** "Gold Mouth Jewelers'", "Ice Box's". */
@@ -148,7 +148,7 @@ async function deposits(shop: TrialShop, origin: string, unsubscribe: string): P
   };
 }
 
-/** Day 12, no card: what they'd lose, in their own numbers. */
+/** 7 days left, no card: what they'd lose, in their own numbers. */
 async function ending(shop: TrialShop, origin: string, unsubscribe: string): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
   const days = `${shop.daysLeft} day${shop.daysLeft === 1 ? '' : 's'}`;
@@ -183,7 +183,7 @@ async function ending(shop: TrialShop, origin: string, unsubscribe: string): Pro
   };
 }
 
-/** Day 14, last day, no card: a plain letter from the founder that invites a reply. */
+/** Last day, no card: a plain letter from the founder that invites a reply. */
 async function lastDay(shop: TrialShop, origin: string, unsubscribe: string): Promise<RenderedEmail> {
   const brand = vvsBrand(origin);
   const subject = 'Last day of your trial';
@@ -213,9 +213,9 @@ export function trialEmail(step: TrialStep, shop: TrialShop, origin: string, uns
       return shop.live ? share(shop, origin, unsubscribe) : goLive(shop, origin, unsubscribe, true);
     case 'day-7':
       return deposits(shop, origin, unsubscribe);
-    case 'day-12':
+    case 'week-left':
       return ending(shop, origin, unsubscribe);
-    case 'day-14':
+    case 'last-day':
       return lastDay(shop, origin, unsubscribe);
   }
 }

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { claimStatus, handleClaim } from '../claims';
 import { handleDashboard } from '../dashboard';
-import { TRIAL_DAYS } from '../../src/lib/trial';
+import { CLAIM_TRIAL_DAYS } from '../../src/lib/trial';
 import { VVSLAB_CONFIG } from '../../src/lib/tenant/vvslab';
 
 // Throwaway accounts in the local test database; generated so no password sits in the repo.
@@ -95,8 +95,8 @@ describe.skipIf(!url || !key || !anon)('claim links (integration)', () => {
     expect(tenant.plan).toBe('trial');
     expect(tenant.status).toBe('live'); // live from the moment it's claimed (MAG-90)
     const days = (Date.parse(tenant.trial_ends_at) - Date.now()) / 864e5;
-    expect(days).toBeGreaterThan(TRIAL_DAYS - 0.1);
-    expect(days).toBeLessThan(TRIAL_DAYS + 0.1);
+    expect(days).toBeGreaterThan(CLAIM_TRIAL_DAYS - 0.1);
+    expect(days).toBeLessThan(CLAIM_TRIAL_DAYS + 0.1);
     // Published, with their email as the lead inbox.
     const [config] = await rest(`tenant_configs?tenant_id=eq.${tenantIds[0]}&status=eq.published&select=version,config`);
     expect(config.version).toBe(tenant.published_version);

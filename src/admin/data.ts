@@ -13,7 +13,14 @@ export type TenantRow = {
   status: 'draft' | 'live' | 'paused' | 'offboarded';
   published_version: number | null;
   created_at: string;
+  plan?: string | null;
+  trial_ends_at?: string | null;
+  trial_started_at?: string | null;
+  billing_status?: string | null;
+  current_period_end?: string | null;
 };
+
+const TENANT_COLUMNS = 'id,slug,name,kind,status,published_version,created_at,plan,trial_ends_at,trial_started_at,billing_status,current_period_end';
 
 export const STATUS_LABEL: Record<TenantRow['status'], string> = { draft: 'Draft', live: 'Live', paused: 'Paused', offboarded: 'Offboarded' };
 
@@ -60,7 +67,7 @@ export async function isAdmin(): Promise<boolean> {
 
 export async function listTenants() {
   const db = supabase();
-  const tenants = must(await db.from('tenants').select('id,slug,name,kind,status,published_version,created_at').order('created_at')) as TenantRow[];
+  const tenants = must(await db.from('tenants').select(TENANT_COLUMNS).order('created_at')) as TenantRow[];
   const since = monthStart();
   const stats = await Promise.all(
     tenants.map(async (tenant) => {
@@ -77,7 +84,7 @@ export async function listTenants() {
 
 export async function getTenant(slug: string) {
   const db = supabase();
-  const [tenant] = must(await db.from('tenants').select('id,slug,name,kind,status,published_version,created_at').eq('slug', slug)) as TenantRow[];
+  const [tenant] = must(await db.from('tenants').select(TENANT_COLUMNS).eq('slug', slug)) as TenantRow[];
   if (!tenant) return null;
   const configs = must(await db.from('tenant_configs').select('id,version,status,config,created_at,published_at').eq('tenant_id', tenant.id).order('version', { ascending: false }).limit(20)) as ConfigRow[];
   return { tenant, configs };
@@ -116,6 +123,22 @@ export async function publish(configId: string) {
 
 export async function setStatus(tenantId: string, status: TenantRow['status']) {
   return must(await supabase().rpc('set_tenant_status', { target: tenantId, next_status: status })) as string;
+}
+
+// ---------- Trials (MAG-220) ----------
+
+/** Extends a shop's trial (+days, or to a set date). Admins only, on the server: it also logs the extension and brings a trial-paused shop back live. */
+export const extendTrial = (tenantId: string, option: { days: number } | { date: string }) =>
+  api<{ ok: boolean; endsAt: string; restored: boolean }>('trial_extend', { tenantId, ...option });
+
+export type TrialExtension = { at: string; by: string | null; data: { from: string | null; to: string; days?: number; date?: string; restored?: boolean } };
+
+/** The latest trial extension for a shop, if the trial was ever extended. */
+export async function latestTrialExtension(tenantId: string): Promise<TrialExtension | null> {
+  const [row] = must(
+    await supabase().from('tenant_events').select('created_at,actor,data').eq('tenant_id', tenantId).eq('type', 'trial_extended').order('created_at', { ascending: false }).limit(1),
+  ) as { created_at: string; actor: string | null; data: TrialExtension['data'] }[];
+  return row ? { at: row.created_at, by: row.actor, data: row.data } : null;
 }
 
 export async function uploadLogo(tenantId: string, file: File): Promise<string> {
@@ -161,7 +184,7 @@ export async function setLeadStatus(leadId: string, status: string) {
 // validate the config and keep plan-controlled fields.
 
 export type MemberRole = 'owner' | 'staff';
-export type MyShop = TenantRow & { role: MemberRole | 'admin'; plan?: string; trial_ends_at?: string | null; billing_status?: string; current_period_end?: string | null };
+export type MyShop = TenantRow & { role: MemberRole | 'admin'; plan?: string | null; trial_ends_at?: string | null; billing_status?: string | null; current_period_end?: string | null };
 
 export async function myShops(): Promise<MyShop[]> {
   const db = supabase();
