@@ -261,6 +261,19 @@ describe('per-tooth extras (MAG-204)', () => {
     expect(quote(LUCKEY, setOf(1, 'yellow', '10k', { extras: ['cross'] })).total).toBe(115 + 150 + 50);
   });
 
+  it('parsing strips extras on iced teeth, keeps them on solid teeth', () => {
+    // The parse boundary enforces the same invariant as withPatch: extras on
+    // an iced tooth are dropped, so a stored design can never carry them
+    // into a later switch back to solid (the only entry is a design posted
+    // straight to the server — the picker hides extras for iced teeth and
+    // withPatch strips them on switch).
+    const catalog = { ...VVSLAB_CONFIG.catalog, extras: ['cross'] as never };
+    const iced = parseRenderSpec({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, type: 'iced', extras: ['cross'] }] }, catalog);
+    expect(iced?.teeth[0].extras).toBeUndefined();
+    const solid = parseRenderSpec({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, extras: ['cross'] }] }, catalog);
+    expect(solid?.teeth[0].extras).toEqual(['cross']);
+  });
+
   it('a design only validates extras the shop sells', () => {
     const catalog = { ...VVSLAB_CONFIG.catalog, extras: ['starburst', 'star', 'cross'] as never };
     const withExtras = (extras: string[]) => ({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, extras }] });

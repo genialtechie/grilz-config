@@ -301,7 +301,12 @@ const parseTooth = (value: unknown): RenderTooth | null => {
     if (new Set(tooth.extras).size !== tooth.extras.length) return null;
   }
   const opal = tooth.style === 'opals' && tooth.opal && tooth.opal !== 'white' ? { opal: tooth.opal as OpalId } : {};
-  const extras = tooth.extras?.length ? { extras: sortExtras(tooth.extras as ExtraId[]) } : {};
+  // Extras never apply to iced teeth — same invariant as withPatch, which
+  // strips them when a tooth switches to iced. The parse boundary enforces
+  // it too, so a design posted straight to the server can't carry extras
+  // that silently reappear (and become chargeable) if the tooth later
+  // switches back to solid.
+  const extras = tooth.type === 'iced' ? {} : tooth.extras?.length ? { extras: sortExtras(tooth.extras as ExtraId[]) } : {};
   return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone, ...opal, ...extras };
 };
 
