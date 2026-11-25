@@ -1,4 +1,4 @@
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS } from '../renderSpec.js';
+import { CUTS, DIAMOND_GRADES, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS } from '../renderSpec.js';
 import { ICED_KEYS, type TenantConfig } from './schema.js';
 import { cutPrice, feeLabel, icedOpalPrice, setPriceKeyLabel } from '../pricing.js';
 
@@ -12,7 +12,7 @@ const label = (list: readonly Option[], id: string) => list.find((item) => item.
 const usd = (value: number | undefined) => (value === undefined ? '—' : `$${Number(value).toLocaleString('en-US')}`);
 const times = (value: number | undefined) => (value === undefined ? '—' : `${value}×`);
 
-const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds' | 'extras'>; name: string; options: readonly Option[] }[] = [
+const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds' | 'extras' | 'grades'>; name: string; options: readonly Option[] }[] = [
   { key: 'metals', name: 'Metals', options: METALS },
   { key: 'karats', name: 'Karats', options: KARATS },
   { key: 'types', name: 'Types', options: GRILLZ_TYPES },
@@ -22,15 +22,17 @@ const LISTS: { key: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 't
   { key: 'cuts', name: 'Fit', options: CUTS },
   { key: 'molds', name: 'Molds', options: MOLDS },
   { key: 'extras', name: 'Extras', options: TOOTH_EXTRAS },
+  { key: 'grades', name: 'Diamond grades', options: DIAMOND_GRADES },
 ];
 
-const PRICE_MAPS: { key: keyof Pick<TenantConfig['pricing'], 'metalPerTooth' | 'stylePerTooth' | 'stonePerTooth' | 'settingPerTooth' | 'inscription' | 'extraPerTooth'>; options: readonly Option[]; suffix: string }[] = [
+const PRICE_MAPS: { key: keyof Pick<TenantConfig['pricing'], 'metalPerTooth' | 'stylePerTooth' | 'stonePerTooth' | 'settingPerTooth' | 'inscription' | 'extraPerTooth' | 'gradePerTooth'>; options: readonly Option[]; suffix: string }[] = [
   { key: 'metalPerTooth', options: METALS, suffix: ' per tooth' },
   { key: 'stylePerTooth', options: STYLES, suffix: ' per tooth' },
   { key: 'stonePerTooth', options: STONES, suffix: ' per tooth' },
   { key: 'settingPerTooth', options: SETTINGS, suffix: ' setting per tooth' },
   { key: 'inscription', options: INSCRIPTION_STYLES, suffix: ' inscription' },
   { key: 'extraPerTooth', options: TOOTH_EXTRAS, suffix: ' extra per tooth' },
+  { key: 'gradePerTooth', options: DIAMOND_GRADES, suffix: ' grade per tooth' },
 ];
 
 const DISPLAY: Record<TenantConfig['pricing']['display'], string> = { exact: 'exact price', from: '"from" price', hidden: 'price on request' };

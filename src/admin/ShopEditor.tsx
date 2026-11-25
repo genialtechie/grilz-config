@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS, type CutId, type ExtraId } from '../lib/renderSpec';
+import { CUTS, DIAMOND_GRADES, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS, type CutId, type ExtraId, type GradeId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
@@ -37,6 +37,9 @@ const FONT_LABEL: Record<(typeof FONT_PAIRS)[number], string> = { 'modern-sans':
 const DISPLAY_LABEL: Record<(typeof PRICE_DISPLAYS)[number], string> = { exact: 'Exact price', from: '"From" price', hidden: 'Price on request' };
 
 const RESET_LABEL: Record<string, string> = { 'ai.monthlyGenerations': 'AI photo allowance', 'brand.poweredBy': '"Powered by VVS Lab" footer' };
+
+/** The ticket's grade prices (MAG-215): seeded when a tier is switched on, and the shop can change them in Prices below. */
+const GRADE_PRICES: Record<GradeId, number> = { 'grown-vvs': 250, 'natural-si-vs': 450, 'natural-vs1': 650 };
 
 const parseRow = (row: ConfigRow | undefined): TenantConfig | null => {
   if (!row) return null;
@@ -679,6 +682,24 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               <>
                 <h3>Stone settings</h3><Checks options={SETTINGS} selected={catalog.settings} onToggle={(id, on) => toggle('settings', id, on)} />
                 <h3>Stones</h3><Checks options={STONES} selected={catalog.stones} onToggle={(id, on) => toggle('stones', id, on)} />
+                <h3>Diamond grades</h3>
+                <Checks
+                  options={DIAMOND_GRADES}
+                  selected={catalog.grades ?? []}
+                  onToggle={(id, on) => update((next) => {
+                    const grades = (next.catalog.grades ?? []) as GradeId[];
+                    const order = DIAMOND_GRADES.map((item) => item.id);
+                    next.catalog.grades = (on ? [...grades, id as GradeId] : grades.filter((item) => item !== id)).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+                    // The ticket fixes the tier prices ($250/$450/$650):
+                    // switching one on seeds its price, so the shop is never
+                    // blocked on a price it didn't set — and a price left over
+                    // in this draft (toggled off, then back on before saving)
+                    // is kept as it was. A shop can change the price in the
+                    // Prices section below; the schema still blocks saving a
+                    // tier with no price at all ("Add a price for grown-vvs.").
+                    if (on) next.pricing.gradePerTooth = { ...next.pricing.gradePerTooth, [id]: next.pricing.gradePerTooth?.[id as GradeId] ?? GRADE_PRICES[id as GradeId] };
+                  })}
+                />
               </>
             )}
             <h3>Fit</h3><Checks options={CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
@@ -813,8 +834,19 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <Money key={setting.id} label={`${setting.label} setting`} value={pricing.settingPerTooth[setting.id]} onChange={(value) => update((next) => { next.pricing.settingPerTooth[setting.id] = value; })} />
                   ))}
                 </div>
+                {(catalog.grades?.length ?? 0) > 0 && (
+                  <>
+                    <h3>Diamond grades</h3>
+                    <p className="admin-muted admin-section__hint">The quality of the stones on an iced tooth, per tooth on top of the stone price. Only the tiers for a tooth's stone are offered: Grown VVS goes with lab diamonds, the Natural tiers with natural diamonds.</p>
+                    <div className="admin-grid admin-grid--prices">
+                      {pick(DIAMOND_GRADES, catalog.grades ?? []).map((grade) => (
+                        <Money key={grade.id} label={grade.label} value={pricing.gradePerTooth?.[grade.id] ?? 0} onChange={(value) => update((next) => { next.pricing.gradePerTooth = { ...next.pricing.gradePerTooth, [grade.id]: value }; })} />
+                      ))}
+                    </div>
+                  </>
+                )}
                 <h3>Iced, all-in per tooth</h3>
-                <p className="admin-muted admin-section__hint">For shops whose iced price changes with the karat: one price per tooth that covers metal and stones. The setting price and open-face share still apply on top. Leave a cell blank if you don't offer that combination; customers won't see it.</p>
+                <p className="admin-muted admin-section__hint">For shops whose iced price changes with the karat: one price per tooth that covers metal and stones. The setting price, open-face share, and diamond grades still apply on top. Leave a cell blank if you don't offer that combination; customers won't see it.</p>
                 <label className="admin-check">
                   <input type="checkbox" checked={Boolean(pricing.icedPerTooth)} onChange={(event) => update((next) => { if (event.target.checked) next.pricing.icedPerTooth = startingIcedTable(next.pricing, next.catalog); else delete next.pricing.icedPerTooth; })} />
                   <span>Price iced teeth all-in by metal and karat</span>

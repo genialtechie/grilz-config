@@ -1,4 +1,4 @@
-import { CUTS, fangCount, icedOpal, icedOpenFace, isGold, KARATS, label, METALS, MOLDS, TOOTH_EXTRAS, toothPosition, type AddOn, type CutId, type ExtraId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { CUTS, DIAMOND_GRADES, fangCount, gradePairsWithStone, icedOpal, icedOpenFace, isGold, KARATS, label, METALS, MOLDS, TOOTH_EXTRAS, toothPosition, type AddOn, type CutId, type ExtraId, type GradeId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { CUT_UNITS, ICED_KEYS, TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 type IcedKey = (typeof ICED_KEYS)[number];
@@ -56,6 +56,9 @@ export const colourPerTooth = (pricing: TenantPricing, metal: MetalId) => pricin
 /** One named tooth extra's price per tooth. */
 export const extraPrice = (pricing: TenantPricing, extra: ExtraId) => pricing.extraPerTooth?.[extra] ?? 0;
 
+/** One diamond grade tier's price per tooth (MAG-215). */
+export const gradePrice = (pricing: TenantPricing, grade: GradeId) => pricing.gradePerTooth?.[grade] ?? 0;
+
 export type CutPrice = { amount: number; per: (typeof CUT_UNITS)[number] };
 
 /** What the shop calls its per-order fee. */
@@ -83,9 +86,17 @@ export const offered = (pricing: TenantPricing, design: Pick<ToothDesign, 'type'
  */
 export const nearestOffered = (pricing: TenantPricing, design: ToothDesign, stones: readonly StoneId[], karats: readonly KaratId[]): ToothDesign | null => {
   if (offered(pricing, design)) return design;
+  // A grade pairs with one stone: changing the stone drops a grade that no
+  // longer pairs with it (MAG-215), so a design never carries a grade its
+  // stone can't show.
+  const withStone = (stone: StoneId): ToothDesign => {
+    const next = { ...design, stone };
+    if (next.grade && !gradePairsWithStone(next.grade, stone)) delete next.grade;
+    return next;
+  };
   const tries: ToothDesign[] = [
-    ...stones.map((stone) => ({ ...design, stone })),
-    ...(isGold(design.metal) ? karats.flatMap((karat) => [design.stone, ...stones].map((stone) => ({ ...design, karat, stone }))) : []),
+    ...stones.map(withStone),
+    ...(isGold(design.metal) ? karats.flatMap((karat) => [design.stone, ...stones].map((stone) => ({ ...withStone(stone), karat }))) : []),
   ];
   return tries.find((attempt) => offered(pricing, attempt)) ?? null;
 };
@@ -164,6 +175,18 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const extrasOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? 0 : (tooth.extras ?? []).reduce((total, extra) => total + extraPrice(pricing, extra), 0));
   const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' && allIn(tooth) === undefined ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
   const settingOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0);
+  // A diamond grade is a stone-quality upgrade (MAG-215): it stacks on
+  // everything a stone price stacks on — the per-part model, an all-in iced
+  // price (the table is keyed by stone, not by grade, so the grade is not
+  // baked into the cell the way the colour surcharge's metal is), a set
+  // price and a market quote (a stone price, not a metal price — the settled
+  // engine rule is that only metal-price items are gated on quotes). Like
+  // the stone price, it takes the open-face border share: fewer stones round
+  // the frame, less of an upgrade to pay for.
+  const gradeOf = (tooth: ToothDesign) => {
+    const grade = tooth.type === 'iced' ? tooth.grade : undefined;
+    return grade && gradePairsWithStone(grade, tooth.stone) ? gradePrice(pricing, grade) * openFaceShare(tooth) : 0;
+  };
   // Open face takes its share of the stones: the part of the all-in price above the plain metal.
   const icedOf = (tooth: ToothDesign) => {
     const price = allIn(tooth);
@@ -189,6 +212,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const finishes = sum(finish);
   const stones = Math.round(sum(stonesOf));
   const settings = Math.round(sum(settingOf));
+  const grades = Math.round(sum(gradeOf));
   const colour = sum(colourOf);
   const extras = Math.round(sum(extrasOf));
   const allInTeeth = teeth.filter((tooth) => allIn(tooth) !== undefined).length;
@@ -214,6 +238,16 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   add('Style & finish', finishes);
   add('Stones', stones);
   add('Mosaic setting', settings);
+  // Diamond grade tiers, per tier (iced teeth only — see gradeOf above).
+  const gradeGroups = new Map<GradeId, { count: number; amount: number }>();
+  teeth.forEach((tooth) => {
+    if (tooth.type !== 'iced' || !tooth.grade) return;
+    const group = gradeGroups.get(tooth.grade) ?? { count: 0, amount: 0 };
+    group.count += 1;
+    group.amount += gradeOf(tooth);
+    gradeGroups.set(tooth.grade, group);
+  });
+  gradeGroups.forEach((group, grade) => add(`${label(DIAMOND_GRADES, grade)} · ${group.count} ${group.count === 1 ? 'tooth' : 'teeth'}`, group.amount));
   // Named extras, per extra (iced teeth take none — see extrasOf above).
   const extraGroups = new Map<ExtraId, { count: number; amount: number }>();
   teeth.forEach((tooth) =>
@@ -227,7 +261,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   extraGroups.forEach((group, extra) => add(`${label(TOOTH_EXTRAS, extra)} · ${group.count} ${group.count === 1 ? 'tooth' : 'teeth'}`, group.amount));
   // Back teeth at the shop's own share of the front price: the difference, on its own line.
   const back = teeth.filter((tooth) => positionFactor(pricing, tooth.index) !== 1);
-  const backDelta = (tooth: RenderTooth) => (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + colourOf(tooth) + extrasOf(tooth)) * (positionFactor(pricing, tooth.index) - 1);
+  const backDelta = (tooth: RenderTooth) => (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + gradeOf(tooth) + colourOf(tooth) + extrasOf(tooth)) * (positionFactor(pricing, tooth.index) - 1);
   // Split by whether the tooth's metal is set-priced: the % volume discount
   // never applies to set-priced metal, so the back-teeth delta on those teeth
   // must not sit in its base either — a cheaper back tooth would make the
@@ -249,7 +283,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     return total + metalPerTooth(pricing, tooth.metal, tooth.karat);
   }, 0);
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + colour + extras + backRest) * percent) / 100));
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + grades + colour + extras + backRest) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);
