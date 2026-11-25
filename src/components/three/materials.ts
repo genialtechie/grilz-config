@@ -28,6 +28,21 @@ export function polishedMetal(metal: MetalId) {
   });
 }
 
+/**
+ * A PVD colour coat (MAG-214): the same mirror-polished metal, tinted the
+ * coat's colour. A PVD coat is a coloured metal film, so the swatch hex is
+ * the base colour — unlike the alloy swatches, which are flat paint colours
+ * tuned for small chips and read olive as metal.
+ */
+export function pvdCoat(color: string) {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    metalness: 1,
+    roughness: 0.09,
+    envMapIntensity: 1.25,
+  });
+}
+
 /** Fine plaster grain for the dental-stone mould (a small tiling bump texture, made once). */
 let grain: THREE.CanvasTexture | null = null;
 function plasterGrain() {

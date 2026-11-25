@@ -642,6 +642,18 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 next.catalog.inscription.enabled = event.target.checked;
                 if (event.target.checked) next.catalog.inscription.styles.forEach((style) => { next.pricing.inscription[style] ??= SAMPLE_PRICING.inscription[style] ?? 0; });
               })} /> Inscriptions</label>
+              <label className="admin-check"><input type="checkbox" checked={Boolean(catalog.pvd)} onChange={(event) => update((next) => {
+                next.catalog.pvd = event.target.checked || undefined;
+                // The ticket fixes the price at $35 a tooth: switching the
+                // coat on seeds that default, so the shop sees a real price
+                // in the Prices section below and can change it before
+                // saving. Extras seed nothing — there is no ticket price
+                // for them, and a $0 seed would offer the extra free. A $35
+                // seed is a default, not an invented free option; the schema
+                // still blocks saving with no price at all. A price left
+                // over (toggled off, then back on before saving) is kept.
+                if (event.target.checked) next.pricing.pvdPerTooth ??= 35;
+              })} /> PVD colour coat</label>
             </div>
             {catalog.inscription.enabled && (
               <Checks options={INSCRIPTION_STYLES} selected={catalog.inscription.styles} onToggle={(id, on) => update((next) => {
@@ -719,6 +731,15 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 <Money key={style.id} label={style.label} value={pricing.stylePerTooth[style.id]} onChange={(value) => update((next) => { next.pricing.stylePerTooth[style.id] = value; })} />
               ))}
             </div>
+            {catalog.pvd && (
+              <>
+                <h3>PVD colour coat</h3>
+                <p className="admin-muted admin-section__hint">A coloured coating on plain teeth — pink, royal blue, black, red, light blue, purple or green. One flat price per tooth, whatever the colour. Added on top of the metal price, and on top of a set price too.</p>
+                <div className="admin-grid admin-grid--prices">
+                  <Money label="PVD colour coat" value={pricing.pvdPerTooth ?? 0} onChange={(value) => update((next) => { next.pricing.pvdPerTooth = value; })} />
+                </div>
+              </>
+            )}
             {(catalog.extras?.length ?? 0) > 0 && (
               <>
                 <h3>Tooth extras</h3>

@@ -1,4 +1,4 @@
-import { CUTS, fangCount, icedOpal, icedOpenFace, isGold, KARATS, label, METALS, MOLDS, TOOTH_EXTRAS, toothPosition, type AddOn, type CutId, type ExtraId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
+import { CUTS, fangCount, icedOpal, icedOpenFace, isGold, KARATS, label, METALS, MOLDS, PVD_COLORS, TOOTH_EXTRAS, toothPosition, type AddOn, type CutId, type ExtraId, type GrillzType, type InscriptionStyleId, type KaratId, type MetalId, type PvdColorId, type RenderTooth, type SetOptions, type SettingId, type StoneId, type StyleId, type ToothDesign } from './renderSpec.js';
 import type { CUT_UNITS, ICED_KEYS, TenantDeposit, TenantPricing } from './tenant/schema.js';
 
 type IcedKey = (typeof ICED_KEYS)[number];
@@ -55,6 +55,9 @@ export const colourPerTooth = (pricing: TenantPricing, metal: MetalId) => pricin
 
 /** One named tooth extra's price per tooth. */
 export const extraPrice = (pricing: TenantPricing, extra: ExtraId) => pricing.extraPerTooth?.[extra] ?? 0;
+
+/** The PVD colour coat's price per tooth: one flat price, whatever the colour. */
+export const pvdPrice = (pricing: TenantPricing) => pricing.pvdPerTooth ?? 0;
 
 export type CutPrice = { amount: number; per: (typeof CUT_UNITS)[number] };
 
@@ -162,6 +165,12 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // starburst — the same rule as the other finishes, which the builder
   // already gates for iced teeth. The picker hides them there too.
   const extrasOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? 0 : (tooth.extras ?? []).reduce((total, extra) => total + extraPrice(pricing, extra), 0));
+  // A PVD coat is a coating on the finished tooth, not a metal price — so
+  // unlike the colour surcharge it still applies on top of a set price and
+  // on a market-linked quote, the same as a named extra. Plain teeth only:
+  // an iced face is covered edge to edge in stones and a coat would hide a
+  // photo (the parse boundary strips it there, so this is a second gate).
+  const pvdOf = (tooth: ToothDesign) => (tooth.type === 'plain' && tooth.pvd ? pvdPrice(pricing) : 0);
   const stonesOf = (tooth: ToothDesign) => (tooth.type === 'iced' && allIn(tooth) === undefined ? (pricing.stonePerTooth[tooth.stone] ?? 0) * openFaceShare(tooth) : 0);
   const settingOf = (tooth: ToothDesign) => (tooth.type === 'iced' ? (pricing.settingPerTooth[tooth.setting] ?? 0) * openFaceShare(tooth) : 0);
   // Open face takes its share of the stones: the part of the all-in price above the plain metal.
@@ -191,6 +200,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   const settings = Math.round(sum(settingOf));
   const colour = sum(colourOf);
   const extras = Math.round(sum(extrasOf));
+  const pvd = Math.round(sum(pvdOf));
   const allInTeeth = teeth.filter((tooth) => allIn(tooth) !== undefined).length;
   const metalTeeth = teeth.length - allInTeeth;
   add(`Metal · ${metalTeeth} teeth`, metal);
@@ -225,15 +235,26 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     }),
   );
   extraGroups.forEach((group, extra) => add(`${label(TOOTH_EXTRAS, extra)} · ${group.count} ${group.count === 1 ? 'tooth' : 'teeth'}`, group.amount));
+  // PVD colour coat, per colour (plain teeth only — see pvdOf above).
+  const pvdGroups = new Map<PvdColorId, { count: number; amount: number }>();
+  teeth.forEach((tooth) => {
+    if (tooth.type !== 'plain' || !tooth.pvd) return;
+    const group = pvdGroups.get(tooth.pvd) ?? { count: 0, amount: 0 };
+    group.count += 1;
+    group.amount += pvdPrice(pricing);
+    pvdGroups.set(tooth.pvd, group);
+  });
+  pvdGroups.forEach((group, color) => add(`${label(PVD_COLORS, color)} PVD coat · ${group.count} ${group.count === 1 ? 'tooth' : 'teeth'}`, group.amount));
   // Back teeth at the shop's own share of the front price: the difference, on its own line.
   const back = teeth.filter((tooth) => positionFactor(pricing, tooth.index) !== 1);
-  const backDelta = (tooth: RenderTooth) => (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + colourOf(tooth) + extrasOf(tooth)) * (positionFactor(pricing, tooth.index) - 1);
+  const backDelta = (tooth: RenderTooth) => (metalOf(tooth) + icedOf(tooth) + finish(tooth) + stonesOf(tooth) + settingOf(tooth) + colourOf(tooth) + extrasOf(tooth) + pvdOf(tooth)) * (positionFactor(pricing, tooth.index) - 1);
   // Split by whether the tooth's metal is set-priced: the % volume discount
   // never applies to set-priced metal, so the back-teeth delta on those teeth
   // must not sit in its base either — a cheaper back tooth would make the
-  // base negative and flip the "discount" into a surcharge. Colour and extras
-  // on set-priced teeth stay in the base: they are charged on top of the set
-  // price, so the % discount does apply to them (MAG-204 review decision).
+  // base negative and flip the "discount" into a surcharge. Colour, extras
+  // and the PVD coat on set-priced teeth stay in the base: they are charged
+  // on top of the set price, so the % discount does apply to them (MAG-204
+  // review decision).
   const backSet = Math.round(back.filter((tooth) => setPerTooth(tooth) !== undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
   const backRest = Math.round(back.filter((tooth) => setPerTooth(tooth) === undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
   const backAdjustment = backSet + backRest;
@@ -248,7 +269,7 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     return total + metalPerTooth(pricing, tooth.metal, tooth.karat);
   }, 0);
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + colour + extras + backRest) * percent) / 100));
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + colour + extras + pvd + backRest) * percent) / 100));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);

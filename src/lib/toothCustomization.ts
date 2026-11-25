@@ -10,6 +10,9 @@ export function toothCustomization(design: ToothDesign, set: Pick<SetOptions, 'f
     metal: metal.id,
     style: design.type === 'plain' || icedBorder(design) ? design.style : undefined,
     opal: opalOf(design) ?? undefined,
+    // A coat only lives on a plain tooth (the parse boundary strips it
+    // elsewhere), so the preview never has to coat stones or a photo.
+    pvd: design.type === 'plain' ? design.pvd : undefined,
     photo: design.type === 'photo',
     fang: set.fangs && FANG_TEETH.includes(index),
     cut: set.cut,

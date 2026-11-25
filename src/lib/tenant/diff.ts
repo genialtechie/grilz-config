@@ -65,6 +65,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   }
   if (live.catalog.fangs !== draft.catalog.fangs) add('What you sell', draft.catalog.fangs ? 'Fangs turned on' : 'Fangs turned off');
   if (live.catalog.vision !== draft.catalog.vision) add('What you sell', draft.catalog.vision ? 'Ideas & inspiration upload turned on' : 'Ideas & inspiration upload turned off');
+  if ((live.catalog.pvd ?? false) !== (draft.catalog.pvd ?? false)) add('What you sell', draft.catalog.pvd ? 'PVD colour coat turned on' : 'PVD colour coat turned off');
   if (live.catalog.inscription.enabled !== draft.catalog.inscription.enabled) add('What you sell', draft.catalog.inscription.enabled ? 'Inscriptions turned on' : 'Inscriptions turned off');
 
   const a0 = live.catalog.addOns ?? [];
@@ -124,6 +125,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = p1.colourSurcharge?.[metal.id] ?? 0;
     if (before !== after) add('Prices', `${metal.label} colour: ${usd(before)} → ${usd(after)} per tooth`);
   });
+  if ((p0.pvdPerTooth ?? 0) !== (p1.pvdPerTooth ?? 0)) add('Prices', `PVD colour coat: ${usd(p0.pvdPerTooth ?? 0)} → ${usd(p1.pvdPerTooth ?? 0)} per tooth`);
   // Sorted by size and metal, so reordering the tiers in the admin reads as
   // no change instead of a price change (MAG-204 review).
   const setPrices = (pricing: typeof p0) =>

@@ -43,6 +43,22 @@ export const OPALS = [
   { id: 'blue', label: 'Blue', swatch: '#2f6fd0', render: 'deep blue opal with flashes of green and violet' },
 ] as const;
 
+/**
+ * PVD colour coat colours (MAG-214): a coloured coating on a plain tooth's
+ * metal, +$35 a tooth whatever the colour (TraxNYC builder). The ticket's
+ * seven colours are authoritative — the teardown says "8 colors" in one line
+ * but lists these seven.
+ */
+export const PVD_COLORS = [
+  { id: 'pink', label: 'Pink', swatch: '#e2477f', render: 'a vivid pink PVD colour coat' },
+  { id: 'royal-blue', label: 'Royal blue', swatch: '#2246c9', render: 'a royal blue PVD colour coat' },
+  { id: 'black', label: 'Black', swatch: '#17171a', render: 'a black PVD colour coat' },
+  { id: 'red', label: 'Red', swatch: '#c41f32', render: 'a red PVD colour coat' },
+  { id: 'light-blue', label: 'Light blue', swatch: '#7fb3e8', render: 'a light blue PVD colour coat' },
+  { id: 'purple', label: 'Purple', swatch: '#7b3fd4', render: 'a purple PVD colour coat' },
+  { id: 'green', label: 'Green', swatch: '#2e9e5b', render: 'a green PVD colour coat' },
+] as const;
+
 export const SETTINGS = [
   { id: 'honeycomb', label: 'Honeycomb', detail: 'Tight hexagon pavé', image: card('setting-honeycomb'), render: 'tight pave: small round stones packed edge to edge in a honeycomb pattern, covering the whole face with no gaps or openings' },
   { id: 'mosaic', label: 'Mosaic', detail: 'Mixed stone sizes', image: card('setting-mosaic'), render: 'a mosaic setting of mixed stone sizes, larger stones surrounded by smaller ones' },
@@ -105,6 +121,7 @@ export type ExtraId = Id<typeof TOOTH_EXTRAS>;
 export type CutId = Id<typeof CUTS>;
 export type MoldId = Id<typeof MOLDS>;
 export type OpalId = Id<typeof OPALS>;
+export type PvdColorId = Id<typeof PVD_COLORS>;
 
 /** The design of one tooth. Teeth in a set can differ (e.g. front two plain, rest iced). */
 export type ToothDesign = {
@@ -116,6 +133,12 @@ export type ToothDesign = {
   stone: StoneId;
   /** The opal's colour, for the opals style (white when absent). */
   opal?: OpalId;
+  /**
+   * A PVD colour coat on the metal (MAG-214): plain teeth only. A coating,
+   * not a finish — it sits on top of whatever style the tooth has, and is
+   * charged per tooth on top of the metal (and a set price).
+   */
+  pvd?: PvdColorId;
   /** Named extras on this tooth, in catalog order (absent = none). */
   extras?: ExtraId[];
 };
@@ -216,7 +239,7 @@ export const label = <T extends readonly { id: string; label: string }[]>(list: 
 export const opalOf = (tooth: ToothDesign): OpalId | null => ((tooth.type === 'plain' || tooth.type === 'iced') && tooth.style === 'opals' ? tooth.opal ?? 'white' : null);
 
 const designKey = (tooth: ToothDesign) =>
-  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedBorder(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? '', (tooth.extras ?? []).join(',')].join('|');
+  [tooth.metal, isGold(tooth.metal) ? tooth.karat : '', tooth.type, tooth.type === 'iced' && !icedBorder(tooth) ? 'solid' : tooth.style, tooth.type === 'iced' ? `${tooth.setting}/${tooth.stone}` : '', opalOf(tooth) ?? '', tooth.type === 'plain' ? tooth.pvd ?? '' : '', (tooth.extras ?? []).join(',')].join('|');
 
 /** Groups teeth that share a design, largest group first. */
 export const groupTeeth = <T extends ToothDesign & { index: number }>(teeth: T[]) => {
@@ -236,10 +259,13 @@ export const describeTooth = (tooth: ToothDesign) => {
           ? `${label(OPALS, opalOf(tooth)!)} opals`
           : label(STYLES, tooth.style);
   const extraStyle = tooth.type === 'photo' && tooth.style !== 'solid' ? ` + ${label(STYLES, tooth.style)}` : '';
+  // A PVD coat is a property of the surface, so it reads with the finish,
+  // before the extras — and never on iced or photo teeth, which take none.
+  const coat = tooth.type === 'plain' && tooth.pvd ? ` · ${label(PVD_COLORS, tooth.pvd)} PVD coat` : '';
   // Iced teeth take no extras (MAG-204 review): the face is covered edge to
   // edge, so a stored extra is not charged and is not described either.
   const extras = tooth.type === 'iced' ? '' : (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id)).join(', ');
-  return `${metal} · ${surface}${extraStyle}${extras ? ` + ${extras}` : ''}`;
+  return `${metal} · ${surface}${coat}${extraStyle}${extras ? ` + ${extras}` : ''}`;
 };
 
 /** "“Lainee” in script, engraved with pink enamel, across 6 lower teeth": for the order summary and emails. */
@@ -287,6 +313,8 @@ export type EnabledOptions = {
   molds?: readonly string[];
   /** Named tooth extras the shop sells; absent = none. */
   extras?: readonly string[];
+  /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
+  pvd?: boolean;
 };
 
 const parseTooth = (value: unknown): RenderTooth | null => {
@@ -296,6 +324,7 @@ const parseTooth = (value: unknown): RenderTooth | null => {
   if (!oneOf(METALS, tooth.metal) || !oneOf(KARATS, tooth.karat) || !oneOf(GRILLZ_TYPES, tooth.type)) return null;
   if (!oneOf(STYLES, tooth.style) || !oneOf(SETTINGS, tooth.setting) || !oneOf(STONES, tooth.stone)) return null;
   if (tooth.opal !== undefined && !oneOf(OPALS, tooth.opal)) return null;
+  if (tooth.pvd !== undefined && !oneOf(PVD_COLORS, tooth.pvd)) return null;
   if (tooth.extras !== undefined) {
     if (!Array.isArray(tooth.extras) || !tooth.extras.every((id) => oneOf(TOOTH_EXTRAS, id))) return null;
     if (new Set(tooth.extras).size !== tooth.extras.length) return null;
@@ -307,7 +336,11 @@ const parseTooth = (value: unknown): RenderTooth | null => {
   // that silently reappear (and become chargeable) if the tooth later
   // switches back to solid.
   const extras = tooth.type === 'iced' ? {} : tooth.extras?.length ? { extras: sortExtras(tooth.extras as ExtraId[]) } : {};
-  return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone, ...opal, ...extras };
+  // A PVD coat only lives on a plain tooth: the face of an iced tooth is
+  // covered edge to edge in stones, and a coat would hide a photo. Same
+  // invariant as withPatch, which strips it on any switch away from plain.
+  const pvd = tooth.type === 'plain' && tooth.pvd ? { pvd: tooth.pvd as PvdColorId } : {};
+  return { index: tooth.index, metal: tooth.metal, karat: tooth.karat, type: tooth.type, style: tooth.style, setting: tooth.setting, stone: tooth.stone, ...opal, ...pvd, ...extras };
 };
 
 /** One inscription from the client, or null if it isn't valid. Accepts the old single-tooth shape. */
@@ -339,6 +372,7 @@ const sells = (tooth: RenderTooth, enabled: EnabledOptions) =>
   (tooth.type === 'iced'
     ? enabled.settings.includes(tooth.setting) && enabled.stones.includes(tooth.stone) && (!icedBorder(tooth) || enabled.styles.includes(tooth.style))
     : enabled.styles.includes(tooth.style)) &&
+  (!tooth.pvd || enabled.pvd) &&
   (tooth.extras ?? []).every((extra) => (enabled.extras ?? []).includes(extra));
 
 export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): RenderSpec | null => {
@@ -414,6 +448,10 @@ const extrasSuffix = (tooth: ToothDesign) => {
 
 const describeDesign = (tooth: ToothDesign) => {
   const metal = `${isGold(tooth.metal) ? `${tooth.karat.toUpperCase()} ` : ''}${pick(METALS, tooth.metal).render}`;
+  // A PVD coat tints the metal itself, so it reads on the metal phrase —
+  // every plain-tooth branch below carries it. Iced and photo teeth take
+  // no coat (stripped at the parse boundary), so they need no mention.
+  const coat = tooth.type === 'plain' && tooth.pvd ? `, coated in ${pick(PVD_COLORS, tooth.pvd).render}` : '';
   const suffix = extrasSuffix(tooth);
   if (icedOpenFace(tooth)) {
     return `${metal}, iced open face: each tooth is a metal outline frame paved edge to edge with sparkling ${pick(STONES, tooth.stone).render} set in ${pick(SETTINGS, tooth.setting).render}, and the natural white tooth shows through the open middle of the frame${suffix}`;
@@ -429,8 +467,8 @@ const describeDesign = (tooth: ToothDesign) => {
     return `${metal} with a custom photo-realistic picture engraved and enamelled on the front, based on the reference image if one is provided${suffix}`;
   }
   const opal = opalOf(tooth);
-  if (opal) return `${metal} with ${pick(STYLES, tooth.style).render}: ${pick(OPALS, opal).render}${suffix}`;
-  return `${metal} with ${pick(STYLES, tooth.style).render}${suffix}`;
+  if (opal) return `${metal}${coat} with ${pick(STYLES, tooth.style).render}: ${pick(OPALS, opal).render}${suffix}`;
+  return `${metal}${coat} with ${pick(STYLES, tooth.style).render}${suffix}`;
 };
 
 const rowText = (count: number, row: 'upper' | 'lower') =>
@@ -441,6 +479,8 @@ const shortDesign = (tooth: ToothDesign) => {
   // Iced teeth take no extras (see describeTooth above).
   const extras = tooth.type === 'iced' ? '' : (tooth.extras ?? []).map((id) => label(TOOTH_EXTRAS, id).toUpperCase()).join(', ');
   const suffix = extras ? ` + ${extras}` : '';
+  // The coat rides on the same suffix, so section-edit prompts name it too.
+  const coat = tooth.type === 'plain' && tooth.pvd ? ` + ${label(PVD_COLORS, tooth.pvd).toUpperCase()} PVD COAT` : '';
   if (icedOpenFace(tooth)) {
     return `ICED OPEN FACE, a stone-paved metal frame with the natural white tooth showing in the middle (${label(SETTINGS, tooth.setting).toLowerCase()} setting, ${pick(STONES, tooth.stone).render}) in ${metal}${suffix}`;
   }
@@ -452,8 +492,8 @@ const shortDesign = (tooth: ToothDesign) => {
   }
   if (tooth.type === 'photo') return `PHOTO ENGRAVED, ${metal}${suffix}`;
   const opal = opalOf(tooth);
-  if (opal) return `${label(OPALS, opal).toUpperCase()} OPAL inlay in ${metal}${suffix}`;
-  return `${label(STYLES, tooth.style).toUpperCase()} ${metal}, no stones${suffix}`;
+  if (opal) return `${label(OPALS, opal).toUpperCase()} OPAL inlay in ${metal}${coat}${suffix}`;
+  return `${label(STYLES, tooth.style).toUpperCase()} ${metal}, no stones${coat}${suffix}`;
 };
 
 // The model numbers each row from the viewer's right (index 0) to the viewer's left (index 15),

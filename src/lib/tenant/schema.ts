@@ -8,6 +8,7 @@ import {
   KARATS,
   METALS,
   MOLDS,
+  PVD_COLORS,
   SETTINGS,
   STONES,
   STYLES,
@@ -28,6 +29,7 @@ export const StyleIdSchema = z.enum(ids(STYLES));
 export const SettingIdSchema = z.enum(ids(SETTINGS));
 export const StoneIdSchema = z.enum(ids(STONES));
 export const ExtraIdSchema = z.enum(ids(TOOTH_EXTRAS));
+export const PvdColorIdSchema = z.enum(ids(PVD_COLORS));
 export const CutIdSchema = z.enum(ids(CUTS));
 export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
@@ -71,6 +73,8 @@ export const CatalogSchema = z.object({
   molds: nonEmptyUnique(MoldIdSchema),
   /** Named tooth extras the shop sells (MAG-204); absent = none. */
   extras: z.array(ExtraIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
+  /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
+  pvd: z.boolean().optional(),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */
@@ -206,6 +210,11 @@ export const PricingSchema = z.object({
   colourSurcharge: z.record(MetalIdSchema, money).optional(),
   /** Named tooth extras, per tooth (MAG-204); absent = none offered. */
   extraPerTooth: z.record(ExtraIdSchema, money).optional(),
+  /**
+   * PVD colour coat per tooth (MAG-214): one flat price, whatever the colour
+   * (the ticket's $35 is the default the admin seeds). Absent = not offered.
+   */
+  pvdPerTooth: money.optional(),
 });
 
 export const DepositSchema = z.object({
@@ -257,6 +266,12 @@ export const TenantConfigSchema = z
     need(catalog.stones, pricing.stonePerTooth, 'stonePerTooth');
     need(catalog.settings, pricing.settingPerTooth, 'settingPerTooth');
     need(catalog.extras ?? [], pricing.extraPerTooth ?? {}, 'extraPerTooth');
+    // A shop that offers the coat must price it (MAG-214): the admin seeds
+    // the ticket's $35 when it is switched on, and saving stays blocked
+    // without a price, so the coat can never be offered free by accident.
+    if (catalog.pvd && pricing.pvdPerTooth === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pricing', 'pvdPerTooth'], message: 'Add a price for the PVD colour coat.' });
+    }
     if (catalog.inscription.enabled) need(catalog.inscription.styles, pricing.inscription, 'inscription');
     if (deposit.mode === 'link' && !deposit.link) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['deposit', 'link'], message: 'Add the payment link.' });
     if (pricing.display === 'hidden' && deposit.mode !== 'none' && deposit.rule.type !== 'fixed') {
