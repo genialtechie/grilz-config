@@ -881,7 +881,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 {catalog.styles.includes('open-face') && (
                   <>
                     <h3>Iced open face</h3>
-                    <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour. Leave the labour blank and iced open-face teeth use your open-face finish price instead.</p>
+                    <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour. Iced open-face teeth use your open-face finish price unless you set a labour here.</p>
                     <div className="admin-grid admin-grid--prices">
                       <Money label="Share of stone price" step={5} suffix="%" value={pricing.icedOpenFace?.stoneShare ?? 100} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: Math.min(100, value) }; })} />
                       <Money label="Open-face labour" min={-100_000} value={icedOpenFacePrice(pricing).perTooth} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
