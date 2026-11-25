@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { priceBreakdown } from '../src/lib/pricing.js';
 import { defaultSet, defaultTooth } from '../src/lib/tenant/catalog.js';
 import { parseTenantConfig, type TenantConfig } from '../src/lib/tenant/schema.js';
-import { TRIAL_DAYS } from '../src/lib/trial.js';
+import { CLAIM_TRIAL_DAYS } from '../src/lib/trial.js';
 import { signInLink } from './authLinks.js';
 import { createDb, hasDb, type Db } from './db.js';
 import { sendEmail } from './email.js';
@@ -15,7 +15,7 @@ import { forgetTenant } from './tenants.js';
 
 // Claim links (MAG-89). VVS Lab builds a jeweler's shop ahead of time (a
 // draft with no owner). At the counter the jeweler scans a QR code for
-// /claim/<token>, enters their email, and the shop is theirs: owner, 14-day
+// /claim/<token>, enters their email, and the shop is theirs: owner, 30-day
 // trial (card optional), published with their email as the lead inbox and
 // switched live (MAG-90), the welcome email sent, and signed in on that phone.
 //
@@ -98,8 +98,10 @@ const closed = (state: Exclude<ClaimState, 'open'>) => reply(CLOSED[state][0], {
 async function handOver(db: Db, tenant: TenantRow, userId: string, email: string) {
   // Already on the team (as staff)? Then they're promoted.
   await db.insert('members', { tenant_id: tenant.id, user_id: userId, role: 'owner' }).catch(() => db.update('members', { tenant_id: `eq.${tenant.id}`, user_id: `eq.${userId}` }, { role: 'owner' }));
-  // The trial starts now, card optional, as for self-serve signup. A shop already on a paid plan keeps it.
-  await db.update('tenants', { id: `eq.${tenant.id}`, billing_status: 'in.(none,canceled)' }, { plan: 'trial', trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString() });
+  // The trial starts now, card optional: 30 days, the offer we make (MAG-220).
+  // A shop already on a paid plan keeps it.
+  const started = new Date().toISOString();
+  await db.update('tenants', { id: `eq.${tenant.id}`, billing_status: 'in.(none,canceled)' }, { plan: 'trial', trial_started_at: started, trial_ends_at: new Date(Date.now() + CLAIM_TRIAL_DAYS * 864e5).toISOString() });
   const latest = await latestConfig(db, tenant.id);
   if (!latest) {
     // Nothing valid to publish: it stays a draft for VVS Lab to fix, rather than live with no builder.
@@ -162,7 +164,7 @@ export async function handleClaim(payload: unknown, ip: string, env: SignupEnv):
   const session = signIn.existing ? null : await signInOnDevice(db, signIn.url).catch(() => null);
   // The email's own link and code (made after that sign-in: one token at a time per account).
   const emailed = (await emailSignIn(db, email, origin, tenant.slug)) ?? { url: `${origin}/dashboard/${tenant.slug}`, code: undefined };
-  const welcome = await welcomeEmail({ shop: tenant.name, slug: tenant.slug, link: emailed.url, code: emailed.code, origin, trialDays: TRIAL_DAYS, claimed: true, oneTime: Boolean(emailed.code) });
+  const welcome = await welcomeEmail({ shop: tenant.name, slug: tenant.slug, link: emailed.url, code: emailed.code, origin, trialDays: CLAIM_TRIAL_DAYS, claimed: true, oneTime: Boolean(emailed.code) });
   await sendEmail({ fromName: 'VVS Lab', fromLocal: 'hello', to: [email], ...welcome, headers: { 'X-Entity-Ref-ID': `claim-${tenant.id}` } }, env);
   return session
     ? reply(200, { ok: true, slug: tenant.slug, session })

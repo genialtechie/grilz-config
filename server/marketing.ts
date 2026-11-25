@@ -68,10 +68,14 @@ export async function optOuts(db: Db, email: string): Promise<Set<Topic | 'all'>
 
 // ---------- Recipients ----------
 
-/** A shop's owner: the address the shop was created for (its first owner invite). */
+/** A shop's owner: the address the shop was created for (its first owner invite). Claim shops have no invite row, so fall back to the members table. */
 export async function ownerEmail(db: Db, tenantId: string): Promise<string | null> {
   const [invite] = await db.select<{ email: string }>('member_invites', { tenant_id: `eq.${tenantId}`, role: 'eq.owner', select: 'email', order: 'created_at.asc', limit: '1' });
-  return invite?.email ? normalise(invite.email) : null;
+  if (invite?.email) return normalise(invite.email);
+  const [member] = await db.select<{ user_id: string }>('members', { tenant_id: `eq.${tenantId}`, role: 'eq.owner', select: 'user_id', order: 'created_at.asc', limit: '1' });
+  if (!member) return null;
+  const user = await db.authUser(member.user_id).catch(() => null);
+  return user?.email ? normalise(user.email) : null;
 }
 
 /** Replies must reach a real inbox: the marketing domain doesn't receive mail. */
@@ -87,7 +91,7 @@ export type MarketingSend = {
   topic: Topic;
   /** What this email is, e.g. 'trial-day-3'. */
   kind: string;
-  /** Unique per intended send, e.g. 'trial-day-3:<tenant id>'. */
+  /** Unique per intended send, e.g. 'trial-day-3:<tenant id>:<trial end>' — the trial end scopes a trial step to one trial cycle, so an extension lets the step fire again. */
   dedupeKey: string;
   tenantId?: string | null;
   fromName: string;

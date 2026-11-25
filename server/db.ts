@@ -110,6 +110,13 @@ export function createDb(env: TenantEnv) {
       return { ok: true, data };
     },
 
+    /** GET /auth/v1/admin/users/<id> (service role): the account's email, or null. */
+    authUser: async (userId: string): Promise<AuthUser | null> => {
+      const response = await fetch(`${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`, { headers: headers() });
+      if (!response.ok) return null;
+      return (await response.json()) as AuthUser;
+    },
+
     /** Public Auth settings; disable_signup must be true for invite-only accounts. */
     authSettings: async (): Promise<{ disable_signup?: boolean } | null> => {
       const response = await fetch(`${base}/auth/v1/settings`, { headers: { apikey: key } });

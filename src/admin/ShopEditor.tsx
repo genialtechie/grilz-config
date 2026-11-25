@@ -6,7 +6,8 @@ import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
-import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
+import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, extendTrial, latestTrialExtension, type ConfigRow, type TenantRow, type TrialExtension } from './data';
+import { adminStatus, ADMIN_STATUS_LABEL, hasCard, trialDisplay } from '../lib/trial';
 import { LeadsPanel } from './LeadsPanel';
 import { TeamPanel } from '../dashboard/TeamPanel';
 import { ClaimLinkCard } from './ClaimLinkCard';
@@ -247,6 +248,8 @@ function Checks({ options, selected, onToggle }: { options: readonly Option[]; s
   );
 }
 
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
 export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: EditorProps = {}) {
   const params = useParams();
   const slug = slugProp ?? params.slug ?? '';
@@ -264,6 +267,8 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   const [showPreview, setShowPreview] = useState(() => typeof window === 'undefined' || window.innerWidth > 1080);
   const [previewKey, setPreviewKey] = useState(0);
   const [cardReady, setCardReady] = useState(false);
+  const [extendDate, setExtendDate] = useState('');
+  const [lastExtension, setLastExtension] = useState<TrialExtension | null>(null);
   const saving = useRef<Promise<unknown> | null>(null);
 
   const reload = useCallback(async () => {
@@ -278,6 +283,12 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   useEffect(() => {
     reload().catch((reason: Error) => setNotice({ kind: 'error', text: reason.message }));
   }, [reload]);
+
+  // Admin only: who last extended this shop's trial, and when.
+  useEffect(() => {
+    if (shop || !loaded?.tenant.id) return;
+    latestTrialExtension(loaded.tenant.id).then(setLastExtension).catch(() => undefined);
+  }, [shop, loaded?.tenant.id]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -324,6 +335,23 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
   }
 
   const { tenant, configs } = loaded;
+  // The admin never claims a shop is live when its trial has ended: the public page already gates it, so the pill matches what customers see.
+  const status = adminStatus(tenant);
+  const trial = trialDisplay(tenant);
+  const trialLine =
+    trial.kind === 'trial'
+      ? `Trial ends ${fmtDate(trial.endsAt)} — ${trial.daysLeft} day${trial.daysLeft === 1 ? '' : 's'} left.`
+      : trial.kind === 'ended'
+        ? `Trial ended ${fmtDate(trial.endsAt)} — the page is paused until the trial is extended or a card is added.`
+        : trial.kind === 'paid'
+          ? `Paid${trial.renewsAt ? ` — renews ${fmtDate(trial.renewsAt)}` : ''}.`
+          : tenant.plan === 'trial'
+            ? 'On trial, with no end date set.'
+            : 'No trial started yet.';
+  // The extend buttons only make sense on a shop that has a trial to extend:
+  // a founding or paid shop has none (the server rejects those too), and a
+  // trial with no end date yet stays extendable — extending gives it an end.
+  const canExtend = (trial.kind === 'trial' || trial.kind === 'ended' || tenant.plan === 'trial') && !hasCard(tenant);
   const draft = configs.find((row) => row.status === 'draft');
   const published = configs.find((row) => row.status === 'published');
   const liveConfig = parseRow(published);
@@ -402,6 +430,14 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       await reload();
       return next === 'live' ? `${config.brand.name} is live at /b/${tenant.slug}.` : `${config.brand.name} is ${STATUS_LABEL[next].toLowerCase()}.`;
     });
+  // Admin only: extend the trial. A shop paused because its trial ended comes back live; the extension is logged with who did it.
+  const onExtend = (option: { days: number } | { date: string }) =>
+    run('trial', async () => {
+      const result = await extendTrial(tenant.id, option);
+      await reload();
+      setLastExtension(await latestTrialExtension(tenant.id).catch(() => null));
+      return `Trial extended to ${fmtDate(result.endsAt)}.${result.restored ? ' The page is live again.' : ''}`;
+    });
   const onOffboard = () =>
     run('status', async () => {
       try {
@@ -448,12 +484,12 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
           <h1>{config.brand.name}</h1>
           {shop ? (
             <p className="admin-muted">
-              <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
+              <span className={`admin-pill admin-pill--${status}`}>{ADMIN_STATUS_LABEL[status]}</span>{' '}
               {dirty ? 'Saving…' : draft ? (changes.length ? `${changes.length} unpublished change${changes.length > 1 ? 's' : ''}` : 'Draft matches your live page') : 'Up to date'}
             </p>
           ) : (
             <p className="admin-muted">
-              <span className={`admin-pill admin-pill--${tenant.status}`}>{STATUS_LABEL[tenant.status]}</span>{' '}
+              <span className={`admin-pill admin-pill--${status}`}>{ADMIN_STATUS_LABEL[status]}</span>{' '}
               /b/{tenant.slug} · live config {published ? `v${published.version}` : 'none yet'}
               {draft ? ` · draft v${draft.version}` : ''}{dirty ? ' · unsaved changes' : ''}
             </p>
@@ -547,6 +583,37 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
       ) : (
         <div className={shop && showPreview ? 'dash-editor' : ''}>
         <div className="admin-sections">
+          {!shop && tenant.kind === 'shop' && (
+            <Section title="Trial" hint="The trial lives in the database, not Stripe — a card on file ends it and starts the plan. The jeweler gets a warning 7 days and 1 day before it ends, and so does Haleem.">
+              <p>{trialLine}</p>
+              {lastExtension && (
+                <p className="admin-muted">
+                  Last extended {fmtDate(lastExtension.at)}
+                  {lastExtension.data.days ? ` by ${lastExtension.data.days} days` : lastExtension.data.date ? ` to ${lastExtension.data.date}` : ''}.
+                </p>
+              )}
+              {canExtend && (
+                <>
+                  <div className="admin-actions">
+                    {[7, 14, 30].map((days) => (
+                      <button key={days} className="admin-button" type="button" disabled={!!busy} onClick={() => void onExtend({ days })}>+{days} days</button>
+                    ))}
+                  </div>
+                  <div className="admin-grid" style={{ marginTop: 12 }}>
+                    <label className="admin-field">
+                      <span>Extend to a date</span>
+                      <input type="date" value={extendDate} onChange={(event) => setExtendDate(event.target.value)} />
+                    </label>
+                    <div className="admin-field">
+                      <span>&nbsp;</span>
+                      <button className="admin-button" type="button" disabled={!!busy || !extendDate} onClick={() => void onExtend({ date: extendDate })}>Extend to date</button>
+                    </div>
+                  </div>
+                  <p className="admin-muted">Extending a shop paused by its trial brings the page back live.</p>
+                </>
+              )}
+            </Section>
+          )}
           <Section title="Brand">
             <div className="admin-grid">
               <label className="admin-field">

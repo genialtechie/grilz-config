@@ -8,6 +8,7 @@ import { deleteLead } from './retention.js';
 import { billingCheckout, billingPortal, connectOnboard, connectStatus, type BillingEnv } from './billing.js';
 import { offboardTenant } from './offboard.js';
 import { createClaimLink, revokeClaimLink } from './claims.js';
+import { extendTrial, type ExtendOption } from './trialAdmin.js';
 import { checkEmailConfirmed, emailUnconfirmed, resendConfirmation } from './emailConfirm.js';
 import { trialExpired, type TrialFields } from '../src/lib/trial.js';
 import type { ApiResult } from './tenantApi.js';
@@ -283,6 +284,14 @@ export async function handleDashboard(action: string, payload: unknown, token: s
       if (action === 'claim_create') return await createClaimLink(db, user.id, tenantId, env);
       const linkId = String(body.linkId ?? '');
       return UUID.test(linkId) ? await revokeClaimLink(db, tenantId, linkId) : reply(400, { error: 'invalid' });
+    }
+    if (action === 'trial_extend') {
+      const tenantId = String(body.tenantId ?? '');
+      if (!UUID.test(tenantId)) return reply(400, { error: 'invalid' });
+      if ((await roleFor(db, user.id, tenantId)) !== 'admin') return reply(403, { error: 'admin_only', message: 'Only VVS Lab can extend a trial.' });
+      const option: ExtendOption =
+        typeof body.days === 'number' ? { days: body.days } : typeof body.date === 'string' ? { date: body.date } : { days: NaN };
+      return await extendTrial(db, user.id, tenantId, option);
     }
     if (['billing_checkout', 'billing_portal', 'connect_onboard', 'connect_status'].includes(action)) return await money(db, user, action, body, env);
     return reply(404, { error: 'not_found' });

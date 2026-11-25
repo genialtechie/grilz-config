@@ -147,6 +147,7 @@ export async function handleSignup(payload: unknown, ip: string, env: SignupEnv)
       status: 'live',
       plan: 'trial',
       created_via: 'signup',
+      trial_started_at: new Date().toISOString(),
       trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 864e5).toISOString(),
     });
     tenantId = tenant.id;

@@ -24,6 +24,12 @@ const at = (days: number, patch: Partial<TrialShop> = {}) => {
   const now = start + days * DAY;
   return stepFor(shop({ daysLeft: Math.max(0, Math.ceil((start + 14 * DAY - now) / DAY)), ...patch }), row, now);
 };
+/** Same, for a 30-day claim/invite trial: the warnings land on their own days there. New 30-day trials record their start, so the row carries it. */
+const row30 = { trial_ends_at: new Date(start + 30 * DAY).toISOString(), trial_started_at: new Date(start).toISOString() };
+const at30 = (days: number, patch: Partial<TrialShop> = {}) => {
+  const now = start + days * DAY;
+  return stepFor(shop({ daysLeft: Math.max(0, Math.ceil((start + 30 * DAY - now) / DAY)), ...patch }), row30, now);
+};
 
 describe('trial sequence: which step is due', () => {
   it('walks a shop that does nothing through every step, one a day at most', () => {
@@ -31,10 +37,21 @@ describe('trial sequence: which step is due', () => {
     expect(at(1.2)).toBe('day-1');
     expect(at(3.2)).toBe('day-3');
     expect(at(5.2)).toBeNull();
-    expect(at(7.2)).toBe('day-7');
-    expect(at(11.2)).toBe('day-12'); // 3 days left
-    expect(at(13.2)).toBe('day-14'); // last day
+    // Day 7 is also 7 days left, so the warning wins and the deposits email slides to day 8.
+    expect(at(7.2)).toBe('week-left');
+    expect(at(8.2)).toBe('day-7');
+    expect(at(11.2)).toBeNull(); // no 3-day touch anymore (MAG-220: warnings are 7-day and last-day)
+    expect(at(13.2)).toBe('last-day');
     expect(at(14.1)).toBeNull(); // trial over
+  });
+
+  it('walks a 30-day claim trial the same way, on its own days', () => {
+    expect(at30(1.2)).toBe('day-1');
+    expect(at30(3.2)).toBe('day-3');
+    expect(at30(7.2)).toBe('day-7'); // 23 days left: no warning yet
+    expect(at30(23.2)).toBe('week-left'); // 7 days left
+    expect(at30(29.2)).toBe('last-day');
+    expect(at30(30.1)).toBeNull();
   });
 
   it('skips a step the shop has already done', () => {
@@ -42,8 +59,8 @@ describe('trial sequence: which step is due', () => {
     // Live from the start (MAG-90) but still on the starting prices: day 1 asks for theirs.
     expect(at(1.2, { live: true })).toBe('day-1');
     expect(at(3.2, { leads: 2 })).toBeNull();
-    expect(at(7.2, { stripeReady: true })).toBeNull();
-    expect(at(11.2, { hasCard: true })).toBeNull();
+    expect(at(7.2, { hasCard: true })).toBeNull();
+    expect(at(8.2, { stripeReady: true })).toBeNull();
     expect(at(13.2, { hasCard: true })).toBeNull();
   });
 
@@ -75,12 +92,12 @@ describe('trial emails', () => {
     expect(day1.html).toContain('vvslab.magpollo.com/b/gold-mouth');
   });
 
-  it('use the shop’s own numbers on day 12, and every email has the unsubscribe link', async () => {
-    const email = await trialEmail('day-12', shop({ leads: 3, estimates: 9450.4, daysLeft: 3 }), origin, unsubscribe);
-    expect(email.subject).toBe('3 days left on your trial');
+  it('use the shop’s own numbers a week out, and every email has the unsubscribe link', async () => {
+    const email = await trialEmail('week-left', shop({ leads: 3, estimates: 9450.4, daysLeft: 7 }), origin, unsubscribe);
+    expect(email.subject).toBe('7 days left on your trial');
     expect(email.html).toContain('3 design requests');
     expect(email.html).toContain('$9,450');
-    for (const step of ['day-1', 'day-3', 'day-7', 'day-12', 'day-14'] as const) {
+    for (const step of ['day-1', 'day-3', 'day-7', 'week-left', 'last-day'] as const) {
       const rendered = await trialEmail(step, shop({ daysLeft: 2 }), origin, unsubscribe);
       expect(rendered.html, step).toContain(unsubscribe.replace(/&/g, '&amp;'));
       expect(rendered.text, step).toContain(unsubscribe);
@@ -88,7 +105,7 @@ describe('trial emails', () => {
   });
 
   it('escape a shop name', async () => {
-    const email = await trialEmail('day-14', shop({ name: '<b>Ice</b>' }), origin, unsubscribe);
+    const email = await trialEmail('last-day', shop({ name: '<b>Ice</b>' }), origin, unsubscribe);
     expect(email.html).not.toContain('<b>Ice</b>');
   });
 });

@@ -78,7 +78,9 @@
 .admin-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #eee8df; color: #5d554c; }
 .admin-pill--live { background: #e3f2ea; color: var(--a-ok); }
 .admin-pill--paused { background: #fdf0d5; color: #8a5a00; }
+.admin-pill--paused-trial { background: #fdf0d5; color: #8a5a00; }
 .admin-pill--offboarded { background: #f1e4e4; color: #8a2b2b; }
+.admin-trial--soon { font-weight: 700; color: #8a5a00; }
 
 .admin-issues { padding: 12px 16px; margin-bottom: 12px; border-color: #f3c7c2; background: #fff7f6; color: var(--a-err); }
 .admin-issues ul { margin: 6px 0 0; padding-left: 18px; }

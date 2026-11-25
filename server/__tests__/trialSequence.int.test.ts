@@ -72,18 +72,19 @@ describe.skipIf(!url || !key)('trial sequence (integration)', () => {
     expect(mine()[0].headers?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 
-  it('follows what the shop does: live on day 3 gets the share email; Stripe connected skips day 7', async () => {
+  it('follows what the shop does: live on day 3 gets the share email; Stripe connected skips day 8 deposits', async () => {
     sent = [];
     await rest(`tenants?id=eq.${tenantId}`, { method: 'PATCH', body: JSON.stringify({ status: 'live', stripe_charges_enabled: true }) });
     await at(3.2);
-    await at(7.2);
+    // Day 7 is the week-left warning on a 14-day trial (a card, not Stripe, is what skips it); day 8 is the deposits step.
+    await at(8.2);
     expect(mine().map((mail) => mail.subject)).toEqual(['Put your builder where customers already are']);
   });
 
   it('stops when the owner unsubscribes, and never mails a shop with a card', async () => {
     sent = [];
     await rest('email_unsubscribes', { method: 'POST', body: JSON.stringify({ email: owner, topic: 'tips', source: 'link' }) });
-    const run = await at(11.2);
+    const run = await at(7.2); // the week-left warning is due today
     expect(run.results.opted_out).toBeGreaterThanOrEqual(1);
     await rest(`email_unsubscribes?email=eq.${owner}`, { method: 'DELETE' });
     await rest(`tenants?id=eq.${tenantId}`, { method: 'PATCH', body: JSON.stringify({ billing_status: 'trialing' }) });
