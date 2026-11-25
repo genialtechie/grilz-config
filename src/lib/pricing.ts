@@ -122,6 +122,70 @@ export const archCount = (teeth: readonly { index: number }[]) => new Set(teeth.
 export const volumeDiscount = (pricing: TenantPricing, teeth: number) =>
   (pricing.volume ?? []).filter((tier) => teeth >= tier.minTeeth).reduce((best, tier) => Math.max(best, tier.percentOff), 0);
 
+/** A live volume-discount hint: the next set-price tier within reach for one metal. */
+export type VolumeHint = { key: IcedKey; label: string; more: number; saving: number };
+
+/**
+ * The next set-price tier for each metal in the set, as a live hint in the
+ * summary — "4 more 14K teeth → −$50/tooth" (MAG-216). The saving is the
+ * per-tooth metal price at the next tier against what the tooth costs now:
+ * the current tier's price/size when the set already reaches one, else the
+ * fixed per-tooth metal price. Only the next tier up, only when it actually
+ * saves at least a dollar a tooth — a bigger tier's price can be worse per
+ * tooth if the shop's table is off, and a hint must never promise a saving
+ * that isn't there. And only when the whole jump is worth naming: a hint
+ * whose total saving (more × saving) is under $20 is noise, not a nudge —
+ * "4 more 10K teeth → −$1/tooth" is correct but worth $4 (Cowork's preview
+ * test). The $20 is a judgment call, tunable if Haleem wants a different bar.
+ * The count is every non-all-in tooth of the key, quoted or not — the same
+ * count priceBreakdown uses, because the tier the unquoted teeth pay is set
+ * by the whole key's count. A hint only fires when at least one tooth of the
+ * key actually takes a set price: a fully-quoted key gets no hint, since no
+ * tooth in it would ever pay a set price. Below the first tier, the current
+ * reference is the cheapest list price among the key's unquoted teeth, so
+ * the saving is a floor every tooth saves at least — and it never depends on
+ * which tooth comes first. All-in iced teeth take no set price and don't
+ * count. A shop hiding its prices gets no hint either. Display-only: the
+ * hint names the tier, it never applies anything. The % volume discount has
+ * no hint: it keys off the total tooth count, not a per-metal ladder, and it
+ * never applies to set-priced metal — a % hint on this set would not match
+ * what the customer pays.
+ */
+export const volumeHints = (pricing: TenantPricing, teeth: readonly RenderTooth[]): VolumeHint[] => {
+  if (pricing.display === 'hidden' || !(pricing.setPrices ?? []).length) return [];
+  const byKey = new Map<IcedKey, { count: number; takesSetPrice: boolean; minList: number }>();
+  teeth.forEach((tooth) => {
+    if (tooth.type === 'iced' && icedAllIn(pricing, tooth) !== undefined) return;
+    const key = setPriceKey(tooth.metal, tooth.karat);
+    const group = byKey.get(key) ?? { count: 0, takesSetPrice: false, minList: Infinity };
+    group.count += 1;
+    // A market-quoted tooth counts toward the tier (priceBreakdown's
+    // keyCounts counts it too) but never takes a set price itself — only an
+    // unquoted tooth of the key sets the current reference (re-review F1).
+    if (!metalQuoted(pricing, tooth.metal, tooth.karat)) {
+      group.takesSetPrice = true;
+      group.minList = Math.min(group.minList, metalPerTooth(pricing, tooth.metal, tooth.karat));
+    }
+    byKey.set(key, group);
+  });
+  const hints: VolumeHint[] = [];
+  byKey.forEach((group, key) => {
+    if (!group.takesSetPrice) return;
+    const next = (pricing.setPrices ?? [])
+      .filter((tier) => tier.size > group.count && tier.prices[key] !== undefined)
+      .sort((a, b) => a.size - b.size)[0];
+    if (!next) return;
+    const current = setPriceCell(pricing, key, group.count);
+    const nowPerTooth = current ? current.price / current.size : group.minList;
+    const saving = Math.round(nowPerTooth - next.prices[key]! / next.size);
+    if (saving < 1) return;
+    const more = next.size - group.count;
+    if (more * saving < 20) return;
+    hints.push({ key, label: setPriceKeyLabel(key), more, saving });
+  });
+  return hints.sort((a, b) => b.saving - a.saving);
+};
+
 /** A tooth's share of the front-tooth price, by where it sits (1 = the same as the front). */
 export const positionFactor = (pricing: TenantPricing, index: number) => {
   const position = toothPosition(index);
