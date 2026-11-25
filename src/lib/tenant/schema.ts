@@ -155,8 +155,11 @@ export const PricingSchema = z.object({
    * Iced open face holds fewer stones than a full face: charge this share (%)
    * of the stone and setting price, plus a labour price per tooth (absent =
    * the open-face finish price). Absent = 100%, which is how it worked first.
+   * A below-base (negative) open-face finish price applies to plain teeth
+   * only, unless applyBelowBase is set: the "windows" discount must not
+   * undercut a full iced set (MAG-225). The shop can opt in.
    */
-  icedOpenFace: z.object({ stoneShare: z.number().min(0).max(100), perTooth: money.optional() }).optional(),
+  icedOpenFace: z.object({ stoneShare: z.number().min(0).max(100), perTooth: money.optional(), applyBelowBase: z.boolean().optional() }).optional(),
   /**
    * Iced opal (MAG-169): an opal centre inside a border of stones. The same
    * shape as icedOpenFace: this share (%) of the stone and setting price plus

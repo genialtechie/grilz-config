@@ -1,6 +1,6 @@
 import { CUTS, DIAMOND_GRADES, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES, TOOTH_EXTRAS } from '../renderSpec.js';
 import { ICED_KEYS, type TenantConfig } from './schema.js';
-import { cutPrice, feeLabel, icedOpalPrice, setPriceKeyLabel } from '../pricing.js';
+import { cutPrice, feeLabel, icedOpalPrice, icedOpenFacePrice, setPriceKeyLabel } from '../pricing.js';
 
 // Plain-language list of what a draft changes compared with the live config,
 // shown before a shop publishes ("Yellow gold: $150 → $165 per tooth").
@@ -110,7 +110,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = p1.molds?.[mold.id] ?? 0;
     if (before !== after) add('Prices', `${mold.label}: ${usd(before)} → ${usd(after)}`);
   });
-  const openFace = (pricing: typeof p0) => `${pricing.icedOpenFace?.stoneShare ?? 100}% of stones + ${usd(pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face'] ?? 0)}`;
+  const openFace = (pricing: typeof p0) => `${icedOpenFacePrice(pricing).stoneShare}% of stones + ${usd(icedOpenFacePrice(pricing).perTooth)}`;
   if (openFace(p0) !== openFace(p1)) add('Prices', `Iced open face: ${openFace(p0)} → ${openFace(p1)}`);
   const opal = (pricing: typeof p0) => `${icedOpalPrice(pricing).stoneShare}% of stones + ${usd(icedOpalPrice(pricing).perTooth)}`;
   if (opal(p0) !== opal(p1)) add('Prices', `Iced opal: ${opal(p0)} → ${opal(p1)}`);
