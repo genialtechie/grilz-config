@@ -45,9 +45,9 @@ export const OPALS = [
 
 /**
  * PVD colour coat colours (MAG-214): a coloured coating on a plain tooth's
- * metal, +$35 a tooth whatever the colour (TraxNYC builder). The ticket's
- * seven colours are authoritative — the teardown says "8 colors" in one line
- * but lists these seven.
+ * metal — colour costs nothing extra on any metal (Haleem, Nov 25). The
+ * ticket's seven colours are authoritative — the teardown says "8 colors" in
+ * one line but lists these seven.
  */
 export const PVD_COLORS = [
   { id: 'pink', label: 'Pink', swatch: '#e2477f', render: 'a vivid pink PVD colour coat' },
@@ -313,7 +313,7 @@ export type EnabledOptions = {
   molds?: readonly string[];
   /** Named tooth extras the shop sells; absent = none. */
   extras?: readonly string[];
-  /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
+  /** PVD colour coat (MAG-214): the shop offers it; absent = not offered. */
   pvd?: boolean;
 };
 

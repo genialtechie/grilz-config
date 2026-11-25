@@ -31,7 +31,7 @@ export const shopCatalog = (catalog: TenantCatalog) => ({
   cuts: only(CUTS, catalog.cuts),
   molds: only(MOLDS, catalog.molds),
   extras: only(TOOTH_EXTRAS, catalog.extras ?? []),
-  /** PVD colour coat (MAG-214): offered or not — the price lives in pricing. */
+  /** PVD colour coat (MAG-214): offered or not — colour costs nothing extra. */
   pvd: Boolean(catalog.pvd),
   inscriptionStyles: catalog.inscription.enabled ? only(INSCRIPTION_STYLES, catalog.inscription.styles) : [],
   fangs: catalog.fangs,
