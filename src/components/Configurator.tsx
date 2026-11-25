@@ -37,6 +37,7 @@ import { toothCustomization } from '../lib/toothCustomization';
 import { InscriptionEditor } from './builder/InscriptionEditor';
 import { draftRow, inscriptionsFrom, newDraft, pickTooth, placeDrafts, unplaceDrafts, type InscriptionDraft } from '../lib/inscriptionDrafts';
 import { designLink, hasDesignHash, openingDesign, sameDesign, saveDesign, setWithoutInscriptions, startingDesign, startingPoster, type DesignSnapshot } from '../lib/savedDesign';
+import { randomizeDesign } from '../lib/randomize';
 import {
   ICED_FINISHES,
   OPALS,
@@ -249,6 +250,10 @@ function Configurator() {
   const [receipt, setReceipt] = useState<LeadReceipt | null>(null);
   const [depositError, setDepositError] = useState('');
   const [showPhoto, setShowPhoto] = useState(false);
+  // "Roll it" (MAG-213): null until the customer types, then their budget in
+  // whole dollars; the roll message holds the nothing-fits note when no set fits.
+  const [budgetInput, setBudgetInput] = useState<string | null>(null);
+  const [rollMessage, setRollMessage] = useState<string | null>(null);
   const {
     selectedTeeth,
     toggleToothSelection,
@@ -334,6 +339,11 @@ function Configurator() {
   const priceHidden = tenant.config.pricing.display === 'hidden';
   const totalText = (value: number) => displayTotal(tenant.config.pricing, value, formatPrice).text;
   const totalCost = pricing.total;
+  // "Roll it" prefill: $200 above the floored $100 of the current total, so
+  // the roll always has at least $100 of headroom ($101-$200) to improve on
+  // what the customer already has (a prefill equal to the total, or $1
+  // above it, could only keep or downgrade).
+  const rollPrefill = Math.max(1, Math.floor(totalCost / 100) * 100 + 200);
 
   // What the 3D model shows: every tooth in the set wears its design from the
   // first frame (the builder opens on a finished set, and choosing teeth adds
@@ -671,6 +681,32 @@ function Configurator() {
     setCloseUp(null);
     posthog.capture('sample_look_started', { look: id });
   };
+
+  // "Roll it" (MAG-213): build a random set inside the customer's budget from
+  // what this shop sells. Only the teeth and their designs change — the cut,
+  // fit, add-ons and any text stay as they are.
+  const rollRandomSet = () => {
+    const budget = Math.floor(Number((budgetInput ?? String(rollPrefill)).replace(/[^0-9.]/g, '')));
+    if (!Number.isFinite(budget) || budget <= 0) {
+      setRollMessage('Enter a budget in whole dollars.');
+      return;
+    }
+    const result = randomizeDesign(tenant, budget, snapshot());
+    if (!result.ok) {
+      setRollMessage(
+        `Nothing fits $${budget.toLocaleString()} here — the cheapest set is $${result.minTotal.toLocaleString()}.`,
+      );
+      return;
+    }
+    const { snapshot: rolled, total } = result;
+    setSelectedTeeth(rolled.teeth);
+    setBase(rolled.base);
+    setOverrides(rolled.overrides);
+    setSetOptions((previous) => ({ ...previous, fangs: rolled.set.fangs }));
+    setCloseUp(null);
+    setRollMessage(null);
+    posthog.capture('sample_randomize_rolled', { budget, total });
+  };
   const lookActive = (design: DesignSnapshot) =>
     design.teeth.join() === selectedTeeth.join() &&
     JSON.stringify(design.base) === JSON.stringify(base) &&
@@ -977,6 +1013,31 @@ function Configurator() {
                       </div>
                     </fieldset>
                   )}
+                  <fieldset className="control-group">
+                    <legend>Roll a set in your budget</legend>
+                    <label>
+                      <span>Budget</span>
+                      <input
+                        className="vision-input"
+                        type="text"
+                        inputMode="numeric"
+                        aria-label="Budget in dollars"
+                        value={budgetInput ?? String(rollPrefill)}
+                        onChange={(event) => {
+                          setBudgetInput(event.target.value);
+                          setRollMessage(null);
+                        }}
+                      />
+                    </label>
+                    <button className="option-button" type="button" onClick={rollRandomSet}>
+                      <strong>Roll it</strong>
+                    </button>
+                    {rollMessage ? (
+                      <small className="field-hint field-hint--warn">{rollMessage}</small>
+                    ) : (
+                      <small className="field-hint">Picks a random set from what this shop sells — you can tweak it after.</small>
+                    )}
+                  </fieldset>
                   <fieldset className="control-group">
                     <legend>Popular sets</legend>
                     <div className="preset-grid preset-grid--four">
