@@ -1,4 +1,4 @@
-import type { CutId, Inscription, MetalId, OpalId, SettingId, StyleId } from './renderSpec';
+import type { CutId, Inscription, MetalId, OpalId, PvdColorId, SettingId, StyleId } from './renderSpec';
 export type Material = 'gold' | 'silver' | 'default';
 export type DiamondType = 'moissanite' | 'lab';
 export type CutStyle = 'deep' | 'permanent';
@@ -12,6 +12,8 @@ export type ToothCustomization = {
   style?: StyleId;
   /** The opal's colour, for the opals style. */
   opal?: OpalId;
+  /** A PVD colour coat on a plain tooth (MAG-214): the cap is coated in this colour. */
+  pvd?: PvdColorId;
   /** A photo grillz tooth: the customer's picture goes on its face. */
   photo?: boolean;
   /** This tooth is a fang cap (an upper canine with fangs on). */

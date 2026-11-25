@@ -41,6 +41,7 @@ import { randomizeDesign } from '../lib/randomize';
 import {
   ICED_FINISHES,
   OPALS,
+  PVD_COLORS,
   TOOTH_EXTRAS,
   VISION_MAX,
   isGold,
@@ -415,6 +416,10 @@ function Configurator() {
     // Iced teeth take no named extras (MAG-204 review): switching a tooth to
     // iced drops them, so a design can never carry an extra it cannot show.
     if (next.type === 'iced') next.extras = [];
+    // A PVD coat only lives on a plain tooth: switching away from plain
+    // drops it, the same way — an iced face is covered in stones, and a
+    // coat would hide a photo.
+    if (next.type !== 'plain') next.pvd = undefined;
     return nearestOffered(shopPricing, next, stoneIds, karatIds) ?? design;
   };
   const icedOffers = (design: Partial<ToothDesign>) => offered(shopPricing, { ...shown, type: 'iced', ...design });
@@ -487,6 +492,7 @@ function Configurator() {
     karat: isGold(base.metal) ? base.karat : 'none',
     grillz_type: base.type,
     style: base.style,
+    pvd_coat: base.pvd ?? 'none',
     any_iced: anyIced,
     fangs: fangsOn,
     cut: setOptions.cut,
@@ -1225,7 +1231,7 @@ function Configurator() {
                   <LookGroup
                     id="finish"
                     title="Finish"
-                    summary={`${label(STYLES, shown.style)}${opalOf(shown) ? ` · ${label(OPALS, opalOf(shown)!)}` : ''}`}
+                    summary={`${label(STYLES, shown.style)}${opalOf(shown) ? ` · ${label(OPALS, opalOf(shown)!)}` : ''}${shown.pvd ? ` · ${label(PVD_COLORS, shown.pvd)} PVD` : ''}`}
                     collapsible={compactLook}
                     open={lookOpen === 'finish'}
                     onToggle={toggleLookGroup}
@@ -1261,6 +1267,34 @@ function Configurator() {
                             {opal.label}
                           </button>
                         ))}
+                      </div>
+                    )}
+                    {catalog.pvd && shown.type === 'plain' && (
+                      <div className="opal-row" role="group" aria-label="PVD colour coat">
+                        <span>PVD coat</span>
+                        {PVD_COLORS.map((color) => (
+                          <button
+                            key={color.id}
+                            type="button"
+                            className={shown.pvd === color.id ? 'opal-choice is-selected' : 'opal-choice'}
+                            onClick={() => applyDesign({ pvd: color.id })}
+                            aria-pressed={shown.pvd === color.id}
+                            disabled={pickingNothing}
+                          >
+                            <i style={{ background: color.swatch }} />
+                            {color.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className={!shown.pvd ? 'opal-choice is-selected' : 'opal-choice'}
+                          onClick={() => applyDesign({ pvd: undefined })}
+                          aria-pressed={!shown.pvd}
+                          disabled={pickingNothing}
+                        >
+                          <i style={{ background: 'linear-gradient(135deg, #fff 46%, var(--muted) 47%, var(--muted) 53%, #fff 54%)' }} />
+                          None
+                        </button>
                       </div>
                     )}
                     {shown.type === 'iced' && (

@@ -28,7 +28,7 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
   return Math.round((pricing.metalPerTooth[metal] ?? 0) * (isGold(metal) ? pricing.karatMultiplier[karat] ?? 1 : 1));
 };
 
-/** Whether a tooth's metal price comes from a market quote (fixed-price extras don't apply on top of one). */
+/** Whether a tooth's metal price comes from a market quote (metal-price items — the colour surcharge, set prices — don't apply on top of one; labour/finish charges like styles and extras still do). */
 export const metalQuoted = (pricing: TenantPricing, metal: MetalId, karat: KaratId) =>
   Boolean(pricing.market?.enabled && pricing.market.quote?.perTooth[quoteKey(metal, karat)] !== undefined);
 
@@ -232,8 +232,9 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
   // never applies to set-priced metal, so the back-teeth delta on those teeth
   // must not sit in its base either — a cheaper back tooth would make the
   // base negative and flip the "discount" into a surcharge. Colour and extras
-  // on set-priced teeth stay in the base: they are charged on top of the set
-  // price, so the % discount does apply to them (MAG-204 review decision).
+  // on set-priced teeth stay in the base: they are charged
+  // on top of the set price, so the % discount does apply to them (MAG-204
+  // review decision).
   const backSet = Math.round(back.filter((tooth) => setPerTooth(tooth) !== undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
   const backRest = Math.round(back.filter((tooth) => setPerTooth(tooth) === undefined).reduce((total, tooth) => total + backDelta(tooth), 0));
   const backAdjustment = backSet + backRest;

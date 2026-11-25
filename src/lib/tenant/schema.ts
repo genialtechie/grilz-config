@@ -8,6 +8,7 @@ import {
   KARATS,
   METALS,
   MOLDS,
+  PVD_COLORS,
   SETTINGS,
   STONES,
   STYLES,
@@ -28,6 +29,7 @@ export const StyleIdSchema = z.enum(ids(STYLES));
 export const SettingIdSchema = z.enum(ids(SETTINGS));
 export const StoneIdSchema = z.enum(ids(STONES));
 export const ExtraIdSchema = z.enum(ids(TOOTH_EXTRAS));
+export const PvdColorIdSchema = z.enum(ids(PVD_COLORS));
 export const CutIdSchema = z.enum(ids(CUTS));
 export const MoldIdSchema = z.enum(ids(MOLDS));
 export const InscriptionStyleIdSchema = z.enum(ids(INSCRIPTION_STYLES));
@@ -71,6 +73,8 @@ export const CatalogSchema = z.object({
   molds: nonEmptyUnique(MoldIdSchema),
   /** Named tooth extras the shop sells (MAG-204); absent = none. */
   extras: z.array(ExtraIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.').optional(),
+  /** PVD colour coat (MAG-214): the shop offers it, at its own price; absent = not offered. */
+  pvd: z.boolean().optional(),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
   /** The "Make it yours" step: free-text idea and inspiration upload. */

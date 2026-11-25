@@ -65,6 +65,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   }
   if (live.catalog.fangs !== draft.catalog.fangs) add('What you sell', draft.catalog.fangs ? 'Fangs turned on' : 'Fangs turned off');
   if (live.catalog.vision !== draft.catalog.vision) add('What you sell', draft.catalog.vision ? 'Ideas & inspiration upload turned on' : 'Ideas & inspiration upload turned off');
+  if ((live.catalog.pvd ?? false) !== (draft.catalog.pvd ?? false)) add('What you sell', draft.catalog.pvd ? 'PVD colour coat turned on' : 'PVD colour coat turned off');
   if (live.catalog.inscription.enabled !== draft.catalog.inscription.enabled) add('What you sell', draft.catalog.inscription.enabled ? 'Inscriptions turned on' : 'Inscriptions turned off');
 
   const a0 = live.catalog.addOns ?? [];

@@ -4,11 +4,12 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { createDiamondStones, disposeDiamondStones } from './DiamondStones';
 import { gemSupport } from './gems';
-import { dentalStone, polishedMetal } from './materials';
+import { dentalStone, polishedMetal, pvdCoat } from './materials';
 import { fangGeometry, finishFor, ICED_RING } from './styles';
 import { clearInscriptionDecals, inscriptionDecals, loadInscriptionFont } from './inscriptions';
 import { clearPhotoDecals, loadPhoto, photoDecals, photoRuns } from './photoDecals';
 import type { GrillzModelProps, ToothCustomization } from '../../lib/types';
+import { PVD_COLORS } from '../../lib/renderSpec';
 import { useTenant } from '../../lib/tenant/useTenant';
 import { mix, usableAccent } from '../../lib/tenant/theme';
 
@@ -103,12 +104,19 @@ function GrillzModel({
   }, [clonedScene]);
 
   // The cap's own metal, polished, iced or not: round an iced face it is the rim the stones sit in.
+  // A PVD coat tints the cap itself (MAG-214): the cache key carries the
+  // coat, so a coated tooth and a bare tooth of the same metal don't share
+  // a material. Finish overlays (diamond-cut facets, rims) keep the base
+  // metal — the cap is the bulk of what shows, and the AI photo, not the
+  // rough preview, is where the details land.
   const getFinishMaterial = useCallback((customization: ToothCustomization) => {
     const metal = customization.metal ?? (customization.material === 'gold' ? 'yellow' : 'silver');
-    const existing = materials.finishCache.get(metal);
+    const coat = customization.pvd ? PVD_COLORS.find((color) => color.id === customization.pvd)?.swatch : undefined;
+    const key = coat ? `${metal}:pvd:${customization.pvd}` : metal;
+    const existing = materials.finishCache.get(key);
     if (existing) return existing;
-    const material = polishedMetal(metal);
-    materials.finishCache.set(metal, material);
+    const material = coat ? pvdCoat(coat) : polishedMetal(metal);
+    materials.finishCache.set(key, material);
     return material;
   }, [materials]);
 

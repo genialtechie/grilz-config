@@ -709,6 +709,12 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 next.catalog.inscription.enabled = event.target.checked;
                 if (event.target.checked) next.catalog.inscription.styles.forEach((style) => { next.pricing.inscription[style] ??= SAMPLE_PRICING.inscription[style] ?? 0; });
               })} /> Inscriptions</label>
+              <label className="admin-check"><input type="checkbox" checked={Boolean(catalog.pvd)} onChange={(event) => update((next) => {
+                next.catalog.pvd = event.target.checked || undefined;
+                // The coat is free — colour costs nothing extra on any metal
+                // (Haleem, Nov 25): the checkbox only turns the colours on
+                // or off, there is no price to seed or require.
+              })} /> PVD colour coat</label>
             </div>
             {catalog.inscription.enabled && (
               <Checks options={INSCRIPTION_STYLES} selected={catalog.inscription.styles} onToggle={(id, on) => update((next) => {
