@@ -806,7 +806,7 @@ function Configurator() {
             ? `Tap a tooth to style it on its own · ${coarsePointer ? 'pinch' : 'scroll'} to zoom`
             : `${zoomTip} · tap a tooth to look closer`;
 
-  const intro = STEP_INTROS[step];
+  const intro = step === 'look' && catalog.cuts.length === 0 ? { ...STEP_INTROS.look, text: 'Plain or iced, the finish, then fangs.' } : STEP_INTROS[step];
 
   return (
     <main

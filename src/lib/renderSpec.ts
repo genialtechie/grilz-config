@@ -320,7 +320,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
     if (!addOns.every((id) => offered.has(id))) return null;
     if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
-    // A shop with no cuts has nothing to check the stored one against (it's meaningless there).
+    // A shop with no cuts has none to check against: the stored one is replaced below, never priced.
     if ((enabled.cuts.length > 0 && !enabled.cuts.includes(spec.cut)) || (spec.fangs && !enabled.fangs)) return null;
     if (inscriptions.some((inscription) => !(enabled.inscription.enabled && enabled.inscription.styles.includes(inscription!.style)))) return null;
     if (!enabled.vision && spec.vision.trim()) return null;
@@ -329,7 +329,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     teeth: (teeth as RenderTooth[]).sort((a, b) => a.index - b.index),
     // Fangs are built on the upper canines: a set without one has none to charge for.
     fangs: fangCount(teeth as RenderTooth[], spec.fangs) > 0,
-    cut: spec.cut,
+    cut: enabled && enabled.cuts.length === 0 ? 'deep' : spec.cut,
     // Upper row first.
     inscriptions: (inscriptions as Inscription[]).sort((a, b) => a.teeth[0] - b.teeth[0]),
     // Keep the customer's note to plain printable text.

@@ -133,7 +133,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     });
   }
   // The fit: amount and how it's counted (permanent look's flat price included, for shops without cut prices).
-  CUTS.forEach((cut) => {
+  CUTS.filter((cut) => draft.catalog.cuts.includes(cut.id)).forEach((cut) => {
     const text = (pricing: typeof p0) => {
       const price = cutPrice(pricing, cut.id);
       return price.amount ? `${usd(price.amount)} per ${price.per}` : 'free';

@@ -6,6 +6,7 @@ import { defaultSet, shopCatalog } from '../tenant/catalog';
 import { describeChanges } from '../tenant/diff';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
+import { toggleOption } from '../../admin/toggleOption';
 
 // What a fit costs, per order, per arch or per tooth (MAG-96).
 
@@ -187,5 +188,49 @@ describe('no forced cut', () => {
   it('rejects an unknown cut id such as "standard"', () => {
     expect(parseTenantConfig({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts: ['standard'] } }).ok).toBe(false);
     expect(parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...legacy, cuts: { standard: { amount: 10, per: 'order' } } } }).ok).toBe(false);
+  });
+});
+
+describe('review fixes', () => {
+  const sixBySix = [...SIX_TOP, ...SIX_BOTTOM];
+  const none = { ...VVSLAB_CONFIG.catalog, cuts: [] };
+  const withCuts = (cuts: CutId[]) => ({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts }, pricing: ceddy });
+
+  it('a saved Permanent design on a zero-cut shop loads as deep and quotes no cut line', () => {
+    const saved = JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'permanent', teeth: sixBySix }));
+    const loaded = parseRenderSpec(saved, none);
+    expect(loaded).not.toBeNull();
+    expect(loaded!.cut).toBe('deep');
+    const pricing = parseTenantConfig({ ...VVSLAB_CONFIG, catalog: none, pricing: ceddy });
+    expect(pricing.ok).toBe(true);
+    // The saved config's pricing is pruned on parse, so the replaced cut costs nothing.
+    const pruned = pricing.ok ? pricing.config.pricing : ceddy;
+    expect(priceBreakdown(pruned, sixBySix, loaded!).lines.some((line) => /^(Deep cut|Permanent look)/.test(line.label))).toBe(false);
+  });
+
+  it('a cut the shop does not offer is still rejected when the shop has cuts', () => {
+    const catalog = { ...VVSLAB_CONFIG.catalog, cuts: ['deep'] as CutId[] };
+    expect(parseRenderSpec(JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'permanent', teeth: sixBySix })), catalog)).toBeNull();
+    expect(parseRenderSpec(JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'deep', teeth: sixBySix })), catalog)?.cut).toBe('deep');
+  });
+
+  it('turning a cut off and back on in the editor keeps its price', () => {
+    const draft = structuredClone(withCuts(['deep', 'permanent']));
+    toggleOption(draft, 'cuts', 'deep', false);
+    toggleOption(draft, 'cuts', 'permanent', false);
+    toggleOption(draft, 'cuts', 'deep', true);
+    toggleOption(draft, 'cuts', 'permanent', true);
+    expect(draft.catalog.cuts).toEqual(['deep', 'permanent']);
+    expect(cutPrice(draft.pricing, 'deep')).toEqual({ amount: 5, per: 'tooth' });
+    expect(cutPrice(draft.pricing, 'permanent')).toEqual({ amount: 100, per: 'arch' });
+  });
+
+  it('the publish diff shows a cut turned off but no price line for it', () => {
+    const live = withCuts(['deep', 'permanent']);
+    const parsed = parseTenantConfig(withCuts(['permanent']));
+    expect(parsed.ok).toBe(true);
+    const texts = describeChanges(live, parsed.ok ? parsed.config : live).map((change) => change.text);
+    expect(texts.some((text) => /deep/i.test(text))).toBe(true);
+    expect(texts.some((text) => /^Deep cut: /.test(text))).toBe(false);
   });
 });

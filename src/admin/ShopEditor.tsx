@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
-import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, pruneCutPrices, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
+import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
 import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
@@ -15,6 +15,7 @@ import { MARKET_DEFAULTS } from '../lib/metalMarket';
 import { MarketPricing } from './MarketPricing';
 import { StripeConnect } from '../dashboard/StripeConnect';
 import { SAMPLE_PRICING } from './templates';
+import { toggleOption, type OptionList } from './toggleOption';
 
 // One page per shop: edit the config as a draft, preview it, publish it, and
 // switch the shop live or paused. Validation is the same zod schema the API
@@ -251,21 +252,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
     setNotice(null);
   };
 
-  /** Turning an option on gives it a sample price so the config stays valid. */
-  const toggle = (list: keyof Pick<TenantConfig['catalog'], 'metals' | 'karats' | 'types' | 'styles' | 'settings' | 'stones' | 'cuts' | 'molds'>, id: string, on: boolean) =>
-    update((next) => {
-      const current = next.catalog[list] as string[];
-      next.catalog[list] = (on ? [...current, id] : current.filter((item) => item !== id)) as never;
-      const order = { metals: METALS, karats: KARATS, types: GRILLZ_TYPES, styles: STYLES, settings: SETTINGS, stones: STONES, cuts: CUTS, molds: MOLDS }[list] as readonly Option[];
-      if (list === 'cuts') next.pricing = pruneCutPrices(next.pricing, next.catalog.cuts);
-      (next.catalog[list] as string[]).sort((a, b) => order.findIndex((item) => item.id === a) - order.findIndex((item) => item.id === b));
-      const prices = { metals: 'metalPerTooth', karats: 'karatMultiplier', styles: 'stylePerTooth', settings: 'settingPerTooth', stones: 'stonePerTooth' } as const;
-      const key = prices[list as keyof typeof prices];
-      if (on && key) {
-        const map = next.pricing[key] as Record<string, number>;
-        if (map[id] === undefined) map[id] = (SAMPLE_PRICING[key] as Record<string, number>)[id] ?? 0;
-      }
-    });
+  const toggle = (list: OptionList, id: string, on: boolean) => update((next) => toggleOption(next, list, id, on));
 
   const run = async (label: string, work: () => Promise<string | null>) => {
     setBusy(label);
