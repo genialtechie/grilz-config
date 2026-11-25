@@ -89,10 +89,9 @@ describe('cut prices', () => {
 
 // MAG-205: no forced cut, and a fee the shop names.
 describe('no forced cut', () => {
-  // Luckey's: $50 fee, permanent look $100, 10K gold $115 a tooth (a 6x6 is $1,380 of metal).
-  const luckey: TenantPricing = { ...legacy, base: 50, baseLabel: 'Appointment fee', metalPerTooth: { ...legacy.metalPerTooth, yellow: 115 }, karatMultiplier: { ...legacy.karatMultiplier, '10k': 1 }, extras: { ...legacy.extras, permanent: 100 }, cuts: undefined };
+  // Luckey's real config: $50 fee, deep cuts included (free), permanent look $100 per set, 10K gold $115 a tooth (a 6x6 is $1,380 of metal).
+  const luckey: TenantPricing = { ...legacy, base: 50, baseLabel: 'Appointment fee', metalPerTooth: { ...legacy.metalPerTooth, yellow: 115 }, karatMultiplier: { ...legacy.karatMultiplier, '10k': 1 }, extras: { ...legacy.extras, permanent: 100 }, cuts: { deep: { amount: 0, per: 'order' as const }, permanent: { amount: 100, per: 'order' as const } } };
   const sixBySix = [...SIX_TOP, ...SIX_BOTTOM];
-  const permanentOnly = { ...VVSLAB_CONFIG.catalog, cuts: ['permanent' as const] };
 
   it('Atlanta (deep $5/tooth, permanent $100/arch, both paid): no free option, deep preselected, $30 Deep cut line', () => {
     const catalog = VVSLAB_CONFIG.catalog;
@@ -102,16 +101,25 @@ describe('no forced cut', () => {
     expect(priceBreakdown(ceddy, SIX_TOP, set).lines).toContainEqual({ label: 'Deep cut · 6 teeth', amount: 30 });
   });
 
-  // Luckey sells Permanent look only, at $100. Every cut costs money, so the quote carries it:
-  // that is CORRECT per the shop's pricing, not a bug. ($1,430 only ever applied while a Deep $0
-  // workaround entry was in the config; that hack is gone.)
-  it('Luckey, permanent look only: permanent preselected, a 10K 6x6 is $1,530 ($1,380 metal + $50 fee + $100)', () => {
-    const set = defaultSet(permanentOnly, luckey);
+  // Luckey includes deep cuts for free and charges $100 for Permanent. His Deep $0 entry is his
+  // real pricing, so a 10K 6x6 quoting $1,430 ($1,380 metal + $50 fee + $0 cut) is CORRECT.
+  it('Luckey (deep free, permanent $100): both offered, free deep preselected, a 10K 6x6 is $1,430 ($1,380 metal + $50 fee + $0 cut)', () => {
+    const catalog = VVSLAB_CONFIG.catalog;
+    expect(shopCatalog(catalog).cuts.map((cut) => cut.id)).toEqual(['deep', 'permanent']);
+    const set = defaultSet(catalog, luckey);
+    expect(set.cut).toBe('deep');
+    const quoted = priceBreakdown(luckey, sixBySix, set);
+    expect(quoted.total).toBe(1430);
+    expect(quoted.lines).toContainEqual({ label: 'Appointment fee', amount: 50 });
+  });
+
+  it('a generic shop selling only Permanent at $100: permanent preselected, a 10K 6x6 is $1,530', () => {
+    const permanentOnly = { ...VVSLAB_CONFIG.catalog, cuts: ['permanent' as const] };
+    const pricing = { ...luckey, cuts: { permanent: { amount: 100, per: 'order' as const } } };
+    const set = defaultSet(permanentOnly, pricing);
     expect(set.cut).toBe('permanent');
     expect(shopCatalog(permanentOnly).cuts.map((cut) => cut.id)).toEqual(['permanent']);
-    const quoted = priceBreakdown(luckey, sixBySix, set);
-    expect(quoted.total).toBe(1530);
-    expect(quoted.lines).toContainEqual({ label: 'Appointment fee', amount: 50 });
+    expect(priceBreakdown(pricing, sixBySix, set).total).toBe(1530);
   });
 
   it('a shop with a free cut preselects the first free one', () => {
