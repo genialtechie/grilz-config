@@ -125,7 +125,6 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     const after = p1.colourSurcharge?.[metal.id] ?? 0;
     if (before !== after) add('Prices', `${metal.label} colour: ${usd(before)} → ${usd(after)} per tooth`);
   });
-  if ((p0.pvdPerTooth ?? 0) !== (p1.pvdPerTooth ?? 0)) add('Prices', `PVD colour coat: ${usd(p0.pvdPerTooth ?? 0)} → ${usd(p1.pvdPerTooth ?? 0)} per tooth`);
   // Sorted by size and metal, so reordering the tiers in the admin reads as
   // no change instead of a price change (MAG-204 review).
   const setPrices = (pricing: typeof p0) =>

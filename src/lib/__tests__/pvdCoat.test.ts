@@ -7,8 +7,9 @@ import { describeChanges } from '../tenant/diff';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
 
 // PVD colour coat (MAG-214), on Luckey's real table: silver $80, 10K $115,
-// 14K $180, 18K $220 a tooth, and a $50 appointment fee. The coat is one
-// flat $35 a tooth, whatever the colour — the ticket's price.
+// 14K $180, 18K $220 a tooth, and a $50 appointment fee. Colour costs
+// nothing extra on any metal (Haleem, Nov 25): a coated tooth costs its
+// metal price only. All 7 colours the same price — free.
 
 const LUCKEY: TenantPricing = {
   ...VVSLAB_CONFIG.pricing,
@@ -30,7 +31,6 @@ const LUCKEY: TenantPricing = {
     cross: 150, star: 150, heart: 150, lightning: 175, '3d': 200, 'diamond-shapes': 250, '3d-animal': 250,
     brushed: 0, laser: 0,
   },
-  pvdPerTooth: 35,
 };
 
 const tooth = (metal: MetalId, karat: KaratId, extra: Partial<ToothDesign> = {}): ToothDesign => ({
@@ -56,43 +56,45 @@ const line = (pricing: TenantPricing, teeth: RenderTooth[], startsWith: string) 
 const PVD_CATALOG = { ...VVSLAB_CONFIG.catalog, pvd: true } as never;
 
 describe('PVD colour coat (MAG-214)', () => {
-  it('a coated tooth adds $35, on its own line, and the total is exact', () => {
+  it('a coated tooth adds nothing — no PVD line, total is the metal price only', () => {
     const teeth = setOf(6, 'yellow', '10k', { pvd: 'pink' });
-    expect(line(LUCKEY, teeth, 'Pink PVD')).toEqual({ label: 'Pink PVD coat · 6 teeth', amount: 210 });
-    expect(quote(LUCKEY, teeth).total).toBe(6 * 115 + 6 * 35 + 50);
+    expect(line(LUCKEY, teeth, 'PVD')).toBeUndefined();
+    expect(quote(LUCKEY, teeth).lines.some((item) => item.label.includes('PVD'))).toBe(false);
+    expect(quote(LUCKEY, teeth).total).toBe(6 * 115 + 50);
+    // The same teeth without the coat cost exactly the same.
+    expect(quote(LUCKEY, setOf(6, 'yellow', '10k')).total).toBe(6 * 115 + 50);
   });
 
-  it('the coat stacks on top of a set price, like the colour surcharge', () => {
+  it('the coat does not stack on a set price — the set price stands, no coat line', () => {
     const teeth = setOf(12, 'yellow', '10k', { pvd: 'pink' });
     expect(line(LUCKEY, teeth, 'Set price')).toEqual({ label: 'Set price · 10K · 12 teeth', amount: -130 });
-    expect(line(LUCKEY, teeth, 'Pink PVD')).toEqual({ label: 'Pink PVD coat · 12 teeth', amount: 420 });
-    expect(quote(LUCKEY, teeth).total).toBe(1250 + 12 * 35 + 50);
+    expect(line(LUCKEY, teeth, 'PVD')).toBeUndefined();
+    expect(quote(LUCKEY, teeth).total).toBe(1250 + 50);
   });
 
-  it('colours group separately, and two-tone teeth each carry their own coat', () => {
+  it('colours group separately in the prompt, and two-tone teeth each carry their own coat — free', () => {
     const teeth = [
       ...setOf(2, 'yellow', '10k', { pvd: 'pink' }),
       ...setOf(2, 'yellow', '10k', { pvd: 'royal-blue' }),
     ].map((tooth, i) => ({ ...tooth, index: i }));
-    expect(line(LUCKEY, teeth, 'Pink PVD')).toEqual({ label: 'Pink PVD coat · 2 teeth', amount: 70 });
-    expect(line(LUCKEY, teeth, 'Royal blue PVD')).toEqual({ label: 'Royal blue PVD coat · 2 teeth', amount: 70 });
-    expect(quote(LUCKEY, teeth).total).toBe(4 * 115 + 4 * 35 + 50);
+    expect(line(LUCKEY, teeth, 'PVD')).toBeUndefined();
+    expect(quote(LUCKEY, teeth).total).toBe(4 * 115 + 50);
     // The two colours are different designs, so the prompt names both.
     expect(describeSpec({ ...DEFAULT_SET, teeth })).toContain('pink PVD colour coat');
     expect(describeSpec({ ...DEFAULT_SET, teeth })).toContain('royal blue PVD colour coat');
-    // A white-gold tooth pays its colour surcharge and the coat.
+    // A white-gold tooth pays its colour surcharge and nothing for the coat.
     const mixed = [{ ...tooth('yellow', '10k', { pvd: 'pink' }), index: 5 }, { ...tooth('white', '10k', { pvd: 'pink' }), index: 6 }];
-    expect(line(LUCKEY, mixed, 'Pink PVD')).toEqual({ label: 'Pink PVD coat · 2 teeth', amount: 70 });
-    expect(quote(LUCKEY, mixed).total).toBe(115 + 115 + 40 + 70 + 50);
+    expect(line(LUCKEY, mixed, 'White gold')).toEqual({ label: 'White gold colour · 1 tooth', amount: 40 });
+    expect(quote(LUCKEY, mixed).total).toBe(115 + 115 + 40 + 50);
   });
 
-  it('the coat works with any style on a plain tooth', () => {
+  it('the coat works with any style on a plain tooth, and adds nothing', () => {
     const opal = tooth('yellow', '10k', { style: 'opals', pvd: 'pink' });
-    expect(quote(LUCKEY, [{ ...opal, index: 5 }]).total).toBe(115 + 60 + 35 + 50);
+    expect(quote(LUCKEY, [{ ...opal, index: 5 }]).total).toBe(115 + 60 + 50);
     expect(describeTooth(opal)).toBe('Yellow gold 10K · White opals · Pink PVD coat');
     expect(describeSpec({ ...DEFAULT_SET, teeth: [{ ...opal, index: 5 }] })).toContain('pink PVD colour coat');
     const cut = tooth('yellow', '10k', { style: 'diamond-cut', pvd: 'black' });
-    expect(quote(LUCKEY, [{ ...cut, index: 5 }]).total).toBe(115 + 20 + 35 + 50);
+    expect(quote(LUCKEY, [{ ...cut, index: 5 }]).total).toBe(115 + 20 + 50);
     expect(describeTooth(cut)).toBe('Yellow gold 10K · Diamond-cut · Black PVD coat');
   });
 
@@ -117,18 +119,21 @@ describe('PVD colour coat (MAG-214)', () => {
     expect(parseRenderSpec({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, pvd: 'not-a-colour' as never }] }, PVD_CATALOG)).toBeNull();
   });
 
-  it('a shop that does not offer the coat never sells it, and offering it needs a price', () => {
+  it('a shop that does not offer the coat never sells it, and offering it needs no price', () => {
     // The demo catalog has no pvd flag: a coated design is rejected.
     expect(parseRenderSpec({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, pvd: 'pink' }] }, VVSLAB_CONFIG.catalog)).toBeNull();
     expect(parseRenderSpec({ ...DEFAULT_SET, teeth: [{ ...tooth('yellow', '10k'), index: 5, pvd: 'pink' }] }, PVD_CATALOG)?.teeth[0].pvd).toBe('pink');
-    // Offering the coat with no price blocks saving — $0 is never assumed.
+    // Offering the coat saves with no price — there is no price to require.
+    // A stale pvdPerTooth left in a stored config is stripped, not an error:
+    // the field was optional and the feature never shipped, so nothing in
+    // production has it, but an old draft must not break on load.
     const catalog = { ...VVSLAB_CONFIG.catalog, pvd: true } as never;
-    const unpriced = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...LUCKEY, pvdPerTooth: undefined }, catalog });
-    expect(unpriced.ok).toBe(false);
-    if (!unpriced.ok) expect(unpriced.issues.some((issue) => /Add a price for the PVD colour coat/.test(issue.message))).toBe(true);
-    const priced = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: LUCKEY, catalog });
-    expect(priced.ok).toBe(true);
-    if (priced.ok) expect(priced.config.pricing.pvdPerTooth).toBe(35);
+    const offered = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: LUCKEY, catalog });
+    expect(offered.ok).toBe(true);
+    if (offered.ok) expect(offered.config.catalog.pvd).toBe(true);
+    const stale = parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...LUCKEY, pvdPerTooth: 35 } as never, catalog });
+    expect(stale.ok).toBe(true);
+    if (stale.ok) expect('pvdPerTooth' in stale.config.pricing).toBe(false);
   });
 
   it('the render prompt carries the colour, in the main prompt and the section edits', () => {
@@ -141,28 +146,25 @@ describe('PVD colour coat (MAG-214)', () => {
     expect(describeSpec({ ...DEFAULT_SET, teeth: setOf(2, 'yellow', '10k') })).not.toContain('PVD');
   });
 
-  it('the coat stays in the percentage discount base, like colour and extras', () => {
-    // 12 teeth, no set prices, 10% off from 12: the base is metal $1,380 +
-    // coat $420 = $1,800, so the discount is $180.
+  it('the coat is excluded from the percentage discount base', () => {
+    // 12 teeth, no set prices, 10% off from 12: the base is metal $1,380
+    // only — the coat adds nothing, so there is nothing of it in the base.
     const pricing: TenantPricing = { ...LUCKEY, setPrices: undefined, volume: [{ minTeeth: 12, percentOff: 10 }] };
     const teeth = setOf(12, 'yellow', '10k', { pvd: 'pink' });
-    expect(line(pricing, teeth, 'Set discount')).toEqual({ label: 'Set discount · 12 teeth, 10% off', amount: -180 });
-    expect(quote(pricing, teeth).total).toBe(50 + 1380 + 420 - 180);
+    expect(line(pricing, teeth, 'Set discount')).toEqual({ label: 'Set discount · 12 teeth, 10% off', amount: -138 });
+    expect(quote(pricing, teeth).total).toBe(50 + 1380 - 138);
   });
 
-  it('the back-teeth delta includes the coat', () => {
-    // 12 teeth 10K pink, back teeth at 50%: 6 back teeth × ($115 + $35) ×
-    // −50% = −$450.
+  it('the back-teeth delta excludes the coat', () => {
+    // 12 teeth 10K pink, back teeth at 50%: 6 back teeth × $115 × −50% =
+    // −$345. The coat contributes nothing to the delta.
     const half: TenantPricing = { ...LUCKEY, setPrices: undefined, positions: { premolar: 50, molar: 50 } };
     const teeth = setOf(12, 'yellow', '10k', { pvd: 'pink' });
-    expect(line(half, teeth, 'Back teeth')).toEqual({ label: 'Back teeth · 6 teeth', amount: -450 });
-    expect(quote(half, teeth).total).toBe(50 + 1380 + 420 - 450);
+    expect(line(half, teeth, 'Back teeth')).toEqual({ label: 'Back teeth · 6 teeth', amount: -345 });
+    expect(quote(half, teeth).total).toBe(50 + 1380 - 345);
   });
 
-  it('the coat still applies on a market-linked quote — it is labour, not a metal price', () => {
-    // Decision: the colour surcharge returns $0 on a quote because the quote
-    // already is that metal's price. A PVD coat is a coating applied to the
-    // finished tooth, like a named extra, so it stacks on the quote.
+  it('a market-linked quote charges the quote only — the coat adds nothing', () => {
     const quoted: TenantPricing = {
       ...LUCKEY,
       market: {
@@ -173,18 +175,20 @@ describe('PVD colour coat (MAG-214)', () => {
     };
     const teeth = setOf(12, 'yellow', '10k', { pvd: 'pink' });
     expect(line(quoted, teeth, 'Metal')).toEqual({ label: 'Metal · 12 teeth', amount: 1680 });
-    expect(line(quoted, teeth, 'Pink PVD')).toEqual({ label: 'Pink PVD coat · 12 teeth', amount: 420 });
-    expect(quote(quoted, teeth).total).toBe(50 + 1680 + 420);
+    expect(line(quoted, teeth, 'PVD')).toBeUndefined();
+    expect(quote(quoted, teeth).total).toBe(50 + 1680);
     expect(quote(quoted, teeth).market).toBeDefined();
+    // The same teeth without the coat cost exactly the same.
+    expect(quote(quoted, setOf(12, 'yellow', '10k')).total).toBe(50 + 1680);
   });
 
-  it('turning the coat on shows up in the publish diff', () => {
+  it('turning the coat on shows up in the publish diff, with no price line', () => {
     const before = { ...VVSLAB_CONFIG, pricing: VVSLAB_CONFIG.pricing };
-    const after = { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, pvdPerTooth: 35 }, catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    const after = { ...VVSLAB_CONFIG, pricing: VVSLAB_CONFIG.pricing, catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
     const texts = describeChanges(before, after).map((change) => change.text);
     expect(texts).toContain('PVD colour coat turned on');
-    expect(texts).toContain('PVD colour coat: $0 → $35 per tooth');
-    const off = { ...VVSLAB_CONFIG, pricing: { ...VVSLAB_CONFIG.pricing, pvdPerTooth: 35 }, catalog: { ...VVSLAB_CONFIG.catalog, pvd: false } };
+    expect(texts.some((text) => text.startsWith('PVD colour coat:'))).toBe(false);
+    const off = { ...VVSLAB_CONFIG, pricing: VVSLAB_CONFIG.pricing, catalog: { ...VVSLAB_CONFIG.catalog, pvd: false } };
     expect(describeChanges(after, off).map((change) => change.text)).toContain('PVD colour coat turned off');
   });
 });

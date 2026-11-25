@@ -54,7 +54,7 @@ import {
   type ToothDesign,
 } from '../lib/renderSpec';
 import { CUTS, FANG_OPTIONS, FANG_TEETH, GRILLZ_TYPES, label, METALS, opalOf, SETTINGS, STONES, STYLES } from '../lib/renderSpec';
-import { depositFor, displayTotal, extraPrice, nearestOffered, offered, priceBreakdown, pvdPrice } from '../lib/pricing';
+import { depositFor, displayTotal, extraPrice, nearestOffered, offered, priceBreakdown } from '../lib/pricing';
 import { fontPairClass, themeStyle } from '../lib/tenant/theme';
 import { monogram } from '../lib/tenant/monogram';
 import { useTenant } from '../lib/tenant/useTenant';
@@ -1210,7 +1210,7 @@ function Configurator() {
                     )}
                     {catalog.pvd && shown.type === 'plain' && (
                       <div className="opal-row" role="group" aria-label="PVD colour coat">
-                        <span>PVD coat · {hints.extra(pvdPrice(tenant.config.pricing), true)}</span>
+                        <span>PVD coat</span>
                         {PVD_COLORS.map((color) => (
                           <button
                             key={color.id}
