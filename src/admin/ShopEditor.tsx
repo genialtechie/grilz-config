@@ -17,6 +17,7 @@ import { MarketPricing } from './MarketPricing';
 import { StripeConnect } from '../dashboard/StripeConnect';
 import { SAMPLE_PRICING } from './templates';
 import { toggleOption, type OptionList } from './toggleOption';
+import { moneyKeystroke } from './moneyInput';
 
 // One page per shop: edit the config as a draft, preview it, publish it, and
 // switch the shop live or paused. Validation is the same zod schema the API
@@ -75,12 +76,36 @@ function Issue({ issues, path }: { issues: Map<string, string>; path: string }) 
 }
 
 function Money({ label, value, onChange, step = 5, suffix = '', min = 0 }: { label: string; value: number | undefined; onChange: (value: number) => void; step?: number; suffix?: string; min?: number }) {
+  // The raw text, held so a half-typed number survives: a type="number"
+  // input sanitizes a lone "-" to "" on read AND on controlled write, so a
+  // negative could never be typed at all — it landed as +$60 (MAG-219
+  // re-review F1). Fields that allow negatives (min < 0) are therefore
+  // type="text" (inputMode="decimal" keeps the numeric keyboard) and publish
+  // through moneyKeystroke, which holds back intermediates ("-", "6.").
+  // The effect keeps the field in sync when the draft changes from outside
+  // (a toggle seeding a price, or a labour fallback following its style
+  // price). A blur reverts text that never parsed (e.g. pasted letters).
+  const [text, setText] = useState(value === undefined ? '' : String(value));
+  useEffect(() => { setText(value === undefined ? '' : String(value)); }, [value]);
   return (
     <label className="admin-field admin-field--money">
       <span>{label}</span>
       <div className="admin-prefix">
         {!suffix && <em>$</em>}
-        <input type="number" inputMode="decimal" min={min} step={step} value={value ?? ''} onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))} />
+        <input
+          type={min < 0 ? 'text' : 'number'}
+          inputMode="decimal"
+          min={min}
+          step={step}
+          value={text}
+          onChange={(event) => {
+            const raw = event.target.value;
+            setText(raw);
+            const parsed = moneyKeystroke(raw);
+            if (parsed !== undefined) onChange(parsed);
+          }}
+          onBlur={() => setText(value === undefined ? '' : String(value))}
+        />
         {suffix && <em>{suffix}</em>}
       </div>
     </label>
@@ -859,7 +884,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <p className="admin-muted admin-section__hint">An open face holds fewer stones than a full face. Charge a share of the stone and setting prices, plus your open-face labour.</p>
                     <div className="admin-grid admin-grid--prices">
                       <Money label="Share of stone price" step={5} suffix="%" value={pricing.icedOpenFace?.stoneShare ?? 100} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { ...next.pricing.icedOpenFace, stoneShare: Math.min(100, value) }; })} />
-                      <Money label="Open-face labour" value={pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face']} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
+                      <Money label="Open-face labour" min={-100_000} value={pricing.icedOpenFace?.perTooth ?? pricing.stylePerTooth['open-face']} onChange={(value) => update((next) => { next.pricing.icedOpenFace = { stoneShare: next.pricing.icedOpenFace?.stoneShare ?? 100, perTooth: value }; })} />
                     </div>
                   </>
                 )}
@@ -869,7 +894,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                     <p className="admin-muted admin-section__hint">An opal centre with a border of stones round it. Charge a share of the stone and setting prices, plus the opal. Until you set them, these follow your open-face share and your Opals price.</p>
                     <div className="admin-grid admin-grid--prices">
                       <Money label="Share of stone price" step={5} suffix="%" value={icedOpalPrice(pricing).stoneShare} onChange={(value) => update((next) => { next.pricing.icedOpal = { ...next.pricing.icedOpal, stoneShare: Math.min(100, value) }; })} />
-                      <Money label="Opal and labour" value={icedOpalPrice(pricing).perTooth} onChange={(value) => update((next) => { next.pricing.icedOpal = { ...next.pricing.icedOpal, perTooth: value }; })} />
+                      <Money label="Opal and labour" min={-100_000} value={icedOpalPrice(pricing).perTooth} onChange={(value) => update((next) => { next.pricing.icedOpal = { ...next.pricing.icedOpal, perTooth: value }; })} />
                     </div>
                   </>
                 )}

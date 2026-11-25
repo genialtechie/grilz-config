@@ -113,6 +113,18 @@ describe('a below-base style (MAG-219)', () => {
     expect(quote({ ...priced, stylePerTooth: { ...priced.stylePerTooth, 'open-face': 0 } }, teeth).total).toBe(1380 - 138 + 50);
   });
 
+  it('never lets the % discount flip into a surcharge on set-priced teeth (re-review F2)', () => {
+    // Set-priced 12× 10K open-face + a 10% volume tier: the % base is just
+    // the -$720 finish (set-priced metal is 0 in the base), so without the
+    // clamp the "discount" line would be +$72 — a surcharge labelled as a
+    // discount. The discount is clamped to ≤ 0, so the tier simply gives
+    // nothing here and the total is the same $580 as without the tier.
+    const priced: TenantPricing = { ...BELOW, volume: [{ minTeeth: 12, percentOff: 10 }] };
+    const teeth = setOf(12, 'yellow', '10k', { style: 'open-face' });
+    expect(line(priced, teeth, 'Set discount')).toBeUndefined();
+    expect(quote(priced, teeth).total).toBe(580);
+  });
+
   it('counts in the back-teeth delta — a cheaper back tooth saves less on the back-teeth share', () => {
     // 3 front teeth + 2 molars at 50%: each back tooth is (metal $115 +
     // finish -$60) × (0.5 − 1) = -$27.50, so -$55 over the two.

@@ -283,7 +283,13 @@ export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set
     return total + metalPerTooth(pricing, tooth.metal, tooth.karat);
   }, 0);
   const percent = volumeDiscount(pricing, teeth.length);
-  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, -Math.round(((volumeMetal + iced + finishes + stones + settings + grades + colour + extras + backRest) * percent) / 100));
+  // A discount line can never be positive: on set-priced teeth the base can go
+  // negative (a below-base finish is the only component — set-priced metal is
+  // 0), which flipped the "discount" into a surcharge (MAG-219 re-review F2,
+  // the same bug class MAG-204 fixed once by excluding backSet). Clamping the
+  // line, not the base, preserves the MAG-204 decision that finishes on
+  // set-priced teeth sit in the % base.
+  if (percent) add(`Set discount · ${teeth.length} teeth, ${percent}% off`, Math.min(0, -Math.round(((volumeMetal + iced + finishes + stones + settings + grades + colour + extras + backRest) * percent) / 100)));
   if (teeth.some((tooth) => tooth.type === 'photo')) add('Photo artwork', pricing.extras.photo);
   // Fangs are built on the upper canines: none in the set, no fangs to charge for.
   const fangs = fangCount(teeth, set.fangs);
