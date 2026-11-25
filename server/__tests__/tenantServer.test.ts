@@ -48,6 +48,16 @@ describe('tenant lookup', () => {
     await forgetTenant('vvslab');
   });
 
+  it('forces kind demo for the demo slug whatever the row says', async () => {
+    const demoConfig = { ...structuredClone(VVSLAB_CONFIG), catalog: { ...VVSLAB_CONFIG.catalog, pvd: true } };
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => (String(input).includes('/rest/v1/tenants?') ? Response.json([row('vvslab', demoConfig, { kind: 'shop' })]) : Response.json([]))));
+    const lookup = await getPublishedTenant('vvslab', env);
+    expect(lookup.ok && lookup.tenant.kind).toBe('demo');
+    expect(lookup.ok && lookup.tenant.version).toBe(2);
+    expect(lookup.ok && lookup.tenant.config.catalog.pvd).toBe(true);
+    await forgetTenant('vvslab');
+  });
+
   it('falls back to the bundled demo when the database lookup fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     mockFetch(async () => new Response('down', { status: 500 }));

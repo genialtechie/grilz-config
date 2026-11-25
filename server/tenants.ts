@@ -112,7 +112,9 @@ export async function getPublishedTenant(slug: string, env: TenantEnv): Promise<
             // Demo pages are showcase pages, not trial shops: the demo never
             // goes paused on a trial end, whatever its stored trial fields say.
             status: row.status === 'live' && slug !== TENANT_ZERO.slug && trialExpired(row) ? 'paused' : (row.status as TenantStatus),
-            kind: row.kind as PublishedTenant['kind'],
+            // The demo is a demo whatever the row says: kind drives lead routing
+            // and the builder's demo treatment, so it comes from the slug, not the row.
+            kind: slug === TENANT_ZERO.slug ? 'demo' : (row.kind as PublishedTenant['kind']),
             version: published.version,
             // A shop on market pricing gets today's per-tooth quote (or its fixed prices without one).
             config: parsed.config.pricing.market ? { ...parsed.config, pricing: withMarketQuote(parsed.config.pricing, await latestSpot(env)) } : parsed.config,
