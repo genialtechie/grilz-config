@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cutPrice, priceBreakdown, priceHints } from '../pricing';
 import { checkLines, quickPricing } from '../quickPricing';
 import { DEFAULT_SET, parseRenderSpec, type CutId, type RenderTooth, type ToothDesign } from '../renderSpec';
+import { defaultSet, shopCatalog } from '../tenant/catalog';
 import { describeChanges } from '../tenant/diff';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
@@ -83,5 +84,41 @@ describe('cut prices', () => {
     const answers = { gold: 150, iced: 225, fee: { kind: 'service' as const, amount: 0 } };
     expect(quickPricing(ceddy, answers).cuts).toEqual(ceddy.cuts);
     expect(checkLines(ceddy)).toEqual(checkLines(legacy));
+  });
+});
+
+// MAG-205: no forced cut, and a fee the shop names.
+describe('no forced cut', () => {
+  // Luckey's: $50 fee, permanent look $100, 10K gold $115 a tooth (a 6x6 is $1,380 of metal).
+  const luckey: TenantPricing = { ...legacy, base: 50, baseLabel: 'Appointment fee', metalPerTooth: { ...legacy.metalPerTooth, yellow: 115 }, karatMultiplier: { ...legacy.karatMultiplier, '10k': 1 }, extras: { ...legacy.extras, permanent: 100 }, cuts: undefined };
+  const sixBySix = [...SIX_TOP, ...SIX_BOTTOM];
+  const permanentOnly = { ...VVSLAB_CONFIG.catalog, cuts: ['permanent' as const] };
+
+  it('permanent look alone gets a free Standard default: a 10K 6x6 is $1,430', () => {
+    const set = defaultSet(permanentOnly, luckey);
+    expect(set.cut).toBe('standard');
+    expect(shopCatalog(permanentOnly, luckey).cuts.map((cut) => cut.id)).toEqual(['standard', 'permanent']);
+    expect(priceBreakdown(luckey, sixBySix, set).total).toBe(1430);
+    expect(priceBreakdown(luckey, sixBySix, { ...set, cut: 'permanent' }).total).toBe(1530);
+  });
+
+  it('a shop with a free cut keeps its options and default', () => {
+    expect(shopCatalog(VVSLAB_CONFIG.catalog, luckey).cuts.map((cut) => cut.id)).toEqual(['deep', 'permanent']);
+    expect(defaultSet(VVSLAB_CONFIG.catalog, luckey).cut).toBe('deep');
+  });
+
+  it('with no cuts the config saves, the builder has no cuts and nothing is charged', () => {
+    const none = { ...VVSLAB_CONFIG.catalog, cuts: [] };
+    expect(parseTenantConfig({ ...VVSLAB_CONFIG, catalog: none, pricing: luckey }).ok).toBe(true);
+    expect(shopCatalog(none, luckey).cuts).toEqual([]);
+    const set = defaultSet(none, luckey);
+    expect(priceBreakdown(luckey, sixBySix, set).total).toBe(1430);
+    expect(parseRenderSpec({ ...set, teeth: sixBySix }, none)).not.toBeNull();
+  });
+
+  it('the fee label shows in the breakdown, defaulting to "Service fee"', () => {
+    expect(priceBreakdown(luckey, SIX_TOP, DEFAULT_SET).lines[0]).toEqual({ label: 'Appointment fee', amount: 50 });
+    expect(priceBreakdown({ ...luckey, baseLabel: undefined }, SIX_TOP, DEFAULT_SET).lines[0].label).toBe('Service fee');
+    expect(describeChanges({ ...VVSLAB_CONFIG, pricing: legacy }, { ...VVSLAB_CONFIG, pricing: luckey }).map((c) => c.text)).toContain(`Appointment fee: $${legacy.base} → $50`);
   });
 });

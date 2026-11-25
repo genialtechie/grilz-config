@@ -3,6 +3,7 @@ import { Check, Pencil } from 'lucide-react';
 import { publishAsMember, saveDraft, type MyShop } from '../admin/data';
 import { loadShopConfig, quickPricingFits, type Loaded } from './shopConfig';
 import { checkLines, editLine, quickAnswers, quickPricing, type CheckLine, type QuickAnswers } from '../lib/quickPricing';
+import { feeLabel } from '../lib/pricing';
 import type { TenantConfig } from '../lib/tenant/schema';
 
 const usd = (value: number) => `$${value.toLocaleString('en-US')}`;
@@ -76,7 +77,7 @@ export function QuickPricing({ shop, prompt = false, onSaved }: { shop: MyShop; 
 
   const lines = checkLines(pricing ?? loaded.config.pricing);
   const shown = pricing ?? loaded.config.pricing;
-  const feeLine = shown.base > 0 ? `Plus a ${usd(shown.base)} service fee on every order.` : shown.minimumOrder > 0 ? `Orders under ${usd(shown.minimumOrder)} are raised to ${usd(shown.minimumOrder)}.` : 'No service fee or minimum order.';
+  const feeLine = shown.base > 0 ? `Plus a ${usd(shown.base)} ${feeLabel(shown).toLowerCase()} on every order.` : shown.minimumOrder > 0 ? `Orders under ${usd(shown.minimumOrder)} are raised to ${usd(shown.minimumOrder)}.` : `No ${feeLabel(shown).toLowerCase()} or minimum order.`;
 
   return (
     <section className="admin-card admin-section dash-quick">
@@ -95,17 +96,17 @@ export function QuickPricing({ shop, prompt = false, onSaved }: { shop: MyShop; 
               <small id="quick-iced-hint" className="admin-muted dash-small">With moissanite: gold and stones together.</small>
             </label>
             <fieldset className="admin-field">
-              <legend>Service fee or minimum order</legend>
+              <legend>{feeLabel(shown)} or minimum order</legend>
               <div className="dash-quick__fee">
                 {(['service', 'minimum', 'none'] as const).map((kind) => (
                   <label key={kind} className={`dash-quick__choice${answers.feeKind === kind ? ' is-active' : ''}`}>
                     <input type="radio" name="fee" checked={answers.feeKind === kind} onChange={() => setAnswers({ ...answers, feeKind: kind })} />
-                    {{ service: 'Service fee', minimum: 'Minimum order', none: 'None' }[kind]}
+                    {{ service: feeLabel(shown), minimum: 'Minimum order', none: 'None' }[kind]}
                   </label>
                 ))}
               </div>
               {answers.feeKind !== 'none' && (
-                <div className="admin-prefix"><em>$</em><input type="number" inputMode="decimal" min={0} aria-label={answers.feeKind === 'service' ? 'Service fee' : 'Minimum order'} value={answers.fee} onChange={(event) => setAnswers({ ...answers, fee: event.target.value })} /></div>
+                <div className="admin-prefix"><em>$</em><input type="number" inputMode="decimal" min={0} aria-label={answers.feeKind === 'service' ? feeLabel(shown) : 'Minimum order'} value={answers.fee} onChange={(event) => setAnswers({ ...answers, fee: event.target.value })} /></div>
               )}
             </fieldset>
             {notice && <p className={notice.kind === 'ok' ? 'admin-notice' : 'admin-error'} role="status">{notice.text}</p>}

@@ -31,7 +31,7 @@ describe('fit (mould) fees', () => {
   });
 
   it("starts on the mail-in kit, or the shop's first fit", () => {
-    expect(defaultSet(VVSLAB_CONFIG.catalog).mold).toBe('kit');
-    expect(defaultSet({ ...VVSLAB_CONFIG.catalog, molds: ['store'] }).mold).toBe('store');
+    expect(defaultSet(VVSLAB_CONFIG.catalog, VVSLAB_CONFIG.pricing).mold).toBe('kit');
+    expect(defaultSet({ ...VVSLAB_CONFIG.catalog, molds: ['store'] }, VVSLAB_CONFIG.pricing).mold).toBe('store');
   });
 });

@@ -69,7 +69,7 @@ const preview = (tenant: TenantRow, config: TenantConfig | null) => {
   if (!config) return { name: tenant.name, slug: tenant.slug };
   const tooth = defaultTooth(config.catalog);
   const teeth = [5, 6, 7, 8, 9, 10].map((index) => ({ ...tooth, index }));
-  const from = config.pricing.display === 'hidden' ? null : priceBreakdown(config.pricing, teeth, defaultSet(config.catalog), config.catalog.addOns).total;
+  const from = config.pricing.display === 'hidden' ? null : priceBreakdown(config.pricing, teeth, defaultSet(config.catalog, config.pricing), config.catalog.addOns).total;
   return { name: config.brand.name, slug: tenant.slug, logo: config.brand.logo ?? null, accent: config.brand.accent, fontPair: config.brand.fontPair, from };
 };
 

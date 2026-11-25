@@ -64,7 +64,8 @@ export const CatalogSchema = z.object({
   styles: nonEmptyUnique(StyleIdSchema),
   settings: nonEmptyUnique(SettingIdSchema),
   stones: nonEmptyUnique(StoneIdSchema),
-  cuts: nonEmptyUnique(CutIdSchema),
+  /** May be empty: no cut choice, and the builder hides the Cut group (MAG-205). */
+  cuts: z.array(CutIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.'),
   molds: nonEmptyUnique(MoldIdSchema),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
@@ -97,6 +98,8 @@ export const PricingSchema = z.object({
   source: z.enum(['default', 'quick', 'custom']).optional(),
   display: z.enum(PRICE_DISPLAYS),
   base: money,
+  /** What the per-order fee is called ("Appointment fee", "Mold kit"…); absent = "Service fee". */
+  baseLabel: z.string().trim().max(40).optional(),
   metalPerTooth: priceMap(MetalIdSchema),
   /** Applies to gold only (yellow, white, rose). */
   karatMultiplier: z.record(KaratIdSchema, multiplier),

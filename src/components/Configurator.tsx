@@ -1223,6 +1223,7 @@ function Configurator() {
                       </div>
                     </LookGroup>
                   )}
+                  {catalog.cuts.length > 0 && (
                   <LookGroup
                     id="cut"
                     title="Cut"
@@ -1245,6 +1246,7 @@ function Configurator() {
                       ))}
                     </div>
                   </LookGroup>
+                  )}
                 </>
               )}
 

@@ -37,7 +37,7 @@ export function shopHead(html: string, tenant: PublishedTenant, origin: string, 
   if (logo) out = out.replace('</head>', `    <link rel="preload" as="image" href="${escape(image)}" fetchpriority="high" />\n  </head>`);
   // The still of the set the builder opens on (src/lib/poster.ts): on screen before the 3D model is.
   // The app's loading frame reads this tag to show it straight away (BuilderShell).
-  const poster = posterFor(defaultTooth(tenant.config.catalog), defaultSet(tenant.config.catalog));
+  const poster = posterFor(defaultTooth(tenant.config.catalog), defaultSet(tenant.config.catalog, tenant.config.pricing));
   if (poster) out = out.replace('</head>', `    <link rel="preload" as="image" href="${poster}" fetchpriority="high" />\n  </head>`);
   // The shop's public config, so the builder starts without waiting on /api/tenant.
   // This page is cached for minutes; the app still asks /api/tenant and takes its answer if it differs.

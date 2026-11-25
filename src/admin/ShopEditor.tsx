@@ -1,10 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Archive, ArrowLeft, Eye, EyeOff, Pause, Play, Rocket, Save, Trash2, Upload, X } from 'lucide-react';
-import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
+import { CUTS, SELLABLE_CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, MAX_ADD_ONS, METALS, MOLDS, SETTINGS, STONES, STYLES, type CutId } from '../lib/renderSpec';
 import { describeChanges } from '../lib/tenant/diff';
 import { CUT_UNITS, FONT_PAIRS, PRICE_DISPLAYS, parseTenantConfig, type ICED_KEYS, type TenantConfig, type TenantPricing } from '../lib/tenant/schema';
-import { cutPrice, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
+import { cutPrice, feeLabel, icedOpalPrice, metalPerTooth, type CutPrice } from '../lib/pricing';
 import { contrast, usableAccent } from '../lib/tenant/theme';
 import { getTenant, offboardShop, publish, publishAsMember, saveDraft, setStatus, STATUS_LABEL, uploadLogo, type ConfigRow, type TenantRow } from './data';
 import { LeadsPanel } from './LeadsPanel';
@@ -535,7 +535,7 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
                 <h3>Stones</h3><Checks options={STONES} selected={catalog.stones} onToggle={(id, on) => toggle('stones', id, on)} />
               </>
             )}
-            <h3>Fit</h3><Checks options={CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
+            <h3>Fit</h3><Checks options={SELLABLE_CUTS} selected={catalog.cuts} onToggle={(id, on) => toggle('cuts', id, on)} />
             <h3>Molds</h3><Checks options={MOLDS} selected={catalog.molds} onToggle={(id, on) => toggle('molds', id, on)} />
             <h3>Extras</h3>
             <div className="admin-checks">
@@ -563,7 +563,11 @@ export function ShopEditor({ mode = 'admin', slug: slugProp, role = 'admin' }: E
               ))}
             </div>
             <div className="admin-grid admin-grid--prices">
-              <Money label="Service fee (per order)" value={pricing.base} onChange={(value) => update((next) => { next.pricing.base = value; })} />
+              <label className="admin-field">
+                <span>Fee name</span>
+                <input type="text" maxLength={40} placeholder="Service fee" value={pricing.baseLabel ?? ''} onChange={(event) => update((next) => { next.pricing.baseLabel = event.target.value || undefined; })} />
+              </label>
+              <Money label={`${feeLabel(pricing)} (per order)`} value={pricing.base} onChange={(value) => update((next) => { next.pricing.base = value; })} />
               <Money label="Minimum order" value={pricing.minimumOrder} onChange={(value) => update((next) => { next.pricing.minimumOrder = value; })} />
             </div>
             <h3>Metal</h3>

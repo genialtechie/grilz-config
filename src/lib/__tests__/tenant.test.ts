@@ -79,7 +79,7 @@ describe('tenant config schema', () => {
 
 describe('shop catalog', () => {
   it('lists only what the shop sells, in platform order', () => {
-    const cat = shopCatalog(budget().catalog);
+    const cat = shopCatalog(budget().catalog, budget().pricing);
     expect(cat.metals.map((m) => m.id)).toEqual(['yellow', 'white']);
     expect(cat.inscriptionStyles).toEqual([]);
     expect(cat.fangs).toBe(false);
