@@ -30,6 +30,9 @@ export const metalPerTooth = (pricing: TenantPricing, metal: MetalId, karat: Kar
 
 export type CutPrice = { amount: number; per: (typeof CUT_UNITS)[number] };
 
+/** What the shop calls its per-order fee. */
+export const feeLabel = (pricing: Pick<TenantPricing, 'baseLabel'>) => pricing.baseLabel?.trim() || 'Service fee';
+
 /** What a fit costs and how it's counted. Shops without cut prices keep the first rule: permanent look per order, deep cut free. */
 export const cutPrice = (pricing: TenantPricing, cut: CutId): CutPrice =>
   pricing.cuts?.[cut] ?? { amount: cut === 'permanent' ? pricing.extras.permanent : 0, per: 'order' };
@@ -92,7 +95,7 @@ export const positionFactor = (pricing: TenantPricing, index: number) => {
  * before the shop's minimum applies.
  */
 export const priceBreakdown = (pricing: TenantPricing, teeth: RenderTooth[], set: SetOptions, addOns: readonly AddOn[] = [], promo: Promo | null = null): PriceBreakdown => {
-  const lines: PriceLine[] = [{ label: 'Service fee', amount: pricing.base }];
+  const lines: PriceLine[] = [{ label: feeLabel(pricing), amount: pricing.base }];
   if (teeth.length === 0) return { lines, total: pricing.base };
   const sum = (fn: (tooth: ToothDesign) => number) => teeth.reduce((total, tooth) => total + fn(tooth), 0);
   const add = (label: string, amount: number) => amount && lines.push({ label, amount });

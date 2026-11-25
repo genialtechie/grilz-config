@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { cutPrice, priceBreakdown, priceHints } from '../pricing';
+import { cutPrice, feeLabel, priceBreakdown, priceHints } from '../pricing';
 import { checkLines, quickPricing } from '../quickPricing';
-import { DEFAULT_SET, parseRenderSpec, type CutId, type RenderTooth, type ToothDesign } from '../renderSpec';
+import { DEFAULT_SET, parseRenderSpec, summarizeDesign, type CutId, type RenderTooth, type ToothDesign } from '../renderSpec';
+import { defaultSet, shopCatalog } from '../tenant/catalog';
 import { describeChanges } from '../tenant/diff';
 import { parseTenantConfig, type TenantPricing } from '../tenant/schema';
 import { VVSLAB_CONFIG } from '../tenant/vvslab';
+import { toggleOption } from '../../admin/toggleOption';
 
 // What a fit costs, per order, per arch or per tooth (MAG-96).
 
@@ -83,5 +85,152 @@ describe('cut prices', () => {
     const answers = { gold: 150, iced: 225, fee: { kind: 'service' as const, amount: 0 } };
     expect(quickPricing(ceddy, answers).cuts).toEqual(ceddy.cuts);
     expect(checkLines(ceddy)).toEqual(checkLines(legacy));
+  });
+});
+
+// MAG-205: no forced cut, and a fee the shop names.
+describe('no forced cut', () => {
+  // Luckey's real config: $50 fee, deep cuts included (free), permanent look $100 per set, 10K gold $115 a tooth (a 6x6 is $1,380 of metal).
+  const luckey: TenantPricing = { ...legacy, base: 50, baseLabel: 'Appointment fee', metalPerTooth: { ...legacy.metalPerTooth, yellow: 115 }, karatMultiplier: { ...legacy.karatMultiplier, '10k': 1 }, extras: { ...legacy.extras, permanent: 100 }, cuts: { deep: { amount: 0, per: 'order' as const }, permanent: { amount: 100, per: 'order' as const } } };
+  const sixBySix = [...SIX_TOP, ...SIX_BOTTOM];
+
+  it('Atlanta (deep $5/tooth, permanent $100/arch, both paid): no free option, deep preselected, $30 Deep cut line', () => {
+    const catalog = VVSLAB_CONFIG.catalog;
+    expect(shopCatalog(catalog).cuts.map((cut) => cut.id)).toEqual(['deep', 'permanent']);
+    const set = defaultSet(catalog, ceddy);
+    expect(set.cut).toBe('deep');
+    expect(priceBreakdown(ceddy, SIX_TOP, set).lines).toContainEqual({ label: 'Deep cut · 6 teeth', amount: 30 });
+  });
+
+  // Luckey includes deep cuts for free and charges $100 for Permanent. His Deep $0 entry is his
+  // real pricing, so a 10K 6x6 quoting $1,430 ($1,380 metal + $50 fee + $0 cut) is CORRECT.
+  it('Luckey (deep free, permanent $100): both offered, free deep preselected, a 10K 6x6 is $1,430 ($1,380 metal + $50 fee + $0 cut)', () => {
+    const catalog = VVSLAB_CONFIG.catalog;
+    expect(shopCatalog(catalog).cuts.map((cut) => cut.id)).toEqual(['deep', 'permanent']);
+    const set = defaultSet(catalog, luckey);
+    expect(set.cut).toBe('deep');
+    const quoted = priceBreakdown(luckey, sixBySix, set);
+    expect(quoted.total).toBe(1430);
+    expect(quoted.lines).toContainEqual({ label: 'Appointment fee', amount: 50 });
+  });
+
+  it('a generic shop selling only Permanent at $100: permanent preselected, a 10K 6x6 is $1,530', () => {
+    const permanentOnly = { ...VVSLAB_CONFIG.catalog, cuts: ['permanent' as const] };
+    const pricing = { ...luckey, cuts: { permanent: { amount: 100, per: 'order' as const } } };
+    const set = defaultSet(permanentOnly, pricing);
+    expect(set.cut).toBe('permanent');
+    expect(shopCatalog(permanentOnly).cuts.map((cut) => cut.id)).toEqual(['permanent']);
+    expect(priceBreakdown(pricing, sixBySix, set).total).toBe(1530);
+  });
+
+  it('a shop with a free cut preselects the first free one', () => {
+    expect(defaultSet(VVSLAB_CONFIG.catalog, luckey).cut).toBe('deep');
+    // Deep is paid, permanent is free: the free one wins over the platform default.
+    const permanentFree = { ...legacy, cuts: { deep: { amount: 5, per: 'tooth' as const }, permanent: { amount: 0, per: 'order' as const } } };
+    expect(defaultSet(VVSLAB_CONFIG.catalog, permanentFree).cut).toBe('permanent');
+  });
+
+  it('with no cuts the config saves, the builder has no cuts and nothing is charged', () => {
+    const none = { ...VVSLAB_CONFIG.catalog, cuts: [] };
+    const parsed = parseTenantConfig({ ...VVSLAB_CONFIG, catalog: none, pricing: luckey });
+    expect(parsed.ok).toBe(true);
+    expect(shopCatalog(none).cuts).toEqual([]);
+    const set = defaultSet(none, luckey);
+    expect(set.cut).toBe('deep');
+    const quoted = priceBreakdown(luckey, sixBySix, set);
+    expect(quoted.total).toBe(1430);
+    expect(quoted.lines.some((line) => /^(Deep cut|Permanent look)/.test(line.label))).toBe(false);
+    const stored = parseRenderSpec(JSON.parse(JSON.stringify({ ...set, teeth: sixBySix })), none);
+    expect(stored).not.toBeNull();
+    // Nor does its summary name a cut the shop doesn't sell.
+    expect(summarizeDesign(stored!, [], none.cuts)).not.toContain('Deep cut');
+    expect(summarizeDesign(stored!)).toContain('Deep cut');
+  });
+
+  it('prunes stale cut prices, so turning every cut off stops the charge', () => {
+    const none = { ...VVSLAB_CONFIG.catalog, cuts: [] };
+    const parsed = parseTenantConfig({ ...VVSLAB_CONFIG, catalog: none, pricing: ceddy });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.config.pricing.cuts).toBeUndefined();
+    const quoted = priceBreakdown(parsed.config.pricing, SIX_TOP, defaultSet(none, parsed.config.pricing));
+    expect(quoted.lines.some((line) => /^Deep cut/.test(line.label))).toBe(false);
+    expect(quoted.total).toBe(priceBreakdown(legacy, SIX_TOP, DEFAULT_SET).total);
+    // One cut left: only its price survives.
+    const kept = parseTenantConfig({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts: ['permanent'] }, pricing: ceddy });
+    expect(kept.ok && kept.config.pricing.cuts).toEqual({ permanent: { amount: 100, per: 'arch' } });
+  });
+
+  it('the fee label shows in the breakdown, defaulting to "Service fee"', () => {
+    expect(priceBreakdown(luckey, SIX_TOP, DEFAULT_SET).lines[0]).toEqual({ label: 'Appointment fee', amount: 50 });
+    expect(priceBreakdown({ ...luckey, baseLabel: undefined }, SIX_TOP, DEFAULT_SET).lines[0].label).toBe('Service fee');
+    expect(describeChanges({ ...VVSLAB_CONFIG, pricing: legacy }, { ...VVSLAB_CONFIG, pricing: luckey }).map((c) => c.text)).toContain(`Appointment fee: $${legacy.base} → $50`);
+  });
+
+  it('renaming the fee alone shows up as a change, so it can be published', () => {
+    const renamed = { ...legacy, baseLabel: 'VIP fee' };
+    expect(describeChanges({ ...VVSLAB_CONFIG, pricing: legacy }, { ...VVSLAB_CONFIG, pricing: renamed }).map((c) => c.text)).toEqual(['Fee name: Service fee → VIP fee']);
+  });
+
+  it('validates the fee label: optional, trimmed, up to 40 characters', () => {
+    const withLabel = (baseLabel?: string) => parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...legacy, baseLabel } }).ok;
+    expect(withLabel(undefined)).toBe(true);
+    expect(withLabel('Appointment fee')).toBe(true);
+    expect(withLabel('x'.repeat(40))).toBe(true);
+    // Blank is allowed and means the default name.
+    expect(withLabel('')).toBe(true);
+    expect(withLabel('   ')).toBe(true);
+    expect(feeLabel({ baseLabel: '' })).toBe('Service fee');
+    expect(feeLabel({ baseLabel: '   ' })).toBe('Service fee');
+    expect(withLabel('x'.repeat(41))).toBe(false);
+  });
+
+  it('rejects an unknown cut id such as "standard"', () => {
+    expect(parseTenantConfig({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts: ['standard'] } }).ok).toBe(false);
+    expect(parseTenantConfig({ ...VVSLAB_CONFIG, pricing: { ...legacy, cuts: { standard: { amount: 10, per: 'order' } } } }).ok).toBe(false);
+  });
+});
+
+describe('review fixes', () => {
+  const sixBySix = [...SIX_TOP, ...SIX_BOTTOM];
+  const none = { ...VVSLAB_CONFIG.catalog, cuts: [] };
+  const withCuts = (cuts: CutId[]) => ({ ...VVSLAB_CONFIG, catalog: { ...VVSLAB_CONFIG.catalog, cuts }, pricing: ceddy });
+
+  it('a saved Permanent design on a zero-cut shop loads as deep and quotes no cut line', () => {
+    const saved = JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'permanent', teeth: sixBySix }));
+    const loaded = parseRenderSpec(saved, none);
+    expect(loaded).not.toBeNull();
+    expect(loaded!.cut).toBe('deep');
+    const pricing = parseTenantConfig({ ...VVSLAB_CONFIG, catalog: none, pricing: ceddy });
+    expect(pricing.ok).toBe(true);
+    // The saved config's pricing is pruned on parse, so the replaced cut costs nothing.
+    const pruned = pricing.ok ? pricing.config.pricing : ceddy;
+    expect(priceBreakdown(pruned, sixBySix, loaded!).lines.some((line) => /^(Deep cut|Permanent look)/.test(line.label))).toBe(false);
+  });
+
+  it('a cut the shop does not offer is still rejected when the shop has cuts', () => {
+    const catalog = { ...VVSLAB_CONFIG.catalog, cuts: ['deep'] as CutId[] };
+    expect(parseRenderSpec(JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'permanent', teeth: sixBySix })), catalog)).toBeNull();
+    expect(parseRenderSpec(JSON.parse(JSON.stringify({ ...DEFAULT_SET, cut: 'deep', teeth: sixBySix })), catalog)?.cut).toBe('deep');
+  });
+
+  it('turning a cut off and back on in the editor keeps its price', () => {
+    const draft = structuredClone(withCuts(['deep', 'permanent']));
+    toggleOption(draft, 'cuts', 'deep', false);
+    toggleOption(draft, 'cuts', 'permanent', false);
+    toggleOption(draft, 'cuts', 'deep', true);
+    toggleOption(draft, 'cuts', 'permanent', true);
+    expect(draft.catalog.cuts).toEqual(['deep', 'permanent']);
+    expect(cutPrice(draft.pricing, 'deep')).toEqual({ amount: 5, per: 'tooth' });
+    expect(cutPrice(draft.pricing, 'permanent')).toEqual({ amount: 100, per: 'arch' });
+  });
+
+  it('the publish diff shows a cut turned off but no price line for it', () => {
+    const live = withCuts(['deep', 'permanent']);
+    const parsed = parseTenantConfig(withCuts(['permanent']));
+    expect(parsed.ok).toBe(true);
+    const texts = describeChanges(live, parsed.ok ? parsed.config : live).map((change) => change.text);
+    expect(texts.some((text) => /deep/i.test(text))).toBe(true);
+    expect(texts.some((text) => /^Deep cut: /.test(text))).toBe(false);
   });
 });

@@ -30,5 +30,5 @@ export const buildTenant = (slug: string, config: TenantConfig, demo = false, ve
   catalog: shopCatalog(config.catalog),
   hints: priceHints(config.pricing),
   defaultTooth: defaultTooth(config.catalog),
-  defaultSet: defaultSet(config.catalog),
+  defaultSet: defaultSet(config.catalog, config.pricing),
 });

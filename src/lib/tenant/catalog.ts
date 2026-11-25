@@ -13,7 +13,8 @@ import {
   type SetOptions,
   type ToothDesign,
 } from '../renderSpec.js';
-import type { TenantCatalog } from './schema.js';
+import { cutPrice } from '../pricing.js';
+import type { TenantCatalog, TenantPricing } from './schema.js';
 
 // The platform catalog narrowed to what one shop sells, in the platform's order.
 
@@ -45,4 +46,14 @@ export const defaultTooth = (catalog: TenantCatalog): ToothDesign => ({
   stone: pick(DEFAULT_TOOTH.stone, catalog.stones),
 });
 
-export const defaultSet = (catalog: TenantCatalog): SetOptions => ({ ...DEFAULT_SET, cut: pick(DEFAULT_SET.cut, catalog.cuts), mold: pick('kit', catalog.molds) });
+/**
+ * The starting set. Cut: the first free cut in platform order; if every cut the
+ * shop sells costs money, the platform default (deep) or the first one on, so no
+ * free option is invented. With no cuts on the group is hidden and the design
+ * just keeps the platform default (nothing is charged for it).
+ */
+export const defaultSet = (catalog: TenantCatalog, pricing: TenantPricing): SetOptions => {
+  const free = only(CUTS, catalog.cuts).find((cut) => cutPrice(pricing, cut.id).amount === 0);
+  const cut = free?.id ?? (catalog.cuts.length ? pick(DEFAULT_SET.cut, catalog.cuts) : DEFAULT_SET.cut);
+  return { ...DEFAULT_SET, cut, mold: pick('kit', catalog.molds) };
+};

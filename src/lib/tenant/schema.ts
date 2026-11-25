@@ -64,7 +64,8 @@ export const CatalogSchema = z.object({
   styles: nonEmptyUnique(StyleIdSchema),
   settings: nonEmptyUnique(SettingIdSchema),
   stones: nonEmptyUnique(StoneIdSchema),
-  cuts: nonEmptyUnique(CutIdSchema),
+  /** May be empty: no cut choice, and the builder hides the Cut group (MAG-205). */
+  cuts: z.array(CutIdSchema).refine((list) => new Set(list).size === list.length, 'Each option can be listed once.'),
   molds: nonEmptyUnique(MoldIdSchema),
   fangs: z.boolean(),
   inscription: z.object({ enabled: z.boolean(), styles: nonEmptyUnique(InscriptionStyleIdSchema) }),
@@ -97,6 +98,8 @@ export const PricingSchema = z.object({
   source: z.enum(['default', 'quick', 'custom']).optional(),
   display: z.enum(PRICE_DISPLAYS),
   base: money,
+  /** What the per-order fee is called ("Appointment fee", "Mold kit"…); absent = "Service fee". */
+  baseLabel: z.string().trim().max(40).optional(),
   metalPerTooth: priceMap(MetalIdSchema),
   /** Applies to gold only (yellow, white, rose). */
   karatMultiplier: z.record(KaratIdSchema, multiplier),
@@ -186,6 +189,14 @@ export const DepositSchema = z.object({
   link: z.string().url().optional(),
 });
 
+/** The pricing with cut prices kept only for the cuts on offer (none left = no `cuts` table). */
+export const pruneCutPrices = <P extends { cuts?: Partial<Record<string, unknown>> }>(pricing: P, offered: readonly string[]): P => {
+  if (!pricing.cuts) return pricing;
+  const kept = Object.fromEntries(Object.entries(pricing.cuts).filter(([id]) => offered.includes(id)));
+  const { cuts: _drop, ...rest } = pricing;
+  return (Object.keys(kept).length ? { ...rest, cuts: kept } : rest) as P;
+};
+
 export const TenantConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -216,7 +227,9 @@ export const TenantConfigSchema = z
     if (catalog.types.includes('iced') && (!catalog.settings.length || !catalog.stones.length)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['catalog', 'types'], message: 'Iced out needs at least one setting and stone.' });
     }
-  });
+  })
+  // Pricing only ever charges for cuts the shop offers: drop entries left over from cuts turned off.
+  .transform((config) => ({ ...config, pricing: pruneCutPrices(config.pricing, config.catalog.cuts) }));
 
 export type TenantConfig = z.infer<typeof TenantConfigSchema>;
 export type TenantCatalog = TenantConfig['catalog'];

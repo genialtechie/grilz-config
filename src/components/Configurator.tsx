@@ -454,7 +454,7 @@ function Configurator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setOptions, fangsOn, teethDesigns, inscriptionsKey],
   );
-  const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns) : [];
+  const designLines = renderSpec ? summarizeDesign(renderSpec, tenant.config.catalog.addOns, tenant.config.catalog.cuts) : [];
 
   const designProperties = () => ({
     selected_teeth: selectedTeeth.length,
@@ -806,7 +806,7 @@ function Configurator() {
             ? `Tap a tooth to style it on its own · ${coarsePointer ? 'pinch' : 'scroll'} to zoom`
             : `${zoomTip} · tap a tooth to look closer`;
 
-  const intro = STEP_INTROS[step];
+  const intro = step === 'look' && catalog.cuts.length === 0 ? { ...STEP_INTROS.look, text: 'Plain or iced, the finish, then fangs.' } : STEP_INTROS[step];
 
   return (
     <main
@@ -1223,6 +1223,7 @@ function Configurator() {
                       </div>
                     </LookGroup>
                   )}
+                  {catalog.cuts.length > 0 && (
                   <LookGroup
                     id="cut"
                     title="Cut"
@@ -1245,6 +1246,7 @@ function Configurator() {
                       ))}
                     </div>
                   </LookGroup>
+                  )}
                 </>
               )}
 

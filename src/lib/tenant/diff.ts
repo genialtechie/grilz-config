@@ -1,6 +1,6 @@
 import { CUTS, GRILLZ_TYPES, INSCRIPTION_STYLES, KARATS, METALS, MOLDS, SETTINGS, STONES, STYLES } from '../renderSpec.js';
 import { ICED_KEYS, type TenantConfig } from './schema.js';
-import { cutPrice, icedOpalPrice } from '../pricing.js';
+import { cutPrice, feeLabel, icedOpalPrice } from '../pricing.js';
 
 // Plain-language list of what a draft changes compared with the live config,
 // shown before a shop publishes ("Yellow gold: $150 → $165 per tooth").
@@ -78,7 +78,8 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
   const p0 = live.pricing;
   const p1 = draft.pricing;
   if (p0.display !== p1.display) add('Prices', `Show ${DISPLAY[p0.display]} → ${DISPLAY[p1.display]}`);
-  if (p0.base !== p1.base) add('Prices', `Service fee: ${usd(p0.base)} → ${usd(p1.base)}`);
+  if (feeLabel(p0) !== feeLabel(p1)) add('Prices', `Fee name: ${feeLabel(p0)} → ${feeLabel(p1)}`);
+  if (p0.base !== p1.base) add('Prices', `${feeLabel(p1)}: ${usd(p0.base)} → ${usd(p1.base)}`);
   if (p0.minimumOrder !== p1.minimumOrder) add('Prices', `Minimum order: ${usd(p0.minimumOrder)} → ${usd(p1.minimumOrder)}`);
   for (const map of PRICE_MAPS) {
     const before = p0[map.key] as Record<string, number>;
@@ -132,7 +133,7 @@ export function describeChanges(live: TenantConfig | null, draft: TenantConfig):
     });
   }
   // The fit: amount and how it's counted (permanent look's flat price included, for shops without cut prices).
-  CUTS.forEach((cut) => {
+  CUTS.filter((cut) => draft.catalog.cuts.includes(cut.id)).forEach((cut) => {
     const text = (pricing: typeof p0) => {
       const price = cutPrice(pricing, cut.id);
       return price.amount ? `${usd(price.amount)} per ${price.per}` : 'free';

@@ -220,14 +220,15 @@ export const describeInscription = (inscription: Inscription) => {
   return `"${inscription.text}" in ${label(INSCRIPTION_FONTS, inscription.font).toLowerCase()}, ${finish.toLowerCase()}, ${where}`;
 };
 
-export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = []): string[] => {
+/** `offeredCuts`: the cuts the shop sells; a design from a shop with none doesn't claim one. Omit it to always name the cut. */
+export const summarizeDesign = (spec: RenderSpec, addOns: readonly Pick<AddOn, 'id' | 'label'>[] = [], offeredCuts?: readonly string[]): string[] => {
   const upper = spec.teeth.filter((tooth) => tooth.index < 16).length;
   const lines = [`${upper} top + ${spec.teeth.length - upper} bottom`];
   const groups = groupTeeth(spec.teeth);
   groups.forEach((group) => lines.push(groups.length > 1 ? `${group.length}× ${describeTooth(group[0])}` : describeTooth(group[0])));
   if (spec.fangs) lines.push('Fangs');
   spec.inscriptions.forEach((inscription) => lines.push(describeInscription(inscription)));
-  lines.push(label(CUTS, spec.cut));
+  if (!offeredCuts || offeredCuts.includes(spec.cut)) lines.push(label(CUTS, spec.cut));
   (spec.addOns ?? []).forEach((id) => lines.push(addOns.find((addOn) => addOn.id === id)?.label ?? id));
   if (spec.mold) lines.push(`Fit: ${label(MOLDS, spec.mold)}`);
   return lines;
@@ -319,7 +320,8 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     const offered = new Set((enabled.addOns ?? []).map((addOn) => addOn.id));
     if (!addOns.every((id) => offered.has(id))) return null;
     if (!(teeth as RenderTooth[]).every((tooth) => sells(tooth, enabled))) return null;
-    if (!enabled.cuts.includes(spec.cut) || (spec.fangs && !enabled.fangs)) return null;
+    // A shop with no cuts has none to check against: the stored one is replaced below, never priced.
+    if ((enabled.cuts.length > 0 && !enabled.cuts.includes(spec.cut)) || (spec.fangs && !enabled.fangs)) return null;
     if (inscriptions.some((inscription) => !(enabled.inscription.enabled && enabled.inscription.styles.includes(inscription!.style)))) return null;
     if (!enabled.vision && spec.vision.trim()) return null;
   }
@@ -327,7 +329,7 @@ export const parseRenderSpec = (value: unknown, enabled?: EnabledOptions): Rende
     teeth: (teeth as RenderTooth[]).sort((a, b) => a.index - b.index),
     // Fangs are built on the upper canines: a set without one has none to charge for.
     fangs: fangCount(teeth as RenderTooth[], spec.fangs) > 0,
-    cut: spec.cut,
+    cut: enabled && enabled.cuts.length === 0 ? 'deep' : spec.cut,
     // Upper row first.
     inscriptions: (inscriptions as Inscription[]).sort((a, b) => a.teeth[0] - b.teeth[0]),
     // Keep the customer's note to plain printable text.
