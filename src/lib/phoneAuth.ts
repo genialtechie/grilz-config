@@ -60,7 +60,13 @@ const say = (error: unknown, fallback: string) => {
 export async function startPhoneCode(phone: string): Promise<PhoneStart> {
   const number = e164(phone);
   if (!number) return { ok: false, error: 'Add your 10-digit phone number.' };
-  if (!firebaseOn()) return { ok: true };
+  if (!firebaseOn()) {
+    // Only `npm run dev` may fake the text; a deployed build without the Firebase keys says so instead of
+    // pretending a code went out (it happened on the preview built before the keys were added, Nov 26).
+    if (import.meta.env.DEV) return { ok: true };
+    console.error('Phone codes: VITE_FIREBASE_* were missing when this site was built. Add them in Vercel and redeploy.');
+    return { ok: false, error: "We can't text codes right now. Please try again later." };
+  }
   try {
     const { auth, sdk } = await firebase();
     if (!verifier) {
